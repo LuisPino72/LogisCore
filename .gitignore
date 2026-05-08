@@ -30,13 +30,12 @@ logs/
 coverage/
 
 # Supabase
-supabase/.branches/
-supabase/.temp/
+supabase/
 opencode.json
-.gitnexus/
 skills-lock.json
 
-#graphify
+# graphify
 .opencode
 graphify-out
 AGENTS.md
+.vercel
