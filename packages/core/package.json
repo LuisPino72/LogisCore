@@ -1,0 +1,16 @@
+{
+  "name": "@logiscore/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LogisCore ERP - Núcleo compartido (Result, AppError, EventBus, Tipos base)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

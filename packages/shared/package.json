@@ -1,0 +1,19 @@
+{
+  "name": "@logiscore/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LogisCore ERP - Utilidades compartidas (validadores fiscales, formateo, constantes)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

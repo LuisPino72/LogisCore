@@ -1,0 +1,38 @@
+node_modules/
+dist/
+.next/
+.turbo/
+.env
+.env.*
+!.env.example
+.agents
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Obsidian
+.obsidian/
+AGENTS.md
+# Memory / Brain
+[Mm]emoria/
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+opencode.json
+.gitnexus/
+skills-lock.json
