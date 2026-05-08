@@ -1,0 +1,7 @@
+{
+  "buildCommand": "turbo build",
+  "outputDirectory": "apps/web/dist",
+  "framework": "vite",
+  "installCommand": "npm install",
+  "devCommand": "turbo dev"
+}
