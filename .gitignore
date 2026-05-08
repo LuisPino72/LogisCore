@@ -31,7 +31,6 @@ coverage/
 .vercel/
 
 # Supabase
-supabase/
 supabase/.branches/
 supabase/.temp/
 opencode.json
