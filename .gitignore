@@ -28,15 +28,17 @@ logs/
 
 # Coverage
 coverage/
+.vercel/
 
 # Supabase
+supabase/
 supabase/.branches/
 supabase/.temp/
 opencode.json
-.gitnexus/
 skills-lock.json
 
 #graphify
 .opencode
 graphify-out
 AGENTS.md
+
