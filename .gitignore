@@ -19,9 +19,8 @@ Thumbs.db
 
 # Obsidian
 .obsidian/
-AGENTS.md
 # Memory / Brain
-[Mm]emoria/
+memoria/
 
 # Logs
 *.log
