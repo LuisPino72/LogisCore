@@ -37,8 +37,8 @@ supabase/.temp/
 opencode.json
 skills-lock.json
 
-#graphify
+# graphify
 .opencode
 graphify-out
 AGENTS.md
-
+.vercel

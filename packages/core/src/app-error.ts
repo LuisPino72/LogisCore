@@ -48,3 +48,7 @@ export function createAppError(input: AppErrorInput): AppError {
     details: input.details,
   });
 }
+
+export function isAppError(error: unknown): error is AppError {
+  return error instanceof AppError;
+}

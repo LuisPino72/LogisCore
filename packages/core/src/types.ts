@@ -29,9 +29,16 @@ export interface UserSession {
   userId: string;
   email: string;
   role: UserRole;
-  tenantId: string;
-  tenantSlug: string;
+  tenantId: string | null;
+  tenantSlug: string | null;
   accessToken: string;
+  expiresAt?: Date;
+}
+
+export interface TenantInfo {
+  id: string;
+  slug: string;
+  name: string;
 }
 
 export interface Subscription {
