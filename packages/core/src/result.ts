@@ -11,4 +11,12 @@ export function failure<E extends AppError>(error: E): Result<never, E> {
   return { ok: false, error };
 }
 
+export function isSuccess<T, E>(result: Result<T, E>): result is { ok: true; data: T } {
+  return result.ok === true;
+}
+
+export function isFailure<T, E>(result: Result<T, E>): result is { ok: false; error: E } {
+  return result.ok === false;
+}
+
 export { AppError, isAppError };

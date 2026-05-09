@@ -22,6 +22,10 @@ Thumbs.db
 # Memory / Brain
 memoria/
 
+# Specs
+apps/web/src/specs/
+tests/specs/
+
 # Logs
 *.log
 logs/
