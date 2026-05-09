@@ -1,18 +1,21 @@
 import Dexie, { type Table } from 'dexie';
 import type { TenantInfo } from '@logiscore/core';
 import type { SyncQueueItem, SyncMeta } from '../sync/types';
+import type { OutboxEntry } from '@logiscore/core';
 
 export class LogisCoreDB extends Dexie {
   tenantRefs!: Table<TenantInfo, string>;
   syncQueue!: Table<SyncQueueItem, number>;
   syncMeta!: Table<SyncMeta, string>;
+  outbox!: Table<OutboxEntry, number>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(2).stores({
+    this.version(3).stores({
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
       syncMeta: 'table',
+      outbox: '++id, event, status, createdAt, nextRetryAt, [status+nextRetryAt]',
     });
   }
 }
