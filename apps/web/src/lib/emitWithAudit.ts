@@ -11,19 +11,22 @@ export async function emitWithAudit(
     tenantUuid?: string;
   },
 ): Promise<void> {
-  const enqueueResult = await outboxService.enqueue(eventName, module, payload);
-  if (!enqueueResult.ok) {
-    console.error(`[emitWithAudit] Outbox enqueue falló para ${eventName}:`, enqueueResult.error);
-  }
+  try {
+    const enqueueResult = await outboxService.enqueue(eventName, module, payload);
+    if (!enqueueResult.ok) {
+      console.error(`[emitWithAudit] Outbox enqueue falló para ${eventName}:`, enqueueResult.error);
+    }
 
-  logAuditEvent({
-    eventName,
-    module,
-    userId: context.userId,
-    tenantId: context.tenantId,
-    tenantUuid: context.tenantUuid,
-    payload: (payload as Record<string, unknown>) ?? {},
-  }).catch((err) => {
-    console.error(`[emitWithAudit] Audit trail falló para ${eventName}:`, err);
-  });
+    await logAuditEvent({
+      eventName,
+      module,
+      userId: context.userId,
+      tenantId: context.tenantId,
+      tenantUuid: context.tenantUuid,
+      payload: (payload as Record<string, unknown>) ?? {},
+    });
+  } catch (err) {
+    // Fallo silencioso: la auditoría es secundaria y no debe bloquear al usuario
+    console.warn(`[emitWithAudit] Fallo no crítico en ${eventName}:`, err);
+  }
 }

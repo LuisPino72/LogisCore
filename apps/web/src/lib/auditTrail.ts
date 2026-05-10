@@ -52,7 +52,7 @@ export async function logAuditEvent(payload: {
     return;
   }
 
-  const { error } = await supabase.from('audit_trail').insert({
+  await supabase.from('audit_trail').insert({
     event_name: payload.eventName,
     event_module: payload.module,
     user_id: payload.userId,
@@ -60,9 +60,5 @@ export async function logAuditEvent(payload: {
     tenant_uuid: payload.tenantUuid,
     payload: sanitizePayload(payload.payload ?? {}),
     severity: determineSeverity(payload.eventName),
-  }).select().single();
-
-  if (error) {
-    console.error('[AuditTrail] Error inserting event:', error.message);
-  }
+  });
 }

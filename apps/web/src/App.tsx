@@ -10,19 +10,7 @@ import {
   ToastContainer,
 } from './common/components';
 import { ShoppingCart, Package, BarChart3, Settings, Store } from 'lucide-react';
-
-function LoginPrompt() {
-  return (
-    <div className="min-h-screen bg-surface p-8 flex flex-col items-center justify-center gap-4">
-      <Store size={48} className="text-primary" />
-      <h1 className="text-2xl font-bold text-primary">LogisCore ERP</h1>
-      <p className="text-gray-500 text-sm">Inicia sesión para continuar</p>
-      <Button variant="primary" size="lg" fullWidth>
-        Iniciar Sesión
-      </Button>
-    </div>
-  );
-}
+import { LoginPage } from './features/auth/LoginPage';
 
 function LoadingScreen() {
   return (
@@ -88,7 +76,7 @@ const App = () => {
 
   if (isLoading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} />;
-  if (!isAuthenticated) return <LoginPrompt />;
+  if (!isAuthenticated) return <LoginPage />;
 
   return (
     <>

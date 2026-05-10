@@ -90,7 +90,7 @@ class OutboxService {
         nextRetryAt: Date.now(),
       });
       return success(undefined);
-    } catch (_err) {
+    } catch {
       return failure(new AppError('OUTBOX_RETRY_FAILED', 'Error al reintentar evento outbox'));
     }
   }
@@ -100,7 +100,7 @@ class OutboxService {
       const db = getDb();
       const count = await db.outbox.where('status').equals('pending').count();
       return success(count);
-    } catch (_err) {
+    } catch {
       return failure(new AppError('OUTBOX_COUNT_FAILED', 'Error al contar eventos outbox'));
     }
   }
@@ -115,7 +115,7 @@ class OutboxService {
         .and(e => e.processedAt !== null && e.processedAt < cutoff)
         .delete();
       return success(deleted);
-    } catch (_err) {
+    } catch {
       return failure(new AppError('OUTBOX_CLEAN_FAILED', 'Error al limpiar outbox'));
     }
   }

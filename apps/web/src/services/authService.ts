@@ -1,8 +1,10 @@
-import { type UserSession, AppError } from '@logiscore/core';
+import { type UserSession, AppError, Result, success, failure } from '@logiscore/core';
 import { supabase } from './supabase/client';
 import { TenantTranslator } from './tenantTranslator';
 import { initDb, destroyDb } from './dexie/db';
 import { syncEngine } from './sync/syncEngine';
+import { EventBus, SystemEvents } from '@logiscore/core';
+import { emitWithAudit } from '../lib/emitWithAudit';
 
 function decodeJWTPayload(token: string): Record<string, unknown> {
   try {
@@ -30,6 +32,46 @@ function extractTenantId(session: Awaited<ReturnType<typeof supabase.auth.getSes
   return (decoded.tenant_id as string) ?? null;
 }
 
+type RawSession = Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
+
+async function buildUserSession(session: NonNullable<RawSession>): Promise<UserSession> {
+  const role = extractRole(session);
+  const tenantUuid = extractTenantId(session);
+  let tenantSlug: string | null = null;
+
+  if (tenantUuid) {
+    tenantSlug = await TenantTranslator.uuidToSlug(tenantUuid);
+    initDb(tenantSlug);
+  }
+
+  return {
+    userId: session.user.id,
+    email: session.user.email ?? '',
+    role: role as UserSession['role'],
+    tenantId: tenantUuid,
+    tenantSlug,
+    accessToken: session.access_token,
+    expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
+  };
+}
+
+function mapSupabaseAuthError(error: { message: string; status?: number }): AppError {
+  const msg = error.message.toLowerCase();
+  if (msg.includes('invalid login credentials')) {
+    return new AppError('AUTH_INVALID_CREDENTIALS', 'Credenciales incorrectas. Verifica tu email y contraseña.');
+  }
+  if (msg.includes('email not confirmed')) {
+    return new AppError('AUTH_EMAIL_NOT_CONFIRMED', 'Este email no ha sido confirmado.');
+  }
+  if (msg.includes('user not found')) {
+    return new AppError('AUTH_USER_NOT_FOUND', 'Este email no está registrado.');
+  }
+  if (msg.includes('rate limit') || msg.includes('too many requests')) {
+    return new AppError('AUTH_RATE_LIMITED', 'Demasiados intentos. Espera un momento e intenta de nuevo.');
+  }
+  return new AppError('AUTH_LOGIN_FAILED', 'Error al iniciar sesión. Verifica tu conexión e intenta de nuevo.');
+}
+
 export const authService = {
   async bootstrapSession(): Promise<UserSession | null> {
     const { data: { session }, error } = await supabase.auth.getSession();
@@ -39,7 +81,6 @@ export const authService = {
     }
 
     const role = extractRole(session);
-    const tenantUuid = extractTenantId(session);
 
     if (!role) {
       throw new AppError(
@@ -49,24 +90,39 @@ export const authService = {
       );
     }
 
-    let tenantSlug: string | null = null;
+    const userSession = buildUserSession(session);
+    return userSession;
+  },
 
-    if (tenantUuid) {
-      tenantSlug = await TenantTranslator.uuidToSlug(tenantUuid);
-      initDb(tenantSlug);
+  async login(email: string, password: string): Promise<Result<UserSession, AppError>> {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      return failure(mapSupabaseAuthError(error));
     }
 
-    const userSession: UserSession = {
-      userId: session.user.id,
-      email: session.user.email ?? '',
-      role: role as UserSession['role'],
-      tenantId: tenantUuid,
-      tenantSlug,
-      accessToken: session.access_token,
-      expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
-    };
+    if (!data.session) {
+      return failure(new AppError('AUTH_NO_SESSION', 'No se pudo iniciar sesión.'));
+    }
 
-    return userSession;
+    const role = extractRole(data.session);
+
+    if (!role) {
+      return failure(
+        new AppError('AUTH_NO_ROLE', 'No se encontró rol asignado. Contacta al administrador.'),
+      );
+    }
+
+    const userSession = await buildUserSession(data.session);
+
+    EventBus.emit(SystemEvents.USER_LOGIN, { email });
+    await emitWithAudit('USER.LOGIN', 'AUTH', { email }, {
+      userId: userSession.userId,
+      tenantId: userSession.tenantId ?? '',
+      tenantUuid: userSession.tenantId ?? undefined,
+    });
+
+    return success(userSession);
   },
 
   startSync(): void {
@@ -78,10 +134,21 @@ export const authService = {
   },
 
   async signOut(): Promise<void> {
+    const currentSession = await this.bootstrapSession(); // Capturar sesión antes de destruirla
+
     this.stopSync();
     destroyDb();
     TenantTranslator.clearCache();
     await supabase.auth.signOut();
+
+    if (currentSession) {
+      EventBus.emit(SystemEvents.USER_LOGOUT, { email: currentSession.email });
+      await emitWithAudit('USER.LOGOUT', 'AUTH', { email: currentSession.email }, {
+        userId: currentSession.userId,
+        tenantId: currentSession.tenantId ?? '',
+        tenantUuid: currentSession.tenantId ?? undefined,
+      });
+    }
   },
 
   async refreshSession(): Promise<UserSession | null> {
