@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { CreateTenantWithUsersInputSchema } from '../types';
-import type { Tenant, UserRole } from '../types';
+import type { Tenant, UserRole, GlobalUser } from '../types';
 import type { Column } from '../../../common/components/DataTable';
 import {
   AppShell,
@@ -15,7 +15,7 @@ import {
   Spinner,
   LogoutButton,
 } from '../../../common/components';
-import { Store, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon } from 'lucide-react';
+import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon } from 'lucide-react';
 
 interface EmployeeForm {
   email: string;
@@ -40,12 +40,12 @@ const emptyCreateForm: CreateForm = {
   employees: [],
 };
 
-type Sheet = 'tenants' | 'users';
+type Sheet = 'tenants' | 'users' | 'all-users';
 
 export function AdminPanelPage() {
   const {
-    tenants, users, isLoading, error,
-    fetchTenants, fetchUsers,
+    tenants, users, allUsers, isLoading, error,
+    fetchTenants, fetchUsers, fetchAllUsers,
     createTenant, addEmployee, updateTenant, removeEmployee,
   } = useAdminPanel();
 
@@ -66,7 +66,8 @@ export function AdminPanelPage() {
 
   useEffect(() => {
     fetchTenants();
-  }, [fetchTenants]);
+    fetchAllUsers();
+  }, [fetchTenants, fetchAllUsers]);
 
   const handleSelectTenant = (tenant: Tenant) => {
     setSelectedTenantId(tenant.id);
@@ -212,8 +213,9 @@ export function AdminPanelPage() {
 
   if (isLoading && tenants.length === 0) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-3">
         <Spinner size="lg" />
+        <p className="text-sm text-gray-400 animate-pulse">Cargando panel de administración...</p>
       </div>
     );
   }
@@ -221,7 +223,7 @@ export function AdminPanelPage() {
   if (error && tenants.length === 0) {
     return (
       <div className="min-h-screen bg-surface p-8 flex items-center justify-center">
-        <Card className="max-w-md">
+        <Card className="max-w-md text-center">
           <p className="text-danger text-sm">{error}</p>
           <Button variant="primary" fullWidth className="mt-4" onClick={fetchTenants}>
             Reintentar
@@ -234,30 +236,64 @@ export function AdminPanelPage() {
   return (
     <AppShell
       topBar={
-        <div className="flex items-center gap-2">
-          {activeSheet === 'users' ? (
-            <Button variant="ghost" size="sm" onClick={handleBackToTenants}>
-              <ArrowLeft size={20} />
-            </Button>
-          ) : null}
-          <Store size={20} className="text-primary" />
-          <span className="font-semibold text-sm flex-1">AdminPanel</span>
+        <div className="flex items-center gap-3 px-2">
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+            <Store size={18} className="text-primary" />
+            <span className="font-semibold text-sm text-primary">AdminPanel</span>
+          </div>
+          <div className="flex-1" />
           {activeSheet === 'tenants' ? (
             <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
-              <Plus size={16} /> Tenant
+              <Plus size={16} /> Nuevo Tenant
             </Button>
-          ) : (
-            <Button variant="primary" size="sm" onClick={() => setShowAddEmployeeModal(true)}>
-              <Plus size={16} /> Empleado
-            </Button>
-          )}
+          ) : activeSheet === 'users' ? (
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={handleBackToTenants}>
+                <ArrowLeft size={18} />
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => setShowAddEmployeeModal(true)}>
+                <Plus size={16} /> Empleado
+              </Button>
+            </div>
+          ) : null}
           <LogoutButton />
         </div>
       }
     >
-      <div className="p-4 space-y-4">
-        {activeSheet === 'tenants' ? (
-          <Card header="Tenants">
+      <div className="flex border-b border-gray-200 bg-white sticky top-0 z-10">
+        <button
+          onClick={() => setActiveSheet('tenants')}
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+            activeSheet === 'tenants'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+        >
+          <Building2 size={16} />
+          Tenants
+        </button>
+        <button
+          onClick={() => setActiveSheet('all-users')}
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+            activeSheet === 'all-users'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+        >
+          <UsersRound size={16} />
+          Todos los Usuarios
+        </button>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {activeSheet === 'tenants' && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Tenants</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{tenants.length} registro{tenants.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
             <DataTable
               columns={tenantColumns}
               data={tenants}
@@ -265,13 +301,43 @@ export function AdminPanelPage() {
               keyExtractor={(t: Tenant) => t.id}
             />
           </Card>
-        ) : (
-          <Card header={`Usuarios de ${selectedTenantName}`}>
+        )}
+
+        {activeSheet === 'users' && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Usuarios</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{selectedTenantName} — {users.length} usuario{users.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
             <DataTable
               columns={userColumns}
               data={users}
               emptyMessage="No hay usuarios en este tenant."
               keyExtractor={(u: UserRole) => u.id}
+            />
+          </Card>
+        )}
+
+        {activeSheet === 'all-users' && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Todos los Usuarios</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{allUsers.length} usuario{allUsers.length !== 1 ? 's' : ''} registrados</p>
+              </div>
+            </div>
+            <DataTable
+              columns={[
+                { key: 'email', header: 'Email' },
+                { key: 'name', header: 'Nombre' },
+                { key: 'role', header: 'Rol' },
+                { key: 'tenantName', header: 'Tenant' },
+              ]}
+              data={allUsers}
+              emptyMessage="No hay usuarios registrados."
+              keyExtractor={(u: GlobalUser) => u.id}
             />
           </Card>
         )}

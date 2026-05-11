@@ -46,6 +46,7 @@ export interface Tenant {
   name: string;
   slug: string;
   rif: string;
+  plan: string;
   createdAt: string;
 }
 
@@ -62,4 +63,16 @@ export interface CreateTenantResponse {
   tenant: Tenant;
   owner: { id: string; email: string; name: string };
   employees: Array<{ id: string; email: string; name: string }>;
+}
+
+export interface GlobalUser {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: 'owner' | 'employee';
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  createdAt: string;
 }

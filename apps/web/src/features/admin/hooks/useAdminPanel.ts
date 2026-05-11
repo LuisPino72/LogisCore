@@ -1,15 +1,17 @@
 import { useState, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { adminService } from '../services/adminService';
-import type { Tenant, UserRole, CreateTenantWithUsersInput, CreateTenantResponse } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse } from '../types';
 
 interface UseAdminPanelReturn {
   tenants: Tenant[];
   users: UserRole[];
+  allUsers: GlobalUser[];
   isLoading: boolean;
   error: string | null;
   fetchTenants: () => Promise<void>;
   fetchUsers: (tenantId?: string) => Promise<void>;
+  fetchAllUsers: () => Promise<void>;
   createTenant: (payload: CreateTenantWithUsersInput) => Promise<Result<CreateTenantResponse, AppError>>;
   addEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
   updateTenant: (id: string, data: Partial<Pick<Tenant, 'name' | 'rif'>>) => Promise<Result<Tenant, AppError>>;
@@ -19,6 +21,7 @@ interface UseAdminPanelReturn {
 export function useAdminPanel(): UseAdminPanelReturn {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<UserRole[]>([]);
+  const [allUsers, setAllUsers] = useState<GlobalUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +43,18 @@ export function useAdminPanel(): UseAdminPanelReturn {
     const result = await adminService.fetchUsers(tenantId);
     if (result.ok) {
       setUsers(result.data);
+    } else {
+      setError(result.error.message);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const fetchAllUsers = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const result = await adminService.fetchAllUsers();
+    if (result.ok) {
+      setAllUsers(result.data);
     } else {
       setError(result.error.message);
     }
@@ -81,10 +96,12 @@ export function useAdminPanel(): UseAdminPanelReturn {
   return {
     tenants,
     users,
+    allUsers,
     isLoading,
     error,
     fetchTenants,
     fetchUsers,
+    fetchAllUsers,
     createTenant,
     addEmployee,
     updateTenant,

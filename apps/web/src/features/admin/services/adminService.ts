@@ -18,7 +18,7 @@ export const adminService = {
   async fetchTenants(): Promise<Result<Tenant[], AppError>> {
     const { data, error } = await supabase
       .from('tenants')
-      .select('id, name, slug, rif, created_at')
+      .select('id, name, slug, rif, created_at, subscriptions!inner(plan, status)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -26,13 +26,17 @@ export const adminService = {
       return failure(new AppError('TENANT_NOT_FOUND', 'Error al cargar Tenants'));
     }
 
-    const tenants: Tenant[] = (data ?? []).map((t: Record<string, unknown>) => ({
-      id: t.id as string,
-      name: t.name as string,
-      slug: t.slug as string,
-      rif: t.rif as string,
-      createdAt: t.created_at as string,
-    }));
+    const tenants: Tenant[] = (data ?? []).map((t: Record<string, unknown>) => {
+      const subs = t.subscriptions as Record<string, unknown> | undefined;
+      return {
+        id: t.id as string,
+        name: t.name as string,
+        slug: t.slug as string,
+        rif: t.rif as string,
+        plan: (subs?.plan as string) ?? 'basic',
+        createdAt: t.created_at as string,
+      };
+    });
 
     return success(tenants);
   },
@@ -63,6 +67,27 @@ export const adminService = {
     }));
 
     return success(users);
+  },
+
+  async fetchAllUsers(): Promise<Result<import('../types').GlobalUser[], AppError>> {
+    const tokenResult = await getAdminToken();
+    if (!tokenResult.ok) return tokenResult;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-users`,
+        { headers: { 'Authorization': `Bearer ${tokenResult.data}` } },
+      );
+
+      if (!response.ok) {
+        return failure(new AppError('TENANT_NOT_FOUND', 'Error al cargar usuarios'));
+      }
+
+      const data: import('../types').GlobalUser[] = await response.json();
+      return success(data);
+    } catch {
+      return failure(new AppError('TENANT_NOT_FOUND', 'Error al cargar usuarios'));
+    }
   },
 
   async createTenant(payload: CreateTenantWithUsersInput): Promise<Result<CreateTenantResponse, AppError>> {
@@ -159,6 +184,7 @@ export const adminService = {
       name: updated.name,
       slug: updated.slug,
       rif: updated.rif,
+      plan: 'basic',
       createdAt: updated.created_at,
     });
   },

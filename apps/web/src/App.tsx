@@ -13,7 +13,7 @@ import {
   ToastContainer,
   LogoutButton,
 } from './common/components';
-import { ShoppingCart, Package, BarChart3, Settings, Store } from 'lucide-react';
+import { ShoppingCart, Package, BarChart3, Settings, Store, ArrowLeft } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 
@@ -51,11 +51,18 @@ function Dashboard() {
   ];
 
   const displaySlug = selectedTenantSlug ?? session?.tenantSlug;
+  const isAdminViewingTenant = session?.role === 'admin' && selectedTenantSlug !== null;
 
   return (
     <AppShell
       topBar={
         <>
+          {isAdminViewingTenant && (
+            <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}>
+              <ArrowLeft size={18} />
+              <span className="hidden sm:inline">Volver al Panel</span>
+            </Button>
+          )}
           <Store size={20} className="text-primary" />
           <span className="font-semibold text-sm flex-1">LogisCore</span>
           {displaySlug && <Badge variant="info">{displaySlug}</Badge>}
