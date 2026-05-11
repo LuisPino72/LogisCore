@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { UserSession } from '@logiscore/core';
 import { authService } from '../services/authService';
-import { LoginInputSchema } from '../specs/auth';
+import { LoginInputSchema } from '../types';
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
 

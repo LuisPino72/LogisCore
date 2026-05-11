@@ -4,7 +4,7 @@ import { Skeleton } from './Loading';
 import { EmptyState } from './EmptyState';
 import { Package } from 'lucide-react';
 
-interface Column<T> {
+export interface Column<T> {
   key: string;
   header: string;
   render?: (item: T) => ReactNode;

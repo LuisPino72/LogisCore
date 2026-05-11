@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { logAuditEvent, sanitizePayload, CRITICAL_EVENTS } from '@/lib/auditTrail';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../services/supabase/client', () => ({
+  supabase: {},
+}));
+
+import { logAuditEvent, sanitizePayload, CRITICAL_EVENTS } from './auditTrail';
 
 describe('auditTrail.ts — funciones puras', () => {
   describe('sanitizePayload', () => {

@@ -1,5 +1,8 @@
-import { useAuth } from './common/hooks/useAuth';
-import { useAuthStore } from './stores/authStore';
+import { useEffect } from 'react';
+import { useAuth } from './features/auth/hooks/useAuth';
+import { useAuthStore } from './features/auth/stores/authStore';
+import { useNavigationStore } from './stores/navigationStore';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import {
   AppShell,
   Badge,
@@ -10,7 +13,8 @@ import {
   ToastContainer,
 } from './common/components';
 import { ShoppingCart, Package, BarChart3, Settings, Store } from 'lucide-react';
-import { LoginPage } from './features/auth/LoginPage';
+import { LoginPage } from './features/auth/components/LoginPage';
+import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 
 function LoadingScreen() {
   return (
@@ -36,6 +40,7 @@ function ErrorScreen({ message }: { message: string }) {
 
 function Dashboard() {
   const session = useAuthStore((s) => s.session);
+  const selectedTenantSlug = useNavigationStore((s) => s.selectedTenantSlug);
 
   const navItems = [
     { key: 'pos', label: 'POS', icon: <ShoppingCart size={24} />, onClick: () => {} },
@@ -44,13 +49,15 @@ function Dashboard() {
     { key: 'settings', label: 'Ajustes', icon: <Settings size={24} />, onClick: () => {} },
   ];
 
+  const displaySlug = selectedTenantSlug ?? session?.tenantSlug;
+
   return (
     <AppShell
       topBar={
         <>
           <Store size={20} className="text-primary" />
           <span className="font-semibold text-sm flex-1">LogisCore</span>
-          {session?.tenantSlug && <Badge variant="info">{session.tenantSlug}</Badge>}
+          {displaySlug && <Badge variant="info">{displaySlug}</Badge>}
           {session?.role && <Badge variant="success">{session.role}</Badge>}
         </>
       }
@@ -71,12 +78,52 @@ function Dashboard() {
 }
 
 const App = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, role } = useAuth();
   const error = useAuthStore((s) => s.error);
+  const { currentView, setView } = useNavigationStore();
+
+  useEffect(() => {
+    const subs: ReturnType<typeof EventBus.on>[] = [];
+
+    subs.push(
+      EventBus.on(SystemEvents.USER_LOGIN, (payload: unknown) => {
+        const { role: loginRole, tenantSlug } = payload as { role?: string; tenantSlug?: string | null };
+        if (loginRole === 'admin') {
+          setView('admin');
+        } else {
+          setView('dashboard', tenantSlug ?? null);
+        }
+      }),
+    );
+
+    subs.push(
+      EventBus.on(SystemEvents.ADMIN_NAVIGATE_TENANT, (payload: unknown) => {
+        const { tenantSlug } = payload as { tenantSlug: string };
+        setView('dashboard', tenantSlug);
+      }),
+    );
+
+    subs.push(
+      EventBus.on(SystemEvents.ADMIN_EXIT_TENANT, () => {
+        setView('admin');
+      }),
+    );
+
+    return () => subs.forEach((s) => EventBus.off(s));
+  }, [setView]);
 
   if (isLoading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} />;
   if (!isAuthenticated) return <LoginPage />;
+
+  if (currentView === 'admin' && role === 'admin') {
+    return (
+      <>
+        <AdminPanelPage />
+        <ToastContainer />
+      </>
+    );
+  }
 
   return (
     <>

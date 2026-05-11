@@ -1,0 +1,67 @@
+import { z } from 'zod';
+
+export const CreateTenantInputSchema = z.object({
+  name: z.string().min(1, 'Nombre requerido').max(100),
+  rif: z.string().regex(/^[VJEGP]\d{9}$/, 'RIF inválido formato V123456789'),
+}).strict();
+
+export type CreateTenantInput = z.infer<typeof CreateTenantInputSchema>;
+
+export const CreateOwnerInputSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Password mínimo 6 caracteres'),
+  name: z.string().min(1, 'Nombre requerido'),
+  tenantId: z.string().uuid('ID de tenant inválido'),
+}).strict();
+
+export type CreateOwnerInput = z.infer<typeof CreateOwnerInputSchema>;
+
+export const CreateEmployeeInputSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Password mínimo 6 caracteres'),
+  name: z.string().min(1, 'Nombre requerido'),
+  tenantId: z.string().uuid('ID de tenant inválido'),
+}).strict();
+
+export type CreateEmployeeInput = z.infer<typeof CreateEmployeeInputSchema>;
+
+export const EdgeCreateUserSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Password mínimo 6 caracteres'),
+  name: z.string().min(1, 'Nombre requerido'),
+}).strict();
+
+export type EdgeCreateUser = z.infer<typeof EdgeCreateUserSchema>;
+
+export const CreateTenantWithUsersInputSchema = z.object({
+  tenant: CreateTenantInputSchema,
+  owner: EdgeCreateUserSchema,
+  employees: z.array(EdgeCreateUserSchema).max(3).default([]),
+}).strict();
+
+export type CreateTenantWithUsersInput = z.infer<typeof CreateTenantWithUsersInputSchema>;
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  rif: string;
+  isActive: boolean;
+  plan: 'basic' | 'pro';
+  createdAt: string;
+}
+
+export interface UserRole {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: 'owner' | 'employee';
+  createdAt: string;
+}
+
+export interface CreateTenantResponse {
+  tenant: Tenant;
+  owner: { id: string; email: string; name: string };
+  employees: Array<{ id: string; email: string; name: string }>;
+}

@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
-import { useAuthStore, type AuthStatus } from '../../stores/authStore';
-import { authService } from '../../services/authService';
+import { useAuthStore, type AuthStatus } from '../stores/authStore';
+import { authService } from '../services/authService';
 
 export function useAuth(): {
   status: AuthStatus;
   isAuthenticated: boolean;
   isLoading: boolean;
   tenantSlug: string | null;
+  role: string | null;
 } {
   const { status, session, setLoading, setSession, clearSession } = useAuthStore();
 
@@ -41,5 +42,6 @@ export function useAuth(): {
     isAuthenticated: status === 'authenticated',
     isLoading: status === 'loading' || status === 'idle',
     tenantSlug: session?.tenantSlug ?? null,
+    role: session?.role ?? null,
   };
 }

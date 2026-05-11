@@ -1,10 +1,10 @@
 import { type UserSession, AppError, Result, success, failure } from '@logiscore/core';
-import { supabase } from './supabase/client';
-import { TenantTranslator } from './tenantTranslator';
-import { initDb, destroyDb } from './dexie/db';
-import { syncEngine } from './sync/syncEngine';
+import { supabase } from '../../../services/supabase/client';
+import { TenantTranslator } from '../../../services/tenantTranslator';
+import { initDb, destroyDb } from '../../../services/dexie/db';
+import { syncEngine } from '../../../services/sync/syncEngine';
 import { EventBus, SystemEvents } from '@logiscore/core';
-import { emitWithAudit } from '../lib/emitWithAudit';
+import { emitWithAudit } from '../../../lib/emitWithAudit';
 
 function decodeJWTPayload(token: string): Record<string, unknown> {
   try {
@@ -115,8 +115,8 @@ export const authService = {
 
     const userSession = await buildUserSession(data.session);
 
-    EventBus.emit(SystemEvents.USER_LOGIN, { email });
-    await emitWithAudit('USER.LOGIN', 'AUTH', { email }, {
+    EventBus.emit(SystemEvents.USER_LOGIN, { email, role: userSession.role, tenantSlug: userSession.tenantSlug });
+    await emitWithAudit('USER.LOGIN', 'AUTH', { email, role: userSession.role, tenantSlug: userSession.tenantSlug }, {
       userId: userSession.userId,
       tenantId: userSession.tenantId ?? '',
       tenantUuid: userSession.tenantId ?? undefined,
@@ -134,7 +134,7 @@ export const authService = {
   },
 
   async signOut(): Promise<void> {
-    const currentSession = await this.bootstrapSession(); // Capturar sesión antes de destruirla
+    const currentSession = await this.bootstrapSession();
 
     this.stopSync();
     destroyDb();

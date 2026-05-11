@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ERROR_CATALOG, getErrorByCode } from '@/lib/errors';
+import { ERROR_CATALOG, getErrorByCode } from './errors';
 
 describe('errors.ts — Catálogo de Errores', () => {
   describe('getErrorByCode — lookup exitoso', () => {
