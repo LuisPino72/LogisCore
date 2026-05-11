@@ -18,17 +18,21 @@ function decodeJWTPayload(token: string): Record<string, unknown> {
 
 function extractRole(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']): string | null {
   if (!session) return null;
-  const fromMetadata = session.user?.app_metadata?.role as string | undefined;
-  if (fromMetadata) return fromMetadata;
+  // Session.app_metadata es raw_app_meta_data de auth.users (NO tiene role del hook)
+  // El hook inyecta role en el JWT claims.app_metadata
   const decoded = decodeJWTPayload(session.access_token);
+  const jwtAppMeta = decoded.app_metadata as Record<string, unknown> | undefined;
+  const jwtRole = jwtAppMeta?.role as string | undefined;
+  if (jwtRole) return jwtRole;
   return (decoded.role as string) ?? null;
 }
 
 function extractTenantId(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']): string | null {
   if (!session) return null;
-  const fromMetadata = session.user?.app_metadata?.tenant_id as string | undefined;
-  if (fromMetadata) return fromMetadata;
   const decoded = decodeJWTPayload(session.access_token);
+  const jwtAppMeta = decoded.app_metadata as Record<string, unknown> | undefined;
+  const jwtTenantId = jwtAppMeta?.tenant_id as string | undefined;
+  if (jwtTenantId) return jwtTenantId;
   return (decoded.tenant_id as string) ?? null;
 }
 
