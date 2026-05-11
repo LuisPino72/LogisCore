@@ -25,7 +25,7 @@ memoria/
 # Specs
 apps/web/src/specs/
 tests/specs/
-
+scripts/
 # Logs
 *.log
 logs/
