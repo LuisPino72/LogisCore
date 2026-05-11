@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
-import type { Tenant, UserRole, CreateTenantWithUsersInput, CreateTenantResponse } from '../types';
+import type { Tenant, UserRole, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView } from '../types';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../lib/emitWithAudit';
 
@@ -197,6 +197,74 @@ export const adminService = {
 
     if (error) {
       return failure(new AppError('TENANT_NOT_FOUND', 'Error al eliminar empleado'));
+    }
+
+    return success(undefined);
+  },
+
+  async fetchSubscriptionView(): Promise<Result<SubscriptionView[], AppError>> {
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('id, name, slug, subscriptions(plan, status, expires_at)')
+      .is('deleted_at', null)
+      .order('name');
+
+    if (error) {
+      return failure(new AppError('ADMIN_ONLY', 'Error al cargar suscripciones'));
+    }
+
+    const views: SubscriptionView[] = (data ?? []).map((t: Record<string, unknown>) => {
+      const subs = (t.subscriptions as Record<string, unknown>[] | undefined)?.[0];
+      const expiresAt = (subs?.expires_at as string) ?? null;
+      const daysRemaining = expiresAt
+        ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000)
+        : -999;
+
+      return {
+        tenantId: t.id as string,
+        tenantName: t.name as string,
+        tenantSlug: t.slug as string,
+        plan: (subs?.plan as string) ?? 'basic',
+        status: (subs?.status as string) ?? 'inactive',
+        expiresAt,
+        daysRemaining,
+      };
+    });
+
+    return success(views);
+  },
+
+  async renewSubscription(tenantId: string): Promise<Result<void, AppError>> {
+    const { data: current } = await supabase
+      .from('subscriptions')
+      .select('expires_at')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    const baseDate = current?.expires_at
+      ? new Date(current.expires_at)
+      : new Date();
+
+    if (baseDate < new Date()) {
+      baseDate.setTime(Date.now());
+    }
+
+    baseDate.setDate(baseDate.getDate() + 30);
+    const newExpiresAt = baseDate.toISOString();
+
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        expires_at: newExpiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
+
+    if (error) {
+      return failure(new AppError('SUBSCRIPTION_RENEW_FAILED', 'Error al renovar suscripción'));
     }
 
     return success(undefined);

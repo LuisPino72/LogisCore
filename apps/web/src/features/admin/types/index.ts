@@ -76,3 +76,13 @@ export interface GlobalUser {
   tenantSlug: string;
   createdAt: string;
 }
+
+export interface SubscriptionView {
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  plan: string;
+  status: string;
+  expiresAt: string | null;
+  daysRemaining: number;
+}

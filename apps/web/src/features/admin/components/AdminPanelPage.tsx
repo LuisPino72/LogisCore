@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { CreateTenantWithUsersInputSchema } from '../types';
-import type { Tenant, UserRole, GlobalUser } from '../types';
+import type { Tenant, UserRole, GlobalUser, SubscriptionView } from '../types';
 import type { Column } from '../../../common/components/DataTable';
 import {
   AppShell,
@@ -15,7 +15,7 @@ import {
   Spinner,
   LogoutButton,
 } from '../../../common/components';
-import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon } from 'lucide-react';
+import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw } from 'lucide-react';
 
 interface EmployeeForm {
   email: string;
@@ -40,12 +40,12 @@ const emptyCreateForm: CreateForm = {
   employees: [],
 };
 
-type Sheet = 'tenants' | 'users' | 'all-users';
+type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions';
 
 export function AdminPanelPage() {
   const {
-    tenants, users, allUsers, isLoading, error,
-    fetchTenants, fetchUsers, fetchAllUsers,
+    tenants, users, allUsers, subscriptions, isLoading, error,
+    fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, renewSubscription,
     createTenant, addEmployee, updateTenant, removeEmployee,
   } = useAdminPanel();
 
@@ -57,6 +57,8 @@ export function AdminPanelPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
+  const [renovateTarget, setRenovateTarget] = useState<SubscriptionView | null>(null);
+
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
   const [editForm, setEditForm] = useState<EditForm>({ name: '', rif: '' });
   const [newEmployee, setNewEmployee] = useState<EmployeeForm>({ email: '', password: '', name: '' });
@@ -67,7 +69,8 @@ export function AdminPanelPage() {
   useEffect(() => {
     fetchTenants();
     fetchAllUsers();
-  }, [fetchTenants, fetchAllUsers]);
+    fetchSubscriptions();
+  }, [fetchTenants, fetchAllUsers, fetchSubscriptions]);
 
   const handleSelectTenant = (tenant: Tenant) => {
     setSelectedTenantId(tenant.id);
@@ -283,6 +286,17 @@ export function AdminPanelPage() {
           <UsersRound size={16} />
           Todos los Usuarios
         </button>
+        <button
+          onClick={() => setActiveSheet('subscriptions')}
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+            activeSheet === 'subscriptions'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+        >
+          <CreditCard size={16} />
+          Suscripciones
+        </button>
       </div>
 
       <div className="p-6 space-y-6">
@@ -338,6 +352,77 @@ export function AdminPanelPage() {
               data={allUsers}
               emptyMessage="No hay usuarios registrados."
               keyExtractor={(u: GlobalUser) => u.id}
+            />
+          </Card>
+        )}
+
+        {activeSheet === 'subscriptions' && (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Suscripciones</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{subscriptions.length} tenenat{subscriptions.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <DataTable
+              columns={[
+                { key: 'tenantName', header: 'Tenant' },
+                {
+                  key: 'plan',
+                  header: 'Plan',
+                  render: (s: SubscriptionView) => (
+                    <Badge variant="info">{s.plan}</Badge>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: 'Estado',
+                  render: (s: SubscriptionView) => {
+                    const variant = s.status === 'active'
+                      ? (s.daysRemaining <= 3 ? 'warning' : 'success')
+                      : 'danger';
+                    return <Badge variant={variant}>{s.status}</Badge>;
+                  },
+                },
+                {
+                  key: 'expiresAt',
+                  header: 'Vence',
+                  render: (s: SubscriptionView) => {
+                    if (!s.expiresAt) return <span className="text-gray-400">-</span>;
+                    const date = new Date(s.expiresAt).toLocaleDateString('es-ES');
+                    const color = s.daysRemaining <= 0 ? 'text-danger font-bold'
+                      : s.daysRemaining <= 3 ? 'text-warning font-bold'
+                      : s.daysRemaining <= 7 ? 'text-orange-600'
+                      : 'text-gray-700';
+                    return (
+                      <span className={color}>
+                        {date} {s.daysRemaining <= 0 ? '(Vencido)' : `(${s.daysRemaining}d)`}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: 'actions',
+                  header: 'Acción',
+                  render: (s: SubscriptionView) => {
+                    const canRenew = s.daysRemaining <= 0;
+                    return (
+                      <Button
+                        variant={canRenew ? 'primary' : 'ghost'}
+                        size="sm"
+                        disabled={!canRenew}
+                        onClick={() => setRenovateTarget(s)}
+                      >
+                        <RefreshCw size={14} />
+                        {canRenew ? 'Renovar +30d' : 'Activa'}
+                      </Button>
+                    );
+                  },
+                },
+              ]}
+              data={subscriptions}
+              emptyMessage="No hay suscripciones registradas."
+              keyExtractor={(s: SubscriptionView) => s.tenantId}
             />
           </Card>
         )}
@@ -506,6 +591,40 @@ export function AdminPanelPage() {
               Cancelar
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={renovateTarget !== null}
+        onClose={() => setRenovateTarget(null)}
+        title="Renovar suscripción"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => setRenovateTarget(null)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" fullWidth onClick={async () => {
+              if (renovateTarget) {
+                await renewSubscription(renovateTarget.tenantId);
+                setRenovateTarget(null);
+              }
+            }}>
+              Confirmar renovación
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            ¿Estás seguro de que quieres renovar la suscripción de{' '}
+            <strong>{renovateTarget?.tenantName}</strong> por 30 días?
+          </p>
+          {renovateTarget?.expiresAt && (
+            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+              <span className="font-medium">Vencimiento actual:</span>{' '}
+              {new Date(renovateTarget.expiresAt).toLocaleDateString('es-ES')}
+            </div>
+          )}
         </div>
       </Modal>
     </AppShell>

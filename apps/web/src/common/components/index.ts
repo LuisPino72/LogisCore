@@ -16,3 +16,5 @@ export { Select } from './Select';
 export { Textarea } from './Textarea';
 export { ToastContainer } from './Toast';
 export { LogoutButton } from './LogoutButton';
+export { Sidebar } from './Sidebar';
+export type { SidebarModule } from './Sidebar';

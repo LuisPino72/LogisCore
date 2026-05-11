@@ -97,7 +97,12 @@ export const authService = {
       );
     }
 
-    const userSession = buildUserSession(session);
+    const userSession = await buildUserSession(session);
+
+    if (userSession.tenantId) {
+      await authService.checkSubscriptionActive(userSession.tenantId);
+    }
+
     return userSession;
   },
 
@@ -121,6 +126,11 @@ export const authService = {
     }
 
     const userSession = await buildUserSession(data.session);
+
+    if (userSession.tenantId) {
+      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
+      if (!subCheck.ok) return subCheck;
+    }
 
     EventBus.emit(SystemEvents.USER_LOGIN, { email, role: userSession.role, tenantSlug: userSession.tenantSlug });
     await emitWithAudit('USER.LOGIN', 'AUTH', { email, role: userSession.role, tenantSlug: userSession.tenantSlug }, {
@@ -168,5 +178,27 @@ export const authService = {
     }
 
     return this.bootstrapSession();
+  },
+
+  async checkSubscriptionActive(tenantId: string): Promise<Result<void, AppError>> {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('status, expires_at')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error || !data) {
+      return success(undefined);
+    }
+
+    if (data.status !== 'active' || new Date(data.expires_at) < new Date()) {
+      return failure(new AppError(
+        'AUTH_SUBSCRIPTION_EXPIRED',
+        'Suscripción vencida. Contacta al 04145180265 para renovar.',
+      ));
+    }
+
+    return success(undefined);
   },
 };

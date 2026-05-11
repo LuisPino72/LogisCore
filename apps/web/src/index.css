@@ -208,8 +208,12 @@
 
 /* ───────────────────── APP SHELL ───────────────────── */
 .app-shell { @apply min-h-screen bg-surface transition-colors duration-300; }
-.app-shell-content { @apply pb-20 sm:pb-0; }
+.app-shell-main { @apply transition-all duration-300; }
+.app-shell-content { @apply pb-4 sm:pb-0; }
 .app-topbar { @apply sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 h-14 flex items-center gap-3; }
+
+/* ───────────────────── SIDEBAR ───────────────────── */
+.sidebar-backdrop { @apply fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden; }
 
 /* ───────────────────── SEARCH INPUT ───────────────────── */
 .search-input-wrapper { @apply relative; }

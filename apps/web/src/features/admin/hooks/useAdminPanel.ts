@@ -1,17 +1,20 @@
 import { useState, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { adminService } from '../services/adminService';
-import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView } from '../types';
 
 interface UseAdminPanelReturn {
   tenants: Tenant[];
   users: UserRole[];
   allUsers: GlobalUser[];
+  subscriptions: SubscriptionView[];
   isLoading: boolean;
   error: string | null;
   fetchTenants: () => Promise<void>;
   fetchUsers: (tenantId?: string) => Promise<void>;
   fetchAllUsers: () => Promise<void>;
+  fetchSubscriptions: () => Promise<void>;
+  renewSubscription: (tenantId: string) => Promise<Result<void, AppError>>;
   createTenant: (payload: CreateTenantWithUsersInput) => Promise<Result<CreateTenantResponse, AppError>>;
   addEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
   updateTenant: (id: string, data: Partial<Pick<Tenant, 'name' | 'rif'>>) => Promise<Result<Tenant, AppError>>;
@@ -22,6 +25,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<UserRole[]>([]);
   const [allUsers, setAllUsers] = useState<GlobalUser[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionView[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,15 +97,38 @@ export function useAdminPanel(): UseAdminPanelReturn {
     return result;
   }, []);
 
+  const fetchSubscriptions = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const result = await adminService.fetchSubscriptionView();
+    if (result.ok) {
+      setSubscriptions(result.data);
+    } else {
+      setError(result.error.message);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const renewSubscription = useCallback(async (tenantId: string) => {
+    const result = await adminService.renewSubscription(tenantId);
+    if (result.ok) {
+      await fetchSubscriptions();
+    }
+    return result;
+  }, [fetchSubscriptions]);
+
   return {
     tenants,
     users,
     allUsers,
+    subscriptions,
     isLoading,
     error,
     fetchTenants,
     fetchUsers,
     fetchAllUsers,
+    fetchSubscriptions,
+    renewSubscription,
     createTenant,
     addEmployee,
     updateTenant,

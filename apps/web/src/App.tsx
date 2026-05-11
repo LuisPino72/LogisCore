@@ -1,21 +1,54 @@
-import { useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthStore } from './features/auth/stores/authStore';
 import { useNavigationStore } from './stores/navigationStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
+import { TenantTranslator } from './services/tenantTranslator';
 import {
   AppShell,
   Badge,
-  BottomNav,
   Button,
   Card,
   Spinner,
   ToastContainer,
-  LogoutButton,
+  Sidebar,
+  type SidebarModule,
 } from './common/components';
-import { ShoppingCart, Package, BarChart3, Settings, Store, ArrowLeft } from 'lucide-react';
+import {
+  ShoppingCart,
+  Package,
+  Settings,
+  Store,
+  ArrowLeft,
+  LayoutDashboard,
+  Wallet,
+  FileText,
+  Menu,
+} from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
+import { DashboardPage } from './features/dashboard/components/DashboardPage';
+import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
+
+const ALL_MODULES: SidebarModule[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+  { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
+  { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
+  { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
+  { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
+  { id: 'settings', label: 'Ajustes', icon: <Settings size={20} /> },
+];
+
+const EMPLOYEE_ALLOWED = new Set(['dashboard', 'pos', 'inventory']);
+
+const MODULE_LABELS: Record<string, string> = {
+  dashboard: 'Dashboard',
+  pos: 'POS',
+  inventory: 'Inventario',
+  cash: 'Caja',
+  reports: 'Reportes',
+  settings: 'Ajustes',
+};
 
 function LoadingScreen() {
   return (
@@ -39,49 +72,117 @@ function ErrorScreen({ message }: { message: string }) {
   );
 }
 
-function Dashboard() {
+function ModulePlaceholder({ moduleId }: { moduleId: string }) {
+  const label = MODULE_LABELS[moduleId] ?? moduleId;
+  return (
+    <div className="p-4 max-w-5xl mx-auto">
+      <Card>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">
+            <Package size={32} className="text-gray-400" />
+          </div>
+          <h2 className="text-lg font-title font-bold text-gray-700 mb-1">{label}</h2>
+          <p className="text-sm text-gray-500 max-w-xs">
+            Este módulo está en desarrollo. Pronto podrás usarlo.
+          </p>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function DashboardLayout() {
   const session = useAuthStore((s) => s.session);
   const selectedTenantSlug = useNavigationStore((s) => s.selectedTenantSlug);
+  const [activeModule, setActiveModule] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [effectiveTenantId, setEffectiveTenantId] = useState<string | null>(null);
 
-  const navItems = [
-    { key: 'pos', label: 'POS', icon: <ShoppingCart size={24} />, onClick: () => {} },
-    { key: 'inventory', label: 'Inventario', icon: <Package size={24} />, onClick: () => {}, badge: 3 },
-    { key: 'reports', label: 'Reportes', icon: <BarChart3 size={24} />, onClick: () => {} },
-    { key: 'settings', label: 'Ajustes', icon: <Settings size={24} />, onClick: () => {} },
-  ];
-
+  const isAdmin = session?.role === 'admin';
+  const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
   const displaySlug = selectedTenantSlug ?? session?.tenantSlug;
-  const isAdminViewingTenant = session?.role === 'admin' && selectedTenantSlug !== null;
+  const role = session?.role ?? null;
+
+  const sidebarModules = role === 'employee'
+    ? ALL_MODULES.filter((m) => EMPLOYEE_ALLOWED.has(m.id))
+    : ALL_MODULES;
+
+  // Resolver tenantId: para usuarios normales viene del JWT,
+  // para admin viendo un tenant se traduce del slug
+  useEffect(() => {
+    if (session?.tenantId) {
+      setEffectiveTenantId(session.tenantId);
+    } else if (isAdminViewingTenant && selectedTenantSlug) {
+      TenantTranslator.slugToUuid(selectedTenantSlug)
+        .then((uuid) => setEffectiveTenantId(uuid))
+        .catch(() => setEffectiveTenantId(null));
+    } else {
+      setEffectiveTenantId(null);
+    }
+  }, [session?.tenantId, selectedTenantSlug, isAdminViewingTenant]);
+
+  const handleNavigate = useCallback((moduleId: string) => {
+    setActiveModule(moduleId);
+  }, []);
+
+  const renderContent = () => {
+    // Employee route protection: redirigir al dashboard si no tiene permiso
+    if (role === 'employee' && !EMPLOYEE_ALLOWED.has(activeModule)) {
+      return <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />;
+    }
+    switch (activeModule) {
+      case 'dashboard':
+        return <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />;
+      default:
+        return <ModulePlaceholder moduleId={activeModule} />;
+    }
+  };
 
   return (
     <AppShell
       topBar={
         <>
+          <button
+            className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Abrir menú"
+          >
+            <Menu size={22} />
+          </button>
           {isAdminViewingTenant && (
             <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}>
               <ArrowLeft size={18} />
               <span className="hidden sm:inline">Volver al Panel</span>
             </Button>
           )}
-          <Store size={20} className="text-primary" />
-          <span className="font-semibold text-sm flex-1">LogisCore</span>
+          <Store size={20} className="text-primary shrink-0" />
+          <button
+            onClick={() => handleNavigate('dashboard')}
+            className="font-semibold text-sm flex-1 text-left hover:text-primary transition-colors"
+          >
+            LogisCore
+          </button>
           {displaySlug && <Badge variant="info">{displaySlug}</Badge>}
-          {session?.role && <Badge variant="success">{session.role}</Badge>}
-          <LogoutButton />
+          {role && <Badge variant="success">{role}</Badge>}
         </>
       }
-      bottomNav={<BottomNav items={navItems} activeKey="pos" />}
+      sidebar={
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          modules={sidebarModules}
+          activeModule={activeModule}
+          onNavigate={handleNavigate}
+          userEmail={session?.email ?? ''}
+          footerSlot={
+            effectiveTenantId ? (
+              <ExchangeRateWidget tenantId={effectiveTenantId} role={role ?? null} />
+            ) : undefined
+          }
+        />
+      }
     >
-      <div className="p-4 space-y-4">
-        <Card>
-          <p className="text-sm text-gray-500">
-            Bienvenido, <strong>{session?.email}</strong>
-          </p>
-        </Card>
-        <Card header="Resumen">
-          <p className="text-sm text-gray-500">Infraestructura inicializada correctamente</p>
-        </Card>
-      </div>
+      {renderContent()}
     </AppShell>
   );
 }
@@ -92,7 +193,6 @@ const App = () => {
   const session = useAuthStore((s) => s.session);
   const { currentView, setView } = useNavigationStore();
 
-  // Inicializar vista al cargar la página (bootstrapSession no emite USER_LOGIN)
   useEffect(() => {
     if (isAuthenticated && currentView === 'loading') {
       setView(role === 'admin' ? 'admin' : 'dashboard', role === 'admin' ? null : (session?.tenantSlug ?? null));
@@ -144,7 +244,7 @@ const App = () => {
 
   return (
     <>
-      <Dashboard />
+      <DashboardLayout />
       <ToastContainer />
     </>
   );

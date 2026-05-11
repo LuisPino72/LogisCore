@@ -6,6 +6,7 @@ export const AuthErrors = {
   AUTH_EMAIL_EXISTS: 'AUTH_EMAIL_EXISTS',
   FORBIDDEN_NO_ROLE: 'FORBIDDEN_NO_ROLE',
   AUTH_ROUTE_DENIED: 'AUTH_ROUTE_DENIED',
+  AUTH_SUBSCRIPTION_EXPIRED: 'AUTH_SUBSCRIPTION_EXPIRED',
 } as const;
 
 export type AuthErrorCode = typeof AuthErrors[keyof typeof AuthErrors];
