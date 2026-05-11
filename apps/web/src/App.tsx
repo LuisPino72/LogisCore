@@ -11,6 +11,7 @@ import {
   Card,
   Spinner,
   ToastContainer,
+  LogoutButton,
 } from './common/components';
 import { ShoppingCart, Package, BarChart3, Settings, Store } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
@@ -59,6 +60,7 @@ function Dashboard() {
           <span className="font-semibold text-sm flex-1">LogisCore</span>
           {displaySlug && <Badge variant="info">{displaySlug}</Badge>}
           {session?.role && <Badge variant="success">{session.role}</Badge>}
+          <LogoutButton />
         </>
       }
       bottomNav={<BottomNav items={navItems} activeKey="pos" />}

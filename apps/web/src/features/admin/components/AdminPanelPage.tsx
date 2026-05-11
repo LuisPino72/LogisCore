@@ -13,6 +13,7 @@ import {
   Input,
   Modal,
   Spinner,
+  LogoutButton,
 } from '../../../common/components';
 import { Store, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon } from 'lucide-react';
 
@@ -250,6 +251,7 @@ export function AdminPanelPage() {
               <Plus size={16} /> Empleado
             </Button>
           )}
+          <LogoutButton />
         </div>
       }
     >

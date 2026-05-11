@@ -5,6 +5,9 @@ import { initDb, destroyDb } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { emitWithAudit } from '../../../lib/emitWithAudit';
+import { useNavigationStore } from '../../../stores/navigationStore';
+import { usePermissionStore } from '../../../stores/permissionStore';
+import { useAuthStore } from '../stores/authStore';
 
 function decodeJWTPayload(token: string): Record<string, unknown> {
   try {
@@ -122,8 +125,7 @@ export const authService = {
     EventBus.emit(SystemEvents.USER_LOGIN, { email, role: userSession.role, tenantSlug: userSession.tenantSlug });
     await emitWithAudit('USER.LOGIN', 'AUTH', { email, role: userSession.role, tenantSlug: userSession.tenantSlug }, {
       userId: userSession.userId,
-      tenantId: userSession.tenantId ?? '',
-      tenantUuid: userSession.tenantId ?? undefined,
+      tenantUuid: userSession.tenantId ?? null,
     });
 
     return success(userSession);
@@ -143,14 +145,16 @@ export const authService = {
     this.stopSync();
     destroyDb();
     TenantTranslator.clearCache();
+    useNavigationStore.getState().setView('login');
+    usePermissionStore.getState().clear();
+    useAuthStore.getState().clearSession();
     await supabase.auth.signOut();
 
     if (currentSession) {
       EventBus.emit(SystemEvents.USER_LOGOUT, { email: currentSession.email });
       await emitWithAudit('USER.LOGOUT', 'AUTH', { email: currentSession.email }, {
         userId: currentSession.userId,
-        tenantId: currentSession.tenantId ?? '',
-        tenantUuid: currentSession.tenantId ?? undefined,
+        tenantUuid: currentSession.tenantId ?? null,
       });
     }
   },

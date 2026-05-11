@@ -8,8 +8,8 @@ export async function emitWithAudit(
   payload: unknown,
   context: {
     userId?: string;
-    tenantId: string;
-    tenantUuid?: string;
+    tenantId?: string;
+    tenantUuid?: string | null;
   },
 ): Promise<void> {
   try {

@@ -44,21 +44,24 @@ export async function logAuditEvent(payload: {
   eventName: string;
   module: string;
   userId?: string;
-  tenantId: string;
-  tenantUuid?: string;
+  tenantId?: string;
+  tenantUuid?: string | null;
   payload?: Record<string, unknown>;
 }): Promise<void> {
   if (!CRITICAL_EVENTS.includes(payload.eventName as typeof CRITICAL_EVENTS[number])) {
     return;
   }
 
-  await supabase.from('audit_trail').insert({
+  const insertPayload: Record<string, unknown> = {
     event_name: payload.eventName,
     event_module: payload.module,
-    user_id: payload.userId,
-    tenant_id: payload.tenantId,
-    tenant_uuid: payload.tenantUuid,
-    payload: sanitizePayload(payload.payload ?? {}),
     severity: determineSeverity(payload.eventName),
-  });
+    payload: sanitizePayload(payload.payload ?? {}),
+  };
+
+  if (payload.userId) insertPayload.user_id = payload.userId;
+  if (payload.tenantId) insertPayload.tenant_id = payload.tenantId;
+  if (payload.tenantUuid) insertPayload.tenant_uuid = payload.tenantUuid;
+
+  await supabase.from('audit_trail').insert(insertPayload);
 }
