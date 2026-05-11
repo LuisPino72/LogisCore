@@ -30,7 +30,7 @@ export const Input: FC<InputProps> = ({
         {iconLeft && (
           <div className={cn(
             !iconOutside && 'input-icon-left',
-            iconOutside && 'text-gray-400 flex-shrink-0'
+            iconOutside && 'text-gray-400 shrink-0'
           )}>
             {iconLeft}
           </div>

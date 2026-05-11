@@ -73,12 +73,12 @@
 .btn-md { @apply px-4 py-2 text-sm rounded-lg; }
 .btn-lg { @apply px-6 py-3 text-base rounded-lg; }
 .btn-full { @apply w-full; }
-.btn-primary { @apply bg-primary text-white hover:bg-primary-dark active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-[1px]; }
-.btn-secondary { @apply bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-[1px]; }
-.btn-danger { @apply bg-danger text-white hover:bg-red-700 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-[1px]; }
+.btn-primary { @apply bg-primary text-white hover:bg-primary-dark active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
+.btn-secondary { @apply bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
+.btn-danger { @apply bg-danger text-white hover:bg-red-700 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-ghost { @apply bg-transparent text-gray-600 hover:bg-gray-100 active:scale-[0.98]; }
 .btn-outline { @apply bg-transparent text-primary border border-primary hover:bg-primary/5 active:scale-[0.98]; }
-.btn-accent { @apply bg-accent text-white hover:bg-accent-dark active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-[1px]; }
+.btn-accent { @apply bg-accent text-white hover:bg-accent-dark active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-loading { @apply opacity-70 pointer-events-none; }
 .btn-icon { @apply p-2; }
 
@@ -120,7 +120,7 @@
 .card-body { @apply p-4; }
 .card-footer { @apply px-4 py-3 border-t border-gray-100 bg-gray-50/30 rounded-b-xl; }
 .card-interactive { 
-  @apply bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer transition-all duration-150 active:scale-[0.99] hover:shadow-md hover:border-gray-300 hover:-translate-y-[1px]; 
+  @apply bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer transition-all duration-150 active:scale-[0.99] hover:shadow-md hover:border-gray-300 hover:-translate-y-px; 
 }
 
 /* ───────────────────── BADGE ───────────────────── */
@@ -151,7 +151,7 @@
 .modal-footer { @apply flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/30; }
 
 /* ───────────────────── TOAST ───────────────────── */
-.toast-container { @apply fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm; }
+.toast-container { @apply fixed top-4 right-4 z-100 flex flex-col gap-2 max-w-sm; }
 .toast { @apply flex items-start gap-3 px-4 py-3 rounded-lg shadow-xl animate-slide-down backdrop-blur-md border; }
 .toast-success { @apply bg-green-50/90 border-green-200 text-green-800; }
 .toast-error { @apply bg-red-50/90 border-red-200 text-red-800; }
@@ -172,7 +172,7 @@
 .skeleton { @apply bg-gray-200 rounded animate-pulse; }
 .skeleton-text { @apply bg-gray-200 rounded animate-pulse h-4 w-full; }
 .skeleton-title { @apply bg-gray-200 rounded animate-pulse h-6 w-2/3; }
-.skeleton-avatar { @apply bg-gray-200 rounded animate-pulse h-10 w-10 rounded-full; }
+.skeleton-avatar { @apply bg-gray-200 animate-pulse h-10 w-10 rounded-full; }
 
 /* ───────────────────── EMPTY STATE ───────────────────── */
 .empty-state { @apply flex flex-col items-center justify-center py-12 px-4 text-center; }

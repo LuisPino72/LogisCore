@@ -61,9 +61,9 @@ describe('AUTH-001: Login', () => {
     });
   });
 
-  describe('DEBE rechazar email mayor a 20 caracteres', () => {
-    it('Given: Email de 21 caracteres', () => {
-      const input = { email: 'a'.repeat(21) + '@test.com', password: '123456' };
+  describe('DEBE rechazar email mayor a 30 caracteres', () => {
+    it('Given: Email de 31 caracteres', () => {
+      const input = { email: 'a'.repeat(31) + '@test.com', password: '123456' };
       
       expect(() => {
         validateLoginInput(input);
