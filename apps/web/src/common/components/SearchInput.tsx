@@ -1,50 +1,34 @@
-import { type FC, useState, useEffect } from 'react';
+import { type FC } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-interface SearchInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  debounceMs?: number;
-  disabled?: boolean;
+interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  onClear?: () => void;
   className?: string;
 }
 
-export const SearchInput: FC<SearchInputProps> = ({
+export const SearchInput: FC<SearchInputProps> = ({ 
+  onClear, 
+  className, 
   value,
-  onChange,
-  placeholder = 'Buscar...',
-  debounceMs = 300,
-  disabled,
-  className,
+  ...props 
 }) => {
-  const [localValue, setLocalValue] = useState(value);
-
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localValue !== value) onChange(localValue);
-    }, debounceMs);
-    return () => clearTimeout(timer);
-  }, [localValue, debounceMs, onChange, value]);
-
   return (
     <div className={cn('search-input-wrapper', className)}>
-      <Search className="search-input-icon" size={16} />
-      <input
-        className="search-input"
-        type="text"
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
+      <div className="search-input-icon">
+        <Search size={16} />
+      </div>
+      <input 
+        className="search-input" 
+        value={value}
+        {...props} 
       />
-      {localValue && (
-        <button className="search-input-clear" onClick={() => setLocalValue('')}>
+      {value && (
+        <button 
+          type="button"
+          onClick={onClear}
+          className="search-input-clear"
+        >
           <X size={16} />
         </button>
       )}

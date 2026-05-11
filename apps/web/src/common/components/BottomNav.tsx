@@ -29,7 +29,7 @@ export const BottomNav: FC<BottomNavProps> = ({ items, activeKey, className }) =
             onClick={item.onClick}
           >
             <div className="relative">
-              {item.icon}
+              <div className="bottom-nav-icon">{item.icon}</div>
               {item.badge !== undefined && item.badge > 0 && (
                 <span className="bottom-nav-badge">
                   {item.badge > 99 ? '99+' : item.badge}

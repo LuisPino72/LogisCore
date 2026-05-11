@@ -1,66 +1,56 @@
-import { type FC, type ReactNode, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { type FC, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface ModalProps {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
-  title?: string;
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  title: string;
   children: ReactNode;
   footer?: ReactNode;
-  closeOnOverlay?: boolean;
+  size?: 'sm' | 'md' | 'lg' | 'full';
+  className?: string;
 }
 
-export const Modal: FC<ModalProps> = ({
-  open,
-  onClose,
-  title,
+export const Modal: FC<ModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children, 
+  footer, 
   size = 'md',
-  children,
-  footer,
-  closeOnOverlay = true,
+  className 
 }) => {
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [open]);
+  if (!isOpen) return null;
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  const sizeClasses = {
+    sm: 'modal-content-sm',
+    md: 'modal-content',
+    lg: 'modal-content-lg',
+    full: 'modal-content-full',
+  };
 
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      className="modal-overlay"
-      onClick={closeOnOverlay ? onClose : undefined}
-    >
-      <div
-        className={cn('modal-content', 'modal-content-' + size)}
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div 
+        className={cn('modal-content', sizeClasses[size], className)} 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2 className="modal-title">{title}</h2>
-          <button className="modal-close" onClick={onClose}>
+          <h3 className="modal-title">{title}</h3>
+          <button onClick={onClose} className="modal-close">
             <X size={20} />
           </button>
         </div>
-        <div className="modal-body">{children}</div>
-        {footer && <div className="modal-footer">{footer}</div>}
+        <div className="modal-body">
+          {children}
+        </div>
+        {footer && (
+          <div className="modal-footer">
+            {footer}
+          </div>
+        )}
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 };

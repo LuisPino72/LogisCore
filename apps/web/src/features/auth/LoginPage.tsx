@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button, Input, Alert, Card } from '@/common/components';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -23,23 +23,19 @@ export function LoginPage() {
         {/* Header Section */}
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="relative">
-            {/* Subtle glow effect using the primary color with very low opacity */}
-            <div 
-              className="absolute inset-0 blur-3xl rounded-full scale-150 opacity-20" 
-              style={{ backgroundColor: 'var(--color-primary)' }}
-            />
+            {/* Subtle glow effect */}
+            <div className="absolute inset-0 blur-3xl rounded-full scale-150 bg-primary/20" />
             <img 
               src="/Emblema.ico" 
               alt="LogisCore Logo" 
-              className="relative w-20 h-20 rounded-2xl shadow-sm"
-              style={{ backgroundColor: 'white' }}
+              className="relative w-20 h-20 rounded-2xl shadow-sm bg-white"
             />
           </div>
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--color-primary)' }}>
-              LogisCore <span style={{ color: 'var(--color-accent)' }}>ERP</span>
+            <h1 className="text-3xl font-bold tracking-tight font-title text-primary">
+              LogisCore <span className="text-accent">ERP</span>
             </h1>
-            <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="text-sm font-medium text-text-secondary">
               Gestión inteligente para tu negocio
             </p>
           </div>
@@ -55,10 +51,9 @@ export function LoginPage() {
                 placeholder="nombre@correo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                leftIcon={<Mail size={18} className="text-text-muted" />}
+                iconLeft={<Mail size={18} />}
                 error={fieldErrors.email}
                 autoComplete="email"
-                className="transition-all duration-200"
               />
 
               <div className="flex flex-col gap-1.5">
@@ -68,19 +63,20 @@ export function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  leftIcon={<Lock size={18} className="text-text-muted" />}
+                  iconLeft={<Lock size={18} />}
                   error={fieldErrors.password}
                   autoComplete="current-password"
-                  className="transition-all duration-200"
+                  iconRight={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-text-muted hover:text-text-secondary transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  }
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="self-end text-xs font-medium transition-colors cursor-pointer py-1"
-                  style={{ color: 'var(--color-primary)' }}
-                >
-                  {showPassword ? 'Ocultar' : 'Mostrar contraseña'}
-                </button>
               </div>
             </div>
 
@@ -96,17 +92,16 @@ export function LoginPage() {
               size="lg"
               fullWidth
               loading={isLoggingIn}
-              className="shadow-md hover:shadow-lg transform transition-all active:scale-[0.98]"
+              className="shadow-lg"
             >
-              Iniciar Sesión
+              {isLoggingIn ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
           </form>
         </Card>
 
         {/* Footer */}
-        <p className="text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
-          &copy; {new Date().getFullYear()} LogisCore ERP. <br />
-          Soporte técnico especializado.
+        <p className="text-xs text-center text-text-muted leading-relaxed">
+          &copy; {new Date().getFullYear()} LogisCore ERP
         </p>
       </div>
     </div>

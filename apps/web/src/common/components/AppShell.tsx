@@ -1,19 +1,22 @@
 import { type FC, type ReactNode } from 'react';
-import { cn } from '../../lib/utils';
 
 interface AppShellProps {
-  topBar?: ReactNode;
-  bottomNav?: ReactNode;
   children: ReactNode;
+  topBar: ReactNode;
+  bottomNav?: ReactNode;
   className?: string;
 }
 
-export const AppShell: FC<AppShellProps> = ({ topBar, bottomNav, children, className }) => {
+export const AppShell: FC<AppShellProps> = ({ children, topBar, bottomNav, className }) => {
   return (
-    <div className="app-shell">
-      {topBar && <div className="app-topbar">{topBar}</div>}
-      <main className={cn('app-shell-content', className)}>{children}</main>
-      {bottomNav}
+    <div className={`app-shell ${className}`}>
+      <header className="app-topbar">
+        {topBar}
+      </header>
+      <main className="app-shell-content">
+        {children}
+      </main>
+      {bottomNav && <footer>{bottomNav}</footer>}
     </div>
   );
 };

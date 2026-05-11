@@ -13,6 +13,7 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "clean": "turbo clean",
+    "new:plan": "node scripts/create-plan.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "new:module": "node scripts/new-module.mjs"
   },

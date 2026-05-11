@@ -1,26 +1,44 @@
 import { type FC } from 'react';
 import { cn } from '../../lib/utils';
 
+type SpinnerSize = 'sm' | 'md' | 'lg';
+type SkeletonVariant = 'text' | 'title' | 'avatar' | 'shimmer';
+
 interface SpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: SpinnerSize;
   className?: string;
 }
 
 interface SkeletonProps {
-  variant?: 'text' | 'title' | 'avatar';
+  variant?: SkeletonVariant;
   count?: number;
   className?: string;
 }
 
 export const Spinner: FC<SpinnerProps> = ({ size = 'md', className }) => {
-  return <span className={cn('spinner', 'spinner-' + size, className)} />;
+  return (
+    <span
+      className={cn('spinner', `spinner-${size}`, className)}
+      role="status"
+      aria-label="Cargando..."
+    />
+  );
 };
 
-export const Skeleton: FC<SkeletonProps> = ({ variant = 'text', count = 1, className }) => {
+export const Skeleton: FC<SkeletonProps> = ({ variant = 'shimmer', count = 1, className }) => {
+  const shimmerBase = 'bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded';
+
+  const variants: Record<SkeletonVariant, string> = {
+    text: 'skeleton-text',
+    title: 'skeleton-title',
+    avatar: 'skeleton-avatar',
+    shimmer: `${shimmerBase} h-4 w-full`,
+  };
+
   return (
     <div className="flex flex-col gap-2" role="status" aria-label="Cargando...">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className={cn('skeleton-' + variant, className)} />
+        <div key={i} className={cn(variants[variant], className)} />
       ))}
     </div>
   );

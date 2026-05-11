@@ -1,52 +1,40 @@
-import { type FC, type InputHTMLAttributes, useId } from 'react';
+import { type FC, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
-  leftIcon?: React.ReactNode;
+  iconLeft?: ReactNode;
+  iconRight?: ReactNode;
+  className?: string;
 }
 
-export const Input: FC<InputProps> = ({
-  label,
-  error,
-  hint,
-  leftIcon,
-  id: externalId,
-  className,
-  type = 'text',
-  ...props
+export const Input: FC<InputProps> = ({ 
+  label, 
+  error, 
+  hint, 
+  iconLeft, 
+  iconRight, 
+  className, 
+  ...props 
 }) => {
-  const generatedId = useId();
-  const id = externalId || generatedId;
-
-  const inputMode = type === 'number' ? 'decimal' : type === 'tel' ? 'numeric' : undefined;
-  const step = type === 'number' ? 'any' : undefined;
-
   return (
-    <div className="input-wrapper">
-      {label && (
-        <label htmlFor={id} className="input-label">
-          {label}
-        </label>
-      )}
+    <div className={cn('input-wrapper', className)}>
+      {label && <label className="input-label">{label}</label>}
       <div className="relative">
-        {leftIcon && <span className="input-icon-left">{leftIcon}</span>}
-        <input
-          id={id}
-          type={type}
-          inputMode={inputMode}
-          step={step}
-          className={cn('input', leftIcon && 'input-with-icon', error && 'input-error', className)}
-          {...props}
+        {iconLeft && <div className="input-icon-left">{iconLeft}</div>}
+        <input 
+          className={cn(
+            'input', 
+            error && 'input-error'
+          )} 
+          {...props} 
         />
+        {iconRight && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{iconRight}</div>}
       </div>
-      {error ? (
-        <p className="input-error-text">{error}</p>
-      ) : hint ? (
-        <p className="input-hint">{hint}</p>
-      ) : null}
+      {error && <span className="input-error-text">{error}</span>}
+      {hint && !error && <span className="input-hint">{hint}</span>}
     </div>
   );
 };

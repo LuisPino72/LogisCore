@@ -22,6 +22,7 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
   keyExtractor: (item: T) => string;
   className?: string;
+  stickyHeader?: boolean;
 }
 
 export function DataTable<T>({
@@ -33,8 +34,9 @@ export function DataTable<T>({
   onRowClick,
   keyExtractor,
   className,
+  stickyHeader,
 }: DataTableProps<T>) {
-  if (loading) return <Skeleton variant="text" count={5} />;
+  if (loading) return <Skeleton variant="shimmer" count={5} />;
 
   if (data.length === 0) {
     return (
@@ -49,26 +51,51 @@ export function DataTable<T>({
   return (
     <div className={cn('data-table', className)}>
       <div
-        className="data-table-header"
+        className={cn(
+          'data-table-header',
+          stickyHeader && 'sticky top-0 z-10',
+        )}
         style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}
       >
         {columns.map((col) => (
           <div key={col.key} className={cn('data-table-cell font-semibold', col.className)}>
-            {col.header}
+            {col.sortable ? (
+              <button className="flex items-center gap-1 hover:text-gray-700 transition-colors">
+                {col.header}
+                <svg width="12" height="12" viewBox="0 0 12 12" className="text-gray-400">
+                  <path d="M6 2L2 7h8L6 2zM6 10L2 5h8L6 10z" fill="currentColor" />
+                </svg>
+              </button>
+            ) : (
+              col.header
+            )}
           </div>
         ))}
       </div>
-      {data.map((item) => (
+      {data.map((item, index) => (
         <div
           key={keyExtractor(item)}
-          className="data-table-row"
+          className={cn(
+            'data-table-row',
+            index % 2 === 0 && 'bg-white',
+            index % 2 !== 0 && 'bg-gray-50/50',
+            onRowClick && 'cursor-pointer',
+          )}
           style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}
           onClick={() => onRowClick?.(item)}
           role={onRowClick ? 'button' : undefined}
           tabIndex={onRowClick ? 0 : undefined}
+          onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(item); } : undefined}
         >
           {columns.map((col) => (
-            <div key={col.key} className={cn('data-table-cell', col.className)}>
+            <div
+              key={col.key}
+              className={cn(
+                'data-table-cell',
+                col.hideOnMobile && 'hidden sm:flex',
+                col.className,
+              )}
+            >
               {col.render
                 ? col.render(item)
                 : String((item as Record<string, unknown>)[col.key] ?? '')}

@@ -1,4 +1,4 @@
-import { type FC, type ButtonHTMLAttributes } from 'react';
+import { type FC, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -6,7 +6,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
   loading?: boolean;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
+  iconLeft?: ReactNode;
+  iconRight?: ReactNode;
 }
 
 export const Button: FC<ButtonProps> = ({
@@ -16,6 +18,8 @@ export const Button: FC<ButtonProps> = ({
   loading,
   disabled,
   icon,
+  iconLeft,
+  iconRight,
   children,
   className,
   type = 'button',
@@ -28,7 +32,7 @@ export const Button: FC<ButtonProps> = ({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        `btn-${variant}`,
+        `btn btn-${variant}`,
         `btn-${size}`,
         fullWidth && 'btn-full',
         loading && 'btn-loading',
@@ -37,8 +41,17 @@ export const Button: FC<ButtonProps> = ({
       )}
       {...props}
     >
-      {loading ? <span className="spinner spinner-sm" /> : icon}
-      {children}
+      {loading ? (
+        <span className="spinner spinner-sm" />
+      ) : isIconOnly ? (
+        icon
+      ) : (
+        <>
+          {iconLeft}
+          {children}
+          {iconRight}
+        </>
+      )}
     </button>
   );
 };
