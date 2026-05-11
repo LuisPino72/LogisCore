@@ -8,8 +8,8 @@ export const CreateTenantInputSchema = z.object({
 export type CreateTenantInput = z.infer<typeof CreateTenantInputSchema>;
 
 export const CreateOwnerInputSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres'),
+  email: z.string().email('Email inválido').max(20, 'Email máximo 20 caracteres'),
+  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
   name: z.string().min(1, 'Nombre requerido'),
   tenantId: z.string().uuid('ID de tenant inválido'),
 }).strict();
@@ -17,8 +17,8 @@ export const CreateOwnerInputSchema = z.object({
 export type CreateOwnerInput = z.infer<typeof CreateOwnerInputSchema>;
 
 export const CreateEmployeeInputSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres'),
+  email: z.string().email('Email inválido').max(20, 'Email máximo 20 caracteres'),
+  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
   name: z.string().min(1, 'Nombre requerido'),
   tenantId: z.string().uuid('ID de tenant inválido'),
 }).strict();
@@ -26,8 +26,8 @@ export const CreateEmployeeInputSchema = z.object({
 export type CreateEmployeeInput = z.infer<typeof CreateEmployeeInputSchema>;
 
 export const EdgeCreateUserSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres'),
+  email: z.string().email('Email inválido').max(20, 'Email máximo 20 caracteres'),
+  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
   name: z.string().min(1, 'Nombre requerido'),
 }).strict();
 

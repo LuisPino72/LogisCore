@@ -33,6 +33,7 @@ export function LoginPage() {
             onChange={(e) => { setEmail(e.target.value); clearLoginError(); }}
             error={fieldErrors.email}
             iconLeft={<Mail size={18} className="text-gray-400" />}
+            iconOutside
             autoComplete="email"
           />
 
@@ -44,6 +45,7 @@ export function LoginPage() {
             onChange={(e) => { setPassword(e.target.value); clearLoginError(); }}
             error={fieldErrors.password}
             iconLeft={<Lock size={18} className="text-gray-400" />}
+            iconOutside
             iconRight={
               <button
                 type="button"

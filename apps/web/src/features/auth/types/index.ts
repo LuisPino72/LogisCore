@@ -3,8 +3,8 @@ import { z } from 'zod';
 /** Auth Spec - AUTH-001..003 */
 
 export const LoginInputSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres'),
+  email: z.string().email('Email inválido').max(20, 'Email máximo 20 caracteres'),
+  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
 });
 
 export type LoginInput = z.infer<typeof LoginInputSchema>;

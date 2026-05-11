@@ -60,6 +60,26 @@ describe('AUTH-001: Login', () => {
       }).toThrow();
     });
   });
+
+  describe('DEBE rechazar email mayor a 20 caracteres', () => {
+    it('Given: Email de 21 caracteres', () => {
+      const input = { email: 'a'.repeat(21) + '@test.com', password: '123456' };
+      
+      expect(() => {
+        validateLoginInput(input);
+      }).toThrow();
+    });
+  });
+
+  describe('DEBE rechazar password mayor a 20 caracteres', () => {
+    it('Given: Password de 21 caracteres', () => {
+      const input = { email: 'test@test.com', password: 'a'.repeat(21) };
+      
+      expect(() => {
+        validateLoginInput(input);
+      }).toThrow();
+    });
+  });
 });
 
 describe('AUTH-002: Redireccion por rol', () => {
