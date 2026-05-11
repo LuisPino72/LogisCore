@@ -56,7 +56,7 @@ describe('ADMIN-001: AdminPanel', () => {
   describe('ESCENARIO 3: Admin crea tenant con owner y empleados', () => {
     it('Given: admin autenticado / When: crea tenant con datos validos / Then: success con tenant+owner+employees', async () => {
       const payload = {
-        tenant: { name: 'Mi Bodega', rif: 'V123456789' },
+        tenant: { name: 'Mi Bodega', rif: 'V-123456789' },
         owner: { email: 'owner@bodega.com', password: '123456', name: 'Juan Owner' },
         employees: [
           { email: 'emp1@bodega.com', password: '123456', name: 'Maria Emp' },
@@ -70,7 +70,7 @@ describe('ADMIN-001: AdminPanel', () => {
       mockAdminService.createTenant.mockResolvedValue({
         ok: true,
         data: {
-          tenant: { id: 'uuid-1', name: 'Mi Bodega', slug: 'mi-bodega', rif: 'V123456789' },
+          tenant: { id: 'uuid-1', name: 'Mi Bodega', slug: 'mi-bodega', rif: 'V-123456789' },
           owner: { id: 'uuid-2', email: 'owner@bodega.com', name: 'Juan Owner' },
           employees: [
             { id: 'uuid-3', email: 'emp1@bodega.com', name: 'Maria Emp' },
@@ -97,7 +97,7 @@ describe('ADMIN-001: AdminPanel', () => {
         email: `emp${i}@test.com`, password: '123456', name: `Emp ${i}`,
       }));
       const parsed = CreateTenantWithUsersInputSchema.safeParse({
-        tenant: { name: 'Test', rif: 'V123456789' },
+        tenant: { name: 'Test', rif: 'V-123456789' },
         owner: { email: 'owner@test.com', password: '123456', name: 'Owner' },
         employees,
       });
@@ -150,7 +150,7 @@ describe('ADMIN-001: AdminPanel', () => {
       });
 
       const result = await mockAdminService.createTenant({
-        tenant: { name: 'Test', rif: 'V123456789' },
+        tenant: { name: 'Test', rif: 'V-123456789' },
         owner: { email: 'o@t.com', password: '123456', name: 'O' },
       });
 

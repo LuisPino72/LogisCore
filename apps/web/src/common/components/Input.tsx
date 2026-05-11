@@ -27,6 +27,7 @@ export const Input: FC<InputProps> = ({
         <input 
           className={cn(
             'input', 
+            iconLeft && 'pl-10',
             error && 'input-error'
           )} 
           {...props} 

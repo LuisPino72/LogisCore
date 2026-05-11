@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const CreateTenantInputSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(100),
-  rif: z.string().regex(/^[VJEGP]\d{9}$/, 'RIF inválido formato V123456789'),
+  rif: z.string().regex(/^[VJEGP]-\d{9}$/, 'RIF inválido formato J-123456789'),
 }).strict();
 
 export type CreateTenantInput = z.infer<typeof CreateTenantInputSchema>;

@@ -142,6 +142,15 @@ export const authService = {
   async signOut(): Promise<void> {
     const currentSession = await this.bootstrapSession();
 
+    // Emitir auditoría ANTES de limpiar la sesión (necesita JWT válido para audit_trail)
+    if (currentSession) {
+      EventBus.emit(SystemEvents.USER_LOGOUT, { email: currentSession.email });
+      await emitWithAudit('USER.LOGOUT', 'AUTH', { email: currentSession.email }, {
+        userId: currentSession.userId,
+        tenantUuid: currentSession.tenantId ?? null,
+      }).catch(() => {});
+    }
+
     this.stopSync();
     destroyDb();
     TenantTranslator.clearCache();
@@ -149,14 +158,6 @@ export const authService = {
     usePermissionStore.getState().clear();
     useAuthStore.getState().clearSession();
     await supabase.auth.signOut();
-
-    if (currentSession) {
-      EventBus.emit(SystemEvents.USER_LOGOUT, { email: currentSession.email });
-      await emitWithAudit('USER.LOGOUT', 'AUTH', { email: currentSession.email }, {
-        userId: currentSession.userId,
-        tenantUuid: currentSession.tenantId ?? null,
-      });
-    }
   },
 
   async refreshSession(): Promise<UserSession | null> {
