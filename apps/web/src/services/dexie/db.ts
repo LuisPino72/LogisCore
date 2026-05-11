@@ -29,6 +29,10 @@ export function getDb(): LogisCoreDB {
   return dbInstance;
 }
 
+export function isDbReady(): boolean {
+  return dbInstance !== null;
+}
+
 export function initDb(tenantSlug: string): LogisCoreDB {
   if (dbInstance && dbInstance.name === `LogisCore_${tenantSlug}`) {
     return dbInstance;

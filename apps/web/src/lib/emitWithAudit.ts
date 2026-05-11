@@ -1,4 +1,5 @@
 import { outboxService } from '@/services/outbox/outboxService';
+import { isDbReady } from '@/services/dexie/db';
 import { logAuditEvent } from './auditTrail';
 
 export async function emitWithAudit(
@@ -12,9 +13,11 @@ export async function emitWithAudit(
   },
 ): Promise<void> {
   try {
-    const enqueueResult = await outboxService.enqueue(eventName, module, payload);
-    if (!enqueueResult.ok) {
-      console.error(`[emitWithAudit] Outbox enqueue falló para ${eventName}:`, enqueueResult.error);
+    if (isDbReady()) {
+      const enqueueResult = await outboxService.enqueue(eventName, module, payload);
+      if (!enqueueResult.ok) {
+        console.error(`[emitWithAudit] Outbox enqueue falló para ${eventName}:`, enqueueResult.error);
+      }
     }
 
     await logAuditEvent({

@@ -11,9 +11,9 @@ export default defineConfig({
     include: [
       'apps/web/src/**/*.test.ts',
       'apps/web/src/**/*.test.tsx',
+      'apps/web/src/**/*.spec.ts',
       'packages/core/src/**/*.test.ts',
       'packages/shared/src/**/*.test.ts',
-      'tests/**/*.spec.ts',
     ],
   },
 });
