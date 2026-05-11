@@ -82,7 +82,15 @@ function Dashboard() {
 const App = () => {
   const { isAuthenticated, isLoading, role } = useAuth();
   const error = useAuthStore((s) => s.error);
+  const session = useAuthStore((s) => s.session);
   const { currentView, setView } = useNavigationStore();
+
+  // Inicializar vista al cargar la página (bootstrapSession no emite USER_LOGIN)
+  useEffect(() => {
+    if (isAuthenticated && currentView === 'loading') {
+      setView(role === 'admin' ? 'admin' : 'dashboard', role === 'admin' ? null : (session?.tenantSlug ?? null));
+    }
+  }, [isAuthenticated, role, session, currentView, setView]);
 
   useEffect(() => {
     const subs: ReturnType<typeof EventBus.on>[] = [];
