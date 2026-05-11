@@ -18,7 +18,7 @@ export const adminService = {
   async fetchTenants(): Promise<Result<Tenant[], AppError>> {
     const { data, error } = await supabase
       .from('tenants')
-      .select('id, name, slug, rif, is_active, plan, created_at')
+      .select('id, name, slug, rif, created_at')
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -31,8 +31,6 @@ export const adminService = {
       name: t.name as string,
       slug: t.slug as string,
       rif: t.rif as string,
-      isActive: (t.is_active as boolean) ?? true,
-      plan: (t.plan as Tenant['plan']) ?? 'basic',
       createdAt: t.created_at as string,
     }));
 
@@ -149,7 +147,7 @@ export const adminService = {
       .from('tenants')
       .update(data)
       .eq('id', id)
-      .select('id, name, slug, rif, is_active, plan, created_at')
+      .select('id, name, slug, rif, created_at')
       .single();
 
     if (error || !updated) {
@@ -161,8 +159,6 @@ export const adminService = {
       name: updated.name,
       slug: updated.slug,
       rif: updated.rif,
-      isActive: updated.is_active ?? true,
-      plan: (updated.plan ?? 'basic') as Tenant['plan'],
       createdAt: updated.created_at,
     });
   },

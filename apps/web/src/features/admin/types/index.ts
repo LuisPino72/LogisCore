@@ -46,8 +46,6 @@ export interface Tenant {
   name: string;
   slug: string;
   rif: string;
-  isActive: boolean;
-  plan: 'basic' | 'pro';
   createdAt: string;
 }
 
