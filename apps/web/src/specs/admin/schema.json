@@ -1,0 +1,11 @@
+{
+  "module": "admin",
+  "version": "1.0.0",
+  "specs": {
+    "ADMIN-001": "Crear tenant con owner y empleados",
+    "ADMIN-002": "Gestionar suscripciones (renovar/vencer)",
+    "ADMIN-003": "Listar usuarios globales y por tenant"
+  },
+  "tables": ["tenants", "user_roles", "subscriptions"],
+  "dependencies": ["supabase.edge-functions"]
+}

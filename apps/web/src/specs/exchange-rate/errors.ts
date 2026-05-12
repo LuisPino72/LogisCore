@@ -1,0 +1,19 @@
+/**
+ * Exchange Rate Errors - EXCH-001..004
+ */
+
+export const ExchangeRateErrors = {
+  // EXCH-001: API
+  EXCHANGE_RATE_API_FAILED: 'EXCHANGE_RATE_API_FAILED',
+  EXCHANGE_RATE_NOT_FOUND: 'EXCHANGE_RATE_NOT_FOUND',
+  EXCHANGE_RATE_INVALID: 'EXCHANGE_RATE_INVALID',
+  
+  // EXCH-002: Fallback
+  EXCHANGE_RATE_FALLBACK_USED: 'EXCHANGE_RATE_FALLBACK_USED',
+  
+  // EXCH-003: Manual
+  EXCHANGE_RATE_MANUAL_INVALID: 'EXCHANGE_RATE_MANUAL_INVALID',
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
+} as const;
+
+export type ExchangeRateErrorCode = typeof ExchangeRateErrors[keyof typeof ExchangeRateErrors];

@@ -22,8 +22,8 @@ Thumbs.db
 # Memory / Brain
 memoria/
 
-# Specs
-apps/web/src/specs/
+# SDD - Fuente de verdad del módulo (SE TRACKEA, requerido para build)
+# tests/specs/ - BDD scenarios (opcional)
 tests/specs/
 scripts/
 # Logs
@@ -34,10 +34,15 @@ logs/
 coverage/
 .vercel/
 
-# Supabase
-supabase/
+# Supabase (track migrations + schema, ignore temp + local config)
 supabase/.branches/
 supabase/.temp/
+supabase/.branches
+!supabase/migrations/
+!supabase/schema.dbml
+!supabase/seed.sql
+!supabase/config.toml
+!supabase/functions/
 opencode.json
 skills-lock.json
 

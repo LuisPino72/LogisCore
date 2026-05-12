@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Purchases Schema",
+  "definitions": {
+    "PurchaseOrder": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "supplierName": { "type": "string" },
+        "totalUsd": { "type": "number" },
+        "totalBs": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "confirmed", "received"] }
+      }
+    },
+    "PurchaseItem": {
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "costUsd": { "type": "number" }
+      }
+    }
+  }
+}

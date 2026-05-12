@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Inventory Schema",
+  "definitions": {
+    "Product": {
+      "type": "object",
+      "required": ["id", "name", "sku", "priceUsd", "isWeighted", "unit", "stock"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "sku": { "type": "string" },
+        "priceUsd": { "type": "number", "minimum": 0.01 },
+        "categoryId": { "type": ["string", "null"] },
+        "isWeighted": { "type": "boolean" },
+        "unit": { "type": "string", "enum": ["kg", "gr", "lt", "m", "unidad"] },
+        "stock": { "type": "integer", "minimum": 0 },
+        "stockMin": { "type": ["integer", "null"] },
+        "deletedAt": { "type": ["string", "null"] }
+      }
+    },
+    "Category": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" }
+      }
+    },
+    "InventoryMovement": {
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "type": { "type": "string", "enum": ["sale", "purchase", "adjustment"] },
+        "quantity": { "type": "number" },
+        "previousStock": { "type": "integer" },
+        "newStock": { "type": "integer" }
+      }
+    }
+  }
+}

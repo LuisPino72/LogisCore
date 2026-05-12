@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Exchange Rate Schema",
+  "definitions": {
+    "ExchangeRate": {
+      "type": "object",
+      "required": ["id", "rate", "source", "fetchedAt"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "rate": { "type": "number", "minimum": 0.01, "maximum": 999999.9999 },
+        "source": { "type": "string", "enum": ["api", "manual", "fallback"] },
+        "fetchedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": ["string", "null"] }
+      }
+    },
+    "ExchangeRateInput": {
+      "type": "object",
+      "required": ["rate"],
+      "properties": {
+        "rate": { "type": "number", "minimum": 0.01, "maximum": 999999.99 }
+      }
+    }
+  }
+}

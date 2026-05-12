@@ -1,0 +1,139 @@
+// ============================================================
+// LogisCore ERP — Database Schema
+// Fuente de verdad: supabase/migrations/
+//
+// Reglas:
+// - dinero = NUMERIC(19,2) en Postgres, number en TS
+// - soft_delete = deleted_at timestamptz nullable
+// - multi-tenant = todas las tablas tienen tenant_id
+//   (en cloud UUID, en local slug)
+// ============================================================
+
+Table tenants {
+  id uuid [pk]
+  slug text [unique, not null]
+  name text [not null]
+  rif text [not null]
+  created_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table user_roles {
+  id uuid [pk]
+  user_id uuid [not null, ref: > auth.users.id]
+  tenant_id uuid [ref: > tenants.id]
+  role text [not null]
+  created_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table subscriptions {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  plan text [not null, default: 'basic']
+  status text [not null, default: 'active']
+  started_at timestamptz [default: `now()`]
+  expires_at timestamptz
+  updated_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table audit_trail {
+  id uuid [pk]
+  event_name text [not null]
+  event_module text [not null]
+  user_id uuid [ref: > auth.users.id]
+  tenant_id uuid [ref: > tenants.id] -- nullable: admin users may not have tenant context
+  payload jsonb [default: '{}']
+  severity text [not null, default: 'INFO']
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table outbox {
+  id uuid [pk]
+  event text [not null]
+  module text [not null]
+  payload jsonb [default: '{}']
+  status text [not null, default: 'pending']
+  retries int [not null, default: 0]
+  last_error text
+  next_retry_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  processed_at timestamptz
+}
+
+Table exchange_rates {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  rate numeric(19,4) [not null]
+  source text [not null]
+  fetched_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz
+}
+
+// ===== INVENTORY (INV-007) =====
+
+Table products {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  name text [not null]
+  sku text [not null]
+  price_usd numeric(19,2) [not null]
+  category_id uuid [ref: > categories.id]
+  is_weighted boolean [not null, default: false]
+  unit text [not null]
+  stock integer [not null, default: 0]
+  stock_min integer
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table categories {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  name text [not null]
+  slug text [not null]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table inventory_movements {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  product_id uuid [not null, ref: > products.id]
+  user_id uuid [not null, ref: > auth.users.id]
+  type text [not null]
+  quantity integer [not null]
+  previous_stock integer [not null]
+  new_stock integer [not null]
+  reason text
+  created_at timestamptz [default: `now()`]
+}
+
+Table inventory_lots {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  product_id uuid [not null, ref: > products.id]
+  quantity_added integer [not null]
+  remaining_quantity integer [not null]
+  source_movement_id uuid [ref: > inventory_movements.id]
+  created_at timestamptz [default: `now()`]
+}
+
+// Refs
+Ref: user_roles.tenant_id - tenants.id
+Ref: subscriptions.tenant_id - tenants.id
+Ref: audit_trail.tenant_id - tenants.id
+Ref: exchange_rates.tenant_id - tenants.id
+Ref: products.tenant_id - tenants.id
+Ref: products.category_id - categories.id
+Ref: categories.tenant_id - tenants.id
+Ref: inventory_movements.tenant_id - tenants.id
+Ref: inventory_movements.product_id - products.id
+Ref: inventory_movements.user_id - auth.users.id
+Ref: inventory_lots.tenant_id - tenants.id
+Ref: inventory_lots.product_id - products.id
+Ref: inventory_lots.source_movement_id - inventory_movements.id

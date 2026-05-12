@@ -1,0 +1,11 @@
+{
+  "module": "auth",
+  "version": "1.0.0",
+  "specs": {
+    "AUTH-001": "Login con credenciales válidas",
+    "AUTH-002": "Redirección por rol post-login",
+    "AUTH-003": "Protección de rutas para sesiones no autenticadas"
+  },
+  "tables": [],
+  "dependencies": ["supabase.auth"]
+}

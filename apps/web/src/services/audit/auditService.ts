@@ -50,5 +50,8 @@ export async function logAuditEvent(payload: {
   if (payload.userId) insertPayload.user_id = payload.userId;
   if (payload.tenantUuid) insertPayload.tenant_id = payload.tenantUuid;
 
-  await supabase.from('audit_trail').insert(insertPayload);
+  const { error } = await supabase.from('audit_trail').insert(insertPayload);
+  if (error) {
+    console.warn(`[auditService] Audit insert falló para ${payload.eventName}:`, error.message);
+  }
 }
