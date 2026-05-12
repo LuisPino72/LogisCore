@@ -12,7 +12,7 @@ import type {
 } from './types';
 import { DEFAULT_BATCH_SIZE, SYNC_INTERVAL_MS } from './types';
 
-const CATALOG_TABLES: string[] = [];
+const CATALOG_TABLES: string[] = ['products', 'categories'];
 
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();
@@ -145,7 +145,16 @@ export class SyncEngine {
 
         if (data && data.length > 0) {
           for (const record of data) {
-            await db.table(tableName).put(record);
+            const local: Record<string, unknown> = {};
+            for (const [key, val] of Object.entries(record)) {
+              const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+              local[camel] = val;
+            }
+            if (tableName === 'products' || tableName === 'categories') {
+              const tenantId = local.tenantId || record.tenant_id;
+              if (tenantId) local.tenantId ??= tenantId;
+            }
+            await db.table(tableName).put(local);
             result.pushed++;
           }
         }

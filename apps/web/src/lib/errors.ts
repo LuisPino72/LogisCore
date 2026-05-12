@@ -97,6 +97,10 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   INVENTORY_STOCK_INSUFFICIENT: makeError('INVENTORY_STOCK_INSUFFICIENT', 'INV-001', 'Stock insuficiente para la operación.', 'INVENTORY'),
   INVENTORY_LOT_FIFO_CONFLICT: makeError('INVENTORY_LOT_FIFO_CONFLICT', 'INV-002', 'Conflicto en el consumo de capas FIFO.', 'INVENTORY'),
   WEIGHTED_MOVEMENT_QUANTITY_INVALID: makeError('WEIGHTED_MOVEMENT_QUANTITY_INVALID', 'INV-003', 'Cantidad de producto pesable inválida.', 'INVENTORY'),
+  CATEGORY_HAS_PRODUCTS: makeError('CATEGORY_HAS_PRODUCTS', 'INV-004', 'No se puede eliminar una categoría que tiene productos asociados.', 'INVENTORY'),
+  INVENTORY_ADJUSTMENT_INVALID: makeError('INVENTORY_ADJUSTMENT_INVALID', 'INV-005', 'El ajuste de inventario debe incluir un motivo.', 'INVENTORY'),
+  INVENTORY_LOT_EXHAUSTED: makeError('INVENTORY_LOT_EXHAUSTED', 'INV-006', 'Lote de inventario agotado durante consumo FIFO.', 'INVENTORY'),
+  PRODUCT_STOCK_NEGATIVE: makeError('PRODUCT_STOCK_NEGATIVE', 'INV-007', 'El stock del producto no puede ser negativo.', 'INVENTORY'),
 
   // ===== SALES =====
   SALE_BOX_CLOSED: makeError('SALE_BOX_CLOSED', 'SALE-001', 'La caja está cerrada. Ábrala para realizar ventas.', 'SALES'),

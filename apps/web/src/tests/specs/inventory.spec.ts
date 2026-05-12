@@ -7,13 +7,14 @@ import { CreateProductInputSchema, PESABLE_UNITS } from '../../specs/inventory';
 
 describe('INV-001: CRUD Producto', () => {
   describe('Owner crea producto exitoso', () => {
-    it('Given: Input { name: "Harina PAN", sku: "HP-001", priceUsd: 2.50, isWeighted: false, unit: "unidad" }', () => {
+    it('Given: Input { name: "Harina PAN", sku: "HP-001", priceUsd: 2.50, isWeighted: false, unit: "unidad", categoryId: "550e8400-e29b-41d4-a716-446655440000" }', () => {
       const input = {
         name: 'Harina PAN',
         sku: 'HP-001',
         priceUsd: 2.50,
         isWeighted: false,
         unit: 'unidad',
+        categoryId: '550e8400-e29b-41d4-a716-446655440000',
       };
       
       // When: Valida input

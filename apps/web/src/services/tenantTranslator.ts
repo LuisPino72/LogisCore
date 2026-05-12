@@ -2,10 +2,17 @@ import type { TenantInfo } from '@logiscore/core';
 import { AppError } from '@logiscore/core';
 import { supabase } from './supabase/client';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const cache = new Map<string, string>();
 
 export class TenantTranslator {
   static async slugToUuid(slug: string): Promise<string> {
+    // If the "slug" is actually a UUID, use it directly
+    if (UUID_RE.test(slug)) {
+      cache.set(slug, slug);
+      return slug;
+    }
+
     const cached = this.findInCache(slug);
     if (cached) return cached;
 

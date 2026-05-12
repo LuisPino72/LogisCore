@@ -46,8 +46,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
       return new Date(dateStr).toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
+        year: '2-digit',
       });
     } catch {
       return '';
@@ -58,15 +57,15 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
     <>
       <div className="flex flex-col items-center space-y-1.5">
         <div className="flex items-center gap-1.5">
-          <DollarSign size={14} className="text-success" />
-          <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tasa BCV</span>
+          <DollarSign size={18} className="text-success" />
+          <span className="text-[18px] font-semibold text-gray-500 uppercase tracking-wider">Tasa BCV</span>
         </div>
 
         <div className="flex items-baseline gap-1">
           <span className="text-base font-title font-bold text-success">
             {loading ? '-' : formatRate(rate)}
           </span>
-          <span className="text-[9px] text-text-muted">/ $</span>
+          <span className="text-[9px] text-text-muted"></span>
         </div>
 
         {error && (
@@ -76,10 +75,10 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
           </div>
         )}
 
-        <div className="text-[9px] text-text-muted">
-          {source === 'bcv_api' && 'BCV'}
+        <div className="text-[14px]">
+          {source === 'bcv_api'}
           {source === 'manual' && 'Manual'}
-          {fetchedAt && ` · ${formatDate(fetchedAt)}`}
+          {fetchedAt && `${formatDate(fetchedAt)}`}
         </div>
 
         {isOwner && (
@@ -87,25 +86,25 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
             <Button
               variant="ghost"
               size="sm"
-              className="px-2! py-1! text-[10px]!"
+              className="px-2! py-1! text-[12px]!"
               onClick={handleUpdate}
               disabled={isUpdating || !tenantId}
             >
               {isUpdating ? (
                 <Spinner size="sm" />
               ) : (
-                <RefreshCw size={11} />
+                <RefreshCw size={20} />
               )}
               Actualizar
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="px-2! py-1! text-[10px]!"
+              className="px-2! py-1! text-[12px]!"
               onClick={() => setShowModal(true)}
               disabled={isUpdating || !tenantId}
             >
-              <Settings size={11} />
+              <Settings size={20} />
               Manual
             </Button>
           </div>

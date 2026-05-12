@@ -3,6 +3,7 @@ import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { initDb, destroyDb } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
+import type { SyncTableConfig } from '../../../services/sync/types';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
 function decodeJWTPayload(token: string): Record<string, unknown> {
@@ -140,6 +141,13 @@ export const authService = {
   },
 
   startSync(): void {
+    const inventoryTables: SyncTableConfig[] = [
+      { name: 'products', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'categories', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'inventory_movements', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'inventory_lots', type: 'transactional', conflictStrategy: 'REMOTE_WINS', localIdField: 'id', remoteIdField: 'id' },
+    ];
+    inventoryTables.forEach((cfg) => syncEngine.registerTable(cfg));
     syncEngine.start();
   },
 

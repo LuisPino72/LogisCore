@@ -31,6 +31,7 @@ import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 import { DashboardPage } from './features/dashboard/components/DashboardPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
+import { InventoryPage } from './features/inventory';
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
@@ -97,7 +98,7 @@ function DashboardLayout() {
   const session = useAuthStore((s) => s.session);
   const selectedTenantSlug = useNavigationStore((s) => s.selectedTenantSlug);
   const [activeModule, setActiveModule] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const isAdmin = session?.role === 'admin';
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
@@ -129,6 +130,8 @@ function DashboardLayout() {
     switch (activeModule) {
       case 'dashboard':
         return <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />;
+      case 'inventory':
+        return <InventoryPage tenantId={effectiveTenantId} />;
       default:
         return <ModulePlaceholder moduleId={activeModule} />;
     }
