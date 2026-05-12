@@ -6,19 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { validateLoginInput, AUTH_ROUTES } from '../../features/auth/types';
 
-// Mock auth service (will be implemented in services/)
-const mockAuthService = {
-  login: vi.fn(),
-  logout: vi.fn(),
-  getSession: vi.fn(),
-  refreshSession: vi.fn(),
-};
-
-// Mock router redirect
-const mockRouter = {
-  push: vi.fn(),
-};
-
 describe('AUTH-001: Login', () => {
   beforeEach(() => {
     vi.clearAllMocks();

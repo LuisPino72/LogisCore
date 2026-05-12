@@ -27,7 +27,6 @@ describe('PURCH-001: Orden de Compra', () => {
 describe('PURCH-002: Recepción', () => {
   describe('Recibir mercancía completa', () => {
     it('Given: orden=confirmed, recibida=100/100', () => {
-      const status = 'confirmed';
       const newStatus = 'received';
       
       expect(newStatus).toBe('received');

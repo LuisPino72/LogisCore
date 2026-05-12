@@ -6,14 +6,15 @@ interface AppShellProps {
   topBar: ReactNode;
   bottomNav?: ReactNode;
   sidebar?: ReactNode;
+  sidebarOpen?: boolean;
   className?: string;
 }
 
-export const AppShell: FC<AppShellProps> = ({ children, topBar, bottomNav, sidebar, className }) => {
+export const AppShell: FC<AppShellProps> = ({ children, topBar, bottomNav, sidebar, sidebarOpen = true, className }) => {
   return (
     <div className={cn('app-shell', className)}>
       {sidebar}
-      <div className={cn('app-shell-main', sidebar && 'md:pl-64')}>
+      <div className={cn('app-shell-main', sidebar && sidebarOpen && 'md:pl-48')}>
         <header className="app-topbar">
           {topBar}
         </header>

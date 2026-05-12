@@ -1,13 +1,9 @@
-import { type UserSession, AppError, Result, success, failure } from '@logiscore/core';
+import { type UserSession, AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { initDb, destroyDb } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
-import { EventBus, SystemEvents } from '@logiscore/core';
-import { emitWithAudit } from '../../../lib/emitWithAudit';
-import { useNavigationStore } from '../../../stores/navigationStore';
-import { usePermissionStore } from '../../../stores/permissionStore';
-import { useAuthStore } from '../stores/authStore';
+import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
 function decodeJWTPayload(token: string): Record<string, unknown> {
   try {
@@ -80,30 +76,33 @@ function mapSupabaseAuthError(error: { message: string; status?: number }): AppE
 }
 
 export const authService = {
-  async bootstrapSession(): Promise<UserSession | null> {
+  async bootstrapSession(): Promise<Result<UserSession | null, AppError>> {
     const { data: { session }, error } = await supabase.auth.getSession();
 
     if (error || !session) {
-      return null;
+      return success(null);
     }
 
     const role = extractRole(session);
 
     if (!role) {
-      throw new AppError(
-        'AUTH_NO_ROLE',
-        'No se encontró rol asignado. Contacta al administrador.',
-        { details: { code: 'FORBIDDEN_NO_ROLE' } },
+      return failure(
+        new AppError(
+          'AUTH_NO_ROLE',
+          'No se encontró rol asignado. Contacta al administrador.',
+          { details: { code: 'FORBIDDEN_NO_ROLE' } },
+        ),
       );
     }
 
     const userSession = await buildUserSession(session);
 
     if (userSession.tenantId) {
-      await authService.checkSubscriptionActive(userSession.tenantId);
+      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
+      if (!subCheck.ok) return subCheck;
     }
 
-    return userSession;
+    return success(userSession);
   },
 
   async login(email: string, password: string): Promise<Result<UserSession, AppError>> {
@@ -132,7 +131,6 @@ export const authService = {
       if (!subCheck.ok) return subCheck;
     }
 
-    EventBus.emit(SystemEvents.USER_LOGIN, { email, role: userSession.role, tenantSlug: userSession.tenantSlug });
     await emitWithAudit('USER.LOGIN', 'AUTH', { email, role: userSession.role, tenantSlug: userSession.tenantSlug }, {
       userId: userSession.userId,
       tenantUuid: userSession.tenantId ?? null,
@@ -149,32 +147,36 @@ export const authService = {
     syncEngine.stop();
   },
 
-  async signOut(): Promise<void> {
-    const currentSession = await this.bootstrapSession();
+  async signOut(): Promise<Result<void, AppError>> {
+    // 1. Emitir evento de navegación para limpiar UI inmediatamente
+    // (evento de navegación, NO write de negocio — Regla #17 no aplica)
+    EventBus.emit(SystemEvents.USER_LOGOUT);
 
-    // Emitir auditoría ANTES de limpiar la sesión (necesita JWT válido para audit_trail)
+    // 2. Obtener sesión para auditoría (no bloqueante)
+    const sessionResult = await this.bootstrapSession();
+    const currentSession = sessionResult.ok ? sessionResult.data : null;
+
+    // 3. Audit trail solo si tenemos sesión válida (necesita JWT para RLS)
     if (currentSession) {
-      EventBus.emit(SystemEvents.USER_LOGOUT, { email: currentSession.email });
       await emitWithAudit('USER.LOGOUT', 'AUTH', { email: currentSession.email }, {
         userId: currentSession.userId,
         tenantUuid: currentSession.tenantId ?? null,
-      }).catch(() => {});
+      });
     }
 
+    // 4. Limpieza de infraestructura
     this.stopSync();
     destroyDb();
     TenantTranslator.clearCache();
-    useNavigationStore.getState().setView('login');
-    usePermissionStore.getState().clear();
-    useAuthStore.getState().clearSession();
     await supabase.auth.signOut();
+    return success(undefined);
   },
 
-  async refreshSession(): Promise<UserSession | null> {
+  async refreshSession(): Promise<Result<UserSession | null, AppError>> {
     const { data: { session }, error } = await supabase.auth.refreshSession();
 
     if (error || !session) {
-      return null;
+      return success(null);
     }
 
     return this.bootstrapSession();

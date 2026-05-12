@@ -5,7 +5,10 @@ import { authService } from '../../features/auth/services/authService';
 
 export function LogoutButton() {
   const handleLogout = useCallback(async () => {
-    await authService.signOut();
+    const result = await authService.signOut();
+    if (!result.ok) {
+      console.error('[LogoutButton] Error al cerrar sesión:', result.error.message);
+    }
   }, []);
 
   return (

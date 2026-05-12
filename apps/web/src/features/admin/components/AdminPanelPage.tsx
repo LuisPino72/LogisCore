@@ -204,7 +204,7 @@ export function AdminPanelPage() {
       key: 'actions',
       header: 'Acciones',
       render: (u) => {
-        if (u.role === 'owner') return <Badge variant="info">Owner</Badge>;
+        if (u.role === 'owner') return <Badge variant="info">Propietario</Badge>;
         return (
           <Button variant="danger" size="sm" onClick={() => handleRemoveEmployee(u.id)}>
             <Trash2 size={16} />
@@ -242,12 +242,12 @@ export function AdminPanelPage() {
         <div className="flex items-center gap-3 px-2">
           <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
             <Store size={18} className="text-primary" />
-            <span className="font-semibold text-sm text-primary">AdminPanel</span>
+            <span className="font-semibold text-sm text-primary">Panel Admin</span>
           </div>
           <div className="flex-1" />
           {activeSheet === 'tenants' ? (
             <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
-              <Plus size={16} /> Nuevo Tenant
+              <Plus size={16} /> Nuevo Local
             </Button>
           ) : activeSheet === 'users' ? (
             <div className="flex gap-2">
@@ -264,39 +264,42 @@ export function AdminPanelPage() {
       }
     >
       <div className="flex border-b border-gray-200 bg-white sticky top-0 z-10">
-        <button
-          onClick={() => setActiveSheet('tenants')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-5 py-3 ${
             activeSheet === 'tenants'
               ? 'border-primary text-primary'
               : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
           }`}
+          onClick={() => setActiveSheet('tenants')}
         >
           <Building2 size={16} />
-          Tenants
-        </button>
-        <button
-          onClick={() => setActiveSheet('all-users')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+          Locales
+        </Button>
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-5 py-3 ${
             activeSheet === 'all-users'
               ? 'border-primary text-primary'
               : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
           }`}
+          onClick={() => setActiveSheet('all-users')}
         >
           <UsersRound size={16} />
           Todos los Usuarios
-        </button>
-        <button
-          onClick={() => setActiveSheet('subscriptions')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
+        </Button>
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-5 py-3 ${
             activeSheet === 'subscriptions'
               ? 'border-primary text-primary'
               : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
           }`}
+          onClick={() => setActiveSheet('subscriptions')}
         >
           <CreditCard size={16} />
           Suscripciones
-        </button>
+        </Button>
       </div>
 
       <div className="p-6 space-y-6">
@@ -304,14 +307,14 @@ export function AdminPanelPage() {
           <Card>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Tenants</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{tenants.length} registro{tenants.length !== 1 ? 's' : ''}</p>
+                <h2 className="text-lg font-semibold text-gray-900">Locales</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{tenants.length} local{tenants.length !== 1 ? 'es' : ''}</p>
               </div>
             </div>
             <DataTable
               columns={tenantColumns}
               data={tenants}
-              emptyMessage="No hay tenants creados. Crea el primero."
+              emptyMessage="No hay locales creados. Crea el primero."
               keyExtractor={(t: Tenant) => t.id}
             />
           </Card>
@@ -328,7 +331,7 @@ export function AdminPanelPage() {
             <DataTable
               columns={userColumns}
               data={users}
-              emptyMessage="No hay usuarios en este tenant."
+              emptyMessage="No hay usuarios en este local."
               keyExtractor={(u: UserRole) => u.id}
             />
           </Card>
@@ -347,7 +350,7 @@ export function AdminPanelPage() {
                 { key: 'email', header: 'Email' },
                 { key: 'name', header: 'Nombre' },
                 { key: 'role', header: 'Rol' },
-                { key: 'tenantName', header: 'Tenant' },
+                { key: 'tenantName', header: 'Local' },
               ]}
               data={allUsers}
               emptyMessage="No hay usuarios registrados."
@@ -361,12 +364,12 @@ export function AdminPanelPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Suscripciones</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{subscriptions.length} tenenat{subscriptions.length !== 1 ? 's' : ''}</p>
+                <p className="text-sm text-gray-500 mt-0.5">{subscriptions.length} local{subscriptions.length !== 1 ? 'es' : ''}</p>
               </div>
             </div>
             <DataTable
               columns={[
-                { key: 'tenantName', header: 'Tenant' },
+                { key: 'tenantName', header: 'Local' },
                 {
                   key: 'plan',
                   header: 'Plan',
@@ -431,7 +434,7 @@ export function AdminPanelPage() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => { setShowCreateModal(false); setCreateError(null); }}
-        title="Crear nuevo tenant"
+        title="Crear nuevo local"
       >
         <div className="space-y-4">
           <div>
@@ -450,7 +453,7 @@ export function AdminPanelPage() {
           </div>
 
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Owner (obligatorio)</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">Propietario (obligatorio)</p>
             <Input
               placeholder="Nombre del owner"
               value={createForm.owner.name}
@@ -534,7 +537,7 @@ export function AdminPanelPage() {
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="Editar tenant"
+        title="Editar local"
       >
         <div className="space-y-4">
           <Input

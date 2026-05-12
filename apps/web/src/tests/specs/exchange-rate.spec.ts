@@ -2,14 +2,8 @@
  * Exchange Rate BDD Tests - EXCH-001..004
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { validateExchangeRateInput, EXCHANGE_RATE_CONFIG } from '../../specs/exchange-rate';
-
-const mockExchangeRateService = {
-  getLatest: vi.fn(),
-  setManual: vi.fn(),
-  clearCache: vi.fn(),
-};
+import { describe, it, expect } from 'vitest';
+import { validateExchangeRateInput } from '../../specs/exchange-rate';
 
 describe('EXCH-001: Obtener tasa BCV automatica', () => {
   describe('API responde correctamente y guarda tasa', () => {

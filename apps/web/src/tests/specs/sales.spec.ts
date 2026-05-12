@@ -9,7 +9,6 @@ describe('SALE-001: Abrir Caja', () => {
   describe('Abrir caja exitoso', () => {
     it('Given: Caja cerrada, monto inicial=5000', () => {
       const currentStatus = 'closed';
-      const initialAmount = 5000;
       const newStatus = 'open';
       
       expect(currentStatus).toBe('closed');

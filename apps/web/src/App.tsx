@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthStore } from './features/auth/stores/authStore';
+import { authService } from './features/auth/services/authService';
 import { useNavigationStore } from './stores/navigationStore';
+import { usePermissionStore } from './stores/permissionStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
-import { TenantTranslator } from './services/tenantTranslator';
+import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
 import {
   AppShell,
   Badge,
@@ -96,7 +98,6 @@ function DashboardLayout() {
   const selectedTenantSlug = useNavigationStore((s) => s.selectedTenantSlug);
   const [activeModule, setActiveModule] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [effectiveTenantId, setEffectiveTenantId] = useState<string | null>(null);
 
   const isAdmin = session?.role === 'admin';
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
@@ -107,22 +108,17 @@ function DashboardLayout() {
     ? ALL_MODULES.filter((m) => EMPLOYEE_ALLOWED.has(m.id))
     : ALL_MODULES;
 
-  // Resolver tenantId: para usuarios normales viene del JWT,
-  // para admin viendo un tenant se traduce del slug
-  useEffect(() => {
-    if (session?.tenantId) {
-      setEffectiveTenantId(session.tenantId);
-    } else if (isAdminViewingTenant && selectedTenantSlug) {
-      TenantTranslator.slugToUuid(selectedTenantSlug)
-        .then((uuid) => setEffectiveTenantId(uuid))
-        .catch(() => setEffectiveTenantId(null));
-    } else {
-      setEffectiveTenantId(null);
-    }
-  }, [session?.tenantId, selectedTenantSlug, isAdminViewingTenant]);
+  const effectiveTenantId = useTenantResolution({ session, selectedTenantSlug, isAdminViewingTenant });
 
   const handleNavigate = useCallback((moduleId: string) => {
     setActiveModule(moduleId);
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    const result = await authService.signOut();
+    if (!result.ok) {
+      console.error('[App] Error al cerrar sesión:', result.error.message);
+    }
   }, []);
 
   const renderContent = () => {
@@ -141,14 +137,16 @@ function DashboardLayout() {
   return (
     <AppShell
       topBar={
+
         <>
-          <button
-            className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
-            onClick={() => setSidebarOpen(true)}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen((prev) => !prev)}
             aria-label="Abrir menú"
           >
             <Menu size={22} />
-          </button>
+          </Button>
           {isAdminViewingTenant && (
             <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}>
               <ArrowLeft size={18} />
@@ -156,12 +154,14 @@ function DashboardLayout() {
             </Button>
           )}
           <Store size={20} className="text-primary shrink-0" />
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleNavigate('dashboard')}
-            className="font-semibold text-sm flex-1 text-left hover:text-primary transition-colors"
+            className="font-semibold text-sm flex-1 text-left"
           >
             LogisCore
-          </button>
+          </Button>
           {displaySlug && <Badge variant="info">{displaySlug}</Badge>}
           {role && <Badge variant="success">{role}</Badge>}
         </>
@@ -174,6 +174,7 @@ function DashboardLayout() {
           activeModule={activeModule}
           onNavigate={handleNavigate}
           userEmail={session?.email ?? ''}
+          onLogout={handleLogout}
           footerSlot={
             effectiveTenantId ? (
               <ExchangeRateWidget tenantId={effectiveTenantId} role={role ?? null} />
@@ -181,6 +182,7 @@ function DashboardLayout() {
           }
         />
       }
+      sidebarOpen={sidebarOpen}
     >
       {renderContent()}
     </AppShell>
@@ -223,6 +225,14 @@ const App = () => {
     subs.push(
       EventBus.on(SystemEvents.ADMIN_EXIT_TENANT, () => {
         setView('admin');
+      }),
+    );
+
+    subs.push(
+      EventBus.on(SystemEvents.USER_LOGOUT, () => {
+        useNavigationStore.getState().setView('login');
+        usePermissionStore.getState().clear();
+        useAuthStore.getState().clearSession();
       }),
     );
 

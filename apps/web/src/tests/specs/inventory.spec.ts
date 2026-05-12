@@ -90,7 +90,7 @@ describe('INV-003: Pesables', () => {
   describe('Producto pesable con unidades válidas', () => {
     it('Given: unit="kg"', () => {
       const unit = 'kg';
-      const isValid = PESABLE_UNITS.includes(unit as any);
+      const isValid = PESABLE_UNITS.includes(unit as typeof PESABLE_UNITS[number]);
       
       expect(isValid).toBe(true);
     });
@@ -99,7 +99,7 @@ describe('INV-003: Pesables', () => {
   describe('Producto pesable con unidad inválida -> error', () => {
     it('Given: unit="caja"', () => {
       const unit = 'caja';
-      const isValid = PESABLE_UNITS.includes(unit as any);
+      const isValid = PESABLE_UNITS.includes(unit as typeof PESABLE_UNITS[number]);
       
       expect(isValid).toBe(false);
     });

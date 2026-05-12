@@ -17,6 +17,10 @@ export default tseslint.config(
         Headers: 'readonly',
         atob: 'readonly',
         btoa: 'readonly',
+        process: 'readonly',
+        __dirname: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
       },
     },
     rules: {

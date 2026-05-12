@@ -2,7 +2,7 @@ import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import type { Tenant, UserRole, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView } from '../types';
 import { AdminErrors } from '../types/errors';
-import { emitWithAudit } from '../../../lib/emitWithAudit';
+import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
 const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-tenant`;
 

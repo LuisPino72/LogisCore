@@ -56,54 +56,58 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
 
   return (
     <>
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <DollarSign size={16} className="text-success" />
-          <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Tasa BCV</span>
+      <div className="flex flex-col items-center space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <DollarSign size={14} className="text-success" />
+          <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tasa BCV</span>
         </div>
 
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-lg font-title font-bold text-success">
+        <div className="flex items-baseline gap-1">
+          <span className="text-base font-title font-bold text-success">
             {loading ? '-' : formatRate(rate)}
           </span>
-          <span className="text-[10px] text-text-muted">/ $</span>
+          <span className="text-[9px] text-text-muted">/ $</span>
         </div>
 
         {error && (
-          <div className="flex items-start gap-1.5 text-[11px] text-danger">
-            <AlertCircle size={12} className="mt-0.5 shrink-0" />
+          <div className="flex items-start gap-1 text-[10px] text-danger">
+            <AlertCircle size={10} className="mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="text-[10px] text-text-muted">
+        <div className="text-[9px] text-text-muted">
           {source === 'bcv_api' && 'BCV'}
           {source === 'manual' && 'Manual'}
           {fetchedAt && ` · ${formatDate(fetchedAt)}`}
         </div>
 
         {isOwner && (
-          <div className="flex gap-2 pt-1">
-            <button
+          <div className="flex gap-1.5 pt-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="!px-2 !py-1 !text-[10px]"
               onClick={handleUpdate}
               disabled={isUpdating || !tenantId}
-              className="btn btn-ghost btn-sm"
             >
               {isUpdating ? (
                 <Spinner size="sm" />
               ) : (
-                <RefreshCw size={14} />
+                <RefreshCw size={11} />
               )}
-              <span className="text-xs">Actualizar</span>
-            </button>
-            <button
+              Actualizar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="!px-2 !py-1 !text-[10px]"
               onClick={() => setShowModal(true)}
               disabled={isUpdating || !tenantId}
-              className="btn btn-ghost btn-sm"
             >
-              <Settings size={14} />
-              <span className="text-xs">Manual</span>
-            </button>
+              <Settings size={11} />
+              Manual
+            </Button>
           </div>
         )}
       </div>

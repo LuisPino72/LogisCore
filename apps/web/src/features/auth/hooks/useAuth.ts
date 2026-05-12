@@ -18,18 +18,19 @@ export function useAuth(): {
 
     authService
       .bootstrapSession()
-      .then((userSession) => {
-        if (userSession) {
-          setSession(userSession);
-          if (userSession.tenantId) {
-            authService.startSync();
+      .then((result) => {
+        if (result.ok) {
+          if (result.data) {
+            setSession(result.data);
+            if (result.data.tenantId) {
+              authService.startSync();
+            }
+          } else {
+            clearSession();
           }
         } else {
-          clearSession();
+          clearSession(result.error.message);
         }
-      })
-      .catch((err) => {
-        clearSession(err instanceof Error ? err.message : 'Error al iniciar sesión');
       });
 
     return () => {

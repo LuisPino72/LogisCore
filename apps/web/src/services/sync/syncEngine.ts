@@ -1,4 +1,5 @@
-import { AppError, EventBus, failure, success, type Result } from '@logiscore/core';
+import { AppError, failure, success, type Result } from '@logiscore/core';
+import { emitEngineEvent } from '../audit/emitWithAudit';
 import { supabase } from '../supabase/client';
 import { TenantTranslator } from '../tenantTranslator';
 import { getDb } from '../dexie/db';
@@ -11,7 +12,7 @@ import type {
 } from './types';
 import { DEFAULT_BATCH_SIZE, SYNC_INTERVAL_MS } from './types';
 
-const CATALOG_TABLES = ['tenantRefs'];
+const CATALOG_TABLES: string[] = [];
 
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();
@@ -43,7 +44,7 @@ export class SyncEngine {
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
 
     try {
-      EventBus.emit('SYNC.BATCH_STARTED', { batchSize });
+      emitEngineEvent('SYNC.BATCH_STARTED', { batchSize });
 
       while (true) {
         const items = await syncQueue.dequeue(batchSize);
@@ -66,11 +67,11 @@ export class SyncEngine {
         }
       }
 
-      EventBus.emit('SYNC.BATCH_COMPLETED', result);
+      emitEngineEvent('SYNC.BATCH_COMPLETED', result);
       return success(result);
     } catch (err) {
       const appErr = err instanceof AppError ? err : new AppError('SYNC_BATCH_FAILED', 'Error en lote de sincronización');
-      EventBus.emit('SYNC.ERROR', appErr);
+      emitEngineEvent('SYNC.ERROR', appErr);
       return failure(appErr);
     } finally {
       this.isSyncing = false;
@@ -101,7 +102,7 @@ export class SyncEngine {
             strategy: cfg.conflictStrategy,
           });
           await supabase.from(item.table).upsert(resolved).maybeSingle();
-          EventBus.emit('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
+          emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
         } else {
           const { error } = await supabase.from(item.table).upsert(remotePayload).maybeSingle();
           if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
@@ -196,11 +197,3 @@ export class SyncEngine {
 }
 
 export const syncEngine = new SyncEngine();
-
-syncEngine.registerTable({
-  name: 'tenantRefs',
-  type: 'catalog',
-  conflictStrategy: 'REMOTE_WINS',
-  localIdField: 'slug',
-  remoteIdField: 'id',
-});

@@ -6,8 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   CreateTenantInputSchema,
-  CreateOwnerInputSchema,
-  CreateEmployeeInputSchema,
   CreateTenantWithUsersInputSchema,
 } from '../../features/admin/types';
 import { SystemEvents } from '@logiscore/core/src/event-bus';
