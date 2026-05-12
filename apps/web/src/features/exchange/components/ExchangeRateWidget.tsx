@@ -87,7 +87,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
             <Button
               variant="ghost"
               size="sm"
-              className="!px-2 !py-1 !text-[10px]"
+              className="px-2! py-1! text-[10px]!"
               onClick={handleUpdate}
               disabled={isUpdating || !tenantId}
             >
@@ -101,7 +101,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
             <Button
               variant="ghost"
               size="sm"
-              className="!px-2 !py-1 !text-[10px]"
+              className="px-2! py-1! text-[10px]!"
               onClick={() => setShowModal(true)}
               disabled={isUpdating || !tenantId}
             >
