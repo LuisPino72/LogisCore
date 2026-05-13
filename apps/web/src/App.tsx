@@ -99,11 +99,10 @@ function DashboardLayout() {
   const selectedTenantSlug = useNavigationStore((s) => s.selectedTenantSlug);
   const [activeModule, setActiveModule] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false); // collapsed by default on mobile
+  const [sidebarExpanded, setSidebarExpanded] = useState(false); 
 
   const isAdmin = session?.role === 'admin';
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
-  const displaySlug = selectedTenantSlug ?? session?.tenantSlug;
   const role = session?.role ?? null;
 
   const sidebarModules = role === 'employee'
