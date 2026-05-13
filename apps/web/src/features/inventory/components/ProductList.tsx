@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Package, Trash2, Plus, ClipboardList, AlertTriangle, Edit3 } from 'lucide-react';
+import { Package, Trash2, Plus, AlertTriangle, Edit3 } from 'lucide-react';
 import { Button, Badge, DataTable, EmptyState } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
@@ -98,9 +98,6 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
             </Button>
             <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1">
               <Edit3 size={14} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onViewHistory(product.id)} className="p-1">
-              <ClipboardList size={14} />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1">
               <Trash2 size={14} className="text-danger" />
