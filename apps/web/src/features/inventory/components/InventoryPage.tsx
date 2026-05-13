@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Package, ListTree, Plus, History, AlertTriangle } from 'lucide-react';
-import { Button, Card, EmptyState, Modal } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
 import { CategoryManager } from './CategoryManager';
-import { StockAdjustmentModal } from './StockAdjustmentModal';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
 import type { CreateProductInput, Product } from '../types';
@@ -33,6 +32,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showAdjustment, setShowAdjustment] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [adjProductId, setAdjProductId] = useState<string>('');
+  const [adjQuantity, setAdjQuantity] = useState('');
+  const [adjReason, setAdjReason] = useState('');
+  const [adjError, setAdjError] = useState('');
+  const [adjSubmitting, setAdjSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
 
   const isOwner = role === 'owner' || role === 'admin';
@@ -40,7 +44,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const tabs = [
     { id: 'productos' as const, label: 'Productos', icon: <Package size={16} /> },
     { id: 'categorias' as const, label: 'Categorías', icon: <ListTree size={16} /> },
-    { id: 'ajustes' as const, label: 'Ajustes', icon: <Plus size={16} /> },
     { id: 'historial' as const, label: 'Historial', icon: <History size={16} /> },
   ];
 
@@ -83,6 +86,38 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     setShowProductForm(true);
   };
 
+  // sync modal initial values when opened
+  useEffect(() => {
+    if (showAdjustment) {
+      setAdjProductId(selectedProductId ?? '');
+      setAdjQuantity('');
+      setAdjReason('');
+      setAdjError('');
+      setAdjSubmitting(false);
+    }
+  }, [showAdjustment, selectedProductId]);
+
+  const handleSubmitAdjustment = async () => {
+    if (!adjProductId) { setAdjError('Selecciona un producto'); return; }
+    const qty = parseFloat(adjQuantity);
+    if (isNaN(qty) || qty === 0) { setAdjError('Ingresa una cantidad válida (positiva o negativa)'); return; }
+    if (!adjReason.trim()) { setAdjError('El motivo es obligatorio'); return; }
+
+    setAdjSubmitting(true);
+    setAdjError('');
+    const ok = await handleAdjustStock(adjProductId, qty, adjReason.trim());
+    setAdjSubmitting(false);
+
+    if (ok) {
+      setAdjQuantity('');
+      setAdjReason('');
+      setSelectedProductId(null);
+      setShowAdjustment(false);
+    } else {
+      setAdjError('Error al ajustar stock. Verifica el stock disponible.');
+    }
+  };
+
   if (!tenantId) {
     return <EmptyState icon={<Package size={48} />} title="Selecciona un tenant" description="No hay tenant activo" />;
   }
@@ -111,7 +146,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      <div className="flex gap-1 overflow-x-auto pb-1 items-center">
         {tabs.map((tab) => (
           <Button
             key={tab.id}
@@ -124,6 +159,19 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <span className="ml-1">{tab.label}</span>
           </Button>
         ))}
+        {/* Reuse the PLUS button to open the stock adjustment modal (option 1) */}
+        {isOwner && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setSelectedProductId(null); setShowAdjustment(true); }}
+            className="shrink-0"
+            aria-label="Ajuste de stock"
+            title="Ajuste de stock"
+          >
+            <Plus size={16} />
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -154,21 +202,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           </div>
         )}
 
-        {activeTab === 'ajustes' && (
-          <div className="p-4">
-            <h2 className="text-sm font-semibold mb-4">Ajuste manual de stock</h2>
-            {!isOwner ? (
-              <p className="text-sm text-gray-500">Solo el propietario puede hacer ajustes.</p>
-            ) : (
-              <StockAdjustmentModal
-                isOpen={true}
-                products={products}
-                onAdjust={handleAdjustStock}
-                onClose={() => setActiveTab('productos')}
-              />
-            )}
-          </div>
-        )}
+        {/* removed ajustes tab content — functionality moved to modal triggered by + button */}
 
         {activeTab === 'historial' && (
           <div className="p-4">
@@ -192,14 +226,43 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         />
       )}
 
-      {showAdjustment && selectedProductId && (
-        <StockAdjustmentModal
-          isOpen={showAdjustment}
-          onClose={() => { setShowAdjustment(false); setSelectedProductId(null); }}
-          products={products}
-          selectedProductId={selectedProductId}
-          onAdjust={handleAdjustStock}
-        />
+      {showAdjustment && (
+        <Modal isOpen={showAdjustment} onClose={() => { setShowAdjustment(false); setSelectedProductId(null); }} title="Ajuste de stock">
+          <div className="space-y-4">
+            <div className="input-wrapper">
+              <label className="input-label">Producto</label>
+              <select className="select" value={adjProductId} onChange={(e) => setAdjProductId(e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock}</option>
+                ))}
+              </select>
+            </div>
+
+            {products.find((p) => p.id === adjProductId) && (
+              <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                Stock actual: <strong>{products.find((p) => p.id === adjProductId)?.stock}</strong>
+              </div>
+            )}
+
+            <div className="input-wrapper">
+              <label className="input-label">Cantidad</label>
+              <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} inputClassName="text-sm px-2 py-2" />
+            </div>
+
+            <div className="input-wrapper">
+              <label className="input-label">Motivo (obligatorio)</label>
+              <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} inputClassName="text-sm px-2 py-2" />
+            </div>
+
+            {adjError && <p className="text-xs text-danger">{adjError}</p>}
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setSelectedProductId(null); }}>Cancelar</Button>
+              <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {confirmDelete && (

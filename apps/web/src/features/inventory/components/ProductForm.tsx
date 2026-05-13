@@ -32,28 +32,30 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={isEditing ? 'Editar producto' : 'Nuevo producto'}>
       <div className="space-y-4">
-        <div className="input-wrapper">
-          <label className="input-label">Nombre del producto</label>
+        <div className="input-wrapper text-center">
+          <label className="input-label text-center">Nombre del producto</label>
           <Input
             placeholder="Ej: Harina PAN"
             value={formData.name}
             onChange={(e) => setField('name', e.target.value)}
             error={errors.name}
+            inputClassName="text-sm px-2 py-2"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="input-wrapper">
-            <label className="input-label">SKU</label>
+            <label className="input-label text-center">SKU</label>
             <Input
               placeholder="Ej: HP-001"
               value={formData.sku}
               onChange={(e) => setField('sku', e.target.value)}
               error={errors.sku}
+              inputClassName="text-sm px-2 py-2"
             />
           </div>
           <div className="input-wrapper">
-            <label className="input-label">Precio USD</label>
+            <label className="input-label text-center">Precio USD</label>
             <Input
               type="number"
               step="0.01"
@@ -62,6 +64,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               value={formData.priceUsd || ''}
               onChange={(e) => setField('priceUsd', parseFloat(e.target.value) || 0)}
               error={errors.priceUsd}
+              inputClassName="text-sm px-2 py-2"
             />
           </div>
         </div>

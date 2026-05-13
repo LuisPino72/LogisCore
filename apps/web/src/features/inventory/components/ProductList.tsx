@@ -70,7 +70,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
           <ProductSearchInput value={searchQuery} onChange={handleSearch} />
         </div>
           <select
-            className="input text-sm max-w-[130px] sm:max-w-[160px] shrink-0"
+            className="input text-sm w-full sm:max-w-[160px]"
             value={filterCategory}
             onChange={(e) => handleCategoryFilter(e.target.value)}
           >
@@ -91,13 +91,15 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
-              <Badge variant={getStockVariant(product)}>
-                {displayStock(product.stock, product.unit)} {product.unit}
-              </Badge>
-              {product.stockMin && product.stock <= product.stockMin && (
-                <AlertTriangle size={12} className="text-danger" />
-              )}
-              <span className="hidden sm:inline text-[10px] text-gray-400">
+              <div className="flex items-center gap-2 min-w-0">
+                <Badge variant={getStockVariant(product)} className="shrink-0">
+                  {displayStock(product.stock, product.unit)} {product.unit}
+                </Badge>
+                {product.stockMin && product.stock <= product.stockMin && (
+                  <AlertTriangle size={12} className="text-danger" />
+                )}
+              </div>
+              <span className="text-[10px] text-gray-400 truncate">
                 {product.isWeighted ? 'Pesable' : 'Unidad'}
                 <span className="hidden sm:inline">
                   {product.categoryId && categoryMap.has(product.categoryId) && ` · ${categoryMap.get(product.categoryId)}`}
@@ -106,20 +108,21 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
             </div>
           </div>
           {isOwner && (
-            <div className="flex gap-1 shrink-0">
-              <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)}>
+            <div className="flex gap-1 flex-none items-center">
+              <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1">
                 <Plus size={14} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)}>
+              <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1">
                 <Edit3 size={14} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => onViewHistory(product.id)}>
+              <Button variant="ghost" size="sm" onClick={() => onViewHistory(product.id)} className="p-1">
                 <ClipboardList size={14} />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onRequestDelete(product.id, product.name)}
+                className="p-1"
               >
                 <Trash2 size={14} className="text-danger" />
               </Button>

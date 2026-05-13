@@ -2,7 +2,7 @@ export { InventoryPage } from './components/InventoryPage';
 export { ProductList } from './components/ProductList';
 export { ProductForm } from './components/ProductForm';
 export { CategoryManager } from './components/CategoryManager';
-export { StockAdjustmentModal } from './components/StockAdjustmentModal';
+// StockAdjustmentModal removed — adjustment flow is now modal-driven from InventoryPage
 export { MovementHistory } from './components/MovementHistory';
 export { LowStockBadge } from './components/LowStockBadge';
 export { useInventory } from './hooks/useInventory';

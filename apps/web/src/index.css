@@ -150,6 +150,12 @@
 .modal-body { @apply p-4 overflow-y-auto; }
 .modal-footer { @apply flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/30; }
 
+@media (max-width: 639px) {
+  .modal-content, .modal-content-sm, .modal-content-lg, .modal-content-full {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
 /* ───────────────────── TOAST ───────────────────── */
 .toast-container { @apply fixed top-4 right-4 z-100 flex flex-col gap-2 max-w-sm; }
 .toast { @apply flex items-start gap-3 px-4 py-3 rounded-lg shadow-xl animate-slide-down backdrop-blur-md border; }
@@ -205,7 +211,7 @@
  }
 
 /* ───────────────────── BOTTOM NAV ───────────────────── */
-.bottom-nav { @apply fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-t border-gray-200; }
+.bottom-nav { @apply fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-t border-gray-200; padding-bottom: env(safe-area-inset-bottom, 0px); }
 .bottom-nav-inner { @apply flex items-center justify-around h-16; }
 .bottom-nav-item { @apply flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-gray-400 transition-all duration-150 relative; }
 .bottom-nav-active { @apply text-primary; }
@@ -253,3 +259,28 @@ aside img[alt="Emblema"] { width: 20px; height: 20px; }
 .radio-wrapper { @apply flex items-center gap-2 cursor-pointer select-none; }
 .radio { @apply h-4 w-4 border-gray-300 text-primary focus:ring-primary/30 accent-primary transition-all duration-150; }
 .radio-label { @apply text-sm text-gray-700; }
+
+/* ───────────────────── MOBILE TOUCH TARGETS ───────────────────── */
+@media (max-width: 639px) {
+  .btn-sm, .btn-md { min-height: 44px; }
+  .btn-sm { min-width: 44px; }
+  .btn-icon { min-height: 44px; min-width: 44px; }
+  .checkbox-wrapper, .radio-wrapper { min-height: 44px; }
+  .toast-container { left: 1rem; right: 1rem; max-width: none; width: auto; }
+  .input, .select, .textarea { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+}
+
+/* ───────────────────── FLUID DESIGN TOKENS ───────────────────── */
+:root {
+  --text-fluid-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-fluid-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --text-fluid-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --text-fluid-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  --text-fluid-xl: clamp(1.25rem, 1rem + 1.25vw, 1.5rem);
+  --text-fluid-2xl: clamp(1.5rem, 1.25rem + 1.25vw, 2rem);
+  --space-fluid-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
+  --space-fluid-sm: clamp(0.5rem, 0.4rem + 0.5vw, 0.75rem);
+  --space-fluid-md: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+  --space-fluid-lg: clamp(1.5rem, 1.2rem + 1.5vw, 2.5rem);
+  --space-fluid-xl: clamp(2rem, 1.5rem + 2.5vw, 4rem);
+}

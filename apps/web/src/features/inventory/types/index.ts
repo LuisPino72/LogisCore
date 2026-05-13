@@ -36,7 +36,7 @@ export interface InventoryState {
   loading: boolean;
   error: string | null;
   searchQuery: string;
-  activeTab: 'productos' | 'categorias' | 'ajustes' | 'historial';
+  activeTab: 'productos' | 'categorias' | 'historial';
 }
 
 export function kgToGrams(kg: number): number {
