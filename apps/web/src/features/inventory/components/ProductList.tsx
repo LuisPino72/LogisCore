@@ -87,7 +87,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm truncate">{product.name}</span>
-              <span className="text-[10px] text-gray-400 shrink-0">{product.sku}</span>
+              <span className="hidden sm:inline text-[10px] text-gray-400 shrink-0">{product.sku}</span>
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
@@ -97,9 +97,11 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
               {product.stockMin && product.stock <= product.stockMin && (
                 <AlertTriangle size={12} className="text-danger" />
               )}
-              <span className="text-[10px] text-gray-400">
+              <span className="hidden sm:inline text-[10px] text-gray-400">
                 {product.isWeighted ? 'Pesable' : 'Unidad'}
-                {product.categoryId && categoryMap.has(product.categoryId) && ` · ${categoryMap.get(product.categoryId)}`}
+                <span className="hidden sm:inline">
+                  {product.categoryId && categoryMap.has(product.categoryId) && ` · ${categoryMap.get(product.categoryId)}`}
+                </span>
               </span>
             </div>
           </div>
