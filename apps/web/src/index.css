@@ -275,6 +275,10 @@ aside img[alt="Emblema"] { width: 20px; height: 20px; }
 .radio { @apply h-4 w-4 border-gray-300 text-primary focus:ring-primary/30 accent-primary transition-all duration-150; }
 .radio-label { @apply text-sm text-gray-700; }
 
+/* ───────────────────── SCROLLBAR HIDE ───────────────────── */
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 /* ───────────────────── MOBILE TOUCH TARGETS ───────────────────── */
 @media (max-width: 639px) {
   .btn-sm, .btn-md { min-height: 44px; }

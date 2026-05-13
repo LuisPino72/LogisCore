@@ -146,7 +146,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto pb-1 items-center">
+      <div className="flex gap-1 overflow-x-auto pb-1 items-center scrollbar-none">
         {tabs.map((tab) => (
           <Button
             key={tab.id}

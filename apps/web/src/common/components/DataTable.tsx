@@ -121,7 +121,7 @@ export function DataTable<T>({
                     }
                     return (
                       <div key={col.key} className="flex items-start gap-2">
-                        <div className="text-gray-500 w-24 text-xs">{col.header}</div>
+                        <div className="text-gray-500 w-16 sm:w-24 text-xs">{col.header}</div>
                         <div className="text-gray-800 truncate text-sm">{content}</div>
                       </div>
                     );
