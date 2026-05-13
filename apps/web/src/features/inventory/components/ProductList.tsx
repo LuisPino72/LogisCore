@@ -49,7 +49,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
             <Package size={20} className="text-gray-400 shrink-0" />
             <div className="min-w-0">
               <div className="font-medium text-sm truncate">{product.name}</div>
-              <span className="text-[10px] text-gray-400">{product.sku}</span>
+              <span className="text-[12px]">{product.sku}</span>
             </div>
           </div>
         ),
@@ -63,11 +63,11 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
       },
       {
         key: 'stock',
-        header: 'Stock',
+        header: 'Total',
         render: (product) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 key">
             <Badge variant={getStockVariant(product)}>
-              {displayStock(product.stock, product.unit)} {product.unit}
+            {displayStock (product.stock, product.unit)}
             </Badge>
             {product.stockMin && product.stock <= product.stockMin && (
               <AlertTriangle size={12} className="text-danger shrink-0" />
@@ -81,7 +81,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         hideOnMobile: true,
         render: (product) => {
           const cat = product.categoryId ? categories.find((c) => c.id === product.categoryId) : undefined;
-          return cat ? <span className="text-[10px] text-gray-400">{cat.name}</span> : null;
+          return cat ? <span className="text-[12px]">{cat.name}</span> : null;
         },
       },
     ];
