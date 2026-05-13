@@ -77,33 +77,35 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       {!loading && movements.length > 0 && (
         <div className="space-y-2">
           {movements.map((mov) => (
-            <div key={mov.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50">
-              {getTypeIcon(mov.type)}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <Badge variant={getTypeBadge(mov.type)}>
-                    {getTypeLabel(mov)}
-                  </Badge>
-                  <span className="text-sm font-semibold">
-                    {(() => {
+            <div key={mov.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 py-2 rounded-lg bg-gray-50">
+              <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                {getTypeIcon(mov.type)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getTypeBadge(mov.type)}>
+                      {getTypeLabel(mov)}
+                    </Badge>
+                    <span className="text-sm font-semibold">
+                      {(() => {
+                        const prod = products.find(p => p.id === mov.productId);
+                        const abs = Math.abs(mov.quantity);
+                        const display = prod?.isWeighted
+                          ? displayStock(abs, prod.unit)
+                          : abs.toString();
+                        return `${mov.quantity > 0 ? '+' : '-'}${display}${prod?.isWeighted ? ` ${prod.unit}` : ''}`;
+                      })()}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">
+                    Stock: {(() => {
                       const prod = products.find(p => p.id === mov.productId);
-                      const abs = Math.abs(mov.quantity);
-                      const display = prod?.isWeighted
-                        ? displayStock(abs, prod.unit)
-                        : abs.toString();
-                      return `${mov.quantity > 0 ? '+' : '-'}${display}${prod?.isWeighted ? ` ${prod.unit}` : ''}`;
+                      if (!prod?.isWeighted) return `${mov.previousStock} → ${mov.newStock}`;
+                      return `${displayStock(mov.previousStock, prod.unit)} → ${displayStock(mov.newStock, prod.unit)} ${prod.unit}`;
                     })()}
-                  </span>
-                </div>
-                <div className="text-[10px] text-gray-400 mt-0.5">
-                  Stock: {(() => {
-                    const prod = products.find(p => p.id === mov.productId);
-                    if (!prod?.isWeighted) return `${mov.previousStock} → ${mov.newStock}`;
-                    return `${displayStock(mov.previousStock, prod.unit)} → ${displayStock(mov.newStock, prod.unit)} ${prod.unit}`;
-                  })()}
+                  </div>
                 </div>
               </div>
-              <span className="text-[10px] text-gray-400 shrink-0">
+              <span className="text-[10px] text-gray-400 shrink-0 sm:self-center self-end -mt-1 sm:mt-0">
                 {new Date(mov.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>

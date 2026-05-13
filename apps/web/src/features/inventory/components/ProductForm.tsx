@@ -43,7 +43,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="input-wrapper">
             <label className="input-label text-center">SKU</label>
             <Input
@@ -82,7 +82,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {!isEditing && (
             <div className="input-wrapper">
               <label className="input-label">

@@ -11,7 +11,7 @@ export interface SidebarModule {
 
 interface SidebarProps {
   isOpen: boolean;
-  expanded?: boolean; // collapsed (false) by default on mobile
+  expanded?: boolean;
   onToggleExpanded?: (expanded: boolean) => void;
   onClose: () => void;
   modules: SidebarModule[];
@@ -36,7 +36,6 @@ export const Sidebar: FC<SidebarProps> = ({
 }) => {
   return (
     <>
-      {/* Backdrop when expanded on mobile */}
       {expanded && (
         <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-fade-in md:hidden" onClick={() => onToggleExpanded?.(false)} />
       )}
@@ -44,7 +43,7 @@ export const Sidebar: FC<SidebarProps> = ({
       <aside
         className={`
           fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200
-          flex flex-col
+          flex flex-col h-dvh
           transform transition-[width,transform] duration-300 ease-in-out
           ${expanded ? 'w-48' : 'w-14 md:w-48'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -53,13 +52,11 @@ export const Sidebar: FC<SidebarProps> = ({
         id="app-sidebar"
       >
         <div className="flex items-center gap-2 px-3 h-12 border-b border-gray-100 shrink-0">
-          {/* Desktop: always expanded, show emblem + name */}
           <div className="hidden md:flex items-center gap-2">
             <img src="/Emblema.ico" alt="Emblema" className="h-5 w-5" />
             <span className="font-title font-bold text-sm text-gray-900">LogisCore</span>
           </div>
 
-          {/* Mobile: collapsed shows hamburger, expanded shows emblem + name + close */}
           <div className="md:hidden flex-1 flex items-center">
             {!expanded ? (
               <div className="flex-1 flex items-center justify-center">
@@ -108,6 +105,7 @@ export const Sidebar: FC<SidebarProps> = ({
                 }`}
                 onClick={() => {
                   onNavigate(mod.id);
+                  onToggleExpanded?.(false);
                 }}
                 title={!expanded ? mod.label : undefined}
               >
@@ -118,14 +116,14 @@ export const Sidebar: FC<SidebarProps> = ({
               </Button>
             ))}
           </nav>
-          {footerSlot && (
-            <div className={`px-3 py-3 border-t border-gray-100 bg-white ${expanded ? '' : 'hidden md:block'}`}>
-              {footerSlot}
-            </div>
-          )}
         </div>
 
         <div className="border-t border-gray-100 shrink-0 bg-gray-50/30">
+          {footerSlot && (
+            <div className={`px-3 py-3 ${expanded ? '' : 'hidden md:block'}`}>
+              {footerSlot}
+            </div>
+          )}
           <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
             <div className="w-5 inline-flex justify-center shrink-0">
               <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] font-bold flex items-center justify-center">

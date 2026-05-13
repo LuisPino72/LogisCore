@@ -82,33 +82,35 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
       </div>
 
       {products.map((product) => (
-        <div key={product.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-100">
-          <Package size={20} className="text-gray-400 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-sm truncate">{product.name}</span>
-              <span className="hidden sm:inline text-[10px] text-gray-400 shrink-0">{product.sku}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
-              <div className="flex items-center gap-2 min-w-0">
-                <Badge variant={getStockVariant(product)} className="shrink-0">
-                  {displayStock(product.stock, product.unit)} {product.unit}
-                </Badge>
-                {product.stockMin && product.stock <= product.stockMin && (
-                  <AlertTriangle size={12} className="text-danger" />
-                )}
+        <div key={product.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 rounded-xl bg-white border border-gray-100">
+          <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+            <Package size={20} className="text-gray-400 shrink-0 mt-0.5 sm:mt-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm truncate">{product.name}</span>
+                <span className="hidden sm:inline text-[10px] text-gray-400 shrink-0">{product.sku}</span>
               </div>
-              <span className="text-[10px] text-gray-400 truncate">
-                {product.isWeighted ? 'Pesable' : 'Unidad'}
-                <span className="hidden sm:inline">
-                  {product.categoryId && categoryMap.has(product.categoryId) && ` · ${categoryMap.get(product.categoryId)}`}
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs font-semibold shrink-0">${product.priceUsd.toFixed(2)}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Badge variant={getStockVariant(product)} className="shrink-0">
+                    {displayStock(product.stock, product.unit)} {product.unit}
+                  </Badge>
+                  {product.stockMin && product.stock <= product.stockMin && (
+                    <AlertTriangle size={12} className="text-danger shrink-0" />
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-400 truncate">
+                  {product.isWeighted ? 'Pesable' : 'Unidad'}
+                  <span className="hidden sm:inline">
+                    {product.categoryId && categoryMap.has(product.categoryId) && ` · ${categoryMap.get(product.categoryId)}`}
+                  </span>
                 </span>
-              </span>
+              </div>
             </div>
           </div>
           {isOwner && (
-            <div className="flex gap-1 flex-none items-center">
+            <div className="flex gap-1 items-center justify-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
               <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1">
                 <Plus size={14} />
               </Button>

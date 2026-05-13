@@ -234,7 +234,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               <select className="select" value={adjProductId} onChange={(e) => setAdjProductId(e.target.value)}>
                 <option value="">Seleccionar...</option>
                 {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.sku}) — Stock: {p.stock}</option>
+                  <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
                 ))}
               </select>
             </div>
