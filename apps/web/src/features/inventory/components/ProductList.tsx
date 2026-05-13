@@ -15,7 +15,6 @@ interface ProductListProps {
   onEditProduct: (product: Product) => void;
   onRequestDelete: (id: string, name: string) => void;
   onAdjust: (id: string) => void;
-  onViewHistory: (id: string) => void;
   onRefresh: () => void;
 }
 
@@ -25,7 +24,7 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewHistory }: ProductListProps) {
+export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
 
@@ -108,7 +107,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
     }
 
     return cols;
-  }, [isOwner, onAdjust, onEditProduct, onViewHistory, onRequestDelete, categories]);
+  }, [isOwner, onAdjust, onEditProduct, onRequestDelete, categories]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (

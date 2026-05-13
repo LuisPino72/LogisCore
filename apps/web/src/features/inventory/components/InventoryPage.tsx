@@ -174,7 +174,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             onEditProduct={openEditProduct}
             onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
             onAdjust={(id) => { setSelectedProductId(id); setShowAdjustment(true); }}
-            onViewHistory={(id) => { setSelectedProductId(id); setActiveTab('historial'); }}
             onRefresh={refresh}
           />
         )}

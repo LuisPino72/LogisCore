@@ -74,7 +74,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
       ) : (
         <div className="space-y-1">
           {categories.map((cat) => (
-            <div key={cat.id} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50">
+            <div key={cat.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-gray-50">
               {editingId === cat.id ? (
                 <div className="flex items-center gap-2 flex-1">
                   <Input
@@ -91,13 +91,12 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2">
-                    <ListTree size={14} className="text-gray-400" />
-                    <span className="text-sm">{cat.name}</span>
-                    <span className="text-[10px] text-gray-400">({cat.slug})</span>
+                  <div className="flex items-center gap-2 min-w-0 truncate">
+                    <ListTree size={14} className="text-gray-400 shrink-0" />
+                    <span className="text-sm truncate">{cat.name}</span>
                   </div>
                   {isOwner && (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 shrink-0">
                       <Button variant="ghost" size="sm" onClick={() => startEdit(cat)}>
                         <Edit3 size={14} />
                       </Button>
