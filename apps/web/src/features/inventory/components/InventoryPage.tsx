@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
@@ -26,6 +26,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     createProduct, updateProduct, deleteProduct, createCategory, updateCategory, deleteCategory, adjustStock,
     search, refresh, userId, role,
   } = useInventory(tenantId);
+
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
 
   const { totalLowStock } = useStockAlerts(tenantId);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -86,16 +88,15 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     setShowProductForm(true);
   };
 
-  // sync modal initial values when opened
+  // Ensure active tab button is centered in view
   useEffect(() => {
-    if (showAdjustment) {
-      setAdjProductId(selectedProductId ?? '');
-      setAdjQuantity('');
-      setAdjReason('');
-      setAdjError('');
-      setAdjSubmitting(false);
+    if (tabsContainerRef.current) {
+      const activeBtn = document.getElementById(`tab-${activeTab}`) as HTMLElement | null;
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
     }
-  }, [showAdjustment, selectedProductId]);
+  }, [activeTab]);
 
   const handleSubmitAdjustment = async () => {
     if (!adjProductId) { setAdjError('Selecciona un producto'); return; }
@@ -146,9 +147,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto pb-1 items-center scrollbar-none">
+      <div ref={tabsContainerRef} className="flex gap-1 overflow-x-auto pb-1 items-center scrollbar-none">
+
         {tabs.map((tab) => (
           <Button
+            id={`tab-${tab.id}`}
             key={tab.id}
             variant={activeTab === tab.id ? 'primary' : 'ghost'}
             size="sm"
@@ -159,6 +162,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <span className="ml-1">{tab.label}</span>
           </Button>
         ))}
+
       
         
       </div>
