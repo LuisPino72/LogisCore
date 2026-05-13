@@ -101,7 +101,6 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
                   )}
                 </div>
                 <span className="text-[10px] text-gray-400 truncate">
-                  {product.isWeighted ? 'Pesable' : 'Unidad'}
                   <span className="hidden sm:inline">
                     {product.categoryId && categoryMap.has(product.categoryId) && ` · ${categoryMap.get(product.categoryId)}`}
                   </span>
