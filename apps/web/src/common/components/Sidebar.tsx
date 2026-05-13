@@ -45,7 +45,7 @@ export const Sidebar: FC<SidebarProps> = ({
         className={`
           fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200
           flex flex-col
-          transform transition-all duration-300 ease-in-out
+          transform transition-[width,transform] duration-300 ease-in-out
           ${expanded ? 'w-48' : 'w-14 md:w-48'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
@@ -95,7 +95,7 @@ export const Sidebar: FC<SidebarProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <nav className="py-2 flex flex-col items-stretch">
             {modules.map((mod) => (
               <Button
