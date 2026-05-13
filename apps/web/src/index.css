@@ -227,9 +227,9 @@
 .app-topbar { @apply sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 h-14 flex items-center gap-3; }
 
 /* Sidebar responsive helpers */
-.app-shell-main { padding-left: 0; }
+.app-shell-main { padding-left: var(--sidebar-width); }
 @media (min-width: 768px) {
-  .app-shell-main { padding-left: 12rem; }
+  .app-shell-main { padding-left: 12rem !important; }
 }
 
 .sidebar-collapsed { width: 3.5rem; }

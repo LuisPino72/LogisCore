@@ -11,9 +11,10 @@ interface AppShellProps {
   className?: string;
 }
 
-export const AppShell: FC<AppShellProps> = ({ children, topBar, bottomNav, sidebar, className }) => {
+export const AppShell: FC<AppShellProps> = ({ children, topBar, bottomNav, sidebar, sidebarOpen: _sidebarOpen = true, sidebarExpanded = false, className }) => {
+  const sidebarWidth = sidebar && _sidebarOpen ? (sidebarExpanded ? '12rem' : '3.5rem') : '0px';
   return (
-    <div className={cn('app-shell', className)}>
+    <div className={cn('app-shell', className)} style={{ ['--sidebar-width' as unknown as string]: sidebarWidth } as React.CSSProperties}>
       {sidebar}
       <div className={cn('app-shell-main') }>
         <header className="app-topbar">
