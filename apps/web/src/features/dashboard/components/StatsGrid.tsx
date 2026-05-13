@@ -44,7 +44,7 @@ export const StatsGrid: FC<StatsGridProps> = ({ employees, plan, status, expires
         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
           <Users size={18} className="text-primary" />
         </div>
-        <p className="text-2xl font-title font-bold text-gray-900">{employees}</p>
+        <p className="text-xl md:text-2xl font-title font-bold text-gray-900 truncate">{employees}</p>
         <p className="text-xs text-text-secondary mt-0.5">Empleados</p>
       </div>
 
@@ -52,7 +52,7 @@ export const StatsGrid: FC<StatsGridProps> = ({ employees, plan, status, expires
         <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
           <Star size={18} className="text-accent" />
         </div>
-        <p className="text-2xl font-title font-bold text-gray-900">
+        <p className="text-lg md:text-2xl font-title font-bold text-gray-900 truncate">
           {plan ? (planLabels[plan] ?? plan) : '-'}
         </p>
         <p className="text-xs text-text-secondary mt-0.5">Plan actual</p>
@@ -67,7 +67,7 @@ export const StatsGrid: FC<StatsGridProps> = ({ employees, plan, status, expires
             {statusInfo.label}
           </span>
         ) : (
-          <p className="text-2xl font-title font-bold text-gray-900">-</p>
+          <p className="text-xl md:text-2xl font-title font-bold text-gray-900">-</p>
         )}
         <p className="text-xs text-text-secondary mt-0.5">Estado</p>
       </div>
@@ -77,7 +77,7 @@ export const StatsGrid: FC<StatsGridProps> = ({ employees, plan, status, expires
           <Calendar size={18} className="text-purple-700" />
         </div>
         {(() => {
-          if (!expiresAt) return <p className="text-sm font-semibold text-gray-900">-</p>;
+          if (!expiresAt) return <p className="text-sm font-semibold text-gray-900 truncate">-</p>;
 
           const daysRemaining = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000);
 
@@ -98,7 +98,7 @@ export const StatsGrid: FC<StatsGridProps> = ({ employees, plan, status, expires
           if (daysRemaining <= 3) {
             return (
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-warning">
+                <p className="text-sm font-semibold text-warning truncate">
                   {new Date(expiresAt).toLocaleDateString('es-ES')}
                 </p>
                 <Badge variant="warning">
@@ -113,7 +113,7 @@ export const StatsGrid: FC<StatsGridProps> = ({ employees, plan, status, expires
 
           return (
             <>
-              <p className="text-sm font-semibold text-gray-900 truncate">
+              <p className="text-sm md:text-base font-semibold text-gray-900 truncate">
                 {new Date(expiresAt).toLocaleDateString('es-ES')}
               </p>
               <p className="text-xs text-text-secondary mt-0.5">Próxima facturación</p>

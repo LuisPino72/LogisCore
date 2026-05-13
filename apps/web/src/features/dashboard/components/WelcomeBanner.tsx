@@ -26,7 +26,7 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ userName, tenantName }) 
             {tenantName ?? 'Cargando...'}
           </span>
         </div>
-        <h1 className="text-xl font-title font-bold text-gray-900 mt-1">
+        <h1 className="text-xl font-title font-bold text-gray-900 mt-1 truncate">
           ¡Hola, {name}!
         </h1>
         <p className="text-sm text-gray-600 mt-0.5 capitalize">{today}</p>
