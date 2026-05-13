@@ -93,7 +93,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               {isUpdating ? (
                 <Spinner size="sm" />
               ) : (
-                <RefreshCw size={20} />
+                <RefreshCw size={19} />
               )}
               Actualizar
             </Button>
@@ -104,7 +104,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               onClick={() => setShowModal(true)}
               disabled={isUpdating || !tenantId}
             >
-              <Settings size={20} />
+              <Settings size={19} />
               Manual
             </Button>
           </div>
