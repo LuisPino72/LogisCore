@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ListTree, Plus, History, AlertTriangle } from 'lucide-react';
+import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
@@ -159,19 +159,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <span className="ml-1">{tab.label}</span>
           </Button>
         ))}
-        {/* Reuse the PLUS button to open the stock adjustment modal (option 1) */}
-        {isOwner && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { setSelectedProductId(null); setShowAdjustment(true); }}
-            className="shrink-0"
-            aria-label="Ajuste de stock"
-            title="Ajuste de stock"
-          >
-            <Plus size={16} />
-          </Button>
-        )}
+      
+        
       </div>
 
       <Card>
