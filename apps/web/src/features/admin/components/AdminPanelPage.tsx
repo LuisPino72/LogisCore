@@ -263,7 +263,7 @@ export function AdminPanelPage() {
         </div>
       }
     >
-      <div className="flex border-b border-gray-200 bg-white sticky top-0 z-10">
+      <div className="flex border-b border-gray-200 bg-white sticky top-14 z-10">
         <Button
           variant="ghost"
           className={`rounded-none border-b-2 px-5 py-3 ${

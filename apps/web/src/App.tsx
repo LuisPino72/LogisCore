@@ -159,7 +159,6 @@ function DashboardLayout() {
           >
             LogisCore
           </Button>
-          {displaySlug && <Badge variant="info">{displaySlug}</Badge>}
           {role && <Badge variant="success">{role}</Badge>}
         </>
       }

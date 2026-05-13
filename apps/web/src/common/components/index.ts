@@ -6,6 +6,7 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { Checkbox } from './Checkbox';
 export { DataTable } from './DataTable';
+export type { Column } from './DataTable';
 export { EmptyState } from './EmptyState';
 export { Input } from './Input';
 export { Spinner, Skeleton } from './Loading';

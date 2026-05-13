@@ -16,7 +16,7 @@ export const AppShell: FC<AppShellProps> = ({ children, topBar, bottomNav, sideb
   return (
     <div className={cn('app-shell', className)} style={{ ['--sidebar-width' as unknown as string]: sidebarWidth } as React.CSSProperties}>
       {sidebar}
-      <div className={cn('app-shell-main') }>
+        <div className={cn('app-shell-main', sidebar && 'app-shell-main--with-sidebar') }>
         <header className="app-topbar">
           {topBar}
         </header>
