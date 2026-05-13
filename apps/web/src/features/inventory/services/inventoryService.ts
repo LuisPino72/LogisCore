@@ -137,7 +137,7 @@ export const inventoryService = {
       if (!existing) {
         return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
       }
-      const { stockInicial, ...cleanInput } = input as Record<string, unknown>;
+      const cleanInput = input as Record<string, unknown>;
       const updated = { ...existing, ...cleanInput };
       await db.products.put(updated);
       await syncQueue.enqueue('products', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);

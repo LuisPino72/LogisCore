@@ -181,20 +181,28 @@
 .empty-state-desc { @apply text-sm text-gray-500 mb-4 max-w-xs; }
 
 /* ───────────────────── DATATABLE ───────────────────── */
-.data-table { @apply w-full; }
-.data-table-header { @apply hidden sm:grid bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider; }
-.data-table-row { @apply grid border-b border-gray-100 hover:bg-gray-50/50 transition-all duration-150; }
-.data-table-cell { @apply px-4 py-3 text-sm text-gray-700 flex items-center; }
+ .data-table { @apply w-full; }
+ /* Use CSS variable --cols exposed by the DataTable wrapper for grid template */
+ .data-table-header { @apply hidden sm:grid bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider; grid-template-columns: var(--cols); }
+ .data-table-row { @apply grid border-b border-gray-100 hover:bg-gray-50/50 transition-all duration-150; grid-template-columns: var(--cols); }
+ /* ensure cells can shrink on small widths and text truncates */
+ .data-table-cell { @apply px-4 py-3 text-sm text-gray-700 flex items-center min-w-0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .data-table-empty { @apply py-12; }
 
-@media (max-width: 639px) {
-  .data-table-header { display: none; }
-  .data-table-row {
-    @apply grid-cols-2 gap-1 px-4 py-3 border border-gray-100 rounded-lg mb-2 mx-2 shadow-sm bg-white;
-  }
-  .data-table-cell { @apply px-0 py-1 text-xs; }
-  .data-table-cell:first-child { @apply col-span-2 text-sm font-semibold; }
-}
+ @media (max-width: 639px) {
+   .data-table-header { display: none; }
+   /* Mobile: render each row as a 2-column card by default. If a cell has long content it will wrap. */
+   .data-table-row {
+     grid-template-columns: repeat(2, minmax(0, 1fr));
+     @apply gap-2 px-4 py-3 border border-gray-100 rounded-lg mb-2 mx-2 shadow-sm bg-white;
+   }
+   .data-table-cell { @apply px-0 py-1 text-xs; white-space: normal; overflow: visible; }
+   .data-table-cell:first-child { @apply col-span-2 text-sm font-semibold; }
+
+   /* If the consumer wants the compact table behavior on mobile, they can avoid passing renderCardOnMobile; but
+      when using the DataTable default mobile card layout, ensure secondary columns can be hidden via hideOnMobile */
+   .data-table-cell.hidden { display: none; }
+ }
 
 /* ───────────────────── BOTTOM NAV ───────────────────── */
 .bottom-nav { @apply fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-t border-gray-200; }
@@ -211,6 +219,19 @@
 .app-shell-main { @apply transition-all duration-300; }
 .app-shell-content { @apply pb-4 sm:pb-0; }
 .app-topbar { @apply sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 h-14 flex items-center gap-3; }
+
+/* Sidebar responsive helpers */
+.app-shell { --sidebar-width: 0px; }
+.app-shell-main { padding-left: var(--sidebar-width); }
+
+.sidebar-collapsed { width: 3.5rem; }
+.sidebar-expanded { width: 12rem; }
+
+/* Smooth width transition for sidebar */
+aside { transition: width 200ms ease; }
+
+/* Emblema sizing */
+aside img[alt="Emblema"] { width: 20px; height: 20px; }
 
 /* ───────────────────── SIDEBAR ───────────────────── */
 .sidebar-backdrop { @apply fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden; }

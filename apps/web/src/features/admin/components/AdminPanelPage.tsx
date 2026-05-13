@@ -174,9 +174,9 @@ export function AdminPanelPage() {
 
   const tenantColumns: Column<Tenant>[] = [
     { key: 'name', header: 'Nombre' },
-    { key: 'rif', header: 'RIF' },
-    { key: 'slug', header: 'Slug' },
-    { key: 'plan', header: 'Plan' },
+    { key: 'rif', header: 'RIF', hideOnMobile: true },
+    { key: 'slug', header: 'Slug', hideOnMobile: true },
+    { key: 'plan', header: 'Plan'},
     {
       key: 'actions',
       header: 'Acciones',
@@ -197,9 +197,9 @@ export function AdminPanelPage() {
   ];
 
   const userColumns: Column<UserRole>[] = [
-    { key: 'id', header: 'ID' },
+    { key: 'id', header: 'ID', hideOnMobile: true },
     { key: 'role', header: 'Rol' },
-    { key: 'createdAt', header: 'Creado' },
+    { key: 'createdAt', header: 'Creado', hideOnMobile: true },
     {
       key: 'actions',
       header: 'Acciones',
@@ -316,6 +316,7 @@ export function AdminPanelPage() {
               data={tenants}
               emptyMessage="No hay locales creados. Crea el primero."
               keyExtractor={(t: Tenant) => t.id}
+              renderCardOnMobile
             />
           </Card>
         )}
@@ -333,6 +334,7 @@ export function AdminPanelPage() {
               data={users}
               emptyMessage="No hay usuarios en este local."
               keyExtractor={(u: UserRole) => u.id}
+              renderCardOnMobile
             />
           </Card>
         )}
@@ -350,11 +352,12 @@ export function AdminPanelPage() {
                 { key: 'email', header: 'Email' },
                 { key: 'name', header: 'Nombre' },
                 { key: 'role', header: 'Rol' },
-                { key: 'tenantName', header: 'Local' },
+                { key: 'tenantName', header: 'Local'},
               ]}
               data={allUsers}
               emptyMessage="No hay usuarios registrados."
               keyExtractor={(u: GlobalUser) => u.id}
+              renderCardOnMobile
             />
           </Card>
         )}
@@ -373,6 +376,7 @@ export function AdminPanelPage() {
                 {
                   key: 'plan',
                   header: 'Plan',
+                  hideOnMobile: true,
                   render: (s: SubscriptionView) => (
                     <Badge variant="info">{s.plan}</Badge>
                   ),
@@ -426,6 +430,7 @@ export function AdminPanelPage() {
               data={subscriptions}
               emptyMessage="No hay suscripciones registradas."
               keyExtractor={(s: SubscriptionView) => s.tenantId}
+              renderCardOnMobile
             />
           </Card>
         )}

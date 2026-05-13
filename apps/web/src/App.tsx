@@ -25,7 +25,7 @@ import {
   LayoutDashboard,
   Wallet,
   FileText,
-  Menu,
+  
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
@@ -99,6 +99,7 @@ function DashboardLayout() {
   const selectedTenantSlug = useNavigationStore((s) => s.selectedTenantSlug);
   const [activeModule, setActiveModule] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false); // collapsed by default on mobile
 
   const isAdmin = session?.role === 'admin';
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
@@ -142,14 +143,7 @@ function DashboardLayout() {
       topBar={
 
         <>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen((prev) => !prev)}
-            aria-label="Abrir menú"
-          >
-            <Menu size={22} />
-          </Button>
+          {/* topbar menu button removed: sidebar has its own hamburger in mobile */}
           {isAdminViewingTenant && (
             <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}>
               <ArrowLeft size={18} />
@@ -172,6 +166,8 @@ function DashboardLayout() {
       sidebar={
         <Sidebar
           isOpen={sidebarOpen}
+          expanded={sidebarExpanded}
+          onToggleExpanded={(v: boolean) => setSidebarExpanded(v)}
           onClose={() => setSidebarOpen(false)}
           modules={sidebarModules}
           activeModule={activeModule}
@@ -186,6 +182,7 @@ function DashboardLayout() {
         />
       }
       sidebarOpen={sidebarOpen}
+      sidebarExpanded={sidebarExpanded}
     >
       {renderContent()}
     </AppShell>
