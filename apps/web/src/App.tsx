@@ -5,6 +5,7 @@ import { authService } from './features/auth/services/authService';
 import { useNavigationStore } from './stores/navigationStore';
 import { usePermissionStore } from './stores/permissionStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
+import { initDb, destroyDb } from './services/dexie/db';
 import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
 import {
   AppShell,
@@ -216,12 +217,14 @@ const App = () => {
     subs.push(
       EventBus.on(SystemEvents.ADMIN_NAVIGATE_TENANT, (payload: unknown) => {
         const { tenantSlug } = payload as { tenantSlug: string };
+        initDb(tenantSlug);
         setView('dashboard', tenantSlug);
       }),
     );
 
     subs.push(
       EventBus.on(SystemEvents.ADMIN_EXIT_TENANT, () => {
+        destroyDb();
         setView('admin');
       }),
     );

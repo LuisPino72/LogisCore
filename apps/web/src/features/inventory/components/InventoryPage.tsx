@@ -33,7 +33,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showAdjustment, setShowAdjustment] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [_selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [adjProductId, setAdjProductId] = useState<string>('');
   const [adjQuantity, setAdjQuantity] = useState('');
   const [adjReason, setAdjReason] = useState('');

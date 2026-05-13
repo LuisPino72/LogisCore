@@ -45,6 +45,7 @@ supabase/.branches
 !supabase/functions/
 opencode.json
 skills-lock.json
+supabase/migrations/
 
 # graphify
 .opencode
