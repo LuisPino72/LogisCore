@@ -3,8 +3,11 @@ import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
+import { inventoryService } from '../services/inventoryService';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
+import { ProductLots } from './ProductLots';
+import { KardexView } from './KardexView';
 import { CategoryManager } from './CategoryManager';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
@@ -40,6 +43,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [adjError, setAdjError] = useState('');
   const [adjSubmitting, setAdjSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
+  const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
+  const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
 
   const isOwner = role === 'owner' || role === 'admin';
 
@@ -49,16 +54,23 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     { id: 'historial' as const, label: 'Historial', icon: <History size={16} /> },
   ];
 
-  const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number }) => {
+  const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
     if (!tenantId || !userId) return false;
-    const ok = await createProduct(tenantId, userId, data);
-    if (ok) setShowProductForm(false);
-    return ok;
+    const product = await createProduct(tenantId, userId, data);
+    if (product && imageFile) {
+      await inventoryService.uploadProductImage(imageFile, tenantId, product.id);
+    }
+    if (product) setShowProductForm(false);
+    return !!product;
   };
 
-  const handleEditProduct = async (data: CreateProductInput & { stockInicial: number }) => {
+  const handleEditProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
     if (!editProduct || !tenantId) return false;
     const ok = await updateProduct(editProduct.id, data, tenantId);
+    if (ok && imageFile) {
+      await inventoryService.uploadProductImage(imageFile, tenantId, editProduct.id);
+      refresh();
+    }
     if (ok) setShowProductForm(false);
     return ok;
   };
@@ -178,6 +190,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             onEditProduct={openEditProduct}
             onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
             onAdjust={(id) => { setSelectedProductId(id); setShowAdjustment(true); }}
+            onViewLots={(id) => setSelectedProductLotsId(id)}
+            onViewKardex={(id) => {
+              const product = products.find((p) => p.id === id);
+              if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
+            }}
             onRefresh={refresh}
           />
         )}
@@ -282,6 +299,26 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               </Button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {selectedProductLotsId && tenantId && (
+        <Modal
+          isOpen={true}
+          onClose={() => setSelectedProductLotsId(null)}
+          title="Lotes del producto"
+        >
+          <ProductLots productId={selectedProductLotsId} tenantId={tenantId} />
+        </Modal>
+      )}
+
+      {selectedKardexProduct && (
+        <Modal
+          isOpen={true}
+          onClose={() => setSelectedKardexProduct(null)}
+          title={`Kardex - ${selectedKardexProduct.name}`}
+        >
+          <KardexView productId={selectedKardexProduct.id} productName={selectedKardexProduct.name} />
         </Modal>
       )}
     </div>

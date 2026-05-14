@@ -17,6 +17,7 @@ export interface DexieProduct {
   unit: 'kg' | 'gr' | 'lt' | 'm' | 'unidad';
   stock: number;
   stockMin?: number;
+  imageUrl?: string;
   deletedAt?: string;
 }
 

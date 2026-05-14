@@ -4,7 +4,7 @@ import { syncQueue } from '../../../services/sync/syncQueue';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
 import { InventoryErrors } from '../../../specs/inventory/errors';
-import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters } from '../types';
+import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, MovementRow } from '../types';
 import { convertToStorage } from '../types';
 
 const INVENTORY_MODULE = 'INVENTORY';
@@ -22,6 +22,18 @@ function toSnake(obj: Record<string, unknown>): Record<string, unknown> {
   return result;
 }
 
+async function getTenantUuid(tenantSlug: string): Promise<string> {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantSlug)) {
+    return tenantSlug;
+  }
+  const db = getDb();
+  const ref = await db.tenantRefs.get(tenantSlug);
+  if (ref?.id) return ref.id;
+  const { data } = await supabase.from('tenants').select('id').eq('slug', tenantSlug).single();
+  if (data) return data.id as string;
+  return tenantSlug;
+}
+
 function toProduct(raw: Record<string, unknown>): Product {
   return {
     id: raw.id as string,
@@ -34,6 +46,7 @@ function toProduct(raw: Record<string, unknown>): Product {
     unit: raw.unit as Product['unit'],
     stock: raw.stock as number,
     stockMin: raw.stockMin as number | undefined,
+    imageUrl: raw.imageUrl as string | undefined,
     deletedAt: raw.deletedAt as string | undefined,
   };
 }
@@ -401,6 +414,124 @@ export const inventoryService = {
       console.error('[adjustStock] Error:', err);
       return failure(new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Error al ajustar stock. Verifica el stock disponible.'));
     }
+  },
+
+  async getProductLots(productId: string): Promise<Result<ActiveLot[], AppError>> {
+    const db = getDb();
+    const lots = await db.inventoryLots
+      .where({ productId })
+      .filter((l) => l.remainingQuantity > 0)
+      .sortBy('createdAt');
+
+    return success(lots.map((l) => ({
+      id: l.id,
+      createdAt: l.createdAt,
+      quantityAdded: l.quantityAdded,
+      remainingQuantity: l.remainingQuantity,
+      costUsdPerUnit: l.costUsdPerUnit,
+    })));
+  },
+
+  async getProductMovements(productId: string): Promise<Result<MovementRow[], AppError>> {
+    const db = getDb();
+    const rows = await db.inventoryMovements
+      .where({ productId })
+      .sortBy('createdAt');
+
+    if (rows.length === 0) return success([]);
+
+    const movements: MovementRow[] = [];
+    let balance = rows[0].previousStock;
+
+    // Primer fila: estado inicial
+    movements.push({
+      date: rows[0].createdAt,
+      type: 'initial',
+      entry: 0,
+      exit: 0,
+      balance,
+      reason: 'Stock inicial',
+    });
+
+    for (const mov of rows) {
+      const isPositive = mov.quantity > 0;
+      const entry = isPositive ? Math.abs(mov.quantity) : 0;
+      const exit_ = isPositive ? 0 : Math.abs(mov.quantity);
+      balance = mov.newStock;
+
+      const typeLabel = mov.type === 'sale' ? 'sale'
+        : mov.type === 'purchase' ? 'purchase'
+        : 'adjustment';
+
+      movements.push({
+        date: mov.createdAt,
+        type: typeLabel,
+        entry,
+        exit: exit_,
+        balance,
+        reason: mov.reason ?? undefined,
+      });
+    }
+
+    return success(movements);
+  },
+
+  async uploadProductImage(file: File, tenantId: string, productId: string): Promise<Result<string, AppError>> {
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return failure(new AppError('INVENTORY_IMAGE_INVALID_TYPE', 'Formato no permitido. Usa JPG, PNG o WebP.'));
+    }
+
+    if (file.size > MAX_SIZE) {
+      return failure(new AppError('INVENTORY_IMAGE_TOO_LARGE', 'La imagen no debe superar 2MB.'));
+    }
+
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const tenantUuid = await getTenantUuid(tenantId);
+    const filePath = `${tenantUuid}/${productId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('products')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      console.error('[uploadProductImage] Storage error:', uploadError);
+      return failure(new AppError('INVENTORY_IMAGE_UPLOAD_FAILED', 'Error al subir la imagen. Verifica permisos de Storage.'));
+    }
+
+    const { data: urlData } = supabase.storage.from('products').getPublicUrl(filePath);
+    const publicUrl = urlData?.publicUrl ?? '';
+
+    const db = getDb();
+    await db.products.update(productId, { imageUrl: publicUrl });
+
+    const dbItem = await db.products.get(productId);
+    if (dbItem) {
+      await syncQueue.enqueue('products', 'UPDATE', productId, toSnake({ ...dbItem, image_url: publicUrl } as unknown as Record<string, unknown>), tenantId);
+    }
+
+    return success(publicUrl);
+  },
+
+  async getProductBySku(sku: string, tenantId: string): Promise<Result<Product | null, AppError>> {
+    const db = getDb();
+    const product = await db.products
+      .where({ tenantId })
+      .filter((p) => !p.deletedAt && p.sku === sku)
+      .first();
+    if (product) return success(toProduct(product as unknown as Record<string, unknown>));
+
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('sku', sku)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (data) return success(toProduct(data as unknown as Record<string, unknown>));
+    return success(null);
   },
 
   async consumeFifo(productId: string, quantity: number, tenantId: string): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {

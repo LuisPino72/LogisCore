@@ -8,7 +8,7 @@ interface InventoryStore extends InventoryState {
   setSearchQuery: (query: string) => void;
   fetchProducts: (tenantId: string, filters?: ProductFilters) => Promise<void>;
   fetchCategories: (tenantId: string) => Promise<void>;
-  createProduct: (tenantId: string, userId: string, input: CreateProductInput & { stockInicial?: number }) => Promise<boolean>;
+  createProduct: (tenantId: string, userId: string, input: CreateProductInput & { stockInicial?: number }) => Promise<Product | null>;
   updateProduct: (id: string, input: Partial<Product>, tenantId: string) => Promise<boolean>;
   deleteProduct: (id: string, tenantId: string) => Promise<boolean>;
   createCategory: (name: string, tenantId: string) => Promise<boolean>;
@@ -60,11 +60,11 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     set({ loading: true, error: null });
     const result = await inventoryService.createProduct(tenantId, userId, input);
     if (result.ok) {
-      await get().fetchProducts(tenantId);
-      return true;
+      set((s) => ({ products: [result.data, ...s.products], loading: false }));
+      return result.data;
     }
     set({ loading: false, error: result.error.message });
-    return false;
+    return null;
   },
 
   updateProduct: async (id, input, tenantId) => {

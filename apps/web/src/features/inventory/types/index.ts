@@ -25,6 +25,23 @@ export interface AdjustStockInput {
   reason: string;
 }
 
+export interface ActiveLot {
+  id: string;
+  createdAt: string;
+  quantityAdded: number;
+  remainingQuantity: number;
+  costUsdPerUnit?: number;
+}
+
+export interface MovementRow {
+  date: string;
+  type: 'purchase' | 'sale' | 'adjustment' | 'initial';
+  entry: number;
+  exit: number;
+  balance: number;
+  reason?: string;
+}
+
 export interface ProductFilters {
   query?: string;
   categoryId?: string;

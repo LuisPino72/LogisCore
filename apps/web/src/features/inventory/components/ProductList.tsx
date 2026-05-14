@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Package, Trash2, Plus, AlertTriangle, Edit3 } from 'lucide-react';
+import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList } from 'lucide-react';
 import { Button, Badge, DataTable, EmptyState } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
@@ -15,6 +15,8 @@ interface ProductListProps {
   onEditProduct: (product: Product) => void;
   onRequestDelete: (id: string, name: string) => void;
   onAdjust: (id: string) => void;
+  onViewLots: (productId: string) => void;
+  onViewKardex: (productId: string) => void;
   onRefresh: () => void;
 }
 
@@ -24,7 +26,21 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust }: ProductListProps) {
+function ProductThumbnail({ product }: { product: Product }) {
+  if (product.imageUrl) {
+    return (
+      <img
+        src={product.imageUrl}
+        alt={product.name}
+        className="w-8 h-8 rounded-full object-cover shrink-0"
+        loading="lazy"
+      />
+    );
+  }
+  return <Package size={20} className="text-gray-400 shrink-0" />;
+}
+
+export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
 
@@ -45,7 +61,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         header: 'Producto',
         render: (product) => (
           <div className="flex items-center gap-3">
-            <Package size={20} className="text-gray-400 shrink-0" />
+            <ProductThumbnail product={product} />
             <div className="min-w-0">
               <div className="font-medium text-sm truncate">{product.name}</div>
               <span className="text-[12px]">{product.sku}</span>
@@ -92,13 +108,19 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         className: 'text-right',
         render: (product) => (
           <div className="flex gap-1 items-center justify-end">
-            <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1">
+            <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1" title="Ver lotes">
+              <Layers size={14} />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onViewKardex(product.id)} className="p-1" title="Ver Kardex">
+              <ClipboardList size={14} />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1" title="Ajustar stock">
               <Plus size={14} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1">
+            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1" title="Editar">
               <Edit3 size={14} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1">
+            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1" title="Eliminar">
               <Trash2 size={14} className="text-danger" />
             </Button>
           </div>

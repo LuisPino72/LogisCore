@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Alert, Badge } from '../../../common/components';
+import { Alert, Badge, Button } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Scan } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { useCashRegister } from '../hooks/useCashRegister';
 import { ProductGrid } from './ProductGrid';
@@ -12,6 +12,7 @@ import { CashStatusBadge } from './CashStatusBadge';
 import { ParkCartModal } from './ParkCartModal';
 import { ParkedCartsList } from './ParkedCartsList';
 import { SalesHistory } from './SalesHistory';
+import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
 import { posService } from '../services/posService';
@@ -47,6 +48,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<'sell' | 'history'>('sell');
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
   const exchangeRateBs = exchangeRate ?? 0;
 
@@ -148,6 +150,20 @@ export function PosPage({ tenantId }: PosPageProps) {
     [loadParkedCart],
   );
 
+  const handleBarcodeScan = useCallback(
+    async (code: string) => {
+      if (!tenantId) return;
+      const result = await inventoryService.getProductBySku(code, tenantId);
+      if (result.ok && result.data) {
+        addToCart(result.data, result.data.isWeighted ? 0 : 1);
+        addToast({ type: 'success', message: `${result.data.name} agregado`, duration: 2000 });
+      } else {
+        addToast({ type: 'error', message: `Producto con código "${code}" no encontrado.`, duration: 4000 });
+      }
+    },
+    [tenantId, addToCart, addToast],
+  );
+
   if (!tenantId) {
     return (
       <div className="p-4 flex items-center justify-center h-full">
@@ -163,6 +179,9 @@ export function PosPage({ tenantId }: PosPageProps) {
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
           <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} />
+          <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1" title="Escanear código de barras">
+            <Scan size={18} />
+          </Button>
           <div className="flex-1" />
           <div className="flex bg-surface-alt rounded-lg p-0.5">
             <button
@@ -291,6 +310,12 @@ export function PosPage({ tenantId }: PosPageProps) {
         onClose={() => setShowParkModal(false)}
         onConfirm={handleParkConfirm}
         loading={processing}
+      />
+
+      <BarcodeScannerModal
+        isOpen={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={handleBarcodeScan}
       />
     </div>
   );

@@ -1,17 +1,23 @@
+import { useState } from 'react';
 import { Button, Input, Modal, Checkbox } from '../../../common/components';
+import { ImagePlus, X, Scan } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
+import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Category, CreateProductInput, Product } from '../types';
 
 interface ProductFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateProductInput & { stockInicial: number }) => Promise<boolean>;
+  onSubmit: (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => Promise<boolean>;
   categories: Category[];
   editProduct?: Product | null;
 }
 
 export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct }: ProductFormProps) {
   const isEditing = !!editProduct;
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(editProduct?.imageUrl ?? null);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const initialValues = editProduct ? {
     name: editProduct.name,
     sku: editProduct.sku,
@@ -22,11 +28,35 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     stockMin: editProduct.stockMin,
   } : undefined;
 
-  const { formData, errors, isSubmitting, setField, handleSubmit, reset } = useProductForm({ onSubmit, initialValues });
+  const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number }): Promise<boolean> => {
+    const result = await onSubmit(data, imageFile);
+    if (result) {
+      setImageFile(null);
+      setImagePreview(null);
+    }
+    return result;
+  };
+
+  const { formData, errors, isSubmitting, setField, handleSubmit: formSubmit, reset } = useProductForm({ onSubmit: wrappedOnSubmit, initialValues });
 
   const handleClose = () => {
     reset();
+    setImageFile(null);
+    setImagePreview(null);
     onClose();
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   return (
@@ -43,16 +73,46 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           />
         </div>
 
+        {/* Image upload */}
+        <div className="input-wrapper">
+          <label className="input-label">Foto del producto</label>
+          <div className="flex items-center gap-3">
+            {imagePreview ? (
+              <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-0 right-0 w-5 h-5 bg-gray-900/60 text-white rounded-bl-lg flex items-center justify-center"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors shrink-0">
+                <ImagePlus size={20} className="text-gray-400" />
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
+              </label>
+            )}
+            <p className="text-[10px] text-gray-400">JPG, PNG o WebP. Máx 2MB.</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="input-wrapper">
             <label className="input-label text-center">SKU</label>
-            <Input
-              placeholder="Ej: HP-001"
-              value={formData.sku}
-              onChange={(e) => setField('sku', e.target.value)}
-              error={errors.sku}
-              inputClassName="text-sm px-2 py-2"
-            />
+            <div className="flex gap-1">
+              <Input
+                placeholder="Ej: HP-001"
+                value={formData.sku}
+                onChange={(e) => setField('sku', e.target.value)}
+                error={errors.sku}
+                inputClassName="text-sm px-2 py-2 flex-1"
+              />
+              <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-2 shrink-0" title="Escanear código de barras">
+                <Scan size={16} />
+              </Button>
+            </div>
           </div>
           <div className="input-wrapper">
             <label className="input-label text-center">Precio USD</label>
@@ -154,11 +214,20 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <Button variant="ghost" fullWidth onClick={handleClose}>
             Cancelar
           </Button>
-          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={isSubmitting}>
+          <Button variant="primary" fullWidth onClick={formSubmit} disabled={isSubmitting}>
             {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear producto'}
           </Button>
         </div>
       </div>
+
+      <BarcodeScannerModal
+        isOpen={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={(code) => {
+          setField('sku', code);
+          setShowBarcodeScanner(false);
+        }}
+      />
     </Modal>
   );
 }
