@@ -26,7 +26,7 @@ import {
   LayoutDashboard,
   Wallet,
   FileText,
-  
+  Truck,
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
@@ -34,11 +34,13 @@ import { DashboardPage } from './features/dashboard/components/DashboardPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
 import { InventoryPage } from './features/inventory';
 import { PosPage } from './features/pos';
+import { PurchasePage } from './features/purchases';
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
+  { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
   { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
   { id: 'settings', label: 'Ajustes', icon: <Settings size={20} /> },
@@ -50,6 +52,7 @@ const MODULE_LABELS: Record<string, string> = {
   dashboard: 'Dashboard',
   pos: 'POS',
   inventory: 'Inventario',
+  purchases: 'Compras',
   cash: 'Caja',
   reports: 'Reportes',
   settings: 'Ajustes',
@@ -134,6 +137,8 @@ function DashboardLayout() {
         return <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />;
       case 'inventory':
         return <InventoryPage tenantId={effectiveTenantId} />;
+      case 'purchases':
+        return <PurchasePage tenantId={effectiveTenantId} />;
       case 'pos':
         return <PosPage tenantId={effectiveTenantId} />;
       default:

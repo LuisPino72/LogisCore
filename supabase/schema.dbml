@@ -119,7 +119,41 @@ Table inventory_lots {
   product_id uuid [not null, ref: > products.id]
   quantity_added integer [not null]
   remaining_quantity integer [not null]
+  cost_usd_per_unit numeric(19,2)
   source_movement_id uuid [ref: > inventory_movements.id]
+  created_at timestamptz [default: `now()`]
+}
+
+Table suppliers {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  name text [not null]
+  phone text
+  created_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table purchase_orders {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  supplier_id uuid [not null, ref: > suppliers.id]
+  status text [not null, default: 'draft']
+  total_usd numeric(19,2) [not null, default: 0]
+  notes text
+  created_by uuid [not null, ref: > auth.users.id]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table purchase_order_items {
+  id uuid [pk]
+  order_id uuid [not null, ref: > purchase_orders.id]
+  product_id uuid [not null, ref: > products.id]
+  quantity integer [not null]
+  cost_usd_per_unit numeric(19,2) [not null]
+  received_quantity integer [not null, default: 0]
+  total_usd numeric(19,2) [not null]
   created_at timestamptz [default: `now()`]
 }
 
@@ -137,3 +171,8 @@ Ref: inventory_movements.user_id - auth.users.id
 Ref: inventory_lots.tenant_id - tenants.id
 Ref: inventory_lots.product_id - products.id
 Ref: inventory_lots.source_movement_id - inventory_movements.id
+Ref: suppliers.tenant_id - tenants.id
+Ref: purchase_orders.tenant_id - tenants.id
+Ref: purchase_orders.supplier_id - suppliers.id
+Ref: purchase_order_items.order_id - purchase_orders.id
+Ref: purchase_order_items.product_id - products.id

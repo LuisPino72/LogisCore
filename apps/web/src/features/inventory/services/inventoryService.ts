@@ -403,7 +403,7 @@ export const inventoryService = {
     }
   },
 
-  async consumeFifo(productId: string, quantity: number, tenantId: string): Promise<Result<void, AppError>> {
+  async consumeFifo(productId: string, quantity: number, tenantId: string): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
     const db = getDb();
     const lots = await db.inventoryLots
       .where({ productId })
@@ -411,31 +411,27 @@ export const inventoryService = {
       .sortBy('createdAt');
 
     let toConsume = quantity;
+    const consumed: Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }> = [];
 
     for (const lot of lots) {
       if (toConsume <= 0) break;
 
-      if (lot.remainingQuantity >= toConsume) {
-        const newRemaining = lot.remainingQuantity - toConsume;
-        await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining });
-        await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
-          ...lot, remainingQuantity: newRemaining,
-        } as unknown as Record<string, unknown>), tenantId);
-        toConsume = 0;
-      } else {
-        toConsume -= lot.remainingQuantity;
-        await db.inventoryLots.update(lot.id, { remainingQuantity: 0 });
-        await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
-          ...lot, remainingQuantity: 0,
-        } as unknown as Record<string, unknown>), tenantId);
-      }
+      const consumeQty = Math.min(lot.remainingQuantity, toConsume);
+      const newRemaining = lot.remainingQuantity - consumeQty;
+      await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining });
+      await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
+        ...lot, remainingQuantity: newRemaining,
+      } as unknown as Record<string, unknown>), tenantId);
+
+      consumed.push({ lotId: lot.id, quantity: consumeQty, costUsdPerUnit: lot.costUsdPerUnit });
+      toConsume -= consumeQty;
     }
 
     if (toConsume > 0) {
       return failure(new AppError(InventoryErrors.INVENTORY_STOCK_INSUFFICIENT, 'Stock insuficiente para completar la operación.'));
     }
 
-    return success(undefined);
+    return success(consumed);
   },
 
   async getMovementHistory(productId: string): Promise<Result<InventoryMovement[], AppError>> {

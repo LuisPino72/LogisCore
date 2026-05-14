@@ -47,6 +47,7 @@ export interface DexieInventoryLot {
   productId: string;
   quantityAdded: number;
   remainingQuantity: number;
+  costUsdPerUnit?: number;
   sourceMovementId?: string;
   createdAt: string;
 }
@@ -116,6 +117,39 @@ export interface DexieProductFavorite {
   createdAt: string;
 }
 
+export interface DexieSupplier {
+  id: string;
+  tenantId: string;
+  name: string;
+  phone?: string;
+  createdAt: string;
+  deletedAt?: string;
+}
+
+export interface DexiePurchaseOrder {
+  id: string;
+  tenantId: string;
+  supplierId: string;
+  status: 'draft' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
+  totalUsd: number;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export interface DexiePurchaseOrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  quantity: number;
+  costUsdPerUnit: number;
+  receivedQuantity: number;
+  totalUsd: number;
+  createdAt: string;
+}
+
 export class LogisCoreDB extends Dexie {
   tenantRefs!: Table<TenantInfo, string>;
   syncQueue!: Table<SyncQueueItem, number>;
@@ -130,10 +164,13 @@ export class LogisCoreDB extends Dexie {
   cashRegisters!: Table<DexieCashRegister, string>;
   parkedCarts!: Table<DexieParkedCart, string>;
   productFavorites!: Table<DexieProductFavorite, [string, string]>;
+  suppliers!: Table<DexieSupplier, string>;
+  purchaseOrders!: Table<DexiePurchaseOrder, string>;
+  purchaseOrderItems!: Table<DexiePurchaseOrderItem, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(7).stores({
+    this.version(8).stores({
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
       syncMeta: 'table',
@@ -147,6 +184,9 @@ export class LogisCoreDB extends Dexie {
       cashRegisters: 'id, tenantId, [tenantId+deletedAt]',
       parkedCarts: 'id, tenantId, [tenantId+createdAt]',
       productFavorites: '[productId+tenantId], tenantId',
+      suppliers: 'id, tenantId, [tenantId+deletedAt]',
+      purchaseOrders: 'id, tenantId, supplierId, status, [tenantId+status], [tenantId+deletedAt]',
+      purchaseOrderItems: 'id, orderId, productId, [orderId]',
     });
   }
 }
