@@ -20,6 +20,11 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
     ? displayStock(product.stock, product.unit)
     : product.stock.toString();
 
+  const stockInDisplay = product.isWeighted
+    ? (product.unit === 'kg' || product.unit === 'lt' ? product.stock / 1000 : product.stock)
+    : product.stock;
+  const isLowStock = stockInDisplay <= (product.stockMin ?? 5);
+
   return (
     <Card
       interactive
@@ -63,7 +68,7 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
           {product.isTaxable !== undefined && !product.isTaxable && (
             <Badge variant="neutral">Exento</Badge>
           )}
-          <Badge variant={product.stock <= (product.stockMin ?? 5) ? 'warning' : 'neutral'}>
+          <Badge variant={isLowStock ? 'warning' : 'neutral'}>
             {displayQuantity}
           </Badge>
         </div>

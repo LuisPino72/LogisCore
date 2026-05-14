@@ -476,8 +476,14 @@ export const inventoryService = {
     const db = getDb();
     const rows = await db.products
       .where({ tenantId })
-      .filter((p) => !p.deletedAt && p.stockMin !== undefined && p.stockMin > 0 && p.stock <= p.stockMin)
+      .filter((p) => !p.deletedAt && p.stockMin !== undefined && p.stockMin > 0)
       .toArray();
-    return success(rows.map((r) => toProduct(r as unknown as Record<string, unknown>)));
+    const lowStock = rows.filter((p) => {
+      const displayStock = p.isWeighted
+        ? (p.unit === 'kg' || p.unit === 'lt' ? p.stock / 1000 : p.stock)
+        : p.stock;
+      return displayStock <= p.stockMin!;
+    });
+    return success(lowStock.map((r) => toProduct(r as unknown as Record<string, unknown>)));
   },
 };

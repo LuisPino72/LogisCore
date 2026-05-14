@@ -30,6 +30,9 @@ function preciseRound(value: number, decimals: number = 2): number {
 }
 
 async function getTenantUuid(tenantSlug: string): Promise<string> {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantSlug)) {
+    return tenantSlug;
+  }
   const db = getDb();
   const ref = await db.tenantRefs.get(tenantSlug);
   if (ref?.id) return ref.id;
@@ -700,6 +703,7 @@ export const posService = {
         closingBalanceBs: declaredClosingBalanceBs,
         expectedClosingBs,
         differenceBs,
+        deletedAt: now,
         updatedAt: now,
       });
 

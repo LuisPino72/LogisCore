@@ -6,6 +6,7 @@ import { StatsGrid } from './StatsGrid';
 import { EmptyState, Card, Badge, Spinner } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp } from 'lucide-react';
 import { dashboardService } from '../services/dashboardService';
+import { displayStock } from '../../inventory/types';
 import type { Product } from '../../../specs/inventory';
 
 interface DashboardPageProps {
@@ -115,7 +116,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                   <span className="text-sm text-gray-700">{p.name}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500">Min: {p.stockMin}</span>
-                    <Badge variant="danger">{p.stock} restantes</Badge>
+                    <Badge variant="danger">{displayStock(p.stock, p.unit)} {p.unit} restantes</Badge>
                   </div>
                 </div>
               ))}

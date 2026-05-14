@@ -84,8 +84,7 @@ export class SyncEngine {
     const remotePayload: Record<string, unknown> = { ...item.payload, tenant_id: tenantUuid };
 
     switch (item.operation) {
-      case 'CREATE':
-      case 'UPDATE': {
+      case 'CREATE': {
         const { data: existing } = await supabase
           .from(item.table)
           .select('*')
@@ -101,11 +100,42 @@ export class SyncEngine {
             remotePayload: existing,
             strategy: cfg.conflictStrategy,
           });
-          await supabase.from(item.table).upsert(resolved);
+          const { error } = await supabase.from(item.table).upsert(resolved);
+          if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
           emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
         } else {
           const { error } = await supabase.from(item.table).upsert(remotePayload);
           if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
+        }
+        break;
+      }
+
+      case 'UPDATE': {
+        const { error } = await supabase
+          .from(item.table)
+          .update(remotePayload)
+          .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField]);
+        if (error) {
+          const { data: existing } = await supabase
+            .from(item.table)
+            .select('*')
+            .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField])
+            .maybeSingle();
+          if (existing && detectConflict(item.payload, existing)) {
+            const resolved = resolveConflict({
+              queueItemId: item.id!,
+              table: item.table,
+              recordId: item.recordId,
+              localPayload: item.payload,
+              remotePayload: existing,
+              strategy: cfg.conflictStrategy,
+            });
+            const { error: upsertError } = await supabase.from(item.table).upsert(resolved);
+            if (upsertError) throw new AppError('SYNC_PUSH_FAILED', upsertError.message, { details: { table: item.table, recordId: item.recordId } });
+            emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
+          } else if (error.message) {
+            throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
+          }
         }
         break;
       }
