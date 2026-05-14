@@ -1,4 +1,4 @@
-import { Button, Input, Modal } from '../../../common/components';
+import { Button, Input, Modal, Checkbox } from '../../../common/components';
 import { useProductForm } from '../hooks/useProductForm';
 import type { Category, CreateProductInput, Product } from '../types';
 
@@ -131,15 +131,26 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           {errors.categoryId && <span className="text-xs text-danger">{errors.categoryId}</span>}
         </div>
 
-        {Object.keys(errors).length > 0 && (
-          <div className="text-xs text-danger space-y-1">
-            {Object.entries(errors).map(([key, msg]) => (
-              <p key={key}>{msg}</p>
-            ))}
-          </div>
-        )}
+          {Object.keys(errors).length > 0 && (
+            <div className="text-xs text-danger space-y-1">
+              {Object.entries(errors).map(([key, msg]) => (
+                <p key={key}>{msg}</p>
+              ))}
+            </div>
+          )}
 
-        <div className="flex gap-3 pt-2">
+          <div className="input-wrapper">
+            <Checkbox
+              label="Producto gravado con IVA"
+              checked={formData.isTaxable}
+              onChange={(e) => setField('isTaxable', e.target.checked)}
+            />
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Desmarca esta casilla si el producto está exento de IVA (ej: alimentos de la cesta básica).
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
           <Button variant="ghost" fullWidth onClick={handleClose}>
             Cancelar
           </Button>

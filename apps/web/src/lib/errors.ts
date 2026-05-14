@@ -210,6 +210,17 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   // ===== TENANT TRANSLATOR =====
   TENANT_INVALID_SLUG_FORMAT: makeError('TENANT_INVALID_SLUG_FORMAT', 'TEN-001', 'Formato de slug inválido.', 'TENANT'),
   TENANT_MISMATCH: makeError('TENANT_MISMATCH', 'TEN-002', 'Payload pertenece a un tenant diferente a la sesión.', 'TENANT'),
+
+  // ===== POS =====
+  SALE_NO_ITEMS: makeError('SALE_NO_ITEMS', 'POS-004', 'No hay productos en el carrito.', 'POS'),
+  SALE_STOCK_INSUFFICIENT: makeError('SALE_STOCK_INSUFFICIENT', 'POS-005', 'Stock insuficiente para completar la venta.', 'POS'),
+  SALE_EXCHANGE_RATE_NOT_FOUND: makeError('SALE_EXCHANGE_RATE_NOT_FOUND', 'POS-006', 'No hay tasa de cambio configurada. Configure la tasa antes de vender.', 'POS'),
+  BOX_ALREADY_OPEN: makeError('BOX_ALREADY_OPEN', 'POS-007', 'Ya existe una caja abierta para este local.', 'POS'),
+  BOX_ALREADY_CLOSED: makeError('BOX_ALREADY_CLOSED', 'POS-008', 'La caja ya está cerrada.', 'POS'),
+  BOX_OPENING_BALANCE_REQUIRED: makeError('BOX_OPENING_BALANCE_REQUIRED', 'POS-009', 'Debe ingresar un monto inicial para abrir la caja.', 'POS'),
+  BOX_CLOSING_BALANCE_REQUIRED: makeError('BOX_CLOSING_BALANCE_REQUIRED', 'POS-010', 'Debe ingresar el monto final para cerrar la caja.', 'POS'),
+  CART_ITEM_WEIGHT_REQUIRED: makeError('CART_ITEM_WEIGHT_REQUIRED', 'POS-011', 'Ingrese la cantidad para productos pesables.', 'POS'),
+  BOX_QUERY_FAILED: makeError('BOX_QUERY_FAILED', 'POS-012', 'Error al consultar el estado de la caja.', 'POS'),
 };
 
 // ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ export interface DexieProduct {
   priceUsd: number;
   categoryId?: string;
   isWeighted: boolean;
+  isTaxable: boolean;
   unit: 'kg' | 'gr' | 'lt' | 'm' | 'unidad';
   stock: number;
   stockMin?: number;
@@ -50,6 +51,71 @@ export interface DexieInventoryLot {
   createdAt: string;
 }
 
+export interface DexieSale {
+  id: string;
+  tenantId: string;
+  userId: string;
+  paymentMethod: string;
+  subtotalBs: number;
+  igtfBs: number;
+  ivaBs: number;
+  totalBs: number;
+  exchangeRate: number;
+  status: string;
+  voidedAt?: string;
+  createdAt: string;
+  deletedAt?: string;
+}
+
+export interface DexieSaleItem {
+  id: string;
+  tenantId: string;
+  saleId: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  unitPriceUsd: number;
+  totalPriceUsd: number;
+  isWeighted: boolean;
+  unit: string;
+  createdAt: string;
+}
+
+export interface DexieCashRegister {
+  id: string;
+  tenantId: string;
+  isOpen: boolean;
+  openedBy: string | null;
+  openedAt: string | null;
+  openingBalanceBs: number | null;
+  closedBy: string | null;
+  closedAt: string | null;
+  closingBalanceBs: number | null;
+  expectedClosingBs: number | null;
+  differenceBs: number | null;
+  totalSalesCount: number;
+  totalSalesBs: number;
+  totalIgtfBs: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export interface DexieParkedCart {
+  id: string;
+  tenantId: string;
+  name: string;
+  cartJson: string;
+  createdAt: string;
+}
+
+export interface DexieProductFavorite {
+  productId: string;
+  tenantId: string;
+  createdAt: string;
+}
+
 export class LogisCoreDB extends Dexie {
   tenantRefs!: Table<TenantInfo, string>;
   syncQueue!: Table<SyncQueueItem, number>;
@@ -59,10 +125,15 @@ export class LogisCoreDB extends Dexie {
   categories!: Table<DexieCategory, string>;
   inventoryMovements!: Table<DexieInventoryMovement, string>;
   inventoryLots!: Table<DexieInventoryLot, string>;
+  sales!: Table<DexieSale, string>;
+  saleItems!: Table<DexieSaleItem, string>;
+  cashRegisters!: Table<DexieCashRegister, string>;
+  parkedCarts!: Table<DexieParkedCart, string>;
+  productFavorites!: Table<DexieProductFavorite, [string, string]>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(4).stores({
+    this.version(7).stores({
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
       syncMeta: 'table',
@@ -71,6 +142,11 @@ export class LogisCoreDB extends Dexie {
       categories: 'id, tenantId, slug, [tenantId+deletedAt]',
       inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt]',
       inventoryLots: 'id, tenantId, productId, remainingQuantity, createdAt, [productId+remainingQuantity]',
+      sales: 'id, tenantId, [tenantId+deletedAt], [tenantId+createdAt]',
+      saleItems: 'id, tenantId, saleId, productId, [tenantId+deletedAt], [saleId]',
+      cashRegisters: 'id, tenantId, [tenantId+deletedAt]',
+      parkedCarts: 'id, tenantId, [tenantId+createdAt]',
+      productFavorites: '[productId+tenantId], tenantId',
     });
   }
 }

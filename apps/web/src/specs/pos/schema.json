@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "POS Module Schema",
+  "description": "POS (Point of Sale) module for LogisCore ERP",
+  "definitions": {
+    "CartItem": {
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "quantity": { "type": "number", "minimum": 0.01 },
+        "unitPriceUsd": { "type": "number" },
+        "totalPriceUsd": { "type": "number" },
+        "isWeighted": { "type": "boolean" },
+        "unit": { "type": "string" }
+      },
+      "required": ["productId", "name", "sku", "quantity", "unitPriceUsd", "totalPriceUsd", "isWeighted", "unit"]
+    },
+    "Sale": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenantId": { "type": "string" },
+        "userId": { "type": "string", "format": "uuid" },
+        "paymentMethod": { "type": "string", "enum": ["efectivo_bs", "pago_movil", "tarjeta_bs", "tarjeta_usd"] },
+        "subtotalBs": { "type": "number" },
+        "igtfBs": { "type": "number" },
+        "totalBs": { "type": "number" },
+        "exchangeRate": { "type": "number" },
+        "status": { "type": "string", "enum": ["completed", "voided"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CashRegister": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "tenantId": { "type": "string" },
+        "isOpen": { "type": "boolean" },
+        "totalSalesCount": { "type": "integer" },
+        "totalSalesBs": { "type": "number" },
+        "totalIgtfBs": { "type": "number" }
+      }
+    }
+  }
+}

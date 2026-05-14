@@ -33,6 +33,7 @@ import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 import { DashboardPage } from './features/dashboard/components/DashboardPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
 import { InventoryPage } from './features/inventory';
+import { PosPage } from './features/pos';
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
@@ -133,6 +134,8 @@ function DashboardLayout() {
         return <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />;
       case 'inventory':
         return <InventoryPage tenantId={effectiveTenantId} />;
+      case 'pos':
+        return <PosPage tenantId={effectiveTenantId} />;
       default:
         return <ModulePlaceholder moduleId={activeModule} />;
     }

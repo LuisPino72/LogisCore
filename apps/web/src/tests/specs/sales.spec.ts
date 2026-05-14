@@ -102,9 +102,9 @@ describe('SALE-004: Cobrar', () => {
   });
 
   describe('Tarjeta USD aplica IGTF 3%', () => {
-    it('Given: total=$10, metodo=tarjeta_usd', () => {
+    it('Given: total=$10, metodo=efectivo_usd', () => {
       const totalUsd = 10;
-      const metodo = 'tarjeta_usd';
+      const metodo = 'efectivo_usd';
       const aplicaIgtf = METADATA_PAGOS[metodo as keyof typeof METADATA_PAGOS].aplicaIgtf;
       const igtf = aplicaIgtf ? totalUsd * IGTF_RATE : 0;
       

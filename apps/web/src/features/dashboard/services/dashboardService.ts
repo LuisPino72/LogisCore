@@ -1,7 +1,10 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
+import { getDb } from '../../../services/dexie/db';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { TenantInfoResponse, SubscriptionResponse } from '../types';
+import type { Product } from '../../../specs/inventory';
+import { inventoryService } from '../../inventory/services/inventoryService';
 
 export const dashboardService = {
   async getTenantInfo(tenantId: string): Promise<Result<TenantInfoResponse, AppError>> {
@@ -46,5 +49,54 @@ export const dashboardService = {
     }
 
     return success(count ?? 0);
+  },
+
+  async getLowStockProducts(tenantId: string): Promise<Result<Product[], AppError>> {
+    return inventoryService.getLowStockProducts(tenantId);
+  },
+
+  async getTopProducts(tenantId: string, limit = 5): Promise<Result<{ productId: string; name: string; totalQty: number }[], AppError>> {
+    try {
+      const db = getDb();
+      const tenantUuid = await (async () => {
+        const ref = await db.tenantRefs.get(tenantId);
+        return ref?.id ?? tenantId;
+      })();
+
+      const { data, error } = await supabase
+        .from('sale_items')
+        .select('product_id, product_name, quantity')
+        .eq('tenant_id', tenantUuid)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        return failure(new AppError('DASHBOARD_TOP_PRODUCTS_FAILED', 'Error al cargar productos más vendidos'));
+      }
+
+      if (!data || data.length === 0) {
+        return success([]);
+      }
+
+      const agg = new Map<string, { name: string; totalQty: number }>();
+      for (const row of data) {
+        const id = row.product_id as string;
+        const existing = agg.get(id);
+        if (existing) {
+          existing.totalQty += Number(row.quantity);
+        } else {
+          agg.set(id, { name: row.product_name as string, totalQty: Number(row.quantity) });
+        }
+      }
+
+      const sorted = Array.from(agg.entries())
+        .map(([productId, { name, totalQty }]) => ({ productId, name, totalQty }))
+        .sort((a, b) => b.totalQty - a.totalQty)
+        .slice(0, limit);
+
+      return success(sorted);
+    } catch {
+      return failure(new AppError('DASHBOARD_TOP_PRODUCTS_FAILED', 'Error al cargar productos más vendidos'));
+    }
   },
 };

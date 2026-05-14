@@ -101,10 +101,10 @@ export class SyncEngine {
             remotePayload: existing,
             strategy: cfg.conflictStrategy,
           });
-          await supabase.from(item.table).upsert(resolved).maybeSingle();
+          await supabase.from(item.table).upsert(resolved);
           emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
         } else {
-          const { error } = await supabase.from(item.table).upsert(remotePayload).maybeSingle();
+          const { error } = await supabase.from(item.table).upsert(remotePayload);
           if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
         }
         break;

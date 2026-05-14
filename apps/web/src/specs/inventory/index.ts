@@ -12,6 +12,7 @@ export const ProductSchema = z.object({
   priceUsd: z.number().positive('Precio debe ser mayor a 0').max(999999.99),
   categoryId: z.string().uuid().optional(),
   isWeighted: z.boolean(),
+  isTaxable: z.boolean().default(true),
   unit: z.union([z.enum(PESABLE_UNITS), z.literal('unidad')]),
   stock: z.number().int().min(0),
   stockMin: z.number().int().min(0).optional(),

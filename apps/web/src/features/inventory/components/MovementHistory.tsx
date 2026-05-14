@@ -59,14 +59,14 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       header: 'Movimiento',
       render: (mov) => {
         const prod = products.find((p) => p.id === mov.productId);
-        const abs = Math.abs(mov.quantity);
-        const display = prod?.isWeighted ? displayStock(abs, prod.unit) : abs.toString();
+        const sign = mov.type === 'sale' ? -1 : (mov.type === 'purchase' ? 1 : Math.sign(mov.quantity));
+        const signedQty = Math.abs(mov.quantity) * sign;
         return (
           <div className="flex items-center gap-2">
             {getTypeIcon(mov.type)}
             <Badge variant={getTypeBadge(mov.type)}>{getTypeLabel(mov)}</Badge>
             <span className="text-sm font-semibold">
-              {mov.quantity > 0 ? '+' : '-'}{display}{prod?.isWeighted ? ` ${prod.unit}` : ''}
+              {signedQty > 0 ? '+' : ''}{signedQty}{prod?.isWeighted ? ` ${prod.unit}` : ''}
             </span>
           </div>
         );

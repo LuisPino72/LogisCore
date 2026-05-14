@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /** Sales Spec - SALE-001..008 */
 
-export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'tarjeta_usd'] as const;
+export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'efectivo_usd'] as const;
 export type PaymentMethod = typeof PAYMENT_METHODS[number];
 
 export const IGTF_RATE = 0.03;
@@ -55,5 +55,5 @@ export const METADATA_PAGOS = {
   efectivo_bs: { label: 'Efectivo Bs', moneda: 'Bs', requiereVuelto: true, aplicaIgtf: false },
   pago_movil: { label: 'Pago Móvil', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
   tarjeta_bs: { label: 'Tarjeta Bs', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
-  tarjeta_usd: { label: 'Tarjeta USD', moneda: 'USD', requiereVuelto: false, aplicaIgtf: true },
+  efectivo_usd: { label: 'Efectivo USD', moneda: 'USD', requiereVuelto: true, aplicaIgtf: true },
 } as const;
