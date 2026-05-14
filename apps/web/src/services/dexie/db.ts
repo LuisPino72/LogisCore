@@ -78,6 +78,7 @@ export interface DexieSaleItem {
   quantity: number;
   unitPriceUsd: number;
   totalPriceUsd: number;
+  costUsdPerUnit?: number;
   isWeighted: boolean;
   unit: string;
   createdAt: string;

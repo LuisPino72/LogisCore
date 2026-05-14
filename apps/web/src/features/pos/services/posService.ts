@@ -267,6 +267,7 @@ export const posService = {
           }
 
           let toConsume = storageQuantity;
+          let totalCostUsd = 0;
           const lots = await db.inventoryLots
             .where({ productId: cartItem.productId })
             .filter((l) => l.remainingQuantity > 0)
@@ -274,11 +275,14 @@ export const posService = {
 
           for (const lot of lots) {
             if (toConsume <= 0) break;
+            const lotCost = lot.costUsdPerUnit ?? 0;
             if (lot.remainingQuantity >= toConsume) {
+              totalCostUsd += toConsume * lotCost;
               await db.inventoryLots.update(lot.id, { remainingQuantity: lot.remainingQuantity - toConsume });
               await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: lot.remainingQuantity - toConsume } as unknown as Record<string, unknown>), tenantId);
               toConsume = 0;
             } else {
+              totalCostUsd += lot.remainingQuantity * lotCost;
               toConsume -= lot.remainingQuantity;
               await db.inventoryLots.update(lot.id, { remainingQuantity: 0 });
               await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: 0 } as unknown as Record<string, unknown>), tenantId);
@@ -293,6 +297,8 @@ export const posService = {
           const newStock = previousStock - storageQuantity;
           await db.products.update(cartItem.productId, { stock: newStock });
 
+          const costUsdPerUnit = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 4) : 0;
+
           const saleItemId = generateId();
           await db.saleItems.add({
             id: saleItemId,
@@ -304,6 +310,7 @@ export const posService = {
             quantity: cartItem.quantity,
             unitPriceUsd: cartItem.unitPriceUsd,
             totalPriceUsd: cartItem.totalPriceUsd,
+            costUsdPerUnit,
             isWeighted: product.isWeighted,
             unit: product.unit,
             createdAt: now,
@@ -334,6 +341,7 @@ export const posService = {
             quantity: cartItem.quantity,
             unit_price_usd: cartItem.unitPriceUsd,
             total_price_usd: cartItem.totalPriceUsd,
+            cost_usd_per_unit: costUsdPerUnit,
             is_weighted: product.isWeighted,
             unit: product.unit,
             created_at: now,
@@ -580,6 +588,7 @@ export const posService = {
               quantity: item.quantity as number,
               unitPriceUsd: item.unit_price_usd as number,
               totalPriceUsd: item.total_price_usd as number,
+              costUsdPerUnit: item.cost_usd_per_unit as number | undefined,
               isWeighted: item.is_weighted as boolean,
               unit: item.unit as string,
               createdAt: item.created_at as string,
@@ -599,6 +608,7 @@ export const posService = {
         quantity: r.quantity,
         unitPriceUsd: r.unitPriceUsd,
         totalPriceUsd: r.totalPriceUsd,
+        costUsdPerUnit: r.costUsdPerUnit,
         isWeighted: r.isWeighted,
         unit: r.unit,
         createdAt: r.createdAt,

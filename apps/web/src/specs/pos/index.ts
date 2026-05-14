@@ -51,6 +51,7 @@ export const SaleItemSchema = z.object({
   quantity: z.number().positive(),
   unitPriceUsd: z.number().positive(),
   totalPriceUsd: z.number().positive(),
+  costUsdPerUnit: z.number().min(0).optional(),
   isWeighted: z.boolean(),
   unit: z.string(),
   createdAt: z.string().datetime(),

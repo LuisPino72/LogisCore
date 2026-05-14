@@ -35,6 +35,7 @@ import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateW
 import { InventoryPage } from './features/inventory';
 import { PosPage } from './features/pos';
 import { PurchasePage } from './features/purchases';
+import { ReportsPage } from './features/reports';
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
@@ -141,6 +142,8 @@ function DashboardLayout() {
         return <PurchasePage tenantId={effectiveTenantId} />;
       case 'pos':
         return <PosPage tenantId={effectiveTenantId} />;
+      case 'reports':
+        return <ReportsPage tenantId={effectiveTenantId} />;
       default:
         return <ModulePlaceholder moduleId={activeModule} />;
     }
