@@ -66,9 +66,9 @@ export function ProductGrid({
       )}
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} variant="shimmer" className="h-24 rounded-lg" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} variant="shimmer" className="aspect-square rounded-lg" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -78,7 +78,7 @@ export function ProductGrid({
           description={searchQuery || selectedCategory ? 'No se encontraron resultados.' : 'Agrega productos desde el módulo de Inventario.'}
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-y-auto flex-1 pb-20 md:pb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto flex-1 pb-20 md:pb-4">
           {filtered.map((product) => (
             <ProductCard
               key={product.id}

@@ -118,6 +118,7 @@ export const posService = {
               unit: prod.unit as Product['unit'],
               stock: prod.stock as number,
               stockMin: prod.stock_min as number | undefined,
+              imageUrl: prod.image_url as string | undefined,
             };
             await db.products.put(local);
           }
@@ -140,6 +141,7 @@ export const posService = {
         stock: r.stock,
         stockMin: r.stockMin,
         deletedAt: r.deletedAt,
+        imageUrl: r.imageUrl,
       })));
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getProductsForSale:', err);

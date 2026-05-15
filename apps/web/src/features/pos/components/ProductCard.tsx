@@ -1,5 +1,5 @@
+import { Image as ImageIcon, Star } from 'lucide-react';
 import { Card, Badge } from '../../../common/components';
-import { Package, Star } from 'lucide-react';
 import type { Product } from '../../../specs/inventory';
 import { displayStock } from '../../inventory/types';
 
@@ -29,46 +29,66 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
     <Card
       interactive
       onClick={() => onAdd(product)}
-      className="flex flex-col gap-1 relative"
+      className="flex flex-col gap-0 overflow-hidden p-0"
     >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleFavorite(product.id);
-        }}
-        className="absolute top-1.5 right-1.5 p-1 rounded-full hover:bg-surface-alt transition-colors z-10"
-      >
-        <Star
-          size={14}
-          className={isFavorite ? 'text-warning fill-warning' : 'text-gray-300'}
-        />
-      </button>
+      <div className="relative aspect-square bg-surface-alt flex items-center justify-center overflow-hidden">
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <ImageIcon size={32} className="text-gray-300" />
+        )}
 
-      <div className="flex items-start gap-2 pr-6">
-        <div className="w-10 h-10 rounded-lg bg-surface-alt flex items-center justify-center shrink-0">
-          <Package size={20} className="text-gray-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
-          <p className="text-xs text-gray-500 truncate">{product.sku}</p>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(product.id);
+          }}
+          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-white/80 hover:bg-white transition-colors z-10 shadow-sm"
+        >
+          <Star
+            size={14}
+            className={isFavorite ? 'text-warning fill-warning' : 'text-gray-400'}
+          />
+        </button>
+
+        {product.isTaxable && (
+          <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-info/80 text-white text-[10px] font-semibold leading-none z-10">
+            IVA
+          </span>
+        )}
+
+        {product.isWeighted && (
+          <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-accent/80 text-white text-[10px] font-semibold leading-none z-10">
+            {product.unit}
+          </span>
+        )}
       </div>
-      <div className="flex items-center justify-between mt-1">
-        <div className="flex flex-col">
-          <p className="text-sm font-bold text-primary">$ {product.priceUsd.toFixed(2)}</p>
+
+      <div className="flex flex-col gap-1 p-2.5 flex-1">
+        <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-tight">
+          {product.name}
+        </p>
+
+        <div className="flex flex-col gap-0.5">
+          <p className="text-sm font-bold text-primary">
+            $ {product.priceUsd.toFixed(2)}
+          </p>
           {priceBs && (
-            <p className="text-xs text-gray-500">Bs {priceBs}</p>
+            <p className="text-xs text-gray-500 leading-none">Bs {priceBs}</p>
           )}
         </div>
-        <div className="flex items-center gap-1">
-          {product.isWeighted && (
-            <Badge variant="info">{product.unit}</Badge>
+
+        <div className="flex items-center gap-1 mt-auto pt-1">
+          {!product.isTaxable && (
+            <Badge variant="neutral" className="text-[10px] px-1 py-0.5">Exento</Badge>
           )}
-          {product.isTaxable !== undefined && !product.isTaxable && (
-            <Badge variant="neutral">Exento</Badge>
-          )}
-          <Badge variant={isLowStock ? 'warning' : 'neutral'}>
+          <Badge variant={isLowStock ? 'warning' : 'success'} className="text-[10px] px-1 py-0.5">
             {displayQuantity}
           </Badge>
         </div>
