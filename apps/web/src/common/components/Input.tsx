@@ -60,8 +60,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       onValidate?.(err);
     }
 
-    const syntheticEvent = { ...e, target: { ...e.target, value: rawValue } } as ChangeEvent<HTMLInputElement>;
-    onChange?.(syntheticEvent);
+    if (sanitize === 'none') {
+      onChange?.(e);
+      return;
+    }
+
+    Object.defineProperty(e.target, 'value', {
+      writable: true,
+      value: rawValue,
+    });
+    onChange?.(e);
   };
 
   const handleBlur = () => {

@@ -77,6 +77,20 @@ export function AdminPanelPage() {
     setDeleteConfirmText('');
   }, []);
 
+  const handleCloseCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+    setCreateError(null);
+  }, []);
+
+  const handleCloseEditModal = useCallback(() => {
+    setShowEditModal(false);
+  }, []);
+
+  const handleCloseAddEmployeeModal = useCallback(() => {
+    setShowAddEmployeeModal(false);
+    setCreateError(null);
+  }, []);
+
   useEffect(() => {
     fetchTenants();
     fetchAllUsers();
@@ -230,17 +244,18 @@ export function AdminPanelPage() {
       key: 'actions',
       header: 'Acciones',
       render: (t) => (
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => handleNavigateTenant(t.slug)}>
+        <div className="flex flex-wrap gap-1">
+          <Button variant="ghost" size="sm" onClick={() => handleNavigateTenant(t.slug)} title="Ver local">
             <Eye size={16} />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)}>
-            Editar
+            <span className="hidden sm:inline">Editar</span>
+            <span className="sm:hidden">✎</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleSelectTenant(t)}>
+          <Button variant="ghost" size="sm" onClick={() => handleSelectTenant(t)} title="Ver usuarios">
             <UsersIcon size={16} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(t)}>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(t)} title="Eliminar">
             <Trash2 size={16} className="text-gray-400 hover:text-danger" />
           </Button>
         </div>
@@ -299,7 +314,8 @@ export function AdminPanelPage() {
           <div className="flex-1" />
           {activeSheet === 'tenants' ? (
             <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
-              <Plus size={16} /> Nuevo Local
+              <Plus size={16} />
+              <span className="hidden sm:inline">Nuevo Local</span>
             </Button>
           ) : activeSheet === 'users' ? (
             <div className="flex gap-2">
@@ -315,7 +331,8 @@ export function AdminPanelPage() {
         </div>
       }
     >
-      <div className="flex border-b border-gray-200 bg-white sticky top-14 z-10">
+      {/* Desktop tabs */}
+      <div className="hidden sm:flex border-b border-gray-200 bg-white sticky top-14 z-10">
         <Button
           variant="ghost"
           className={`rounded-none border-b-2 px-5 py-3 ${
@@ -338,7 +355,7 @@ export function AdminPanelPage() {
           onClick={() => setActiveSheet('all-users')}
         >
           <UsersRound size={16} />
-          Todos los Usuarios
+          Usuarios
         </Button>
         <Button
           variant="ghost"
@@ -354,7 +371,7 @@ export function AdminPanelPage() {
         </Button>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 sm:pb-0">
         {activeSheet === 'tenants' && (
           <Card>
             <div className="flex items-center justify-between mb-4">
@@ -401,7 +418,9 @@ export function AdminPanelPage() {
             </div>
             <DataTable
               columns={[
-                { key: 'email', header: 'Email' },
+                { key: 'email', header: 'Email', render: (u: GlobalUser) => (
+                  <span className="truncate block max-w-[200px]" title={u.email}>{u.email}</span>
+                )},
                 { key: 'name', header: 'Nombre' },
                 { key: 'role', header: 'Rol' },
                 { key: 'tenantName', header: 'Local'},
@@ -473,7 +492,7 @@ export function AdminPanelPage() {
                         onClick={() => setRenovateTarget(s)}
                       >
                         <RefreshCw size={14} />
-                        {canRenew ? 'Renovar +30d' : 'Activa'}
+                        <span className="hidden sm:inline">{canRenew ? 'Renovar +30d' : 'Activa'}</span>
                       </Button>
                     );
                   },
@@ -488,9 +507,42 @@ export function AdminPanelPage() {
         )}
       </div>
 
+      {/* Mobile Bottom Nav */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="flex items-stretch h-16">
+          <button
+            onClick={() => setActiveSheet('tenants')}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              activeSheet === 'tenants' ? 'text-primary' : 'text-gray-400'
+            }`}
+          >
+            <Building2 size={20} />
+            <span className="text-[10px] font-medium">Locales</span>
+          </button>
+          <button
+            onClick={() => setActiveSheet('all-users')}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              activeSheet === 'all-users' ? 'text-primary' : 'text-gray-400'
+            }`}
+          >
+            <UsersRound size={20} />
+            <span className="text-[10px] font-medium">Usuarios</span>
+          </button>
+          <button
+            onClick={() => setActiveSheet('subscriptions')}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              activeSheet === 'subscriptions' ? 'text-primary' : 'text-gray-400'
+            }`}
+          >
+            <CreditCard size={20} />
+            <span className="text-[10px] font-medium">Suscripciones</span>
+          </button>
+        </div>
+      </div>
+
       <Modal
         isOpen={showCreateModal}
-        onClose={() => { setShowCreateModal(false); setCreateError(null); }}
+        onClose={handleCloseCreateModal}
         title="Crear nuevo local"
       >
         <div className="space-y-4">
@@ -545,31 +597,35 @@ export function AdminPanelPage() {
               </Button>
             </div>
             {createForm.employees.map((emp, i) => (
-              <div key={i} className="border rounded p-2 mb-2 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Empleado #{i + 1}</span>
-                  <Button variant="danger" size="sm" onClick={() => removeEmployeeRow(i)}>
-                    <Trash2 size={14} />
-                  </Button>
+              <Card key={i} className="mb-2">
+                <div className="card-body py-2 px-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500">Empleado #{i + 1}</span>
+                    <Button variant="danger" size="sm" onClick={() => removeEmployeeRow(i)}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Nombre"
+                      value={emp.name}
+                      onChange={(e) => updateEmployeeRow(i, 'name', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Email"
+                      type="email"
+                      value={emp.email}
+                      onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Contraseña"
+                      type="password"
+                      value={emp.password}
+                      onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
+                    />
+                  </div>
                 </div>
-                <Input
-                  placeholder="Nombre"
-                  value={emp.name}
-                  onChange={(e) => updateEmployeeRow(i, 'name', e.target.value)}
-                />
-                <Input
-                  placeholder="Email"
-                  type="email"
-                  value={emp.email}
-                  onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
-                />
-                <Input
-                  placeholder="Contraseña"
-                  type="password"
-                  value={emp.password}
-                  onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
-                />
-              </div>
+              </Card>
             ))}
           </div>
 
@@ -593,7 +649,7 @@ export function AdminPanelPage() {
 
       <Modal
         isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        onClose={handleCloseEditModal}
         title="Editar local"
       >
         <div className="space-y-4">
@@ -621,7 +677,7 @@ export function AdminPanelPage() {
 
       <Modal
         isOpen={showAddEmployeeModal}
-        onClose={() => { setShowAddEmployeeModal(false); setCreateError(null); }}
+        onClose={handleCloseAddEmployeeModal}
         title={`Agregar empleado a ${selectedTenantName}`}
       >
         <div className="space-y-4">
