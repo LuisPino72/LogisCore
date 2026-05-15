@@ -92,7 +92,8 @@ export const posService = {
         updatedAt: row.updatedAt,
         deletedAt: row.deletedAt ?? null,
       });
-    } catch {
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getCashRegister:', err);
       return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Error al consultar el estado de la caja.'));
     }
   },
@@ -151,8 +152,9 @@ export const posService = {
         stockMin: r.stockMin,
         deletedAt: r.deletedAt,
       })));
-    } catch {
-      return failure(new AppError('PRODUCT_NOT_FOUND', 'Error al cargar productos para venta.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getProductsForSale:', err);
+      return failure(new AppError('PRODUCTS_FETCH_FAILED', 'Error al cargar productos para venta.'));
     }
   },
 
@@ -568,8 +570,9 @@ export const posService = {
         createdAt: r.createdAt,
         deletedAt: r.deletedAt ?? undefined,
       })));
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cargar historial de ventas.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getSalesHistory:', err);
+      return failure(new AppError('SALES_HISTORY_FETCH_FAILED', 'Error al cargar historial de ventas.'));
     }
   },
 
@@ -623,8 +626,9 @@ export const posService = {
         unit: r.unit,
         createdAt: r.createdAt,
       })));
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cargar items de venta.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getSaleItems:', err);
+      return failure(new AppError('SALE_ITEMS_FETCH_FAILED', 'Error al cargar items de venta.'));
     }
   },
 
@@ -640,7 +644,7 @@ export const posService = {
       const now = new Date().toISOString();
       const tenantUuid = await getTenantUuid(tenantId);
 
-      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.syncQueue], async () => {
+      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });
 
         for (const item of items) {
@@ -653,6 +657,27 @@ export const posService = {
             : Math.round(item.quantity);
           const newStock = previousStock + storageQty;
           await db.products.update(item.productId, { stock: newStock });
+
+          // Reverse FIFO: restore lots from newest to oldest
+          const lots = await db.inventoryLots
+            .where({ productId: item.productId })
+            .filter((l) => l.remainingQuantity >= 0)
+            .toArray();
+          lots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+          let toRestore = storageQty;
+          for (const lot of lots) {
+            if (toRestore <= 0) break;
+            const currentLot = await db.inventoryLots.get(lot.id);
+            if (!currentLot) continue;
+            const newRemaining = currentLot.remainingQuantity + toRestore;
+            const newVersion = (currentLot.version ?? 0) + 1;
+            await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
+            await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
+              id: lot.id, remainingQuantity: newRemaining, version: newVersion,
+            } as unknown as Record<string, unknown>), tenantId);
+            toRestore = 0;
+          }
 
           const movementId = generateId();
           await db.inventoryMovements.add({
@@ -676,6 +701,8 @@ export const posService = {
           } as unknown as Record<string, unknown>), tenantId);
         }
 
+        await outboxService.enqueue('SALE.VOIDED', MODULE_NAME, { saleId, tenantSlug: tenantId });
+
         await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
           id: saleId, tenant_id: tenantUuid, status: 'voided', voided_at: now,
         } as unknown as Record<string, unknown>), tenantId);
@@ -683,8 +710,9 @@ export const posService = {
 
       await emitWithAudit('SALE.VOIDED', MODULE_NAME, { saleId, tenantSlug: tenantId }, { userId, tenantId, tenantUuid });
       return success(undefined);
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al anular la venta.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en voidSale:', err);
+      return failure(new AppError('SALE_VOID_FAILED', 'Error al anular la venta.'));
     }
   },
 
@@ -803,8 +831,9 @@ export const posService = {
         cart: JSON.parse(r.cartJson) as import('../types').CartItem[],
         createdAt: r.createdAt,
       })));
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cargar ventas en cola.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getParkedCarts:', err);
+      return failure(new AppError('PARKED_CARTS_FETCH_FAILED', 'Error al cargar ventas en cola.'));
     }
   },
 
@@ -823,8 +852,9 @@ export const posService = {
         createdAt: new Date().toISOString(),
       });
       return success(id);
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al guardar venta en cola.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en parkCart:', err);
+      return failure(new AppError('PARKED_CART_SAVE_FAILED', 'Error al guardar venta en cola.'));
     }
   },
 
@@ -833,8 +863,9 @@ export const posService = {
       const db = getDb();
       await db.parkedCarts.delete(id);
       return success(undefined);
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al eliminar venta en cola.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en deleteParkedCart:', err);
+      return failure(new AppError('PARKED_CART_DELETE_FAILED', 'Error al eliminar venta en cola.'));
     }
   },
 
@@ -850,8 +881,9 @@ export const posService = {
       }
       await db.productFavorites.add({ productId, tenantId, createdAt: new Date().toISOString() });
       return success(true);
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cambiar favorito.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en toggleFavorite:', err);
+      return failure(new AppError('FAVORITE_TOGGLE_FAILED', 'Error al cambiar favorito.'));
     }
   },
 
@@ -860,8 +892,9 @@ export const posService = {
       const db = getDb();
       const favs = await db.productFavorites.where({ tenantId }).toArray();
       return success(new Set(favs.map((f) => f.productId)));
-    } catch {
-      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cargar favoritos.'));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getFavorites:', err);
+      return failure(new AppError('FAVORITES_FETCH_FAILED', 'Error al cargar favoritos.'));
     }
   },
 };

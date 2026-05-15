@@ -1,5 +1,5 @@
-import { type FC, type ReactNode } from 'react';
-import { LogOut, Menu as MenuIcon } from 'lucide-react';
+import { memo, type ReactNode } from 'react';
+import { Menu as MenuIcon } from 'lucide-react';
 import { Button } from './Button';
 
 export interface SidebarModule {
@@ -22,18 +22,8 @@ interface SidebarProps {
   footerSlot?: ReactNode;
 }
 
-export const Sidebar: FC<SidebarProps> = ({
-  isOpen,
-  expanded = false,
-  onToggleExpanded,
-  onClose: _onClose,
-  modules,
-  activeModule,
-  onNavigate,
-  userEmail,
-  onLogout,
-  footerSlot,
-}) => {
+export const Sidebar = memo(function Sidebar(props: SidebarProps) {
+  const { isOpen, expanded = false, onToggleExpanded, modules, activeModule, onNavigate } = props;
   return (
     <>
       {expanded && (
@@ -117,31 +107,7 @@ export const Sidebar: FC<SidebarProps> = ({
             ))}
           </nav>
         </div>
-
-        <div className="border-t border-gray-100 shrink-0 bg-gray-50/30">
-          {footerSlot && (
-            <div className={`px-3 py-3 ${expanded ? '' : 'hidden md:block'}`}>
-              {footerSlot}
-            </div>
-          )}
-          <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-            <div className="w-5 inline-flex justify-center shrink-0">
-              <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] font-bold flex items-center justify-center">
-                {(userEmail || 'U')[0].toUpperCase()}
-              </span>
-            </div>
-            <span className={`text-xs font-medium text-gray-700 truncate flex-1 ${expanded ? '' : 'hidden md:block'}`}>{userEmail || 'Usuario'}</span>
-          </div>
-          <button
-            className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] md:min-h-0 text-xs text-gray-500 hover:text-danger hover:bg-red-50 transition-colors group"
-            onClick={onLogout}
-            title={!expanded ? 'Cerrar sesión' : undefined}
-          >
-            <LogOut size={14} className="group-hover:text-danger shrink-0" />
-            <span className={!expanded ? 'hidden md:inline' : ''}>Cerrar sesión</span>
-          </button>
-        </div>
       </aside>
     </>
   );
-};
+});

@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 import { ChevronDown } from 'lucide-react';
 
@@ -9,18 +9,19 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   className?: string;
 }
 
-export const Select: FC<SelectProps> = ({ 
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(({ 
   label, 
   error, 
   hint, 
   className, 
   ...props 
-}) => {
+}, ref) => {
   return (
     <div className={cn('input-wrapper', className)}>
       {label && <label className="input-label">{label}</label>}
       <div className="select-wrapper">
         <select 
+          ref={ref}
           className={cn(
             'select', 
             error && 'input-error'
@@ -35,4 +36,5 @@ export const Select: FC<SelectProps> = ({
       {hint && !error && <span className="input-hint">{hint}</span>}
     </div>
   );
-};
+});
+Select.displayName = 'Select';

@@ -50,11 +50,13 @@ export class SyncEngine {
     this.isSyncing = true;
 
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
+    const MAX_BATCHES = 50;
 
     try {
       emitEngineEvent('SYNC.BATCH_STARTED', { batchSize });
 
-      while (true) {
+      let batches = 0;
+      while (batches < MAX_BATCHES) {
         const items = await syncQueue.dequeue(batchSize);
         if (items.length === 0) break;
 
@@ -73,6 +75,7 @@ export class SyncEngine {
             }
           }
         }
+        batches++;
       }
 
       emitEngineEvent('SYNC.BATCH_COMPLETED', result);

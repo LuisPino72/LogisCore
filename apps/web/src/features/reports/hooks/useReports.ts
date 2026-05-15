@@ -30,8 +30,17 @@ export function useReports(tenantId: string | null) {
   const [filters, setFilters] = useState<ReportFilters>({ timeRange: 'today' });
   const [state, setState] = useState<ReportsState>(initialState);
   const [activeTab, setActiveTab] = useState<ReportTab>('summary');
+  const MAX_CACHE_SIZE = 50;
   const prevKey = useRef('');
-  const dataCache = useRef<Record<string, Partial<ReportsState>>>({});
+  const dataCache = useRef<Map<string, Partial<ReportsState>>>(new Map());
+  const cacheOrder = useRef<string[]>([]);
+
+  const pruneCache = () => {
+    while (cacheOrder.current.length > MAX_CACHE_SIZE) {
+      const key = cacheOrder.current.shift()!;
+      dataCache.current.delete(key);
+    }
+  };
 
   const loadTab = useCallback(async (tab: ReportTab) => {
     if (!tenantId) return;
@@ -39,7 +48,7 @@ export function useReports(tenantId: string | null) {
     if (prevKey.current === cacheKey) return;
     prevKey.current = cacheKey;
 
-    const cached = dataCache.current[cacheKey];
+    const cached = dataCache.current.get(cacheKey);
     if (cached) {
       setState((prev) => ({ ...prev, ...cached, loading: false }));
       return;
@@ -48,7 +57,9 @@ export function useReports(tenantId: string | null) {
     setState((s) => ({ ...s, loading: true, error: null }));
 
     const apply = (updates: Partial<ReportsState>, error: string | null) => {
-      dataCache.current[cacheKey] = updates;
+      dataCache.current.set(cacheKey, updates);
+      cacheOrder.current.push(cacheKey);
+      pruneCache();
       setState((prev) => ({ ...prev, ...updates, loading: false, error }));
     };
 
@@ -101,7 +112,8 @@ export function useReports(tenantId: string | null) {
 
   const refetch = useCallback(() => {
     prevKey.current = '';
-    dataCache.current = {};
+    dataCache.current.clear();
+    cacheOrder.current = [];
     loadTab(activeTab);
   }, [loadTab, activeTab]);
 

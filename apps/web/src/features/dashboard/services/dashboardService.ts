@@ -1,5 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
+import { logger } from '../../../lib/logger';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { TenantInfoResponse, SubscriptionResponse } from '../types';
@@ -91,7 +92,8 @@ export const dashboardService = {
         .slice(0, limit);
 
       return success(sorted);
-    } catch {
+    } catch (err) {
+      logger.error('Dashboard', 'Error en getTopProducts:', err);
       return failure(new AppError('DASHBOARD_TOP_PRODUCTS_FAILED', 'Error al cargar productos más vendidos'));
     }
   },

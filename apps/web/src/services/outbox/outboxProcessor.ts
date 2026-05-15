@@ -20,12 +20,16 @@ class OutboxProcessor {
     }
   }
 
+  private MAX_PER_TICK = 50;
+
   private async tick(): Promise<void> {
     if (!this.running) return;
     try {
-      const result = await outboxService.processNext();
-      if (result.ok && result.data === 'processed') {
-        this.tick();
+      let processed = 0;
+      while (processed < this.MAX_PER_TICK) {
+        const result = await outboxService.processNext();
+        if (!result.ok || result.data !== 'processed') break;
+        processed++;
       }
     } catch (err) {
       console.error('[OutboxProcessor] Error en tick:', err);

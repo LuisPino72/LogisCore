@@ -1,5 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
+import { logger } from '../../../lib/logger';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { ExchangeRateResponse } from '../types';
 
@@ -55,7 +56,8 @@ export const exchangeRateService = {
 
       const data: ExchangeRateResponse = await response.json();
       return success(data);
-    } catch {
+    } catch (err) {
+      logger.error('Exchange', 'Error en triggerBcvFetch:', err);
       return failure(new AppError(DashboardErrors.TASA_API_ERROR, 'Error de conexión al consultar BCV'));
     }
   },

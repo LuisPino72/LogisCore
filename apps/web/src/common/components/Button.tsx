@@ -1,4 +1,4 @@
-import { type FC, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -11,7 +11,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   iconRight?: ReactNode;
 }
 
-export const Button: FC<ButtonProps> = ({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'primary',
   size = 'md',
   fullWidth,
@@ -24,11 +24,12 @@ export const Button: FC<ButtonProps> = ({
   className,
   type = 'button',
   ...props
-}) => {
+}, ref) => {
   const isIconOnly = !children && !!icon;
 
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled || loading}
       className={cn(
@@ -54,4 +55,5 @@ export const Button: FC<ButtonProps> = ({
       )}
     </button>
   );
-};
+});
+Button.displayName = 'Button';

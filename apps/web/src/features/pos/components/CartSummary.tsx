@@ -1,3 +1,4 @@
+import { preciseRound } from '@logiscore/shared';
 import { Button, Badge } from '../../../common/components';
 import { ShoppingCart, Pause } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
@@ -44,10 +45,6 @@ export function CartSummary({
   const totalUsd = exchangeRateBs > 0 ? preciseRound(totalBs / exchangeRateBs, 2) : subtotalUsd;
 
   const fmt = (n: number) => n.toFixed(2);
-  function preciseRound(value: number, decimals = 2): number {
-    const factor = Math.pow(10, decimals);
-    return Math.round(value * factor) / factor;
-  }
 
   return (
     <div className="border-t border-border pt-3 space-y-2">

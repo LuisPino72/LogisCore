@@ -1,4 +1,4 @@
-import { type FC, type ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 interface NavItem {
@@ -15,7 +15,7 @@ interface BottomNavProps {
   className?: string;
 }
 
-export const BottomNav: FC<BottomNavProps> = ({ items, activeKey, className }) => {
+export const BottomNav = memo(function BottomNav({ items, activeKey, className }: BottomNavProps) {
   return (
     <nav className={cn('bottom-nav', className)}>
       <div className="bottom-nav-inner">
@@ -42,4 +42,4 @@ export const BottomNav: FC<BottomNavProps> = ({ items, activeKey, className }) =
       </div>
     </nav>
   );
-};
+});

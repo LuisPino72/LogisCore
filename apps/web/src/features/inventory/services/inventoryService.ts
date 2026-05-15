@@ -132,7 +132,8 @@ export const inventoryService = {
       await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial }, { userId, tenantId });
 
       return success(product);
-    } catch {
+    } catch (err) {
+      logger.error(INVENTORY_MODULE, 'Error en createProduct:', err);
       return failure(new AppError('PRODUCT_SKU_DUPLICATE', 'Error al crear producto. Verifica que el SKU no esté duplicado.'));
     }
   },
@@ -153,7 +154,8 @@ export const inventoryService = {
       });
       await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { productId: id, changes: Object.keys(input) }, { tenantId });
       return success(toProduct(updated as unknown as Record<string, unknown>));
-    } catch {
+    } catch (err) {
+      logger.error(INVENTORY_MODULE, 'Error en updateProduct:', err);
       return failure(new AppError('PRODUCT_SKU_DUPLICATE', 'Error al actualizar. Verifica que el SKU no esté duplicado.'));
     }
   },
@@ -251,8 +253,9 @@ export const inventoryService = {
       }
 
       return success(products);
-    } catch {
-      return failure(new AppError('PRODUCT_NOT_FOUND', 'Error al cargar productos.'));
+    } catch (err) {
+      logger.error(INVENTORY_MODULE, 'Error en getProducts:', err);
+      return failure(new AppError('PRODUCTS_QUERY_FAILED', 'Error al cargar productos.'));
     }
   },
 

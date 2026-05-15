@@ -76,10 +76,27 @@ serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    // Fetch BCV rate from dolarapi.com
-    const bcvRes = await fetch('https://ve.dolarapi.com/v1/dolares', {
-      headers: { 'Accept': 'application/json' },
-    });
+    // Fetch BCV rate from dolarapi.com con timeout de 10s
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    let bcvRes: Response;
+    try {
+      bcvRes = await fetch('https://ve.dolarapi.com/v1/dolares', {
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      const message = fetchErr instanceof DOMException && fetchErr.name === 'AbortError'
+        ? 'El API del BCV no respondió en 10 segundos.'
+        : 'Error de conexión al consultar API del BCV';
+      return new Response(
+        JSON.stringify({ code: 'BCV_API_ERROR', message }),
+        { status: 502, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+      );
+    }
+    clearTimeout(timeout);
 
     if (!bcvRes.ok) {
       return new Response(

@@ -1,34 +1,31 @@
 import { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
-interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface DatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
   error?: string;
   hint?: string;
-  className?: string;
 }
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({ 
-  label, 
-  error, 
-  hint, 
-  className, 
-  ...props 
+export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
+  label,
+  error,
+  hint,
+  className,
+  ...props
 }, ref) => {
   return (
     <div className={cn('input-wrapper', className)}>
       {label && <label className="input-label">{label}</label>}
-      <textarea 
+      <input
         ref={ref}
-        className={cn(
-          'textarea', 
-          error && 'input-error'
-        )} 
-        {...props} 
+        type="date"
+        className={cn('input', error && 'input-error')}
+        {...props}
       />
       {error && <span className="input-error-text">{error}</span>}
       {hint && !error && <span className="input-hint">{hint}</span>}
     </div>
   );
 });
-Textarea.displayName = 'Textarea';
+DatePicker.displayName = 'DatePicker';

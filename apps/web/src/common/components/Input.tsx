@@ -1,4 +1,4 @@
-import { type FC, type ReactNode } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -12,7 +12,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   inputClassName?: string;
 }
 
-export const Input: FC<InputProps> = ({ 
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ 
   label, 
   error, 
   hint, 
@@ -22,7 +22,7 @@ export const Input: FC<InputProps> = ({
   className, 
   inputClassName,
   ...props 
-}) => {
+}, ref) => {
   return (
     <div className={cn('input-wrapper', className)}>
       {label && <label className="input-label">{label}</label>}
@@ -37,6 +37,7 @@ export const Input: FC<InputProps> = ({
         )}
         <div className="relative flex-1">
           <input 
+            ref={ref}
             className={cn(
               'input', 
               (iconLeft && !iconOutside) && 'pl-10',
@@ -53,4 +54,5 @@ export const Input: FC<InputProps> = ({
       {hint && !error && <span className="input-hint">{hint}</span>}
     </div>
   );
-};
+});
+Input.displayName = 'Input';

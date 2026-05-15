@@ -1,4 +1,4 @@
-import { type FC, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -10,17 +10,80 @@ interface ModalProps {
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'full';
   className?: string;
+  closeOnOverlay?: boolean;
+  closeOnEsc?: boolean;
+  initialFocusRef?: React.RefObject<HTMLElement>;
 }
 
-export const Modal: FC<ModalProps> = ({ 
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+export function Modal({ 
   isOpen, 
   onClose, 
   title, 
   children, 
   footer, 
   size = 'md',
-  className 
-}) => {
+  className,
+  closeOnOverlay = true,
+  closeOnEsc = true,
+  initialFocusRef,
+}: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (closeOnEsc && e.key === 'Escape') {
+      onClose();
+      return;
+    }
+
+    // Focus trap
+    if (e.key === 'Tab' && modalRef.current) {
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+  }, [closeOnEsc, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKeyDown);
+
+    requestAnimationFrame(() => {
+      if (initialFocusRef?.current) {
+        initialFocusRef.current.focus();
+      } else if (modalRef.current) {
+        const firstFocusable = modalRef.current.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+        firstFocusable?.focus();
+      }
+    });
+
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [isOpen, handleKeyDown, initialFocusRef]);
+
   if (!isOpen) return null;
 
   const sizeClasses = {
@@ -31,14 +94,21 @@ export const Modal: FC<ModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={closeOnOverlay ? onClose : undefined}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
       <div 
+        ref={modalRef}
         className={cn('modal-content', sizeClasses[size], className)} 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
-          <button onClick={onClose} className="modal-close">
+          <button onClick={onClose} className="modal-close" aria-label="Cerrar">
             <X size={20} />
           </button>
         </div>
@@ -53,4 +123,4 @@ export const Modal: FC<ModalProps> = ({
       </div>
     </div>
   );
-};
+}

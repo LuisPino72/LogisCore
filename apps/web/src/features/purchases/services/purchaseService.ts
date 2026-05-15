@@ -84,7 +84,8 @@ export const purchaseService = {
       });
       await emitWithAudit('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name }, { userId, tenantId });
       return success(supplier);
-    } catch {
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en createSupplier:', err);
       return failure(new AppError('SUPPLIER_CREATE_ERROR', 'Error al crear proveedor.'));
     }
   },
@@ -221,7 +222,8 @@ export const purchaseService = {
 
       await emitWithAudit('PURCHASE.CREATED', PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd }, { userId, tenantId });
       return success(order);
-    } catch {
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en createOrder:', err);
       return failure(new AppError('PURCHASE_CREATE_ERROR', 'Error al crear orden de compra.'));
     }
   },
@@ -283,7 +285,8 @@ export const purchaseService = {
 
       await emitWithAudit('PURCHASE.UPDATED', PURCHASES_MODULE, { orderId: id }, { userId, tenantId });
       return success(toOrder({ ...order, totalUsd } as unknown as Record<string, unknown>));
-    } catch {
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en updateOrder:', err);
       return failure(new AppError('PURCHASE_UPDATE_ERROR', 'Error al actualizar orden.'));
     }
   },

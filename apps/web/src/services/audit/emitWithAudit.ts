@@ -1,5 +1,6 @@
 import { EventBus } from '@logiscore/core';
 import { logAuditEvent } from './auditService';
+import { outboxService } from '../outbox/outboxService';
 
 /** Emite un evento de sistema sin persistencia outbox/auditoría.
  *  Usar solo para eventos internos del engine (SYNC, CORE) que no son
@@ -38,4 +39,28 @@ export async function emitWithAudit(
   } catch (err) {
     console.warn(`[emitWithAudit] Fallo no crítico en ${eventName}:`, err);
   }
+}
+
+/** Versión unificada que empareja outbox + audit.
+ *  Retorna { enqueueInTransaction, auditAfterTransaction }
+ *  para usar dentro/fuera de la transacción Dexie respectivamente.
+ *  Uso:
+ *    const ev = emitWithPersistence('SALE.C', 'POS', {...}, {...});
+ *    await db.transaction(... async () => { await ev.enqueueInTransaction(); });
+ *    await ev.auditAfterTransaction();
+ */
+export function emitWithPersistence(
+  eventName: string,
+  module: string,
+  payload: unknown,
+  context: {
+    userId?: string;
+    tenantId?: string;
+    tenantUuid?: string | null;
+  },
+) {
+  return {
+    enqueueInTransaction: () => outboxService.enqueue(eventName, module, payload),
+    auditAfterTransaction: () => emitWithAudit(eventName, module, payload, context),
+  };
 }

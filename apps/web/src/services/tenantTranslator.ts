@@ -3,18 +3,18 @@ import { AppError } from '@logiscore/core';
 import { supabase } from './supabase/client';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const cache = new Map<string, string>();
+const CACHE_TTL = 5 * 60 * 1000;
+const cache = new Map<string, { value: string; expiresAt: number }>();
 
 export class TenantTranslator {
   static async slugToUuid(slug: string): Promise<string> {
-    // If the "slug" is actually a UUID, use it directly
     if (UUID_RE.test(slug)) {
-      cache.set(slug, slug);
+      cache.set(slug, { value: slug, expiresAt: Date.now() + CACHE_TTL });
       return slug;
     }
 
-    const cached = this.findInCache(slug);
-    if (cached) return cached;
+    const cached = cache.get(slug);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
 
     const { data, error } = await supabase
       .from('tenants')
@@ -27,13 +27,14 @@ export class TenantTranslator {
       throw new AppError('TENANT_TRANSLATION_FAILED', `No se encontró tenant con slug: ${slug}`);
     }
 
-    cache.set(slug, data.id);
+    cache.set(slug, { value: data.id, expiresAt: Date.now() + CACHE_TTL });
     return data.id;
   }
 
   static async uuidToSlug(uuid: string): Promise<string> {
-    for (const [slug, id] of cache) {
-      if (id === uuid) return slug;
+    const now = Date.now();
+    for (const [slug, entry] of cache) {
+      if (entry.value === uuid && entry.expiresAt > now) return slug;
     }
 
     const { data, error } = await supabase
@@ -47,7 +48,7 @@ export class TenantTranslator {
       throw new AppError('TENANT_TRANSLATION_FAILED', `No se encontró tenant con id: ${uuid}`);
     }
 
-    cache.set(data.slug, uuid);
+    cache.set(data.slug, { value: uuid, expiresAt: now + CACHE_TTL });
     return data.slug;
   }
 
@@ -69,9 +70,5 @@ export class TenantTranslator {
 
   static clearCache(): void {
     cache.clear();
-  }
-
-  private static findInCache(slug: string): string | undefined {
-    return cache.get(slug);
   }
 }
