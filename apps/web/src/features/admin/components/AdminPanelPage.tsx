@@ -5,6 +5,7 @@ import { CreateTenantWithUsersInputSchema } from '../types';
 import type { Tenant, UserRole, GlobalUser, SubscriptionView } from '../types';
 import type { Column } from '../../../common/components/DataTable';
 import {
+  Alert,
   AppShell,
   Badge,
   Button,
@@ -47,6 +48,7 @@ export function AdminPanelPage() {
     tenants, users, allUsers, subscriptions, isLoading, error,
     fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, renewSubscription,
     createTenant, addEmployee, updateTenant, removeEmployee,
+    softDeleteTenant, hardDeleteTenant,
   } = useAdminPanel();
 
   const [activeSheet, setActiveSheet] = useState<Sheet>('tenants');
@@ -58,6 +60,8 @@ export function AdminPanelPage() {
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
 
   const [renovateTarget, setRenovateTarget] = useState<SubscriptionView | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
   const [editForm, setEditForm] = useState<EditForm>({ name: '', rif: '' });
@@ -149,6 +153,17 @@ export function AdminPanelPage() {
     await removeEmployee(userRoleId);
   };
 
+  const handleDeleteTenant = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.deletedAt) {
+      await hardDeleteTenant(deleteTarget.id);
+    } else {
+      await softDeleteTenant(deleteTarget.id);
+    }
+    setDeleteTarget(null);
+    setDeleteConfirmText('');
+  };
+
   const addEmployeeRow = () => {
     if (createForm.employees.length >= 3) return;
     setCreateForm((prev) => ({
@@ -178,6 +193,15 @@ export function AdminPanelPage() {
     { key: 'slug', header: 'Slug', hideOnMobile: true },
     { key: 'plan', header: 'Plan'},
     {
+      key: 'status',
+      header: 'Estado',
+      render: (t) => (
+        t.deletedAt
+          ? <Badge variant="neutral">Inactivo</Badge>
+          : <Badge variant="success">Activo</Badge>
+      ),
+    },
+    {
       key: 'actions',
       header: 'Acciones',
       render: (t) => (
@@ -190,6 +214,9 @@ export function AdminPanelPage() {
           </Button>
           <Button variant="ghost" size="sm" onClick={() => handleSelectTenant(t)}>
             <UsersIcon size={16} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(t)}>
+            <Trash2 size={16} className="text-gray-400 hover:text-danger" />
           </Button>
         </div>
       ),
@@ -634,6 +661,74 @@ export function AdminPanelPage() {
             </div>
           )}
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={deleteTarget !== null}
+        onClose={() => { setDeleteTarget(null); setDeleteConfirmText(''); }}
+        title={deleteTarget?.deletedAt ? 'Eliminar permanentemente' : 'Desactivar local'}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); }}>
+              Cancelar
+            </Button>
+            {deleteTarget?.deletedAt ? (
+              <Button
+                variant="danger"
+                fullWidth
+                disabled={deleteConfirmText !== 'BORRAR'}
+                onClick={handleDeleteTenant}
+              >
+                Eliminar permanentemente
+              </Button>
+            ) : (
+              <Button variant="danger" fullWidth onClick={handleDeleteTenant}>
+                Desactivar
+              </Button>
+            )}
+          </div>
+        }
+      >
+        {deleteTarget?.deletedAt ? (
+          <div className="space-y-4">
+            <Alert variant="error">
+              ¡ATENCIÓN! Esta acción <strong>NO se puede deshacer</strong>. Se borrarán <strong>todos los datos</strong> del local en cascada:
+            </Alert>
+            <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+              <li>Productos, categorías e imágenes</li>
+              <li>Ventas, items de venta e historial</li>
+              <li>Inventario, movimientos y lotes</li>
+              <li>Proveedores, órdenes de compra</li>
+              <li>Usuarios y roles del local</li>
+              <li>Suscripciones y tasas de cambio</li>
+            </ul>
+            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+              <p><span className="font-medium text-gray-700">Local:</span> {deleteTarget.name}</p>
+              <p><span className="font-medium text-gray-700">Slug:</span> {deleteTarget.slug}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-1">
+                Escribe <strong>BORRAR</strong> para confirmar:
+              </p>
+              <Input
+                placeholder="BORRAR"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Alert variant="warning">
+              Esto desactivará el local y ocultará todos sus datos. Podrás reactivarlo después si es necesario.
+            </Alert>
+            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+              <p><span className="font-medium text-gray-700">Local:</span> {deleteTarget?.name}</p>
+              <p><span className="font-medium text-gray-700">Slug:</span> {deleteTarget?.slug}</p>
+              <p><span className="font-medium text-gray-700">RIF:</span> {deleteTarget?.rif}</p>
+            </div>
+          </div>
+        )}
       </Modal>
     </AppShell>
   );

@@ -19,6 +19,8 @@ interface UseAdminPanelReturn {
   addEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
   updateTenant: (id: string, data: Partial<Pick<Tenant, 'name' | 'rif'>>) => Promise<Result<Tenant, AppError>>;
   removeEmployee: (userRoleId: string) => Promise<Result<void, AppError>>;
+  softDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
+  hardDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
 }
 
 export function useAdminPanel(): UseAdminPanelReturn {
@@ -117,6 +119,22 @@ export function useAdminPanel(): UseAdminPanelReturn {
     return result;
   }, [fetchSubscriptions]);
 
+  const softDeleteTenant = useCallback(async (id: string) => {
+    const result = await adminService.softDeleteTenant(id);
+    if (result.ok) {
+      await fetchTenants();
+    }
+    return result;
+  }, [fetchTenants]);
+
+  const hardDeleteTenant = useCallback(async (id: string) => {
+    const result = await adminService.hardDeleteTenant(id);
+    if (result.ok) {
+      await fetchTenants();
+    }
+    return result;
+  }, [fetchTenants]);
+
   return {
     tenants,
     users,
@@ -133,5 +151,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     addEmployee,
     updateTenant,
     removeEmployee,
+    softDeleteTenant,
+    hardDeleteTenant,
   };
 }

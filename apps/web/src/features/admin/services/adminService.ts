@@ -18,8 +18,8 @@ export const adminService = {
   async fetchTenants(): Promise<Result<Tenant[], AppError>> {
     const { data, error } = await supabase
       .from('tenants')
-      .select('id, name, slug, rif, created_at, subscriptions!inner(plan, status)')
-      .is('deleted_at', null)
+      .select('id, name, slug, rif, created_at, deleted_at, subscriptions!inner(plan, status)')
+      .order('deleted_at', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -35,10 +35,55 @@ export const adminService = {
         rif: t.rif as string,
         plan: (subs?.plan as string) ?? 'basic',
         createdAt: t.created_at as string,
+        deletedAt: t.deleted_at as string | undefined,
       };
     });
 
     return success(tenants);
+  },
+
+  async softDeleteTenant(id: string): Promise<Result<void, AppError>> {
+    const { error } = await supabase
+      .from('tenants')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      return failure(new AppError('TENANT_DELETE_FAILED', 'Error al desactivar el local'));
+    }
+
+    await emitWithAudit('ADMIN.TENANT.DELETE', 'ADMIN', {
+      tenantId: id,
+      type: 'soft',
+    }, {
+      userId: '',
+      tenantId: '',
+      tenantUuid: id,
+    });
+
+    return success(undefined);
+  },
+
+  async hardDeleteTenant(id: string): Promise<Result<void, AppError>> {
+    const { error } = await supabase
+      .from('tenants')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return failure(new AppError('TENANT_HARD_DELETE_FAILED', 'Error al eliminar permanentemente el local'));
+    }
+
+    await emitWithAudit('ADMIN.TENANT.HARD_DELETE', 'ADMIN', {
+      tenantId: id,
+      type: 'hard',
+    }, {
+      userId: '',
+      tenantId: '',
+      tenantUuid: id,
+    });
+
+    return success(undefined);
   },
 
   async fetchUsers(tenantId?: string): Promise<Result<UserRole[], AppError>> {

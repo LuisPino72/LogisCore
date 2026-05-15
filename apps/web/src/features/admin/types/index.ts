@@ -48,6 +48,7 @@ export interface Tenant {
   rif: string;
   plan: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 export interface UserRole {
