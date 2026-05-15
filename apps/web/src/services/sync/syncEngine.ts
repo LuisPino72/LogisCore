@@ -180,7 +180,7 @@ export class SyncEngine {
         const query = supabase
           .from(tableName)
           .select('*')
-          .or(`and(${timeCol}.gt.${since}),and(deleted_at.gt.${since})`);
+          .or(`${timeCol}.gt.${since},deleted_at.gt.${since}`);
 
         const { data, error } = await query;
 
