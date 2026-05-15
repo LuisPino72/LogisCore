@@ -16,6 +16,7 @@ import {
   Spinner,
   LogoutButton,
 } from '../../../common/components';
+import { useToastStore } from '../../../stores/toastStore';
 import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw } from 'lucide-react';
 
 interface EmployeeForm {
@@ -69,6 +70,8 @@ export function AdminPanelPage() {
 
   const [createError, setCreateError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { addToast } = useToastStore();
 
   useEffect(() => {
     fetchTenants();
@@ -155,11 +158,29 @@ export function AdminPanelPage() {
 
   const handleDeleteTenant = async () => {
     if (!deleteTarget) return;
-    if (deleteTarget.deletedAt) {
-      await hardDeleteTenant(deleteTarget.id);
-    } else {
-      await softDeleteTenant(deleteTarget.id);
+    setIsDeleting(true);
+    try {
+      const fn = deleteTarget.deletedAt ? hardDeleteTenant : softDeleteTenant;
+      const result = await fn(deleteTarget.id);
+      if (result.ok) {
+        addToast({
+          type: 'success',
+          message: deleteTarget.deletedAt
+            ? 'Local eliminado permanentemente.'
+            : 'Local desactivado correctamente.',
+          duration: 4000,
+        });
+      } else {
+        addToast({ type: 'error', message: result.error.message, duration: 5000 });
+      }
+    } catch (err) {
+      addToast({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Error al eliminar el local',
+        duration: 5000,
+      });
     }
+    setIsDeleting(false);
     setDeleteTarget(null);
     setDeleteConfirmText('');
   };
@@ -669,21 +690,22 @@ export function AdminPanelPage() {
         title={deleteTarget?.deletedAt ? 'Eliminar permanentemente' : 'Desactivar local'}
         footer={
           <div className="flex gap-2">
-            <Button variant="secondary" fullWidth onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); }}>
+            <Button variant="secondary" fullWidth onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); }} disabled={isDeleting}>
               Cancelar
             </Button>
             {deleteTarget?.deletedAt ? (
               <Button
                 variant="danger"
                 fullWidth
-                disabled={deleteConfirmText !== 'BORRAR'}
+                disabled={deleteConfirmText !== 'BORRAR' || isDeleting}
+                loading={isDeleting}
                 onClick={handleDeleteTenant}
               >
-                Eliminar permanentemente
+                {isDeleting ? 'Eliminando...' : 'Eliminar permanentemente'}
               </Button>
             ) : (
-              <Button variant="danger" fullWidth onClick={handleDeleteTenant}>
-                Desactivar
+              <Button variant="danger" fullWidth onClick={handleDeleteTenant} loading={isDeleting}>
+                {isDeleting ? 'Desactivando...' : 'Desactivar'}
               </Button>
             )}
           </div>

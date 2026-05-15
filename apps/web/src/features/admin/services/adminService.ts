@@ -52,14 +52,18 @@ export const adminService = {
       return failure(new AppError('TENANT_DELETE_FAILED', 'Error al desactivar el local'));
     }
 
-    await emitWithAudit('ADMIN.TENANT.DELETE', 'ADMIN', {
-      tenantId: id,
-      type: 'soft',
-    }, {
-      userId: '',
-      tenantId: '',
-      tenantUuid: id,
-    });
+    try {
+      await emitWithAudit('ADMIN.TENANT.DELETE', 'ADMIN', {
+        tenantId: id,
+        type: 'soft',
+      }, {
+        userId: '',
+        tenantId: '',
+        tenantUuid: id,
+      });
+    } catch {
+      // Non-critical: audit fallo, pero el soft delete ya fue exitoso
+    }
 
     return success(undefined);
   },
@@ -74,14 +78,18 @@ export const adminService = {
       return failure(new AppError('TENANT_HARD_DELETE_FAILED', 'Error al eliminar permanentemente el local'));
     }
 
-    await emitWithAudit('ADMIN.TENANT.HARD_DELETE', 'ADMIN', {
-      tenantId: id,
-      type: 'hard',
-    }, {
-      userId: '',
-      tenantId: '',
-      tenantUuid: id,
-    });
+    try {
+      await emitWithAudit('ADMIN.TENANT.HARD_DELETE', 'ADMIN', {
+        tenantId: id,
+        type: 'hard',
+      }, {
+        userId: '',
+        tenantId: '',
+        tenantUuid: id,
+      });
+    } catch {
+      // Non-critical: audit fallo, pero el hard delete ya fue exitoso
+    }
 
     return success(undefined);
   },
