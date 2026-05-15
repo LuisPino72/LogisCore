@@ -84,7 +84,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" style={{ paddingTop: 'env(safe-area-inset-top, 1rem)', paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
         <div className="p-4 flex items-center justify-between border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">

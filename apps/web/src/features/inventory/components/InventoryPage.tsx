@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, Select } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { inventoryService } from '../services/inventoryService';
@@ -30,8 +30,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     search, refresh, userId, role,
   } = useInventory(tenantId);
 
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-
   const { totalLowStock } = useStockAlerts(tenantId);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -47,12 +45,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
 
   const isOwner = role === 'owner' || role === 'admin';
-
-  const tabs = [
-    { id: 'productos' as const, label: 'Productos', icon: <Package size={16} /> },
-    { id: 'categorias' as const, label: 'Categorías', icon: <ListTree size={16} /> },
-    { id: 'historial' as const, label: 'Historial', icon: <History size={16} /> },
-  ];
 
   const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
     if (!tenantId || !userId) return false;
@@ -100,16 +92,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     setShowProductForm(true);
   };
 
-  // Ensure active tab button is centered in view
-  useEffect(() => {
-    if (tabsContainerRef.current) {
-      const activeBtn = document.getElementById(`tab-${activeTab}`) as HTMLElement | null;
-      if (activeBtn) {
-        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }
-    }
-  }, [activeTab]);
-
   const handleSubmitAdjustment = async () => {
     if (!adjProductId) { setAdjError('Selecciona un producto'); return; }
     const qty = parseFloat(adjQuantity);
@@ -137,7 +119,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
   if (loading && products.length === 0) {
     return (
-      <div className="p-4 max-w-5xl mx-auto space-y-4">
+      <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-title font-bold">Inventario</h1>
         </div>
@@ -151,7 +133,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto space-y-4">
+    <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-title font-bold">Inventario</h1>
         <div className="flex items-center gap-2">
@@ -159,71 +141,124 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         </div>
       </div>
 
-      <div ref={tabsContainerRef} className="flex gap-1 overflow-x-auto pb-1 items-center scrollbar-none">
-
-        {tabs.map((tab) => (
-          <Button
-            id={`tab-${tab.id}`}
-            key={tab.id}
-            variant={activeTab === tab.id ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab(tab.id)}
-            className="shrink-0"
-          >
-            {tab.icon}
-            <span className="ml-1">{tab.label}</span>
-          </Button>
-        ))}
-
-      
-        
+      {/* Desktop tabs */}
+      <div className="hidden sm:flex border-b border-gray-200 bg-white sticky top-14 z-10">
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-5 py-3 ${
+            activeTab === 'productos'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+          onClick={() => setActiveTab('productos')}
+        >
+          <Package size={16} />
+          <span className="ml-1">Productos</span>
+        </Button>
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-5 py-3 ${
+            activeTab === 'categorias'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+          onClick={() => setActiveTab('categorias')}
+        >
+          <ListTree size={16} />
+          <span className="ml-1">Categorías</span>
+        </Button>
+        <Button
+          variant="ghost"
+          className={`rounded-none border-b-2 px-5 py-3 ${
+            activeTab === 'historial'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+          onClick={() => setActiveTab('historial')}
+        >
+          <History size={16} />
+          <span className="ml-1">Historial</span>
+        </Button>
       </div>
 
-      <Card>
-        {activeTab === 'productos' && (
-          <ProductList
-            products={products}
-            categories={categories}
-            onSearch={search}
-            isOwner={isOwner}
-            onNewProduct={openNewProduct}
-            onEditProduct={openEditProduct}
-            onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
-            onAdjust={(id) => { setSelectedProductId(id); setShowAdjustment(true); }}
-            onViewLots={(id) => setSelectedProductLotsId(id)}
-            onViewKardex={(id) => {
-              const product = products.find((p) => p.id === id);
-              if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
-            }}
-            onRefresh={refresh}
-          />
-        )}
-
-        {activeTab === 'categorias' && (
-          <div className="p-4">
-            <CategoryManager
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+        <Card>
+          {activeTab === 'productos' && (
+            <ProductList
+              products={products}
               categories={categories}
+              onSearch={search}
               isOwner={isOwner}
-              onCreate={async (name) => { if (!tenantId) return false; return createCategory(name, tenantId); }}
-              onUpdate={async (id, name) => { if (!tenantId) return false; return updateCategory(id, name, tenantId); }}
-              onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
+              onNewProduct={openNewProduct}
+              onEditProduct={openEditProduct}
+              onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
+              onAdjust={(id) => { setSelectedProductId(id); setShowAdjustment(true); }}
+              onViewLots={(id) => setSelectedProductLotsId(id)}
+              onViewKardex={(id) => {
+                const product = products.find((p) => p.id === id);
+                if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
+              }}
+              onRefresh={refresh}
             />
-          </div>
-        )}
+          )}
 
-        {/* removed ajustes tab content — functionality moved to modal triggered by + button */}
+          {activeTab === 'categorias' && (
+            <div className="p-4">
+              <CategoryManager
+                categories={categories}
+                isOwner={isOwner}
+                onCreate={async (name) => { if (!tenantId) return false; return createCategory(name, tenantId); }}
+                onUpdate={async (id, name) => { if (!tenantId) return false; return updateCategory(id, name, tenantId); }}
+                onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
+              />
+            </div>
+          )}
 
-        {activeTab === 'historial' && (
-          <div className="p-4">
-            <h2 className="text-sm font-semibold mb-4">Historial de movimientos</h2>
-            {!isOwner ? (
-              <p className="text-sm text-gray-500">Solo el propietario puede ver el historial.</p>
-            ) : (
-              <MovementHistory products={products} />
-            )}
-          </div>
-        )}
-      </Card>
+          {activeTab === 'historial' && (
+            <div className="p-4">
+              <h2 className="text-sm font-semibold mb-4">Historial de movimientos</h2>
+              {!isOwner ? (
+                <p className="text-sm text-gray-500">Solo el propietario puede ver el historial.</p>
+              ) : (
+                <MovementHistory products={products} />
+              )}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Mobile Bottom Nav */}
+      <div className="sm:hidden fixed bottom-0 left-14 right-0 bg-white border-t border-gray-200 z-30">
+        <div className="flex items-stretch h-14">
+          <button
+            onClick={() => setActiveTab('productos')}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              activeTab === 'productos' ? 'text-primary' : 'text-gray-400'
+            }`}
+          >
+            <Package size={20} />
+            <span className="text-[10px] font-medium">Productos</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('categorias')}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              activeTab === 'categorias' ? 'text-primary' : 'text-gray-400'
+            }`}
+          >
+            <ListTree size={20} />
+            <span className="text-[10px] font-medium">Categorías</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('historial')}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              activeTab === 'historial' ? 'text-primary' : 'text-gray-400'
+            }`}
+          >
+            <History size={20} />
+            <span className="text-[10px] font-medium">Historial</span>
+          </button>
+        </div>
+      </div>
 
       {showProductForm && (
         <ProductForm
@@ -238,15 +273,16 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       {showAdjustment && (
         <Modal isOpen={showAdjustment} onClose={() => { setShowAdjustment(false); setSelectedProductId(null); }} title="Ajuste de stock">
           <div className="space-y-4">
-            <div className="input-wrapper">
-              <label className="input-label">Producto</label>
-              <select className="select" value={adjProductId} onChange={(e) => setAdjProductId(e.target.value)}>
-                <option value="">Seleccionar...</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Producto"
+              value={adjProductId}
+              onChange={(e) => setAdjProductId(e.target.value)}
+            >
+              <option value="">Seleccionar...</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+              ))}
+            </Select>
 
             {products.find((p) => p.id === adjProductId) && (
               <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">

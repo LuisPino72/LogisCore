@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { History, TrendingUp, TrendingDown, Package, ChevronDown } from 'lucide-react';
-import { Badge, DataTable, Button } from '../../../common/components';
+import { Badge, DataTable, Button, Select } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import type { Product } from '../types';
 import { displayStock } from '../types';
@@ -109,19 +109,16 @@ export function MovementHistory({ products }: MovementHistoryProps) {
 
   return (
     <div className="space-y-4">
-      <div className="input-wrapper">
-        <label className="input-label">Seleccionar producto</label>
-        <select
-          className="select"
-          value={selectedProductId}
-          onChange={(e) => handleProductChange(e.target.value)}
-        >
-          <option value="">Seleccionar producto...</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label="Seleccionar producto"
+        value={selectedProductId}
+        onChange={(e) => handleProductChange(e.target.value)}
+      >
+        <option value="">Seleccionar producto...</option>
+        {products.map((p) => (
+          <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+        ))}
+      </Select>
 
       {!selectedProductId && (
         <p className="text-sm text-gray-400 text-center py-4">Selecciona un producto para ver su historial</p>

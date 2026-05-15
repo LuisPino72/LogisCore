@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Input, Modal, Checkbox } from '../../../common/components';
+import { Button, Input, Modal, Checkbox, Select } from '../../../common/components';
 import { ImagePlus, X, Scan } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
@@ -131,15 +131,14 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
         <div className="input-wrapper">
           <label className="input-label">Tipo de producto</label>
-          <select
-            className="select"
+          <Select
             value={formData.productType}
             onChange={(e) => setField('productType', e.target.value as 'unidad' | 'pesable_kg' | 'pesable_lt')}
           >
             <option value="unidad">Unidad (entero)</option>
             <option value="pesable_kg">Pesable (Kg)</option>
             <option value="pesable_lt">Líquido (Lt)</option>
-          </select>
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -177,18 +176,17 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         </div>
 
         <div className="input-wrapper">
-          <label className="input-label">Categoría</label>
-          <select
-            className="select"
+          <Select
+            label="Categoría"
             value={formData.categoryId || ''}
             onChange={(e) => setField('categoryId', e.target.value || undefined)}
+            error={errors.categoryId}
           >
             <option value="">Seleccionar categoría...</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
-          </select>
-          {errors.categoryId && <span className="text-xs text-danger">{errors.categoryId}</span>}
+          </Select>
         </div>
 
           {Object.keys(errors).length > 0 && (

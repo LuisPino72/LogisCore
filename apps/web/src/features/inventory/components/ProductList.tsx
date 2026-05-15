@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList } from 'lucide-react';
-import { Button, Badge, DataTable, EmptyState } from '../../../common/components';
+import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, MoreVertical } from 'lucide-react';
+import { Button, Badge, DataTable, Dropdown, EmptyState } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import type { Product, Category } from '../types';
@@ -107,23 +107,40 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         header: '',
         className: 'text-right',
         render: (product) => (
-          <div className="flex gap-1 items-center justify-end">
-            <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1" title="Ver lotes">
-              <Layers size={14} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onViewKardex(product.id)} className="p-1" title="Ver Kardex">
-              <ClipboardList size={14} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1" title="Ajustar stock">
-              <Plus size={14} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1" title="Editar">
-              <Edit3 size={14} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1" title="Eliminar">
-              <Trash2 size={14} className="text-danger" />
-            </Button>
-          </div>
+          <>
+            {/* Desktop: all buttons visible */}
+            <div className="hidden sm:flex gap-1 items-center justify-end">
+              <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1" title="Ver lotes">
+                <Layers size={16} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onViewKardex(product.id)} className="p-1" title="Ver Kardex">
+                <ClipboardList size={16} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1" title="Ajustar stock">
+                <Plus size={16} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1" title="Editar">
+                <Edit3 size={16} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1" title="Eliminar">
+                <Trash2 size={16} className="text-danger" />
+              </Button>
+            </div>
+            {/* Mobile: dropdown menu */}
+            <div className="sm:hidden flex justify-end">
+              <Dropdown
+                align="right"
+                trigger={<MoreVertical size={20} className="text-gray-500" />}
+                items={[
+                  { label: 'Ver lotes', icon: <Layers size={16} />, onClick: () => onViewLots(product.id) },
+                  { label: 'Ver Kardex', icon: <ClipboardList size={16} />, onClick: () => onViewKardex(product.id) },
+                  { label: 'Ajustar stock', icon: <Plus size={16} />, onClick: () => onAdjust(product.id) },
+                  { label: 'Editar', icon: <Edit3 size={16} />, onClick: () => onEditProduct(product) },
+                  { label: 'Eliminar', icon: <Trash2 size={16} className="text-danger" />, onClick: () => onRequestDelete(product.id, product.name), variant: 'danger' as const },
+                ]}
+              />
+            </div>
+          </>
         ),
       });
     }

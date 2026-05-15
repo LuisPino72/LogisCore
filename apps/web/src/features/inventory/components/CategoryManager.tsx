@@ -64,7 +64,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
             error={error}
           />
           <Button variant="primary" size="sm" onClick={handleCreate} disabled={creating}>
-            <Plus size={14} />
+            <Plus size={16} />
           </Button>
         </div>
       )}
@@ -82,26 +82,26 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
                     onChange={(e) => setEditName(e.target.value)}
                     className="text-sm!"
                   />
-                  <Button variant="ghost" size="sm" onClick={saveEdit}>
-                    <Check size={14} className="text-success" />
+                      <Button variant="ghost" size="sm" onClick={saveEdit}>
+                    <Check size={16} className="text-success" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={cancelEdit}>
-                    <X size={14} className="text-danger" />
+                    <X size={16} className="text-danger" />
                   </Button>
                 </div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 min-w-0 truncate">
-                    <ListTree size={14} className="text-gray-400 shrink-0" />
+                    <ListTree size={16} className="text-gray-400 shrink-0" />
                     <span className="text-sm truncate">{cat.name}</span>
                   </div>
                   {isOwner && (
                     <div className="flex gap-1 shrink-0">
                       <Button variant="ghost" size="sm" onClick={() => startEdit(cat)}>
-                        <Edit3 size={14} />
+                        <Edit3 size={16} />
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)}>
-                        <Trash2 size={14} className="text-danger" />
+                        <Trash2 size={16} className="text-danger" />
                       </Button>
                     </div>
                   )}
