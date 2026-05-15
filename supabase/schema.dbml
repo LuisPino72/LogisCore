@@ -47,6 +47,7 @@ Table audit_trail {
   payload jsonb [default: '{}']
   severity text [not null, default: 'INFO']
   created_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz
 }
 
 Table outbox {

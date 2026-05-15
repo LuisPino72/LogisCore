@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { CreateTenantWithUsersInputSchema } from '../types';
@@ -72,6 +72,10 @@ export function AdminPanelPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { addToast } = useToastStore();
+  const handleCloseDeleteModal = useCallback(() => {
+    setDeleteTarget(null);
+    setDeleteConfirmText('');
+  }, []);
 
   useEffect(() => {
     fetchTenants();
@@ -686,11 +690,11 @@ export function AdminPanelPage() {
 
       <Modal
         isOpen={deleteTarget !== null}
-        onClose={() => { setDeleteTarget(null); setDeleteConfirmText(''); }}
+        onClose={handleCloseDeleteModal}
         title={deleteTarget?.deletedAt ? 'Eliminar permanentemente' : 'Desactivar local'}
         footer={
           <div className="flex gap-2">
-            <Button variant="secondary" fullWidth onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); }} disabled={isDeleting}>
+            <Button variant="secondary" fullWidth onClick={handleCloseDeleteModal} disabled={isDeleting}>
               Cancelar
             </Button>
             {deleteTarget?.deletedAt ? (

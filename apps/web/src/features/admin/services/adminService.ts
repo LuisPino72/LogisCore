@@ -43,13 +43,10 @@ export const adminService = {
   },
 
   async softDeleteTenant(id: string): Promise<Result<void, AppError>> {
-    const { error } = await supabase
-      .from('tenants')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
+    const { error } = await supabase.rpc('soft_delete_tenant', { p_tenant_id: id });
 
     if (error) {
-      return failure(new AppError('TENANT_DELETE_FAILED', 'Error al desactivar el local'));
+      return failure(new AppError('TENANT_DELETE_FAILED', error.message || 'Error al desactivar el local'));
     }
 
     try {
@@ -69,13 +66,10 @@ export const adminService = {
   },
 
   async hardDeleteTenant(id: string): Promise<Result<void, AppError>> {
-    const { error } = await supabase
-      .from('tenants')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.rpc('hard_delete_tenant', { p_tenant_id: id });
 
     if (error) {
-      return failure(new AppError('TENANT_HARD_DELETE_FAILED', 'Error al eliminar permanentemente el local'));
+      return failure(new AppError('TENANT_HARD_DELETE_FAILED', error.message || 'Error al eliminar permanentemente el local'));
     }
 
     try {
