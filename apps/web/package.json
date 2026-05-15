@@ -11,8 +11,8 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@logiscore/core": "workspace:*",
-    "@logiscore/shared": "workspace:*",
+    "@logiscore/core": "*",
+    "@logiscore/shared": "*",
     "@supabase/supabase-js": "^2.47.0",
     "dexie": "^4.0.0",
     "html5-qrcode": "^2.3.8",
