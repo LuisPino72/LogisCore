@@ -502,7 +502,7 @@ export function AdminPanelPage() {
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, name: e.target.value } }))}
             />
             <Input
-              placeholder="RIF (V123456789)"
+              placeholder="RIF (J-123456789)"
               value={createForm.tenant.rif}
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value.toUpperCase() } }))}
               className="mt-2"

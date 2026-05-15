@@ -13,8 +13,8 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
   ...props
 }, ref) => {
   return (
-    <label className={cn('flex items-center gap-3 cursor-pointer', className)}>
-      <div className="relative">
+    <label className={cn('flex items-center gap-3 cursor-pointer select-none min-h-[44px]', className)}>
+      <div className="relative flex items-center">
         <input
           ref={ref}
           type="checkbox"
@@ -23,15 +23,15 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
         />
         <div className={cn(
           'rounded-full bg-gray-300 peer-checked:bg-primary transition-colors',
-          size === 'sm' ? 'w-8 h-4' : 'w-10 h-5',
+          size === 'sm' ? 'w-9 h-5' : 'w-11 h-6',
         )}>
           <div className={cn(
             'absolute top-0.5 left-0.5 bg-white rounded-full shadow transition-transform',
-            size === 'sm' ? 'w-3 h-3 peer-checked:translate-x-4' : 'w-4 h-4 peer-checked:translate-x-5',
+            size === 'sm' ? 'w-4 h-4 peer-checked:translate-x-4' : 'w-5 h-5 peer-checked:translate-x-5',
           )} />
         </div>
       </div>
-      {label && <span className="text-sm text-gray-700 select-none">{label}</span>}
+      {label && <span className="text-sm text-gray-700">{label}</span>}
     </label>
   );
 });

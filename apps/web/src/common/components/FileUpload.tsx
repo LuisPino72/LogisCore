@@ -88,9 +88,9 @@ export function FileUpload({
       {error && <span className="input-error-text">{error}</span>}
 
       {preview && previews.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
           {previews.map((url, i) => (
-            <div key={i} className="relative w-16 h-16">
+            <div key={i} className="relative w-16 h-16 shrink-0">
               <img src={url} alt={`Preview ${i}`} className="w-full h-full object-cover rounded border" />
               <button
                 onClick={() => {
@@ -105,7 +105,7 @@ export function FileUpload({
             </div>
           ))}
           {previews.length > 1 && (
-            <button onClick={clearPreviews} className="text-xs text-red-600 hover:underline">
+            <button onClick={clearPreviews} className="text-xs text-red-600 hover:underline self-center">
               Limpiar todo
             </button>
           )}

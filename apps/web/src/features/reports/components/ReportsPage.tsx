@@ -173,7 +173,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       </div>
 
       {/* Mobile Bottom Nav for Tabs */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
         <div className="flex items-center justify-around overflow-x-auto">
           {TABS.map((tab) => (
             <button
