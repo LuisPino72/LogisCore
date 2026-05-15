@@ -14,4 +14,4 @@ export type { CurrencyType, PaymentMethod } from './constants';
 export { validateRif, calculateIGTF, validateIGTF, applyCentsAdjustment } from './fiscal';
 export type { RifValidation } from './fiscal';
 
-export { preciseRound, formatCurrency, isValidSlug } from './utils';
+export { preciseRound, formatCurrency, isValidSlug, toSnake, toCamel, generateId } from './utils';

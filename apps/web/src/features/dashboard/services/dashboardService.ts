@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
-import { getDb } from '../../../services/dexie/db';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { TenantInfoResponse, SubscriptionResponse } from '../types';
 import type { Product } from '../../../specs/inventory';
@@ -57,11 +57,7 @@ export const dashboardService = {
 
   async getTopProducts(tenantId: string, limit = 5): Promise<Result<{ productId: string; name: string; totalQty: number }[], AppError>> {
     try {
-      const db = getDb();
-      const tenantUuid = await (async () => {
-        const ref = await db.tenantRefs.get(tenantId);
-        return ref?.id ?? tenantId;
-      })();
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
       const { data, error } = await supabase
         .from('sale_items')

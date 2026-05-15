@@ -12,7 +12,15 @@ import type {
 } from './types';
 import { DEFAULT_BATCH_SIZE, SYNC_INTERVAL_MS } from './types';
 
-const CATALOG_TABLES: string[] = ['products', 'categories'];
+// Tablas que se sincronizan bidireccionalmente (pull + push)
+// Cada entrada define qué columna usar para incremental fetch
+const PULL_TABLES: { name: string; timeCol: string }[] = [
+  { name: 'products', timeCol: 'updated_at' },
+  { name: 'categories', timeCol: 'updated_at' },
+  { name: 'inventory_lots', timeCol: 'created_at' },
+  { name: 'suppliers', timeCol: 'created_at' },
+  { name: 'purchase_orders', timeCol: 'updated_at' },
+];
 
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();
@@ -155,36 +163,46 @@ export class SyncEngine {
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
     const db = getDb();
 
-    const tablesToSync = tables ?? CATALOG_TABLES;
+    const tablesToSync = tables ?? PULL_TABLES.map((t) => t.name);
 
     for (const tableName of tablesToSync) {
       try {
+        const tableCfg = PULL_TABLES.find((t) => t.name === tableName);
+        const timeCol = tableCfg?.timeCol ?? 'updated_at';
+
         const meta = await db.syncMeta.get(tableName);
         const lastPullAt = meta?.lastPullAt ?? 0;
 
         const query = supabase
           .from(tableName)
           .select('*')
-          .gt('updated_at', new Date(lastPullAt).toISOString());
+          .gt(timeCol, new Date(lastPullAt).toISOString());
 
         const { data, error } = await query;
 
         if (error) {
-          throw new AppError('SYNC_PULL_FAILED', error.message, { details: { table: tableName } });
+          // Si la columna no existe en la tabla remota, intentar con created_at
+          if (timeCol === 'updated_at' && error.message?.includes(timeCol)) {
+            const fallbackQuery = supabase
+              .from(tableName)
+              .select('*')
+              .gt('created_at', new Date(lastPullAt).toISOString());
+            const fbResult = await fallbackQuery;
+            if (fbResult.error) continue;
+            const fbData = fbResult.data;
+            if (fbData && fbData.length > 0) {
+              for (const record of fbData) {
+                await this.upsertLocalRecord(tableName, record);
+                result.pushed++;
+              }
+            }
+          }
+          continue;
         }
 
         if (data && data.length > 0) {
           for (const record of data) {
-            const local: Record<string, unknown> = {};
-            for (const [key, val] of Object.entries(record)) {
-              const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-              local[camel] = val;
-            }
-            if (tableName === 'products' || tableName === 'categories') {
-              const tenantId = local.tenantId || record.tenant_id;
-              if (tenantId) local.tenantId ??= tenantId;
-            }
-            await db.table(tableName).put(local);
+            await this.upsertLocalRecord(tableName, record);
             result.pushed++;
           }
         }
@@ -199,6 +217,20 @@ export class SyncEngine {
     }
 
     return success(result);
+  }
+
+  private async upsertLocalRecord(tableName: string, record: Record<string, unknown>): Promise<void> {
+    const db = getDb();
+    const local: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(record)) {
+      const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      local[camel] = val;
+    }
+    // Asegurar tenantId en todas las tablas multi-tenant
+    if (local.tenantId || record.tenant_id) {
+      local.tenantId ??= record.tenant_id;
+    }
+    await db.table(tableName).put(local);
   }
 
   start(): void {

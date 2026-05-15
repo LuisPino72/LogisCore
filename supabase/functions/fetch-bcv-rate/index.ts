@@ -7,6 +7,18 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 
+// Rate limit: max 1 request por tenant cada 60 segundos (evita abuso)
+const rateLimitMap = new Map<string, number>();
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const lastCall = rateLimitMap.get(key) ?? 0;
+  if (now - lastCall < RATE_LIMIT_WINDOW_MS) return false;
+  rateLimitMap.set(key, now);
+  return true;
+}
+
 function corsHeaders(): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -50,6 +62,15 @@ serve(async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
     const tenant_id = body?.tenant_id as string | undefined;
+
+    // Rate limiting por tenant
+    const rateKey = tenant_id ?? 'global';
+    if (!checkRateLimit(rateKey)) {
+      return new Response(
+        JSON.stringify({ code: 'RATE_LIMITED', message: 'Demasiadas solicitudes. Espera 60 segundos.' }),
+        { status: 429, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+      );
+    }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false },

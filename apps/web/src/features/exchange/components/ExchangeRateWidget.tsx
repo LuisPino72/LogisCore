@@ -76,9 +76,8 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
         )}
 
         <div className="text-[14px]">
-          {source === 'bcv_api'}
-          {source === 'manual' && 'Manual'}
-          {fetchedAt && `${formatDate(fetchedAt)}`}
+          {source === 'bcv_api' ? 'BCV' : source === 'manual' ? 'Manual' : ''}
+          {fetchedAt && ` ${formatDate(fetchedAt)}`}
         </div>
 
         {isOwner && (

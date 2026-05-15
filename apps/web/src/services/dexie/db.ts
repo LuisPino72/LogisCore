@@ -51,6 +51,7 @@ export interface DexieInventoryLot {
   costUsdPerUnit?: number;
   sourceMovementId?: string;
   createdAt: string;
+  version?: number;
 }
 
 export interface DexieSale {

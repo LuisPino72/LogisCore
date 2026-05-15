@@ -1,0 +1,45 @@
+/* Estilos para impresión/PDF de reportes */
+@media print {
+  /* Oculta elementos que no deben imprimirse */
+  nav, .sidebar, .bottom-nav, .app-shell aside,
+  button, .btn, .toast-container,
+  .app-topbar,
+  [class*="sidebar"] {
+    display: none !important;
+  }
+
+  /* Ajusta layout para impresión */
+  .app-shell-main {
+    padding-left: 0 !important;
+    overflow: visible !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 11pt;
+    color: #000;
+  }
+
+  /* Evita saltos de página en medio de cards */
+  .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+  }
+
+  /* Asegura que tablas se vean completas */
+  .data-table-row {
+    break-inside: avoid;
+  }
+
+  /* Oculta el botón de exportar de la impresión */
+  .export-button-group {
+    display: none !important;
+  }
+
+  @page {
+    margin: 1.5cm;
+    size: A4 portrait;
+  }
+}

@@ -1,10 +1,10 @@
 import { create } from 'zustand';
+import { preciseRound } from '@logiscore/shared';
 import type { PosState, PaymentMethod, ParkedCart } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { posService } from '../services/posService';
 import { exchangeRateService } from '../../../features/exchange/services/exchangeRateService';
 import type { CreateSaleInput } from '../../../specs/pos';
-import { getDb } from '../../../services/dexie/db';
 
 const MAX_PARKED_CARTS = 10;
 
@@ -44,11 +44,6 @@ const initialState: PosState = {
   searchQuery: '',
 };
 
-function preciseRound(value: number, decimals: number = 2): number {
-  const factor = Math.pow(10, decimals);
-  return Math.round(value * factor) / factor;
-}
-
 export const usePosStore = create<PosStore>((set, get) => ({
   ...initialState,
 
@@ -58,9 +53,8 @@ export const usePosStore = create<PosStore>((set, get) => ({
     set({ loading: true, error: null });
     const result = await posService.getProductsForSale(tenantId);
     if (result.ok) {
-      const db = getDb();
-      const favs = await db.productFavorites.where({ tenantId }).toArray();
-      const favIds = new Set(favs.map((f) => f.productId));
+      const favResult = await posService.getFavorites(tenantId);
+      const favIds = favResult.ok ? favResult.data : new Set<string>();
       const sorted = [...result.data].sort((a, b) => {
         const aFav = favIds.has(a.id) ? 1 : 0;
         const bFav = favIds.has(b.id) ? 1 : 0;
@@ -90,19 +84,10 @@ export const usePosStore = create<PosStore>((set, get) => ({
   },
 
   fetchParkedCarts: async (tenantId) => {
-    const db = getDb();
-    const rows = await db.parkedCarts
-      .where({ tenantId })
-      .sortBy('createdAt');
-    set({
-      parkedCarts: rows.map((r) => ({
-        id: r.id,
-        tenantId: r.tenantId,
-        name: r.name,
-        cart: JSON.parse(r.cartJson) as ParkedCart['cart'],
-        createdAt: r.createdAt,
-      })),
-    });
+    const result = await posService.getParkedCarts(tenantId);
+    if (result.ok) {
+      set({ parkedCarts: result.data });
+    }
   },
 
   fetchSalesHistory: async (tenantId) => {
@@ -125,19 +110,13 @@ export const usePosStore = create<PosStore>((set, get) => ({
       set({ error: `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.` });
       return false;
     }
-    const db = getDb();
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
-    await db.parkedCarts.add({
-      id,
-      tenantId,
-      name: name.trim() || `Venta #${parkedCarts.length + 1}`,
-      cartJson: JSON.stringify(cart),
-      createdAt: now,
-    });
-    set({ cart: [], activeParkedCartId: null, error: null });
-    get().fetchParkedCarts(tenantId);
-    return true;
+    const result = await posService.parkCart(tenantId, name, cart);
+    if (result.ok) {
+      set({ cart: [], activeParkedCartId: null, error: null });
+      get().fetchParkedCarts(tenantId);
+      return true;
+    }
+    return false;
   },
 
   loadParkedCart: (parked) => {
@@ -145,23 +124,16 @@ export const usePosStore = create<PosStore>((set, get) => ({
   },
 
   deleteParkedCart: async (id) => {
-    const db = getDb();
-    await db.parkedCarts.delete(id);
+    await posService.deleteParkedCart(id);
     set((state) => ({
       parkedCarts: state.parkedCarts.filter((p) => p.id !== id),
     }));
   },
 
   toggleFavorite: async (tenantId, productId) => {
-    const db = getDb();
-    const existing = await db.productFavorites.get([productId, tenantId]);
-    if (existing) {
-      await db.productFavorites.delete([productId, tenantId]);
-    } else {
-      await db.productFavorites.add({ productId, tenantId, createdAt: new Date().toISOString() });
-    }
-    const favs = await db.productFavorites.where({ tenantId }).toArray();
-    const favIds = new Set(favs.map((f) => f.productId));
+    await posService.toggleFavorite(tenantId, productId);
+    const favResult = await posService.getFavorites(tenantId);
+    const favIds = favResult.ok ? favResult.data : new Set<string>();
     set((state) => {
       const sorted = [...state.products].sort((a, b) => {
         const aFav = favIds.has(a.id) ? 1 : 0;
@@ -259,8 +231,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
     if (result.ok) {
       const activeId = get().activeParkedCartId;
       if (activeId) {
-        const db = getDb();
-        await db.parkedCarts.delete(activeId);
+        await posService.deleteParkedCart(activeId);
       }
       set({ loading: false, cart: [], exchangeRate: null, activeParkedCartId: null });
       if (activeId) {

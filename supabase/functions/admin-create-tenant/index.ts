@@ -114,6 +114,29 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
     );
   }
 
+  // Validate RIF format (V/J/E/G/P + 9 digits)
+  if (!/^[VJEGP]\d{9}$/.test(tenantInput.rif)) {
+    return new Response(
+      JSON.stringify({ code: 'INVALID_RIF', message: 'Formato RIF inválido. Debe ser letra (V,J,E,G,P) + 9 dígitos (ej: J-123456789)' }),
+      { status: 400, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // Validate owner email
+  if (!ownerInput.email || !ownerInput.email.includes('@')) {
+    return new Response(
+      JSON.stringify({ code: 'INVALID_EMAIL', message: 'Email del owner inválido' }),
+      { status: 400, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+    );
+  }
+
+  if (!ownerInput.password || ownerInput.password.length < 6) {
+    return new Response(
+      JSON.stringify({ code: 'INVALID_PASSWORD', message: 'La contraseña debe tener al menos 6 caracteres' }),
+      { status: 400, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+    );
+  }
+
   // Generate slug from name
   const slug = tenantInput.name
     .toLowerCase()

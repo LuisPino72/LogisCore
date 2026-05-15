@@ -1,223 +1,277 @@
 /**
  * POS BDD Tests — POS-001..013
+ * TDD: Unit tests for posService with mocked Dexie + syncQueue
  */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { describe, it, expect } from 'vitest';
-import { IGTF_RATE } from '../../specs/pos';
-import type { PaymentMethod } from '../../specs/pos';
+const mockDb = {
+  products: { get: vi.fn(), add: vi.fn(), put: vi.fn(), update: vi.fn(), where: vi.fn() },
+  sales: { add: vi.fn() },
+  saleItems: { add: vi.fn() },
+  inventoryMovements: { add: vi.fn(), where: vi.fn(), sortBy: vi.fn() },
+  inventoryLots: { add: vi.fn(), update: vi.fn(), where: vi.fn(), get: vi.fn() },
+  cashRegisters: { add: vi.fn(), update: vi.fn(), where: vi.fn() },
+  tenantRefs: { get: vi.fn() },
+  syncQueue: { add: vi.fn() },
+  outbox: { add: vi.fn() },
+  transaction: vi.fn((_mode: unknown, _tables: unknown[], fn: () => Promise<void>) => fn()),
+};
 
-function preciseRound(value: number, decimals = 2): number {
-  const factor = Math.pow(10, decimals);
-  return Math.round(value * factor) / factor;
+function resetMockDb() {
+  vi.clearAllMocks();
+  mockDb.products.where.mockReturnValue({
+    filter: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])), count: vi.fn(() => Promise.resolve(0)) })),
+  });
+  mockDb.cashRegisters.where.mockReturnValue({
+    filter: vi.fn(() => ({ first: vi.fn(() => Promise.resolve(null)) })),
+  });
+  mockDb.inventoryLots.where.mockReturnValue({
+    filter: vi.fn(() => ({ sortBy: vi.fn(() => Promise.resolve([])) })),
+  });
+}
+
+vi.mock('../../services/dexie/db', () => ({
+  getDb: () => mockDb,
+  isDbReady: () => true,
+}));
+
+vi.mock('../../services/sync/syncQueue', () => ({
+  syncQueue: { enqueue: vi.fn() },
+}));
+
+vi.mock('../../services/outbox/outboxService', () => ({
+  outboxService: { enqueue: vi.fn(() => Promise.resolve({ ok: true, data: 1 })) },
+}));
+
+vi.mock('../../services/audit/emitWithAudit', () => ({
+  emitWithAudit: vi.fn(),
+}));
+
+vi.mock('../../services/supabase/client', () => ({
+  supabase: { from: vi.fn(() => ({ select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: null })) })) })) })) },
+}));
+
+vi.mock('@logiscore/core', () => ({
+  AppError: class AppError extends Error {
+    code: string;
+    constructor(code: string, msg: string) {
+      super(msg); this.code = code; this.name = 'AppError';
+    }
+  },
+  success: <T>(data: T) => ({ ok: true, data }) as const,
+  failure: (err: Error) => ({ ok: false, error: err }) as const,
+  EventBus: { on: vi.fn(() => ({ event: '', listener: vi.fn() })), off: vi.fn(), emit: vi.fn() },
+  SystemEvents: { USER_LOGIN: 'USER_LOGIN', USER_LOGOUT: 'USER_LOGOUT' },
+  isAppError: (err: Error) => err.name === 'AppError',
+}));
+
+const USER_ID = '550e8400-e29b-41d4-a716-446655440001';
+const PROD_ID = '550e8400-e29b-41d4-a716-446655440002';
+
+function mockCashRegister(overrides: Record<string, unknown> = {}) {
+  const reg = {
+    id: '550e8400-e29b-41d4-a716-446655440003', tenantId: 'test-tenant', isOpen: true,
+    openedBy: USER_ID, openedAt: '2026-01-01T00:00:00Z', openingBalanceBs: 100,
+    closedBy: null, closedAt: null, closingBalanceBs: null, expectedClosingBs: null, differenceBs: null,
+    totalSalesCount: 0, totalSalesBs: 0, totalIgtfBs: 0,
+    createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', deletedAt: undefined,
+    ...overrides,
+  };
+  mockDb.cashRegisters.where.mockReturnValue({
+    filter: vi.fn(() => ({ first: vi.fn(() => Promise.resolve(reg)) })),
+  });
+  return reg;
+}
+
+function mockProduct(stock = 50) {
+  const product = {
+    id: PROD_ID, tenantId: 'test-tenant', name: 'Test Product', sku: 'TP-001',
+    priceUsd: 2, isWeighted: false, isTaxable: true, unit: 'unidad' as const,
+    stock, stockMin: undefined, deletedAt: undefined,
+  };
+  mockDb.products.get.mockResolvedValue(product);
+  return product;
+}
+
+function mockLots(lots: { id: string; remainingQuantity: number; createdAt: string; costUsdPerUnit?: number; version?: number }[]) {
+  const lotMap = new Map(lots.map((l) => [l.id, l]));
+  mockDb.inventoryLots.get.mockImplementation((id: string) => Promise.resolve(lotMap.get(id) ?? null));
+  mockDb.inventoryLots.where.mockReturnValue({
+    filter: vi.fn(() => ({ sortBy: vi.fn(() => Promise.resolve(lots)) })),
+  });
+}
+
+function makeCartItem(overrides: Record<string, unknown> = {}) {
+  return {
+    productId: PROD_ID, name: 'Test Product', sku: 'TP-001',
+    quantity: 1, unitPriceUsd: 2, totalPriceUsd: 2,
+    isWeighted: false, unit: 'unidad', ...overrides,
+  };
 }
 
 describe('POS-001: Happy path — venta completada', () => {
-  describe('Venta exitosa con 3 productos', () => {
-    it('Given: caja abierta, stock>0, tasa=480', () => {
-      const isBoxOpen = true;
-      const stock = 10;
-      const exchangeRate = 480;
+  beforeEach(() => { resetMockDb(); });
 
-      expect(isBoxOpen).toBe(true);
-      expect(stock).toBeGreaterThan(0);
-      expect(exchangeRate).toBeGreaterThan(0);
+  it('Given: caja abierta, stock=50. When: vender 3. Then: sale completada, stock=47', async () => {
+    mockCashRegister();
+    mockProduct(50);
+    mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
+
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem({ quantity: 3, totalPriceUsd: 6 })], exchangeRate: 480,
     });
-  });
 
-  describe('Calculo de totales', () => {
-    it('Given: priceUsd=2.50, qty=3, tasa=480', () => {
-      const priceUsd = 2.50;
-      const qty = 3;
-      const rate = 480;
-      const subtotalBs = preciseRound(priceUsd * qty * rate, 2);
-      const igtfBs = 0;
-      const totalBs = preciseRound(subtotalBs + igtfBs, 2);
-
-      expect(subtotalBs).toBe(3600);
-      expect(totalBs).toBe(3600);
-    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.status).toBe('completed');
+    expect(mockDb.products.update).toHaveBeenCalledWith(PROD_ID, { stock: 47 });
   });
 });
 
 describe('POS-002: Caja cerrada bloquea venta', () => {
-  describe('Intentar cobrar con caja cerrada', () => {
-    it('Given: caja cerrada', () => {
-      const boxOpen = false;
-      const canSell = boxOpen === true;
+  beforeEach(() => { resetMockDb(); });
 
-      expect(canSell).toBe(false);
+  it('Given: caja cerrada. When: cobrar. Then: SALE_BOX_CLOSED', async () => {
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem()], exchangeRate: 480,
     });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('SALE_BOX_CLOSED');
   });
 });
 
 describe('POS-003: IGTF solo en efectivo_usd', () => {
-  describe('efectivo_usd aplica 3%', () => {
-    it('Given: subtotal=1000Bs, metodo=efectivo_usd', () => {
-      const subtotal = 1000;
-      const method: PaymentMethod = 'efectivo_usd';
-      const igtf = method === 'efectivo_usd' ? preciseRound(subtotal * IGTF_RATE, 2) : 0;
+  beforeEach(() => { resetMockDb(); });
 
-      expect(igtf).toBe(30);
+  it('Given: subtotal ~1000 Bs. When: efectivo_usd. Then: igtf=30', async () => {
+    mockCashRegister();
+    mockProduct(50);
+    mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
+
+    const { posService } = await import('../../features/pos/services/posService');
+    const r = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_usd',
+      items: [makeCartItem({ quantity: 1, unitPriceUsd: 2.08333, totalPriceUsd: 2.08333 })], exchangeRate: 480,
     });
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.igtfBs).toBe(30);
+    expect(r.data.ivaBs).toBe(160);
+    expect(r.data.totalBs).toBe(1190);
   });
 
-  describe('efectivo_bs NO aplica IGTF', () => {
-    it('Given: subtotal=1000Bs, metodo=efectivo_bs', () => {
-      const subtotal = 1000;
-      const method: PaymentMethod = 'efectivo_bs';
-      const igtf = method === 'efectivo_usd' ? preciseRound(subtotal * IGTF_RATE, 2) : 0;
+  it('Given: mismo subtotal. When: efectivo_bs. Then: igtf=0', async () => {
+    mockCashRegister();
+    mockProduct(50);
+    mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
 
-      expect(igtf).toBe(0);
+    const { posService } = await import('../../features/pos/services/posService');
+    const r = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem({ quantity: 1, unitPriceUsd: 2.08333, totalPriceUsd: 2.08333 })], exchangeRate: 480,
     });
-  });
 
-  describe('pago_movil NO aplica IGTF', () => {
-    it('Given: subtotal=1000Bs, metodo=pago_movil', () => {
-      const subtotal = 1000;
-      const method: PaymentMethod = 'pago_movil';
-      const igtf = method === 'efectivo_usd' ? preciseRound(subtotal * IGTF_RATE, 2) : 0;
-
-      expect(igtf).toBe(0);
-    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.igtfBs).toBe(0);
+    expect(r.data.totalBs).toBe(1160);
   });
 });
 
 describe('POS-004: Carrito vacio', () => {
-  describe('Cobrar sin productos', () => {
-    it('Given: carrito vacio', () => {
-      const cart: unknown[] = [];
-      const hasItems = cart.length > 0;
+  beforeEach(() => { resetMockDb(); });
 
-      expect(hasItems).toBe(false);
+  it('Given: carrito vacio. When: cobrar. Then: SALE_NO_ITEMS', async () => {
+    mockCashRegister();
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [], exchangeRate: 480,
     });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('SALE_NO_ITEMS');
   });
 });
 
 describe('POS-005: Stock insuficiente', () => {
-  describe('Intentar vender mas de lo disponible', () => {
-    it('Given: stock=2, en carrito=5', () => {
-      const stock = 2;
-      const requested = 5;
-      const hasStock = stock >= requested;
+  beforeEach(() => { resetMockDb(); });
 
-      expect(hasStock).toBe(false);
+  it('Given: stock=2, vender 5. Then: SALE_STOCK_INSUFFICIENT', async () => {
+    mockCashRegister();
+    mockProduct(2);
+    mockLots([{ id: 'lot-1', remainingQuantity: 2, createdAt: '2026-01-01T00:00:00Z' }]);
+
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem({ quantity: 5, totalPriceUsd: 10 })], exchangeRate: 480,
     });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('SALE_STOCK_INSUFFICIENT');
   });
 });
 
-describe('POS-006: Sin tasa BCV configurada', () => {
-  describe('Bloquear venta sin exchangeRate', () => {
-    it('Given: exchangeRate=0', () => {
-      const rate = 0;
-      const isValid = rate > 0;
+describe('POS-007: Abrir caja', () => {
+  beforeEach(() => { resetMockDb(); });
 
-      expect(isValid).toBe(false);
+  it('Given: sin caja abierta. When: abrir con 500. Then: caja abierta', async () => {
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.openCashRegister({
+      tenantId: 'test-tenant', userId: USER_ID, openingBalanceBs: 500,
     });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.isOpen).toBe(true);
+    expect(result.data.openingBalanceBs).toBe(500);
   });
 });
 
-describe('POS-007: Caja ya abierta', () => {
-  describe('Intentar abrir segunda caja', () => {
-    it('Given: ya existe caja abierta', () => {
-      const existingOpen = true;
-      const canOpen = !existingOpen;
+describe('POS-008: Cerrar caja', () => {
+  beforeEach(() => { resetMockDb(); });
 
-      expect(canOpen).toBe(false);
+  it('Given: caja abierta con ventas. When: cerrar con 600. Then: expected=600, diff=0', async () => {
+    mockCashRegister({ totalSalesBs: 500, totalIgtfBs: 15 });
+
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.closeCashRegister({
+      tenantId: 'test-tenant', userId: USER_ID, declaredClosingBalanceBs: 600,
     });
-  });
-});
 
-describe('POS-008: Caja ya cerrada', () => {
-  describe('Intentar cerrar caja cerrada', () => {
-    it('Given: caja cerrada', () => {
-      const isOpen = false;
-      const canClose = isOpen === true;
-
-      expect(canClose).toBe(false);
-    });
-  });
-});
-
-describe('POS-009: Abrir sin monto', () => {
-  describe('Monto inicial = 0', () => {
-    it('Given: openingBalance=0', () => {
-      const balance = 0;
-      const isValid = balance > 0;
-
-      expect(isValid).toBe(false);
-    });
-  });
-});
-
-describe('POS-010: Cerrar sin monto', () => {
-  describe('Monto final no declarado', () => {
-    it('Given: declaredClosingBalance=null', () => {
-      const declared: number | null = null;
-      const isValid = declared !== null && declared >= 0;
-
-      expect(isValid).toBe(false);
-    });
-  });
-});
-
-describe('POS-011: Pesable sin cantidad', () => {
-  describe('Producto pesable con quantity<=0', () => {
-    it('Given: isWeighted=true, quantity=0', () => {
-      const isWeighted = true;
-      const quantity = 0;
-      const isValid = isWeighted ? quantity > 0 : true;
-
-      expect(isValid).toBe(false);
-    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.expectedClosingBs).toBe(600);
+    expect(result.data.differenceBs).toBe(0);
   });
 });
 
 describe('POS-012: FIFO consume lotes ordenados', () => {
-  describe('Vender 8 con Lote1=5 y Lote2=10', () => {
-    it('Given: Lote1(antiguo)=5, Lote2(reciente)=10', () => {
-      const lote1 = 5;
-      const lote2 = 10;
-      const toConsume = 8;
+  beforeEach(() => { resetMockDb(); });
 
-      const consumeLote1 = Math.min(lote1, toConsume);
-      const remaining1 = lote1 - consumeLote1;
-      const remaining2 = lote2 - (toConsume - consumeLote1);
+  it('Given: Lote1=5, Lote2=10. When: vender 8. Then: Lote1=0, Lote2=7', async () => {
+    mockCashRegister();
+    mockProduct(15);
+    mockLots([
+      { id: 'lot-1', remainingQuantity: 5, createdAt: '2026-01-01T00:00:00Z' },
+      { id: 'lot-2', remainingQuantity: 10, createdAt: '2026-01-15T00:00:00Z' },
+    ]);
 
-      expect(remaining1).toBe(0);
-      expect(remaining2).toBe(7);
-    });
-  });
-});
-
-describe('POS-013: Calculo expected_closing correcto', () => {
-  describe('expected = opening + sales (NO restar IGTF)', () => {
-    it('Given: opening=100, sales=500, igtf=15', () => {
-      const opening = 100;
-      const sales = 500;
-      const igtf = 15;
-      const expected = preciseRound(opening + sales, 2);
-
-      expect(expected).toBe(600);
-      // IGTF no se resta
-      expect(expected).not.toBe(opening + sales - igtf);
-    });
-  });
-
-  describe('Diferencia positiva y negativa', () => {
-    it('Given: expected=600, declared=590', () => {
-      const expected = 600;
-      const declared = 590;
-      const diff = preciseRound(declared - expected, 2);
-
-      expect(diff).toBe(-10);
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem({ quantity: 8, totalPriceUsd: 16 })], exchangeRate: 480,
     });
 
-    it('Given: expected=600, declared=610', () => {
-      const expected = 600;
-      const declared = 610;
-      const diff = preciseRound(declared - expected, 2);
-
-      expect(diff).toBe(10);
-    });
+    expect(result.ok).toBe(true);
+    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-1', expect.objectContaining({ remainingQuantity: 0 }));
+    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-2', expect.objectContaining({ remainingQuantity: 7 }));
   });
 });

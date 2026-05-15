@@ -25,6 +25,6 @@ export const NON_WEIGHTED_UNITS = ['unidad', 'un'] as const;
 export const CURRENCY_TYPES = ['VES', 'USD'] as const;
 export type CurrencyType = (typeof CURRENCY_TYPES)[number];
 
-/** Métodos de pago. */
-export const PAYMENT_METHODS = ['efectivo', 'divisa', 'transferencia', 'zelle'] as const;
+/** Métodos de pago (POS). */
+export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'efectivo_usd'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];

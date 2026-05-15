@@ -141,13 +141,18 @@ export const authService = {
   },
 
   startSync(): void {
-    const inventoryTables: SyncTableConfig[] = [
+    const allTables: SyncTableConfig[] = [
       { name: 'products', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
       { name: 'categories', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
       { name: 'inventory_movements', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
       { name: 'inventory_lots', type: 'transactional', conflictStrategy: 'REMOTE_WINS', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'suppliers', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'purchase_orders', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'sales', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'sale_items', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'cash_registers', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
     ];
-    inventoryTables.forEach((cfg) => syncEngine.registerTable(cfg));
+    allTables.forEach((cfg) => syncEngine.registerTable(cfg));
     syncEngine.start();
   },
 

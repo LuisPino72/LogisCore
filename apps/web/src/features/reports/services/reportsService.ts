@@ -1,4 +1,5 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
+import { preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import type {
@@ -17,11 +18,6 @@ const PAYMENT_LABELS: Record<string, string> = {
   tarjeta_bs: 'Tarjeta Bs',
   efectivo_usd: 'Efectivo USD',
 };
-
-function preciseRound(value: number, decimals: number = 2): number {
-  const factor = Math.pow(10, decimals);
-  return Math.round(value * factor) / factor;
-}
 
 function startOfDay(date: Date): Date {
   const d = new Date(date);

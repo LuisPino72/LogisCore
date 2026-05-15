@@ -1,33 +1,19 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
+import { preciseRound, toSnake, generateId } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
+import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
+import { logger } from '../../../lib/logger';
 import { PosErrors } from '../../../specs/pos/errors';
+import { InventoryErrors } from '../../../specs/inventory/errors';
 import { CreateSaleInputSchema } from '../../../specs/pos';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
 
 const MODULE_NAME = 'POS';
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
-function toSnake(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(obj)) {
-    const snake = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
-    result[snake] = val;
-  }
-  return result;
-}
-
-function preciseRound(value: number, decimals: number = 2): number {
-  const factor = Math.pow(10, decimals);
-  return Math.round(value * factor) / factor;
-}
 
 async function getTenantUuid(tenantSlug: string): Promise<string> {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantSlug)) {
@@ -237,6 +223,7 @@ export const posService = {
         db.products,
         db.cashRegisters,
         db.syncQueue,
+        db.outbox,
       ], async () => {
         await db.sales.add({
           id: saleId,
@@ -275,17 +262,24 @@ export const posService = {
 
           for (const lot of lots) {
             if (toConsume <= 0) break;
-            const lotCost = lot.costUsdPerUnit ?? 0;
-            if (lot.remainingQuantity >= toConsume) {
+            // Optimistic locking: re-read version before update
+            const currentLot = await db.inventoryLots.get(lot.id);
+            if (!currentLot || currentLot.remainingQuantity <= 0) continue;
+            if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
+              throw new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto en consumo FIFO. Reintente la operación.');
+            }
+            const lotCost = currentLot.costUsdPerUnit ?? 0;
+            const newVersion = (currentLot.version ?? 0) + 1;
+            if (currentLot.remainingQuantity >= toConsume) {
               totalCostUsd += toConsume * lotCost;
-              await db.inventoryLots.update(lot.id, { remainingQuantity: lot.remainingQuantity - toConsume });
-              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: lot.remainingQuantity - toConsume } as unknown as Record<string, unknown>), tenantId);
+              await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion });
+              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion } as unknown as Record<string, unknown>), tenantId);
               toConsume = 0;
             } else {
-              totalCostUsd += lot.remainingQuantity * lotCost;
-              toConsume -= lot.remainingQuantity;
-              await db.inventoryLots.update(lot.id, { remainingQuantity: 0 });
-              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: 0 } as unknown as Record<string, unknown>), tenantId);
+              totalCostUsd += currentLot.remainingQuantity * lotCost;
+              toConsume -= currentLot.remainingQuantity;
+              await db.inventoryLots.update(lot.id, { remainingQuantity: 0, version: newVersion });
+              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: 0, version: newVersion } as unknown as Record<string, unknown>), tenantId);
             }
           }
 
@@ -336,8 +330,6 @@ export const posService = {
             tenant_id: tenantUuid,
             sale_id: saleId,
             product_id: cartItem.productId,
-            product_name: product.name,
-            product_sku: product.sku,
             quantity: cartItem.quantity,
             unit_price_usd: cartItem.unitPriceUsd,
             total_price_usd: cartItem.totalPriceUsd,
@@ -388,6 +380,15 @@ export const posService = {
           status: 'completed',
           created_at: now,
         } as unknown as Record<string, unknown>), tenantId);
+
+        // Encolar en outbox DENTRO de la transacción (Regla #17)
+        await outboxService.enqueue('SALE.COMPLETED', MODULE_NAME, {
+          saleId,
+          tenantSlug: tenantId,
+          totalBs,
+          paymentMethod,
+          itemsCount: items.length,
+        });
       });
 
       await emitWithAudit('SALE.COMPLETED', MODULE_NAME, {
@@ -417,7 +418,7 @@ export const posService = {
       });
     } catch (err) {
       if (err instanceof AppError) return failure(err);
-      console.error('[posService.createSale] Error:', err);
+      logger.error('createSale', 'Error:', err);
       return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al completar la venta.'));
     }
   },
@@ -463,21 +464,30 @@ export const posService = {
         updatedAt: now,
       };
 
-      await db.cashRegisters.add(register);
+      await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
+        await db.cashRegisters.add(register);
 
-      await syncQueue.enqueue('cash_registers', 'UPDATE', id, toSnake({
-        id,
-        tenant_id: tenantUuid,
-        is_open: true,
-        opened_by: userId,
-        opened_at: now,
-        opening_balance_bs: openingBalanceBs,
-        total_sales_count: 0,
-        total_sales_bs: 0,
-        total_igtf_bs: 0,
-        created_at: now,
-        updated_at: now,
-      } as unknown as Record<string, unknown>), tenantId);
+        await syncQueue.enqueue('cash_registers', 'UPDATE', id, toSnake({
+          id,
+          tenant_id: tenantUuid,
+          is_open: true,
+          opened_by: userId,
+          opened_at: now,
+          opening_balance_bs: openingBalanceBs,
+          total_sales_count: 0,
+          total_sales_bs: 0,
+          total_igtf_bs: 0,
+          created_at: now,
+          updated_at: now,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        await outboxService.enqueue('BOX.OPENED', MODULE_NAME, {
+          registerId: id,
+          tenantSlug: tenantId,
+          openingBalanceBs,
+          openedBy: userId,
+        });
+      });
 
       await emitWithAudit('BOX.OPENED', MODULE_NAME, {
         registerId: id,
@@ -492,7 +502,7 @@ export const posService = {
 
       return success({ ...register, deletedAt: null });
     } catch (err) {
-      console.error('[posService.openCashRegister] Error:', err);
+      logger.error('openCashRegister', 'Error:', err);
       return failure(new AppError('BOX_ALREADY_OPEN', 'Error al abrir la caja.'));
     }
   },
@@ -706,31 +716,40 @@ export const posService = {
     const differenceBs = preciseRound(declaredClosingBalanceBs - expectedClosingBs, 2);
 
     try {
-      await db.cashRegisters.update(cashReg.id, {
-        isOpen: false,
-        closedBy: userId,
-        closedAt: now,
-        closingBalanceBs: declaredClosingBalanceBs,
-        expectedClosingBs,
-        differenceBs,
-        deletedAt: now,
-        updatedAt: now,
-      });
+      await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
+        await db.cashRegisters.update(cashReg.id, {
+          isOpen: false,
+          closedBy: userId,
+          closedAt: now,
+          closingBalanceBs: declaredClosingBalanceBs,
+          expectedClosingBs,
+          differenceBs,
+          updatedAt: now,
+        });
 
-      await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
-        id: cashReg.id,
-        tenant_id: tenantUuid,
-        is_open: false,
-        closed_by: userId,
-        closed_at: now,
-        closing_balance_bs: declaredClosingBalanceBs,
-        expected_closing_bs: expectedClosingBs,
-        difference_bs: differenceBs,
-        total_sales_count: cashReg.totalSalesCount,
-        total_sales_bs: cashReg.totalSalesBs,
-        total_igtf_bs: cashReg.totalIgtfBs,
-        updated_at: now,
-      } as unknown as Record<string, unknown>), tenantId);
+        await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
+          id: cashReg.id,
+          tenant_id: tenantUuid,
+          is_open: false,
+          closed_by: userId,
+          closed_at: now,
+          closing_balance_bs: declaredClosingBalanceBs,
+          expected_closing_bs: expectedClosingBs,
+          difference_bs: differenceBs,
+          total_sales_count: cashReg.totalSalesCount,
+          total_sales_bs: cashReg.totalSalesBs,
+          total_igtf_bs: cashReg.totalIgtfBs,
+          updated_at: now,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        await outboxService.enqueue('BOX.CLOSED', MODULE_NAME, {
+          registerId: cashReg.id,
+          tenantSlug: tenantId,
+          expectedBs: expectedClosingBs,
+          declaredBs: declaredClosingBalanceBs,
+          differenceBs,
+        });
+      });
 
       await emitWithAudit('BOX.CLOSED', MODULE_NAME, {
         registerId: cashReg.id,
@@ -764,8 +783,85 @@ export const posService = {
         deletedAt: null,
       });
     } catch (err) {
-      console.error('[posService.closeCashRegister] Error:', err);
+      logger.error('closeCashRegister', 'Error:', err);
       return failure(new AppError('BOX_ALREADY_CLOSED', 'Error al cerrar la caja.'));
+    }
+  },
+
+  // ===== PARKED CARTS =====
+
+  async getParkedCarts(tenantId: string): Promise<Result<import('../types').ParkedCart[], AppError>> {
+    try {
+      const db = getDb();
+      const rows = await db.parkedCarts
+        .where({ tenantId })
+        .sortBy('createdAt');
+      return success(rows.map((r) => ({
+        id: r.id,
+        tenantId: r.tenantId,
+        name: r.name,
+        cart: JSON.parse(r.cartJson) as import('../types').CartItem[],
+        createdAt: r.createdAt,
+      })));
+    } catch {
+      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cargar ventas en cola.'));
+    }
+  },
+
+  async parkCart(tenantId: string, name: string, cart: import('../types').CartItem[]): Promise<Result<string, AppError>> {
+    try {
+      const db = getDb();
+      const existingCount = await db.parkedCarts.where({ tenantId }).count();
+      if (existingCount >= 10) {
+        return failure(new AppError('CART_ITEM_WEIGHT_REQUIRED', 'Máximo 10 ventas en cola. Completa o elimina una.'));
+      }
+      const id = generateId();
+      await db.parkedCarts.add({
+        id, tenantId,
+        name: name.trim() || `Venta #${existingCount + 1}`,
+        cartJson: JSON.stringify(cart),
+        createdAt: new Date().toISOString(),
+      });
+      return success(id);
+    } catch {
+      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al guardar venta en cola.'));
+    }
+  },
+
+  async deleteParkedCart(id: string): Promise<Result<void, AppError>> {
+    try {
+      const db = getDb();
+      await db.parkedCarts.delete(id);
+      return success(undefined);
+    } catch {
+      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al eliminar venta en cola.'));
+    }
+  },
+
+  // ===== FAVORITES =====
+
+  async toggleFavorite(tenantId: string, productId: string): Promise<Result<boolean, AppError>> {
+    try {
+      const db = getDb();
+      const existing = await db.productFavorites.get([productId, tenantId]);
+      if (existing) {
+        await db.productFavorites.delete([productId, tenantId]);
+        return success(false);
+      }
+      await db.productFavorites.add({ productId, tenantId, createdAt: new Date().toISOString() });
+      return success(true);
+    } catch {
+      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cambiar favorito.'));
+    }
+  },
+
+  async getFavorites(tenantId: string): Promise<Result<Set<string>, AppError>> {
+    try {
+      const db = getDb();
+      const favs = await db.productFavorites.where({ tenantId }).toArray();
+      return success(new Set(favs.map((f) => f.productId)));
+    } catch {
+      return failure(new AppError('SALE_TOTALS_MISMATCH', 'Error al cargar favoritos.'));
     }
   },
 };

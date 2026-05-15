@@ -23,6 +23,7 @@ export interface AdjustStockInput {
   productId: string;
   quantity: number;
   reason: string;
+  costUsdPerUnit?: number;
 }
 
 export interface ActiveLot {

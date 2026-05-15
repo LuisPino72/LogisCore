@@ -1,6 +1,4 @@
 import { EventBus } from '@logiscore/core';
-import { outboxService } from '@/services/outbox/outboxService';
-import { isDbReady } from '@/services/dexie/db';
 import { logAuditEvent } from './auditService';
 
 /** Emite un evento de sistema sin persistencia outbox/auditoría.
@@ -10,6 +8,10 @@ export function emitEngineEvent(eventName: string, payload: unknown = {}): void 
   EventBus.emit(eventName, payload);
 }
 
+/** Emite un evento con feedback UI inmediato + registro de auditoría.
+ *  NOTA: El encolado en outbox se realiza DENTRO de la transacción Dexie
+ *  (ver outboxService.enqueue() en los servicios) para garantizar atomicidad
+ *  (Regla #17). Esta función solo emite para UI y registra auditoría no crítica. */
 export async function emitWithAudit(
   eventName: string,
   module: string,
@@ -23,16 +25,8 @@ export async function emitWithAudit(
   // 1. Emitir inmediatamente para feedback de UI (sincrónico)
   EventBus.emit(eventName, payload);
 
+  // 2. Registrar en auditoría (no crítico, falla silenciosa)
   try {
-    // 2. Encolar en outbox para durabilidad transaccional (Regla #17)
-    if (isDbReady()) {
-      const enqueueResult = await outboxService.enqueue(eventName, module, payload);
-      if (!enqueueResult.ok) {
-        console.error(`[emitWithAudit] Outbox enqueue falló para ${eventName}:`, enqueueResult.error);
-      }
-    }
-
-    // 3. Registrar en auditoría
     await logAuditEvent({
       eventName,
       module,

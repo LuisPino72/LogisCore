@@ -11,7 +11,7 @@ const mockDb = {
   sales: { add: vi.fn() },
   saleItems: { add: vi.fn() },
   inventoryMovements: { add: vi.fn(), where: vi.fn(), sortBy: vi.fn() },
-  inventoryLots: { add: vi.fn(), update: vi.fn(), where: vi.fn() },
+  inventoryLots: { add: vi.fn(), update: vi.fn(), where: vi.fn(), get: vi.fn() },
   cashRegisters: { add: vi.fn(), update: vi.fn(), where: vi.fn() },
   tenantRefs: { get: vi.fn() },
   syncQueue: { add: vi.fn() },
@@ -118,7 +118,9 @@ function mockProduct(stock = 50) {
   return product;
 }
 
-function mockLots(lots: { id: string; remainingQuantity: number; createdAt: string }[]) {
+function mockLots(lots: { id: string; remainingQuantity: number; createdAt: string; version?: number }[]) {
+  const lotMap = new Map(lots.map((l) => [l.id, l]));
+  mockDb.inventoryLots.get.mockImplementation((id: string) => Promise.resolve(lotMap.get(id) ?? null));
   mockDb.inventoryLots.where.mockReturnValue({
     filter: vi.fn(() => ({
       sortBy: vi.fn(() => Promise.resolve(lots)),
@@ -318,8 +320,8 @@ describe('POS-020: FIFO consume lotes ordenados', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-1', { remainingQuantity: 0 });
-    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-2', { remainingQuantity: 7 });
+    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-1', expect.objectContaining({ remainingQuantity: 0 }));
+    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-2', expect.objectContaining({ remainingQuantity: 7 }));
   });
 });
 
@@ -340,5 +342,11 @@ describe('POS-021: Calculo expected_closing correcto', () => {
     if (!result.ok) return;
     expect(result.data.expectedClosingBs).toBe(600);
     expect(result.data.differenceBs).toBe(0);
+    expect(result.data.deletedAt).toBeNull();
+    // Verify deletedAt was NOT set (no se marca como eliminada al cerrar)
+    const updateCalls = mockDb.cashRegisters.update.mock.calls;
+    for (const [, data] of updateCalls) {
+      expect(data).not.toHaveProperty('deletedAt');
+    }
   });
 });

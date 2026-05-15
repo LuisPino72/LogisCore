@@ -1,8 +1,11 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
+import { toSnake, generateId } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
+import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
+import { logger } from '../../../lib/logger';
 import { PurchaseErrors } from '../../../specs/purchases/errors';
 import type {
   Supplier,
@@ -16,19 +19,6 @@ import type {
 import { convertToStorage } from '../../inventory/types';
 
 const PURCHASES_MODULE = 'PURCHASES';
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
-function toSnake(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(obj)) {
-    const snake = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
-    result[snake] = val;
-  }
-  return result;
-}
 
 function toSupplier(raw: Record<string, unknown>): Supplier {
   return {
@@ -87,8 +77,11 @@ export const purchaseService = {
     };
 
     try {
-      await db.suppliers.add({ ...supplier, tenantId });
-      await syncQueue.enqueue('suppliers', 'CREATE', id, toSnake({ ...supplier, tenantId } as unknown as Record<string, unknown>), tenantId);
+      await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
+        await db.suppliers.add({ ...supplier, tenantId });
+        await syncQueue.enqueue('suppliers', 'CREATE', id, toSnake({ ...supplier, tenantId } as unknown as Record<string, unknown>), tenantId);
+        await outboxService.enqueue('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name });
+      });
       await emitWithAudit('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name }, { userId, tenantId });
       return success(supplier);
     } catch {
@@ -107,8 +100,11 @@ export const purchaseService = {
       return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
     }
     const updated = { ...existing, ...input };
-    await db.suppliers.put(updated);
-    await syncQueue.enqueue('suppliers', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
+    await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
+      await db.suppliers.put(updated);
+      await syncQueue.enqueue('suppliers', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
+      await outboxService.enqueue('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id });
+    });
     await emitWithAudit('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
     return success(toSupplier(updated as unknown as Record<string, unknown>));
   },
@@ -130,8 +126,11 @@ export const purchaseService = {
     }
 
     const deletedAt = new Date().toISOString();
-    await db.suppliers.update(id, { deletedAt });
-    await syncQueue.enqueue('suppliers', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+    await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
+      await db.suppliers.update(id, { deletedAt });
+      await syncQueue.enqueue('suppliers', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+      await outboxService.enqueue('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id });
+    });
     await emitWithAudit('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
     return success(undefined);
   },
@@ -217,6 +216,7 @@ export const purchaseService = {
         for (const item of items) {
           await syncQueue.enqueue('purchase_order_items', 'CREATE', item.id, toSnake({ ...item, tenantId } as unknown as Record<string, unknown>), tenantId);
         }
+        await outboxService.enqueue('PURCHASE.CREATED', PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd });
       });
 
       await emitWithAudit('PURCHASE.CREATED', PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd }, { userId, tenantId });
@@ -278,6 +278,7 @@ export const purchaseService = {
         for (const item of newItems) {
           await syncQueue.enqueue('purchase_order_items', 'CREATE', item.id, toSnake({ ...item, tenantId } as unknown as Record<string, unknown>), tenantId);
         }
+        await outboxService.enqueue('PURCHASE.UPDATED', PURCHASES_MODULE, { orderId: id });
       });
 
       await emitWithAudit('PURCHASE.UPDATED', PURCHASES_MODULE, { orderId: id }, { userId, tenantId });
@@ -294,8 +295,11 @@ export const purchaseService = {
       return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
     }
     const deletedAt = new Date().toISOString();
-    await db.purchaseOrders.update(id, { deletedAt });
-    await syncQueue.enqueue('purchase_orders', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+    await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
+      await db.purchaseOrders.update(id, { deletedAt });
+      await syncQueue.enqueue('purchase_orders', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+      await outboxService.enqueue('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id });
+    });
     await emitWithAudit('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id }, { tenantId });
     return success(undefined);
   },
@@ -311,8 +315,11 @@ export const purchaseService = {
     }
 
     const updated = { ...order, status: 'confirmed' as const, updatedAt: new Date().toISOString() };
-    await db.purchaseOrders.put(updated);
-    await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
+    await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
+      await db.purchaseOrders.put(updated);
+      await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
+      await outboxService.enqueue('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id });
+    });
     await emitWithAudit('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id }, { tenantId });
     return success(toOrder(updated as unknown as Record<string, unknown>));
   },
@@ -429,12 +436,13 @@ export const purchaseService = {
         const updatedOrder = { ...order, status: newStatus, updatedAt: now };
         await db.purchaseOrders.put(updatedOrder);
         await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updatedOrder, tenantId } as unknown as Record<string, unknown>), tenantId);
+        await outboxService.enqueue('PURCHASE.RECEIVED', PURCHASES_MODULE, { orderId: id, status: newStatus });
       });
 
       await emitWithAudit('PURCHASE.RECEIVED', PURCHASES_MODULE, { orderId: id, status: newStatus }, { userId, tenantId });
       return success(toOrder({ ...order, status: newStatus, updatedAt: now } as unknown as Record<string, unknown>));
     } catch (err) {
-      console.error('[receiveOrder] Error:', err);
+      logger.error('receiveOrder', 'Error:', err);
       return failure(new AppError('PURCHASE_RECEIVE_ERROR', 'Error al recibir orden.'));
     }
   },
@@ -450,8 +458,11 @@ export const purchaseService = {
     }
 
     const updated = { ...order, status: 'cancelled' as const, updatedAt: new Date().toISOString() };
-    await db.purchaseOrders.put(updated);
-    await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
+    await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
+      await db.purchaseOrders.put(updated);
+      await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
+      await outboxService.enqueue('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id });
+    });
     await emitWithAudit('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id }, { tenantId });
     return success(toOrder(updated as unknown as Record<string, unknown>));
   },

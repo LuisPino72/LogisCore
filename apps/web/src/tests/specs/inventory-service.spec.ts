@@ -10,7 +10,7 @@ const mockDb = {
   products: { get: vi.fn(), add: vi.fn(), put: vi.fn(), update: vi.fn(), where: vi.fn() },
   categories: { add: vi.fn(), where: vi.fn(), update: vi.fn() },
   inventoryMovements: { add: vi.fn(), where: vi.fn(), sortBy: vi.fn() },
-  inventoryLots: { add: vi.fn(), update: vi.fn(), where: vi.fn() },
+  inventoryLots: { add: vi.fn(), update: vi.fn(), where: vi.fn(), get: vi.fn() },
   syncQueue: { add: vi.fn() },
   outbox: { add: vi.fn() },
   transaction: vi.fn((_mode: unknown, _tables: unknown[], fn: () => Promise<void>) => fn()),
@@ -68,7 +68,9 @@ vi.mock('@logiscore/core', () => ({
 
 // ── Helpers ────────────────────────────────────────────
 
-function mockLots(lots: { id: string; remainingQuantity: number; createdAt: string }[]) {
+function mockLots(lots: { id: string; remainingQuantity: number; createdAt: string; version?: number }[]) {
+  const lotMap = new Map(lots.map((l) => [l.id, l]));
+  mockDb.inventoryLots.get.mockImplementation((id: string) => Promise.resolve(lotMap.get(id) ?? null));
   mockDb.inventoryLots.where.mockReturnValue({
     filter: vi.fn(() => ({
       sortBy: vi.fn(() => Promise.resolve(lots)),
@@ -97,8 +99,8 @@ describe('INV-007: FIFO consume del lote más antiguo', () => {
     const result = await inventoryService.consumeFifo('prod-1', 12, 'test-tenant');
 
     expect(result.ok).toBe(true);
-    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-1', { remainingQuantity: 0 });
-    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-2', { remainingQuantity: 8 });
+    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-1', expect.objectContaining({ remainingQuantity: 0 }));
+    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-2', expect.objectContaining({ remainingQuantity: 8 }));
   });
 });
 
@@ -126,7 +128,7 @@ describe('INV-009: FIFO consume parcial de lote', () => {
     const result = await inventoryService.consumeFifo('prod-1', 3, 'test-tenant');
 
     expect(result.ok).toBe(true);
-    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-1', { remainingQuantity: 7 });
+    expect(mockDb.inventoryLots.update).toHaveBeenCalledWith('lot-1', expect.objectContaining({ remainingQuantity: 7 }));
   });
 });
 

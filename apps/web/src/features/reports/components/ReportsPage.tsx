@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { Card, Button, Select, Spinner } from '@/common/components';
 import { Calendar, BarChart3, PieChart, ShoppingBag, Wallet, FileText } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
+import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
-import { ProfitChart } from './ProfitChart';
-import { TopProductsChart } from './TopProductsChart';
-import { PaymentBreakdown } from './PaymentBreakdown';
-import { CashAnalysis } from './CashAnalysis';
 import type { ReportTimeRange, ReportTab } from '../types';
+import '../print.css';
+
+const ProfitChart = lazy(() => import('./ProfitChart').then((m) => ({ default: m.ProfitChart })));
+const TopProductsChart = lazy(() => import('./TopProductsChart').then((m) => ({ default: m.TopProductsChart })));
+const PaymentBreakdown = lazy(() => import('./PaymentBreakdown').then((m) => ({ default: m.PaymentBreakdown })));
+const CashAnalysis = lazy(() => import('./CashAnalysis').then((m) => ({ default: m.CashAnalysis })));
 
 const TIME_RANGE_OPTIONS: { value: ReportTimeRange; label: string }[] = [
   { value: 'today', label: 'Hoy' },
@@ -80,6 +83,17 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           <Button variant="ghost" size="sm" onClick={refetch} disabled={loading}>
             {loading ? <Spinner size="sm" /> : <Calendar size={16} />}
           </Button>
+          <div className="export-button-group">
+            <ExportButton
+              activeTab={activeTab}
+              summary={summary}
+              profitOverTime={profitOverTime}
+              topProducts={topProducts}
+              paymentBreakdown={paymentBreakdown}
+              cashAnalysis={cashAnalysis}
+              loading={loading}
+            />
+          </div>
         </div>
       </div>
 
@@ -141,19 +155,21 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
 
       {/* Content */}
       <div className="space-y-4">
-        {activeTab === 'summary' && (
-          <>
-            <ExecutiveSummary data={summary} loading={loading} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <PaymentBreakdown data={paymentBreakdown} loading={loading} />
-              <TopProductsChart data={topProducts} loading={loading} />
-            </div>
-          </>
-        )}
-        {activeTab === 'profits' && <ProfitChart data={profitOverTime} loading={loading} />}
-        {activeTab === 'products' && <TopProductsChart data={topProducts} loading={loading} />}
-        {activeTab === 'payments' && <PaymentBreakdown data={paymentBreakdown} loading={loading} />}
-        {activeTab === 'cash' && <CashAnalysis data={cashAnalysis} loading={loading} />}
+        <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+          {activeTab === 'summary' && (
+            <>
+              <ExecutiveSummary data={summary} loading={loading} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <PaymentBreakdown data={paymentBreakdown} loading={loading} />
+                <TopProductsChart data={topProducts} loading={loading} />
+              </div>
+            </>
+          )}
+          {activeTab === 'profits' && <ProfitChart data={profitOverTime} loading={loading} />}
+          {activeTab === 'products' && <TopProductsChart data={topProducts} loading={loading} />}
+          {activeTab === 'payments' && <PaymentBreakdown data={paymentBreakdown} loading={loading} />}
+          {activeTab === 'cash' && <CashAnalysis data={cashAnalysis} loading={loading} />}
+        </Suspense>
       </div>
 
       {/* Mobile Bottom Nav for Tabs */}

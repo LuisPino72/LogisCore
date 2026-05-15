@@ -1,26 +1,16 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
+import { toSnake, generateId } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
+import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
+import { logger } from '../../../lib/logger';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, MovementRow } from '../types';
 import { convertToStorage } from '../types';
 
 const INVENTORY_MODULE = 'INVENTORY';
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
-function toSnake(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(obj)) {
-    const snake = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
-    result[snake] = val;
-  }
-  return result;
-}
 
 async function getTenantUuid(tenantSlug: string): Promise<string> {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantSlug)) {
@@ -135,6 +125,8 @@ export const inventoryService = {
         }
 
         await syncQueue.enqueue('products', 'CREATE', id, toSnake(product as unknown as Record<string, unknown>), tenantId);
+
+        await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial });
       });
 
       await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial }, { userId, tenantId });
@@ -154,8 +146,11 @@ export const inventoryService = {
       }
       const cleanInput = input as Record<string, unknown>;
       const updated = { ...existing, ...cleanInput };
-      await db.products.put(updated);
-      await syncQueue.enqueue('products', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
+      await db.transaction('rw', [db.products, db.syncQueue, db.outbox], async () => {
+        await db.products.put(updated);
+        await syncQueue.enqueue('products', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
+        await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { productId: id, changes: Object.keys(input) });
+      });
       await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { productId: id, changes: Object.keys(input) }, { tenantId });
       return success(toProduct(updated as unknown as Record<string, unknown>));
     } catch {
@@ -170,8 +165,11 @@ export const inventoryService = {
       return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
     }
     const deletedAt = new Date().toISOString();
-    await db.products.update(id, { deletedAt });
-    await syncQueue.enqueue('products', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+    await db.transaction('rw', [db.products, db.syncQueue, db.outbox], async () => {
+      await db.products.update(id, { deletedAt });
+      await syncQueue.enqueue('products', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+      await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { productId: id });
+    });
     await emitWithAudit('INVENTORY.DELETED', INVENTORY_MODULE, { productId: id }, { tenantId });
     return success(undefined);
   },
@@ -272,8 +270,11 @@ export const inventoryService = {
     const id = generateId();
     const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const cat = { id, name: input.name, slug, tenantId: input.tenantId };
-    await db.categories.add(cat);
-    await syncQueue.enqueue('categories', 'CREATE', id, { id, name: input.name, slug }, input.tenantId);
+    await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
+      await db.categories.add(cat);
+      await syncQueue.enqueue('categories', 'CREATE', id, { id, name: input.name, slug }, input.tenantId);
+      await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name });
+    });
     await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name }, { tenantId: input.tenantId });
     return success(toCategory(cat as unknown as Record<string, unknown>));
   },
@@ -282,8 +283,11 @@ export const inventoryService = {
     const db = getDb();
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const updated = { name, slug };
-    await db.categories.update(id, updated);
-    await syncQueue.enqueue('categories', 'UPDATE', id, { id, name, slug }, tenantId);
+    await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
+      await db.categories.update(id, updated);
+      await syncQueue.enqueue('categories', 'UPDATE', id, { id, name, slug }, tenantId);
+      await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name });
+    });
     await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name }, { tenantId });
     return success({ id, name, slug });
   },
@@ -374,18 +378,27 @@ export const inventoryService = {
         createdAt: now,
       };
  
-      await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue], async () => {
+      await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
         await db.products.update(input.productId, { stock: newStock });
         await db.inventoryMovements.add(movement);
  
         if (storageQuantity > 0) {
           const lotId = generateId();
+          // Usar costo explícito si se provee, o último costo conocido del producto
+          const lotCost = input.costUsdPerUnit ?? await (async () => {
+            const lots = await db.inventoryLots
+              .where({ productId: input.productId })
+              .filter((l) => l.costUsdPerUnit !== undefined && l.costUsdPerUnit! > 0)
+              .sortBy('createdAt');
+            return lots.length > 0 ? lots[lots.length - 1].costUsdPerUnit : undefined;
+          })();
           const lot = {
             id: lotId,
             tenantId: input.tenantId,
             productId: input.productId,
             quantityAdded: storageQuantity,
             remainingQuantity: storageQuantity,
+            costUsdPerUnit: lotCost,
             sourceMovementId: movementId,
             createdAt: now,
           };
@@ -402,6 +415,11 @@ export const inventoryService = {
           await syncQueue.enqueue('products', 'UPDATE', input.productId, toSnake(updatedProduct as unknown as Record<string, unknown>), input.tenantId);
         }
         await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
+
+        await outboxService.enqueue('INVENTORY.ADJUSTMENT', INVENTORY_MODULE, {
+          productId: input.productId, quantity: input.quantity, reason: input.reason,
+          previousStock, newStock,
+        });
       });
 
       await emitWithAudit('INVENTORY.ADJUSTMENT', INVENTORY_MODULE, {
@@ -411,7 +429,7 @@ export const inventoryService = {
 
       return success(toMovement(movement as unknown as Record<string, unknown>));
     } catch (err) {
-      console.error('[adjustStock] Error:', err);
+      logger.error('adjustStock', 'Error:', err);
       return failure(new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Error al ajustar stock. Verifica el stock disponible.'));
     }
   },
@@ -497,7 +515,7 @@ export const inventoryService = {
       .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      console.error('[uploadProductImage] Storage error:', uploadError);
+      logger.error('uploadProductImage', 'Storage error:', uploadError);
       return failure(new AppError('INVENTORY_IMAGE_UPLOAD_FAILED', 'Error al subir la imagen. Verifica permisos de Storage.'));
     }
 
@@ -547,11 +565,19 @@ export const inventoryService = {
     for (const lot of lots) {
       if (toConsume <= 0) break;
 
-      const consumeQty = Math.min(lot.remainingQuantity, toConsume);
-      const newRemaining = lot.remainingQuantity - consumeQty;
-      await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining });
+      // Optimistic locking: re-read lot just before update and check version
+      const currentLot = await db.inventoryLots.get(lot.id);
+      if (!currentLot) continue;
+      if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
+        return failure(new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto en consumo FIFO. Reintente la operación.'));
+      }
+
+      const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
+      const newRemaining = currentLot.remainingQuantity - consumeQty;
+      const newVersion = (currentLot.version ?? 0) + 1;
+      await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
       await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
-        ...lot, remainingQuantity: newRemaining,
+        ...lot, remainingQuantity: newRemaining, version: newVersion,
       } as unknown as Record<string, unknown>), tenantId);
 
       consumed.push({ lotId: lot.id, quantity: consumeQty, costUsdPerUnit: lot.costUsdPerUnit });

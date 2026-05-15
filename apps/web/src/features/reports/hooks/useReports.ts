@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import type { Result, AppError } from '@logiscore/core';
 import { reportsService } from '../services/reportsService';
 import type {
   ReportFilters,
@@ -7,7 +8,6 @@ import type {
   TopProductData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
-  CategoryProfitData,
   ReportTab,
 } from '../types';
 
@@ -19,79 +19,91 @@ interface ReportsState {
   topProducts: TopProductData[];
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
-  categoryProfit: CategoryProfitData[];
 }
 
 const initialState: ReportsState = {
-  loading: false,
-  error: null,
-  summary: null,
-  profitOverTime: [],
-  topProducts: [],
-  paymentBreakdown: [],
-  cashAnalysis: [],
-  categoryProfit: [],
+  loading: false, error: null,
+  summary: null, profitOverTime: [], topProducts: [], paymentBreakdown: [], cashAnalysis: [],
 };
 
 export function useReports(tenantId: string | null) {
   const [filters, setFilters] = useState<ReportFilters>({ timeRange: 'today' });
   const [state, setState] = useState<ReportsState>(initialState);
   const [activeTab, setActiveTab] = useState<ReportTab>('summary');
-  const prevKey = useRef<string>('');
+  const prevKey = useRef('');
+  const dataCache = useRef<Record<string, Partial<ReportsState>>>({});
 
-  const loadAll = useCallback(async () => {
+  const loadTab = useCallback(async (tab: ReportTab) => {
     if (!tenantId) return;
-    const cacheKey = `${tenantId}-${filters.timeRange}-${filters.startDate ?? ''}-${filters.endDate ?? ''}`;
+    const cacheKey = `${tenantId}-${tab}-${filters.timeRange}-${filters.startDate ?? ''}-${filters.endDate ?? ''}`;
     if (prevKey.current === cacheKey) return;
     prevKey.current = cacheKey;
 
+    const cached = dataCache.current[cacheKey];
+    if (cached) {
+      setState((prev) => ({ ...prev, ...cached, loading: false }));
+      return;
+    }
+
     setState((s) => ({ ...s, loading: true, error: null }));
 
-    const [summaryRes, profitRes, topRes, paymentRes, cashRes, catRes] = await Promise.all([
-      reportsService.getExecutiveSummary(tenantId, filters),
-      reportsService.getProfitOverTime(tenantId, filters),
-      reportsService.getTopProducts(tenantId, filters),
-      reportsService.getPaymentBreakdown(tenantId, filters),
-      reportsService.getCashAnalysis(tenantId, filters),
-      reportsService.getCategoryProfit(tenantId, filters),
-    ]);
+    const apply = (updates: Partial<ReportsState>, error: string | null) => {
+      dataCache.current[cacheKey] = updates;
+      setState((prev) => ({ ...prev, ...updates, loading: false, error }));
+    };
 
-    const errors: string[] = [];
-    if (!summaryRes.ok) errors.push(summaryRes.error.message);
-    if (!profitRes.ok) errors.push(profitRes.error.message);
-    if (!topRes.ok) errors.push(topRes.error.message);
-    if (!paymentRes.ok) errors.push(paymentRes.error.message);
-    if (!cashRes.ok) errors.push(cashRes.error.message);
-    if (!catRes.ok) errors.push(catRes.error.message);
+    try {
+      if (tab === 'summary') {
+        const [s, p, tp, pm, c] = await Promise.all([
+          reportsService.getExecutiveSummary(tenantId, filters),
+          reportsService.getProfitOverTime(tenantId, filters),
+          reportsService.getTopProducts(tenantId, filters),
+          reportsService.getPaymentBreakdown(tenantId, filters),
+          reportsService.getCashAnalysis(tenantId, filters),
+        ]);
+        const errs = [s, p, tp, pm, c].filter((r) => !r.ok).map((r) => r.error.message);
+        apply({
+          summary: s.ok ? s.data : null,
+          profitOverTime: p.ok ? p.data : [],
+          topProducts: tp.ok ? tp.data : [],
+          paymentBreakdown: pm.ok ? pm.data : [],
+          cashAnalysis: c.ok ? c.data : [],
+        }, errs.length ? errs.join('. ') : null);
+        return;
+      }
 
-    setState({
-      loading: false,
-      error: errors.length > 0 ? errors.join('. ') : null,
-      summary: summaryRes.ok ? summaryRes.data : null,
-      profitOverTime: profitRes.ok ? profitRes.data : [],
-      topProducts: topRes.ok ? topRes.data : [],
-      paymentBreakdown: paymentRes.ok ? paymentRes.data : [],
-      cashAnalysis: cashRes.ok ? cashRes.data : [],
-      categoryProfit: catRes.ok ? catRes.data : [],
-    });
+      let res: Result<unknown, AppError>;
+      if (tab === 'profits') res = await reportsService.getProfitOverTime(tenantId, filters);
+      else if (tab === 'products') res = await reportsService.getTopProducts(tenantId, filters);
+      else if (tab === 'payments') res = await reportsService.getPaymentBreakdown(tenantId, filters);
+      else if (tab === 'cash') res = await reportsService.getCashAnalysis(tenantId, filters);
+      else return;
+
+      if (res.ok) {
+        const updates: Partial<ReportsState> = {};
+        if (tab === 'profits') updates.profitOverTime = res.data as DailyProfitPoint[];
+        else if (tab === 'products') updates.topProducts = res.data as TopProductData[];
+        else if (tab === 'payments') updates.paymentBreakdown = res.data as PaymentBreakdownData[];
+        else if (tab === 'cash') updates.cashAnalysis = res.data as CashRegisterSummaryData[];
+        apply(updates, null);
+      } else {
+        apply({}, res.error.message);
+      }
+    } catch (err) {
+      setState((prev) => ({ ...prev, loading: false, error: err instanceof Error ? err.message : 'Error al cargar reportes' }));
+    }
   }, [tenantId, filters]);
 
   useEffect(() => {
     if (!tenantId) return;
-    loadAll();
-  }, [tenantId, filters, loadAll]);
+    loadTab(activeTab);
+  }, [tenantId, filters, activeTab, loadTab]);
 
   const refetch = useCallback(() => {
     prevKey.current = '';
-    loadAll();
-  }, [loadAll]);
+    dataCache.current = {};
+    loadTab(activeTab);
+  }, [loadTab, activeTab]);
 
-  return {
-    filters,
-    setFilters,
-    activeTab,
-    setActiveTab,
-    ...state,
-    refetch,
-  };
+  return { filters, setFilters, activeTab, setActiveTab, ...state, refetch };
 }

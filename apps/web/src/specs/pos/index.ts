@@ -4,7 +4,6 @@ import { z } from 'zod';
 
 export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'efectivo_usd'] as const;
 export type PaymentMethod = typeof PAYMENT_METHODS[number];
-
 export const IGTF_RATE = 0.03;
 
 export const PaymentMethodSchema = z.enum(PAYMENT_METHODS);

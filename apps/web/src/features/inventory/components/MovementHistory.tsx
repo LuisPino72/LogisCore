@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
-import { History, TrendingUp, TrendingDown, Package } from 'lucide-react';
-import { Badge, DataTable } from '../../../common/components';
+import { History, TrendingUp, TrendingDown, Package, ChevronDown } from 'lucide-react';
+import { Badge, DataTable, Button } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import type { Product } from '../types';
 import { displayStock } from '../types';
 import { inventoryService } from '../services/inventoryService';
 import type { InventoryMovement } from '../../../specs/inventory';
+
+const PAGE_SIZE = 20;
 
 interface MovementHistoryProps {
   products: Product[];
@@ -42,16 +44,21 @@ function getTypeBadge(type: string): 'success' | 'warning' | 'danger' | 'info' {
 export function MovementHistory({ products }: MovementHistoryProps) {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
 
   const handleProductChange = async (productId: string) => {
     setSelectedProductId(productId);
+    setDisplayCount(PAGE_SIZE);
     if (!productId) { setMovements([]); return; }
     setLoading(true);
     const result = await inventoryService.getMovementHistory(productId);
     if (result.ok) setMovements(result.data);
     setLoading(false);
   };
+
+  const visibleMovements = movements.slice(0, displayCount);
+  const hasMoreMovements = visibleMovements.length < movements.length;
 
   const columns = useMemo((): Column<InventoryMovement>[] => [
     {
@@ -121,15 +128,24 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       )}
 
       {selectedProductId && (
-        <DataTable
-          columns={columns}
-          data={movements}
-          loading={loading}
-          keyExtractor={(m: InventoryMovement) => m.id}
-          emptyMessage="Sin movimientos"
-          emptyIcon={<History size={32} />}
-          renderCardOnMobile
-        />
+        <>
+          <DataTable
+            columns={columns}
+            data={visibleMovements}
+            loading={loading}
+            keyExtractor={(m: InventoryMovement) => m.id}
+            emptyMessage="Sin movimientos"
+            emptyIcon={<History size={32} />}
+            renderCardOnMobile
+          />
+          {hasMoreMovements && (
+            <div className="flex justify-center pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setDisplayCount((c) => c + PAGE_SIZE)}>
+                <ChevronDown size={16} /> Cargar más ({movements.length - visibleMovements.length} restantes)
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

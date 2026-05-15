@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Button, Badge, Modal, DataTable } from '../../../common/components';
-import { Eye, Ban, ShoppingCart, Calendar } from 'lucide-react';
+import { Eye, Ban, ShoppingCart, Calendar, ChevronDown } from 'lucide-react';
 import type { Column } from '../../../common/components';
 import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
 import { posService } from '../services/posService';
 import { METADATA_PAGOS } from '../../../specs/sales';
+
+const PAGE_SIZE = 20;
 
 interface SalesHistoryProps {
   tenantId: string;
@@ -15,6 +17,9 @@ interface SalesHistoryProps {
 }
 
 export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading }: SalesHistoryProps) {
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
+  const visibleSales = sales.slice(0, displayCount);
+  const hasMore = visibleSales.length < sales.length;
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
@@ -97,11 +102,18 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading }: Sa
         <div className="flex-1 overflow-auto">
           <DataTable
             columns={columns}
-            data={sales}
+            data={visibleSales}
             keyExtractor={(s) => s.id}
             emptyMessage="Sin ventas"
             renderCardOnMobile
           />
+          {hasMore && (
+            <div className="flex justify-center pt-3 pb-4">
+              <Button variant="ghost" size="sm" onClick={() => setDisplayCount((c) => c + PAGE_SIZE)}>
+                <ChevronDown size={16} /> Cargar más ({sales.length - visibleSales.length} restantes)
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
