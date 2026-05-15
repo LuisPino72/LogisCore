@@ -4,6 +4,7 @@ import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { InventoryErrors } from '../../../specs/inventory/errors';
@@ -11,18 +12,6 @@ import type { Product, Category, InventoryMovement, CreateProductInput, AdjustSt
 import { convertToStorage } from '../types';
 
 const INVENTORY_MODULE = 'INVENTORY';
-
-async function getTenantUuid(tenantSlug: string): Promise<string> {
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantSlug)) {
-    return tenantSlug;
-  }
-  const db = getDb();
-  const ref = await db.tenantRefs.get(tenantSlug);
-  if (ref?.id) return ref.id;
-  const { data } = await supabase.from('tenants').select('id').eq('slug', tenantSlug).single();
-  if (data) return data.id as string;
-  return tenantSlug;
-}
 
 function toProduct(raw: Record<string, unknown>): Product {
   return {
@@ -117,6 +106,7 @@ export const inventoryService = {
             remainingQuantity: stockInicial,
             sourceMovementId: movementId,
             createdAt: now,
+            updatedAt: now,
           };
           await db.inventoryLots.add(lot);
 
@@ -227,6 +217,7 @@ export const inventoryService = {
                 remainingQuantity: lot.remaining_quantity,
                 sourceMovementId: lot.source_movement_id,
                 createdAt: lot.created_at,
+                updatedAt: lot.updated_at ?? lot.created_at,
               });
             }
           }
@@ -404,6 +395,7 @@ export const inventoryService = {
             costUsdPerUnit: lotCost,
             sourceMovementId: movementId,
             createdAt: now,
+            updatedAt: now,
           };
           await db.inventoryLots.add(lot);
           await syncQueue.enqueue('inventory_lots', 'CREATE', lotId, toSnake(lot as unknown as Record<string, unknown>), input.tenantId);
@@ -510,7 +502,7 @@ export const inventoryService = {
     }
 
     const ext = file.name.split('.').pop() ?? 'jpg';
-    const tenantUuid = await getTenantUuid(tenantId);
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const filePath = `${tenantUuid}/${productId}.${ext}`;
 
     const { error: uploadError } = await supabase.storage

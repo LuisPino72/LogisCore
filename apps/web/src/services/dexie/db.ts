@@ -51,6 +51,7 @@ export interface DexieInventoryLot {
   costUsdPerUnit?: number;
   sourceMovementId?: string;
   createdAt: string;
+  updatedAt: string;
   version?: number;
 }
 
@@ -126,6 +127,7 @@ export interface DexieSupplier {
   name: string;
   phone?: string;
   createdAt: string;
+  updatedAt: string;
   deletedAt?: string;
 }
 
@@ -173,7 +175,7 @@ export class LogisCoreDB extends Dexie {
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(8).stores({
+    this.version(9).stores({
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
       syncMeta: 'table',

@@ -4,6 +4,7 @@ import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { PosErrors } from '../../../specs/pos/errors';
@@ -14,18 +15,6 @@ import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
 
 const MODULE_NAME = 'POS';
-
-async function getTenantUuid(tenantSlug: string): Promise<string> {
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantSlug)) {
-    return tenantSlug;
-  }
-  const db = getDb();
-  const ref = await db.tenantRefs.get(tenantSlug);
-  if (ref?.id) return ref.id;
-  const { data } = await supabase.from('tenants').select('id').eq('slug', tenantSlug).single();
-  if (data) return data.id as string;
-  return tenantSlug;
-}
 
 export const posService = {
   async getCashRegister(tenantId: string): Promise<Result<CashRegister | null, AppError>> {
@@ -38,7 +27,7 @@ export const posService = {
         .first();
 
       if (!row) {
-        const uuid = await getTenantUuid(tenantId);
+        const uuid = await TenantTranslator.slugToUuid(tenantId);
         const { data } = await supabase
           .from('cash_registers')
           .select('*')
@@ -107,7 +96,7 @@ export const posService = {
         .toArray();
 
       if (rows.length === 0) {
-        const uuid = await getTenantUuid(tenantId);
+        const uuid = await TenantTranslator.slugToUuid(tenantId);
         const { data } = await supabase
           .from('products')
           .select('*')
@@ -214,7 +203,7 @@ export const posService = {
 
     const saleId = generateId();
     const now = new Date().toISOString();
-    const tenantUuid = await getTenantUuid(tenantId);
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     try {
       await db.transaction('rw', [
@@ -444,7 +433,7 @@ export const posService = {
 
     const id = generateId();
     const now = new Date().toISOString();
-    const tenantUuid = await getTenantUuid(tenantId);
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     try {
       const register = {
@@ -509,17 +498,18 @@ export const posService = {
     }
   },
 
-  async getSalesHistory(tenantId: string): Promise<Result<Sale[], AppError>> {
+  async getSalesHistory(tenantId: string, offset = 0, limit = 50): Promise<Result<Sale[], AppError>> {
     try {
       const db = getDb();
-      let rows = await db.sales
-        .where({ tenantId })
-        .filter((r) => !r.deletedAt && r.status === 'completed')
-        .reverse()
-        .sortBy('createdAt');
 
-      if (rows.length === 0) {
-        const uuid = await getTenantUuid(tenantId);
+      const count = await db.sales
+        .where('[tenantId+deletedAt]')
+        .between([tenantId, '\uffff'], [tenantId, '\uffff'])
+        .filter((r) => !r.deletedAt && r.status === 'completed')
+        .count();
+
+      if (count === 0) {
+        const uuid = await TenantTranslator.slugToUuid(tenantId);
         const { data } = await supabase
           .from('sales')
           .select('*')
@@ -547,13 +537,17 @@ export const posService = {
               deletedAt: sale.deleted_at as string | undefined,
             });
           }
-          rows = await db.sales
-            .where({ tenantId })
-            .filter((r) => !r.deletedAt && r.status === 'completed')
-            .reverse()
-            .sortBy('createdAt');
         }
       }
+
+      const rows = await db.sales
+        .where('[tenantId+createdAt]')
+        .between([tenantId, ''], [tenantId, '\uffff'])
+        .filter((r) => !r.deletedAt && r.status === 'completed')
+        .reverse()
+        .offset(offset)
+        .limit(limit)
+        .toArray();
 
       return success(rows.map((r) => ({
         id: r.id,
@@ -642,7 +636,7 @@ export const posService = {
 
       const items = await db.saleItems.where({ saleId }).toArray();
       const now = new Date().toISOString();
-      const tenantUuid = await getTenantUuid(tenantId);
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
       await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });
@@ -734,7 +728,7 @@ export const posService = {
     }
 
     const now = new Date().toISOString();
-    const tenantUuid = await getTenantUuid(tenantId);
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     const expectedClosingBs = preciseRound(
       (cashReg.openingBalanceBs ?? 0) + cashReg.totalSalesBs,

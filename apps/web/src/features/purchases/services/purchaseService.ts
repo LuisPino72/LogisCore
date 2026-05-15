@@ -78,7 +78,7 @@ export const purchaseService = {
 
     try {
       await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
-        await db.suppliers.add({ ...supplier, tenantId });
+        await db.suppliers.add({ ...supplier, tenantId, updatedAt: now });
         await syncQueue.enqueue('suppliers', 'CREATE', id, toSnake({ ...supplier, tenantId } as unknown as Record<string, unknown>), tenantId);
         await outboxService.enqueue('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name });
       });
@@ -157,6 +157,7 @@ export const purchaseService = {
             name: s.name,
             phone: s.phone,
             createdAt: s.created_at,
+            updatedAt: s.updated_at ?? s.created_at,
           });
         }
         rows = await db.suppliers.where({ tenantId }).filter((s) => !s.deletedAt).toArray();
@@ -421,6 +422,7 @@ export const purchaseService = {
               costUsdPerUnit: item.costUsdPerUnit,
               sourceMovementId: movementId,
               createdAt: now,
+              updatedAt: now,
             };
 
             await db.products.update(item.productId, { stock: newStock });

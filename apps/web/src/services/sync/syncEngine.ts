@@ -17,8 +17,8 @@ import { DEFAULT_BATCH_SIZE, SYNC_INTERVAL_MS } from './types';
 const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'products', timeCol: 'updated_at' },
   { name: 'categories', timeCol: 'updated_at' },
-  { name: 'inventory_lots', timeCol: 'created_at' },
-  { name: 'suppliers', timeCol: 'created_at' },
+  { name: 'inventory_lots', timeCol: 'updated_at' },
+  { name: 'suppliers', timeCol: 'updated_at' },
   { name: 'purchase_orders', timeCol: 'updated_at' },
 ];
 
@@ -176,37 +176,55 @@ export class SyncEngine {
         const meta = await db.syncMeta.get(tableName);
         const lastPullAt = meta?.lastPullAt ?? 0;
 
+        const since = new Date(lastPullAt).toISOString();
         const query = supabase
           .from(tableName)
           .select('*')
-          .gt(timeCol, new Date(lastPullAt).toISOString());
+          .or(`and(${timeCol}.gt.${since}),and(deleted_at.gt.${since})`);
 
         const { data, error } = await query;
 
         if (error) {
-          // Si la columna no existe en la tabla remota, intentar con created_at
-          if (timeCol === 'updated_at' && error.message?.includes(timeCol)) {
-            const fallbackQuery = supabase
+          // Si no soporta OR (ej. columna deleted_at no existe), intentar solo timeCol
+          if (error.message?.includes('deleted_at')) {
+            const simpleQuery = supabase
               .from(tableName)
               .select('*')
-              .gt('created_at', new Date(lastPullAt).toISOString());
-            const fbResult = await fallbackQuery;
-            if (fbResult.error) continue;
-            const fbData = fbResult.data;
-            if (fbData && fbData.length > 0) {
-              for (const record of fbData) {
+              .gt(timeCol, since);
+            const simpleResult = await simpleQuery;
+            if (simpleResult.error) {
+              if (timeCol === 'updated_at' && simpleResult.error.message?.includes(timeCol)) {
+                const fallbackQuery = supabase
+                  .from(tableName)
+                  .select('*')
+                  .gt('created_at', since);
+                const fbResult = await fallbackQuery;
+                if (fbResult.error) continue;
+                const fbData = fbResult.data;
+                if (fbData && fbData.length > 0) {
+                  for (const record of fbData) {
+                    await this.upsertLocalRecord(tableName, record);
+                    result.pushed++;
+                  }
+                }
+              }
+              continue;
+            }
+            if (simpleResult.data && simpleResult.data.length > 0) {
+              for (const record of simpleResult.data) {
                 await this.upsertLocalRecord(tableName, record);
                 result.pushed++;
               }
             }
+          } else {
+            continue;
           }
-          continue;
-        }
-
-        if (data && data.length > 0) {
-          for (const record of data) {
-            await this.upsertLocalRecord(tableName, record);
-            result.pushed++;
+        } else {
+          if (data && data.length > 0) {
+            for (const record of data) {
+              await this.upsertLocalRecord(tableName, record);
+              result.pushed++;
+            }
           }
         }
 

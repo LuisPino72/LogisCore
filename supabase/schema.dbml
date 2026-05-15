@@ -69,6 +69,7 @@ Table exchange_rates {
   source text [not null]
   fetched_at timestamptz
   created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [default: `now()`]
   deleted_at timestamptz
 }
 
@@ -126,6 +127,7 @@ Table inventory_lots {
   version integer [not null, default: 0]
   source_movement_id uuid [ref: > inventory_movements.id]
   created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
   deleted_at timestamptz
 }
 
@@ -135,6 +137,7 @@ Table suppliers {
   name text [not null]
   phone text
   created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
   deleted_at timestamptz
 }
 

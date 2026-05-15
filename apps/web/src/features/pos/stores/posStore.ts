@@ -205,17 +205,18 @@ export const usePosStore = create<PosStore>((set, get) => ({
   clearCart: () => set({ cart: [] }),
 
   completeSale: async (tenantId, paymentMethod, userId) => {
-    const { cart } = get();
+    const { cart, exchangeRate: cachedRate } = get();
     if (cart.length === 0) {
       set({ error: 'No hay productos en el carrito.' });
       return false;
     }
 
-    const exchangeRateResult = await exchangeRateService.fetchLatest(tenantId);
-
-    let exchangeRate = 0;
-    if (exchangeRateResult.ok && exchangeRateResult.data && exchangeRateResult.data.rate) {
-      exchangeRate = exchangeRateResult.data.rate;
+    let exchangeRate = cachedRate ?? 0;
+    if (!exchangeRate) {
+      const exchangeRateResult = await exchangeRateService.fetchLatest(tenantId);
+      if (exchangeRateResult.ok && exchangeRateResult.data?.rate) {
+        exchangeRate = exchangeRateResult.data.rate;
+      }
     }
 
     const input: CreateSaleInput = {

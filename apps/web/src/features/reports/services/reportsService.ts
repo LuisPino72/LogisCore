@@ -85,7 +85,9 @@ interface SaleWithItems {
   items: {
     productId: string;
     productName: string;
+    productSku: string;
     quantity: number;
+    unitPriceUsd: number;
     costUsdPerUnit?: number;
   }[];
 }
@@ -93,31 +95,44 @@ interface SaleWithItems {
 async function fetchSalesWithItems(tenantId: string, start: string, end: string): Promise<SaleWithItems[]> {
   const db = getDb();
   const sales = await db.sales
-    .where({ tenantId })
-    .filter((s) => !s.deletedAt && s.status === 'completed' && s.createdAt >= start && s.createdAt <= end)
+    .where('[tenantId+createdAt]')
+    .between([tenantId, start], [tenantId, end])
+    .filter((s) => !s.deletedAt && s.status === 'completed')
     .toArray();
 
-  const result: SaleWithItems[] = [];
-  for (const sale of sales) {
-    const items = await db.saleItems.where({ saleId: sale.id }).toArray();
-    result.push({
-      sale: {
-        id: sale.id,
-        totalBs: sale.totalBs,
-        igtfBs: sale.igtfBs,
-        exchangeRate: sale.exchangeRate,
-        paymentMethod: sale.paymentMethod,
-        createdAt: sale.createdAt,
-      },
-      items: items.map((i) => ({
-        productId: i.productId,
-        productName: i.productName,
-        quantity: i.quantity,
-        costUsdPerUnit: i.costUsdPerUnit,
-      })),
-    });
+  if (sales.length === 0) return [];
+
+  const saleIds = sales.map((s) => s.id);
+  const allItems = await db.saleItems
+    .where('saleId')
+    .anyOf(saleIds)
+    .toArray();
+
+  const itemsBySaleId = new Map<string, typeof allItems>();
+  for (const item of allItems) {
+    const group = itemsBySaleId.get(item.saleId);
+    if (group) group.push(item);
+    else itemsBySaleId.set(item.saleId, [item]);
   }
-  return result;
+
+  return sales.map((sale) => ({
+    sale: {
+      id: sale.id,
+      totalBs: sale.totalBs,
+      igtfBs: sale.igtfBs,
+      exchangeRate: sale.exchangeRate,
+      paymentMethod: sale.paymentMethod,
+      createdAt: sale.createdAt,
+    },
+    items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
+      productId: i.productId,
+      productName: i.productName,
+      productSku: i.productSku,
+      quantity: i.quantity,
+      unitPriceUsd: i.unitPriceUsd,
+      costUsdPerUnit: i.costUsdPerUnit,
+    })),
+  }));
 }
 
 function calcItemCostBs(quantity: number, costUsdPerUnit: number | undefined, exchangeRate: number): number {
@@ -135,12 +150,10 @@ export const reportsService = {
       let totalCostBs = 0;
       let totalIgtfBs = 0;
       const productProfitMap = new Map<string, { name: string; profit: number }>();
-      const db = getDb();
 
-      for (const { sale } of data) {
+      for (const { sale, items } of data) {
         totalSalesBs += sale.totalBs;
         totalIgtfBs += sale.igtfBs;
-        const items = await db.saleItems.where({ saleId: sale.id }).toArray();
         for (const item of items) {
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
@@ -207,7 +220,6 @@ export const reportsService = {
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
-      const db = getDb();
 
       const map = new Map<string, DailyProfitPoint>();
       for (const { sale } of data) {
@@ -221,10 +233,9 @@ export const reportsService = {
         point.transactions += 1;
       }
 
-      for (const { sale } of data) {
+      for (const { sale, items } of data) {
         const dateKey = sale.createdAt.slice(0, 10);
         const point = map.get(dateKey)!;
-        const items = await db.saleItems.where({ saleId: sale.id }).toArray();
         for (const item of items) {
           point.costBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
         }
@@ -248,11 +259,9 @@ export const reportsService = {
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
-      const db = getDb();
 
       const map = new Map<string, TopProductData>();
-      for (const { sale } of data) {
-        const items = await db.saleItems.where({ saleId: sale.id }).toArray();
+      for (const { sale, items } of data) {
         for (const item of items) {
           const existing = map.get(item.productId);
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
@@ -299,8 +308,9 @@ export const reportsService = {
       const { start, end } = getDateRange(filters);
       const db = getDb();
       const sales = await db.sales
-        .where({ tenantId })
-        .filter((s) => !s.deletedAt && s.status === 'completed' && s.createdAt >= start && s.createdAt <= end)
+        .where('[tenantId+createdAt]')
+        .between([tenantId, start], [tenantId, end])
+        .filter((s) => !s.deletedAt && s.status === 'completed')
         .toArray();
 
       const map = new Map<string, PaymentBreakdownData>();
