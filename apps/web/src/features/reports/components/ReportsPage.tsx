@@ -46,7 +46,6 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     topProducts,
     paymentBreakdown,
     cashAnalysis,
-    refetch: _refetch,
   } = useReports(tenantId);
 
   const [showCustomDate, setShowCustomDate] = useState(false);

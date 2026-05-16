@@ -91,3 +91,22 @@ export interface SubscriptionView {
   expiresAt: string | null;
   daysRemaining: number;
 }
+
+export interface DashboardStats {
+  totalActiveTenants: number;
+  totalInactiveTenants: number;
+  expiringSubscriptions: number;
+  totalUsers: number;
+}
+
+export interface TenantAnalytics {
+  monthlySalesCount: number;
+  monthlySalesTotalBs: number;
+  activeProducts: number;
+  totalUsers: number;
+}
+
+export interface ResetPasswordInput {
+  userId: string;
+  newPassword: string;
+}

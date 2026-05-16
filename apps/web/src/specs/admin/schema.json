@@ -1,11 +1,16 @@
 {
   "module": "admin",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "specs": {
     "ADMIN-001": "Crear tenant con owner y empleados",
     "ADMIN-002": "Gestionar suscripciones (renovar/vencer)",
-    "ADMIN-003": "Listar usuarios globales y por tenant"
+    "ADMIN-003": "Listar usuarios globales y por tenant",
+    "ADMIN-004": "Dashboard de estadisticas (locales activos/inactivos, usuarios totales, suscripciones por vencer)",
+    "ADMIN-005": "Buscar y filtrar locales por nombre, RIF, estado y plan",
+    "ADMIN-006": "Reactivar tenant soft-deleteado",
+    "ADMIN-007": "Restablecer contrasena de empleado via Edge Function",
+    "ADMIN-008": "Analytics de tenant (ventas mensuales, productos activos, usuarios)"
   },
-  "tables": ["tenants", "user_roles", "subscriptions"],
-  "dependencies": ["supabase.edge-functions"]
+  "tables": ["tenants", "user_roles", "subscriptions", "sales", "products"],
+  "dependencies": ["supabase.edge-functions", "supabase.head-queries"]
 }

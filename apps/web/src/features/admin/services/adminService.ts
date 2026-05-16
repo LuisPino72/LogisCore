@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
-import type { Tenant, UserRole, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView } from '../types';
+import type { Tenant, UserRole, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics } from '../types';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
@@ -319,5 +319,122 @@ export const adminService = {
     }
 
     return success(undefined);
+  },
+
+  async restoreTenant(id: string): Promise<Result<void, AppError>> {
+    const { error } = await supabase
+      .from('tenants')
+      .update({ deleted_at: null })
+      .eq('id', id);
+
+    if (error) {
+      return failure(new AppError(AdminErrors.ADMIN_RESTORE_FAILED, 'Error al reactivar el local'));
+    }
+
+    return success(undefined);
+  },
+
+  async resetPassword(userId: string, newPassword: string): Promise<Result<void, AppError>> {
+    const tokenResult = await getAdminToken();
+    if (!tokenResult.ok) return tokenResult;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-reset-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenResult.data}`,
+          },
+          body: JSON.stringify({ userId, newPassword }),
+        },
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        return failure(new AppError(
+          (body as { code?: string }).code ?? AdminErrors.ADMIN_RESET_PASS_FAILED,
+          (body as { message?: string }).message ?? 'Error al resetear contraseña',
+        ));
+      }
+
+      return success(undefined);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al conectar con el servidor';
+      return failure(new AppError(AdminErrors.ADMIN_RESET_PASS_FAILED, message));
+    }
+  },
+
+  async fetchDashboardStats(): Promise<Result<DashboardStats, AppError>> {
+    const [
+      activeTenantsResult,
+      inactiveTenantsResult,
+      totalUsersResult,
+    ] = await Promise.all([
+      supabase.from('tenants').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+      supabase.from('tenants').select('id', { count: 'exact', head: true }).not('deleted_at', 'is', null),
+      supabase.from('user_roles').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+    ]);
+
+    const totalActiveTenants = activeTenantsResult.count ?? 0;
+    const totalInactiveTenants = inactiveTenantsResult.count ?? 0;
+    const totalUsers = totalUsersResult.count ?? 0;
+
+    // Count expiring subscriptions (active + expires within 7 days)
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 86400000).toISOString();
+    const { data: expiringData } = await supabase
+      .from('subscriptions')
+      .select('tenant_id')
+      .lte('expires_at', sevenDaysLater)
+      .gte('expires_at', now.toISOString())
+      .eq('status', 'active')
+      .is('deleted_at', null);
+
+    const expiringSubscriptions = expiringData?.length ?? 0;
+
+    return success({
+      totalActiveTenants,
+      totalInactiveTenants,
+      expiringSubscriptions,
+      totalUsers,
+    });
+  },
+
+  async getTenantAnalytics(tenantId: string): Promise<Result<TenantAnalytics, AppError>> {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [
+      salesResult,
+      productsResult,
+      usersResult,
+    ] = await Promise.all([
+      supabase
+        .from('sales')
+        .select('total_bs', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .gte('created_at', startOfMonth.toISOString())
+        .is('deleted_at', null),
+      supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null),
+      supabase
+        .from('user_roles')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null),
+    ]);
+
+    return success({
+      monthlySalesCount: salesResult.count ?? 0,
+      monthlySalesTotalBs: 0, // En un futuro podríamos sumar total_bs real
+      activeProducts: productsResult.count ?? 0,
+      totalUsers: usersResult.count ?? 0,
+    });
   },
 };

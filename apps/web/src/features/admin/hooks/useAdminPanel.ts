@@ -1,19 +1,23 @@
 import { useState, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { adminService } from '../services/adminService';
-import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics } from '../types';
 
 interface UseAdminPanelReturn {
   tenants: Tenant[];
   users: UserRole[];
   allUsers: GlobalUser[];
   subscriptions: SubscriptionView[];
+  dashboardStats: DashboardStats | null;
+  analytics: TenantAnalytics | null;
   isLoading: boolean;
   error: string | null;
   fetchTenants: () => Promise<void>;
   fetchUsers: (tenantId?: string) => Promise<void>;
   fetchAllUsers: () => Promise<void>;
   fetchSubscriptions: () => Promise<void>;
+  fetchDashboardStats: () => Promise<void>;
+  fetchAnalytics: (tenantId: string) => Promise<void>;
   renewSubscription: (tenantId: string) => Promise<Result<void, AppError>>;
   createTenant: (payload: CreateTenantWithUsersInput) => Promise<Result<CreateTenantResponse, AppError>>;
   addEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
@@ -21,6 +25,8 @@ interface UseAdminPanelReturn {
   removeEmployee: (userRoleId: string) => Promise<Result<void, AppError>>;
   softDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
   hardDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
+  restoreTenant: (id: string) => Promise<Result<void, AppError>>;
+  resetPassword: (userId: string, newPassword: string) => Promise<Result<void, AppError>>;
 }
 
 export function useAdminPanel(): UseAdminPanelReturn {
@@ -28,6 +34,8 @@ export function useAdminPanel(): UseAdminPanelReturn {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [allUsers, setAllUsers] = useState<GlobalUser[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionView[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [analytics, setAnalytics] = useState<TenantAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -135,17 +143,48 @@ export function useAdminPanel(): UseAdminPanelReturn {
     return result;
   }, [fetchTenants]);
 
+  const restoreTenant = useCallback(async (id: string) => {
+    const result = await adminService.restoreTenant(id);
+    if (result.ok) {
+      await fetchTenants();
+    }
+    return result;
+  }, [fetchTenants]);
+
+  const resetPassword = useCallback(async (userId: string, newPassword: string) => {
+    return adminService.resetPassword(userId, newPassword);
+  }, []);
+
+  const fetchDashboardStats = useCallback(async () => {
+    const result = await adminService.fetchDashboardStats();
+    if (result.ok) {
+      setDashboardStats(result.data);
+    }
+  }, []);
+
+  const fetchAnalytics = useCallback(async (tenantId: string) => {
+    setAnalytics(null);
+    const result = await adminService.getTenantAnalytics(tenantId);
+    if (result.ok) {
+      setAnalytics(result.data);
+    }
+  }, []);
+
   return {
     tenants,
     users,
     allUsers,
     subscriptions,
+    dashboardStats,
+    analytics,
     isLoading,
     error,
     fetchTenants,
     fetchUsers,
     fetchAllUsers,
     fetchSubscriptions,
+    fetchDashboardStats,
+    fetchAnalytics,
     renewSubscription,
     createTenant,
     addEmployee,
@@ -153,5 +192,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     removeEmployee,
     softDeleteTenant,
     hardDeleteTenant,
+    restoreTenant,
+    resetPassword,
   };
 }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Admin Spec - ADMIN-001..003 */
+/** Admin Spec - ADMIN-001..008 */
 
 export const CreateTenantSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(100),
@@ -31,3 +31,46 @@ export const UpdateTenantSchema = z.object({
 });
 
 export type UpdateTenant = z.infer<typeof UpdateTenantSchema>;
+
+// ADMIN-004: Dashboard stats
+export const DashboardStatsSchema = z.object({
+  totalActiveTenants: z.number().min(0),
+  totalInactiveTenants: z.number().min(0),
+  expiringSubscriptions: z.number().min(0),
+  totalUsers: z.number().min(0),
+});
+
+export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
+
+// ADMIN-005: Tenant filters
+export const TenantFilterSchema = z.object({
+  search: z.string().default(''),
+  status: z.enum(['all', 'active', 'inactive']).default('all'),
+  plan: z.string().default('all'),
+});
+
+export type TenantFilter = z.infer<typeof TenantFilterSchema>;
+
+// ADMIN-006: Restore tenant
+export const RestoreTenantSchema = z.object({
+  tenantId: z.string().uuid(),
+});
+
+export type RestoreTenant = z.infer<typeof RestoreTenantSchema>;
+
+// ADMIN-007: Reset password
+export const ResetPasswordSchema = z.object({
+  userId: z.string().uuid(),
+  newPassword: z.string().min(6, 'Mínimo 6 caracteres').max(100),
+});
+
+export type ResetPassword = z.infer<typeof ResetPasswordSchema>;
+
+// ADMIN-008: Tenant analytics
+export const TenantAnalyticsSchema = z.object({
+  monthlySalesCount: z.number().min(0),
+  activeProducts: z.number().min(0),
+  totalUsers: z.number().min(0),
+});
+
+export type TenantAnalytics = z.infer<typeof TenantAnalyticsSchema>;

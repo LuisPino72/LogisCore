@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAdminPanel } from '../hooks/useAdminPanel';
+import { useTenantFilters } from '../hooks/useTenantFilters';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { CreateTenantWithUsersInputSchema } from '../types';
 import type { Tenant, UserRole, GlobalUser, SubscriptionView } from '../types';
@@ -14,11 +15,15 @@ import {
   DataTable,
   Input,
   Modal,
+  SearchInput,
+  Select,
   Spinner,
   LogoutButton,
 } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield } from 'lucide-react';
+import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, LayoutDashboard, RotateCcw, KeyRound, BarChart3 } from 'lucide-react';
+import { AdminDashboard } from './AdminDashboard';
+import { AnalyticsModal } from './AnalyticsModal';
 
 interface EmployeeForm {
   email: string;
@@ -45,7 +50,7 @@ const emptyCreateForm: CreateForm = {
   employees: [],
 };
 
-type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions';
+type Sheet = 'dashboard' | 'tenants' | 'users' | 'all-users' | 'subscriptions';
 
 function getSubscriptionProgress(daysRemaining: number): { pct: number; color: string } {
   const maxDays = 30;
@@ -56,13 +61,15 @@ function getSubscriptionProgress(daysRemaining: number): { pct: number; color: s
 
 export function AdminPanelPage() {
   const {
-    tenants, users, allUsers, subscriptions, isLoading, error,
-    fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, renewSubscription,
-    createTenant, addEmployee, updateTenant, removeEmployee,
-    softDeleteTenant, hardDeleteTenant,
+    tenants, users, allUsers, subscriptions, dashboardStats, analytics, isLoading, error,
+    fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, fetchDashboardStats, fetchAnalytics,
+    renewSubscription, createTenant, addEmployee, updateTenant, removeEmployee,
+    softDeleteTenant, hardDeleteTenant, restoreTenant, resetPassword,
   } = useAdminPanel();
 
-  const [activeSheet, setActiveSheet] = useState<Sheet>('tenants');
+  const { filteredTenants, setSearch, setStatus, setPlan } = useTenantFilters(tenants);
+
+  const [activeSheet, setActiveSheet] = useState<Sheet>('dashboard');
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [selectedTenantName, setSelectedTenantName] = useState('');
 
@@ -74,6 +81,14 @@ export function AdminPanelPage() {
   const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
+  const [analyticsTarget, setAnalyticsTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showAnalyticsLoading, setShowAnalyticsLoading] = useState(false);
+
+  const [resetPassTarget, setResetPassTarget] = useState<{ userId: string; email: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetPassError, setResetPassError] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
   const [editForm, setEditForm] = useState<EditForm>({ name: '', rif: '', direccion: '', telefono: '' });
   const [newEmployee, setNewEmployee] = useState<EmployeeForm>({ email: '', password: '', name: '' });
@@ -82,6 +97,10 @@ export function AdminPanelPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { addToast } = useToastStore();
+
+  // Notification counts
+  const expiredCount = subscriptions.filter((s) => s.daysRemaining <= 0).length;
+  const totalBadge = expiredCount > 0 ? expiredCount : undefined;
   const handleCloseDeleteModal = useCallback(() => {
     setDeleteTarget(null);
     setDeleteConfirmText('');
@@ -105,7 +124,8 @@ export function AdminPanelPage() {
     fetchTenants();
     fetchAllUsers();
     fetchSubscriptions();
-  }, [fetchTenants, fetchAllUsers, fetchSubscriptions]);
+    fetchDashboardStats();
+  }, [fetchTenants, fetchAllUsers, fetchSubscriptions, fetchDashboardStats]);
 
   const handleSelectTenant = (tenant: Tenant) => {
     setSelectedTenantId(tenant.id);
@@ -213,6 +233,41 @@ export function AdminPanelPage() {
     setDeleteConfirmText('');
   };
 
+  const handleAnalytics = async (tenant: Tenant) => {
+    setAnalyticsTarget({ id: tenant.id, name: tenant.name });
+    setShowAnalyticsLoading(true);
+    await fetchAnalytics(tenant.id);
+    setShowAnalyticsLoading(false);
+  };
+
+  const handleResetPass = (user: UserRole) => {
+    setResetPassTarget({
+      userId: user.id,
+      email: user.email ?? user.id,
+      name: user.name ?? user.email ?? user.id,
+    });
+    setNewPassword('');
+    setResetPassError(null);
+  };
+
+  const handleResetPasswordSubmit = async () => {
+    if (!resetPassTarget) return;
+    if (!newPassword || newPassword.length < 6) {
+      setResetPassError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    setIsResetting(true);
+    setResetPassError(null);
+    const result = await resetPassword(resetPassTarget.userId, newPassword);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Contraseña restablecida exitosamente.', duration: 4000 });
+      setResetPassTarget(null);
+    } else {
+      setResetPassError(result.error.message);
+    }
+    setIsResetting(false);
+  };
+
   const addEmployeeRow = () => {
     if (createForm.employees.length >= 3) return;
     setCreateForm((prev) => ({
@@ -266,9 +321,18 @@ export function AdminPanelPage() {
           <Button variant="ghost" size="sm" onClick={() => handleSelectTenant(t)} title="Ver usuarios">
             <UsersIcon size={16} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(t)} title="Eliminar">
-            <Trash2 size={16} className="text-gray-400 hover:text-danger" />
+          <Button variant="ghost" size="sm" onClick={() => handleAnalytics(t)} title="Analíticas">
+            <BarChart3 size={16} />
           </Button>
+          {t.deletedAt ? (
+            <Button variant="ghost" size="sm" onClick={() => restoreTenant(t.id)} title="Reactivar">
+              <RotateCcw size={16} className="text-green-600" />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(t)} title="Eliminar">
+              <Trash2 size={16} className="text-gray-400 hover:text-danger" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -284,9 +348,14 @@ export function AdminPanelPage() {
       render: (u) => {
         if (u.role === 'owner') return <Badge variant="info">Propietario</Badge>;
         return (
-          <Button variant="danger" size="sm" onClick={() => handleRemoveEmployee(u.id)}>
-            <Trash2 size={16} />
-          </Button>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={() => handleResetPass(u)} title="Restablecer contraseña">
+              <KeyRound size={16} />
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => handleRemoveEmployee(u.id)}>
+              <Trash2 size={16} />
+            </Button>
+          </div>
         );
       },
     },
@@ -325,7 +394,7 @@ export function AdminPanelPage() {
             <span className="font-title font-semibold text-sm text-primary">Panel Admin</span>
           </div>
           <div className="flex-1" />
-          {activeSheet === 'tenants' ? (
+          {activeSheet === 'dashboard' || activeSheet === 'tenants' ? (
             <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
               <Plus size={16} />
               <span className="hidden sm:inline">Nuevo Local</span>
@@ -346,6 +415,18 @@ export function AdminPanelPage() {
     >
       {/* Desktop tabs */}
       <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-14 z-10 max-w-6xl mx-auto">
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+            activeSheet === 'dashboard'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
+          }`}
+          onClick={() => setActiveSheet('dashboard')}
+        >
+          <LayoutDashboard size={20} />
+          Dashboard
+        </button>
         <button
           type="button"
           className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
@@ -385,6 +466,13 @@ export function AdminPanelPage() {
       </div>
 
       <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+        {activeSheet === 'dashboard' && (
+          <AdminDashboard
+            stats={dashboardStats ?? { totalActiveTenants: 0, totalInactiveTenants: 0, expiringSubscriptions: 0, totalUsers: 0 }}
+            expiredCount={expiredCount}
+          />
+        )}
+
         {activeSheet === 'tenants' && (
           <Card>
             <div className="p-4 pb-0">
@@ -397,12 +485,38 @@ export function AdminPanelPage() {
                   <p className="text-xs text-text-secondary">{tenants.length} local{tenants.length !== 1 ? 'es' : ''}</p>
                 </div>
               </div>
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <SearchInput
+                  placeholder="Buscar local..."
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="flex-1 min-w-[200px]"
+                />
+                <Select
+                  value=""
+                  onChange={(e) => setStatus(e.target.value as 'all' | 'active' | 'inactive')}
+                  className="w-[130px]"
+                >
+                  <option value="all">Todos</option>
+                  <option value="active">Activos</option>
+                  <option value="inactive">Inactivos</option>
+                </Select>
+                <Select
+                  value=""
+                  onChange={(e) => setPlan(e.target.value)}
+                  className="w-[130px]"
+                >
+                  <option value="all">Todos</option>
+                  <option value="basico">Básico</option>
+                  <option value="plus">Plus</option>
+                  <option value="premium">Premium</option>
+                </Select>
+              </div>
             </div>
             <div className="p-4 pt-0">
               <DataTable
                 columns={tenantColumns}
-                data={tenants}
-                emptyMessage="No hay locales creados. Crea el primero."
+                data={filteredTenants}
+                emptyMessage="No hay locales que coincidan con los filtros."
                 keyExtractor={(t: Tenant) => t.id}
                 renderCardOnMobile
               />
@@ -557,6 +671,7 @@ export function AdminPanelPage() {
       <BottomNav
         activeId={activeSheet}
         items={[
+          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, badge: totalBadge, onClick: () => setActiveSheet('dashboard') },
           { id: 'tenants', label: 'Locales', icon: <Building2 size={20} />, onClick: () => setActiveSheet('tenants') },
           { id: 'all-users', label: 'Usuarios', icon: <UsersRound size={20} />, onClick: () => setActiveSheet('all-users') },
           { id: 'subscriptions', label: 'Suscripciones', icon: <CreditCard size={20} />, onClick: () => setActiveSheet('subscriptions') },
@@ -865,6 +980,47 @@ export function AdminPanelPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Analytics Modal */}
+      <AnalyticsModal
+        isOpen={analyticsTarget !== null}
+        onClose={() => setAnalyticsTarget(null)}
+        analytics={analytics}
+        isLoading={showAnalyticsLoading}
+        tenantName={analyticsTarget?.name ?? ''}
+      />
+
+      {/* Reset Password Modal */}
+      <Modal
+        isOpen={resetPassTarget !== null}
+        onClose={() => setResetPassTarget(null)}
+        title={resetPassTarget ? `Restablecer contraseña: ${resetPassTarget.name}` : ''}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => setResetPassTarget(null)} disabled={isResetting}>
+              Cancelar
+            </Button>
+            <Button variant="primary" fullWidth onClick={handleResetPasswordSubmit} loading={isResetting}>
+              {isResetting ? 'Restableciendo...' : 'Restablecer'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {resetPassError && <Alert variant="error">{resetPassError}</Alert>}
+          <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+            <p><span className="font-medium text-gray-700">Email:</span> {resetPassTarget?.email}</p>
+            <p><span className="font-medium text-gray-700">Usuario:</span> {resetPassTarget?.name}</p>
+          </div>
+          <Input
+            label="Nueva contraseña"
+            type="password"
+            placeholder="Mínimo 6 caracteres"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+        </div>
       </Modal>
     </AppShell>
   );
