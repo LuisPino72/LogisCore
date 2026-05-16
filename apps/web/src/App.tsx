@@ -39,9 +39,9 @@ import { ReportsPage } from './features/reports';
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-  { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
   { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
+  { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
   { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
   { id: 'settings', label: 'Ajustes', icon: <Settings size={20} /> },
@@ -84,7 +84,7 @@ function ErrorScreen({ message }: { message: string }) {
 function ModulePlaceholder({ moduleId }: { moduleId: string }) {
   const label = MODULE_LABELS[moduleId] ?? moduleId;
   return (
-    <div className="p-4 max-w-5xl mx-auto">
+    <div className="p-4 max-w-6xl mx-auto">
       <Card>
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">

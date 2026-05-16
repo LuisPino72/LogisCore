@@ -55,17 +55,12 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
 
   return (
     <>
-      <div className="flex flex-col items-center space-y-1.5">
+      <div className="flex flex-col items-center w-full">
         <div className="flex items-center gap-1.5">
-          <DollarSign size={18} className="text-success" />
-          <span className="text-[18px] font-semibold text-gray-500 uppercase tracking-wider">Tasa BCV</span>
-        </div>
-
-        <div className="flex items-baseline gap-1">
+          <DollarSign size={16} className="text-success" />
           <span className="text-base font-title font-bold text-success">
             {loading ? '-' : formatRate(rate)}
           </span>
-          <span className="text-[9px] text-text-muted"></span>
         </div>
 
         {error && (
@@ -81,29 +76,29 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
         </div>
 
         {isOwner && (
-          <div className="flex gap-1.5 pt-0.5">
+          <div className="flex flex-col gap-0.5 w-full pt-1">
             <Button
               variant="ghost"
               size="sm"
-              className="px-2! py-1! text-[12px]!"
               onClick={handleUpdate}
               disabled={isUpdating || !tenantId}
+              className="min-h-[36px] px-2 w-full"
             >
               {isUpdating ? (
                 <Spinner size="sm" />
               ) : (
-                <RefreshCw size={19} />
+                <RefreshCw size={14} />
               )}
               Actualizar
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="px-2! py-1! text-[12px]!"
               onClick={() => setShowModal(true)}
               disabled={isUpdating || !tenantId}
+              className="min-h-[36px] px-2 w-full"
             >
-              <Settings size={19} />
+              <Settings size={14} />
               Manual
             </Button>
           </div>

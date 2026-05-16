@@ -281,7 +281,6 @@ export function PosPage({ tenantId }: PosPageProps) {
 
       {/* Mobile Bottom Nav */}
       <BottomNav
-        sidebarOffset
         activeId={activeTab}
         items={[
           { id: 'sell', label: 'Vender', icon: <Package size={20} />, onClick: () => setActiveTab('sell') },

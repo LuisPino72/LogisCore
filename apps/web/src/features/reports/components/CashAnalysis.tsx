@@ -138,7 +138,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                 <div className="p-2 rounded-lg bg-blue-50">
                   <p className="text-text-secondary">Apertura</p>
                   <p className="font-semibold text-blue-700">{formatBs(reg.openingBalanceBs)}</p>
@@ -149,7 +149,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                     {reg.expectedClosingBs !== undefined ? formatBs(reg.expectedClosingBs) : '-'}
                   </p>
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                   <DiffIndicator differenceBs={reg.differenceBs} />
                 </div>
               </div>

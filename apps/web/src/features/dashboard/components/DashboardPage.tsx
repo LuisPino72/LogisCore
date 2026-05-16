@@ -88,7 +88,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
       )}
 
       {/* Stats: Ganancias de hoy + Suscripción */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Ganancias de hoy */}
         <Card className="p-4 border bg-linear-to-br from-emerald-50 to-emerald-100/50 border-emerald-200/60 transition-shadow hover:shadow-md">
           <div className="flex items-start justify-between">
@@ -142,50 +142,6 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
             </div>
             <div className={`p-2.5 rounded-xl shrink-0 ml-3 ${expiryIconBg}`}>
               <Calendar size={18} />
-            </div>
-          </div>
-        </Card>
-
-        {/* Top producto */}
-        <Card className="p-4 border bg-linear-to-br from-blue-50 to-blue-100/50 border-blue-200/60 transition-shadow hover:shadow-md">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1.5 min-w-0 flex-1">
-              <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">Top producto</p>
-              {dataLoading ? (
-                <div className="skeleton h-4 w-24 rounded mt-1" />
-              ) : topProducts.length > 0 ? (
-                <p className="text-sm font-bold text-blue-700 truncate" title={topProducts[0].name}>
-                  {topProducts[0].name}
-                </p>
-              ) : (
-                <p className="text-sm text-text-secondary">Sin datos</p>
-              )}
-              {topProducts.length > 0 && (
-                <p className="text-xs text-text-secondary">{topProducts[0].totalQty} vendidos</p>
-              )}
-            </div>
-            <div className="p-2.5 rounded-xl bg-blue-100 text-blue-600 shrink-0 ml-3">
-              <TrendingUp size={18} />
-            </div>
-          </div>
-        </Card>
-
-        {/* Stock bajo count */}
-        <Card className={`p-4 border transition-shadow hover:shadow-md ${lowStock.length > 0 ? 'bg-linear-to-br from-amber-50 to-amber-100/50 border-amber-200/60' : 'bg-linear-to-br from-green-50 to-green-100/50 border-green-200/60'}`}>
-          <div className="flex items-start justify-between">
-            <div className="space-y-1.5 min-w-0 flex-1">
-              <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">Stock bajo</p>
-              {dataLoading ? (
-                <div className="skeleton h-6 w-8 rounded mt-1" />
-              ) : (
-                <p className={`text-xl font-title font-bold ${lowStock.length > 0 ? 'text-amber-700' : 'text-green-700'}`}>
-                  {lowStock.length}
-                </p>
-              )}
-              <p className="text-xs text-text-secondary">{lowStock.length > 0 ? 'requieren atención' : 'todo OK'}</p>
-            </div>
-            <div className={`p-2.5 rounded-xl shrink-0 ml-3 ${lowStock.length > 0 ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'}`}>
-              <AlertTriangle size={18} />
             </div>
           </div>
         </Card>

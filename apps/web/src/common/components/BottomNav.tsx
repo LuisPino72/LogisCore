@@ -13,15 +13,13 @@ interface BottomNavProps {
   items: BottomNavItem[];
   activeId: string;
   className?: string;
-  sidebarOffset?: boolean;
 }
 
-export function BottomNav({ items, activeId, className, sidebarOffset = true }: BottomNavProps) {
+export function BottomNav({ items, activeId, className }: BottomNavProps) {
   return (
     <nav
       className={cn(
-        'sm:hidden fixed bottom-0 bg-white border-t border-gray-200 z-30',
-        sidebarOffset ? 'left-14 right-0' : 'left-0 right-0',
+        'sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 pl-14',
         className,
       )}
     >

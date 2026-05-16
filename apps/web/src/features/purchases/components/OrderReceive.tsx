@@ -128,7 +128,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
                     <button
                       type="button"
                       onClick={() => handleQtyChange(item.id, pending)}
-                      className="text-xs text-primary font-medium shrink-0 hover:underline"
+                      className="text-xs text-primary font-medium shrink-0 hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
                       Todo
                     </button>
@@ -143,7 +143,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
           <button
             type="button"
             onClick={receiveAll}
-            className="w-full text-sm text-primary font-medium py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors"
+            className="w-full text-sm text-primary font-medium py-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors min-h-[44px]"
           >
             Recibir todo lo pendiente
           </button>

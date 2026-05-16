@@ -552,7 +552,6 @@ export function AdminPanelPage() {
 
       {/* Mobile Bottom Nav */}
       <BottomNav
-        sidebarOffset={false}
         activeId={activeSheet}
         items={[
           { id: 'tenants', label: 'Locales', icon: <Building2 size={20} />, onClick: () => setActiveSheet('tenants') },

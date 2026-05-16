@@ -37,22 +37,20 @@ function KpiCard({
   };
 
   return (
-    <Card className={`p-4 border bg-linear-to-br ${gradients[gradient]} transition-shadow hover:shadow-md`}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1.5 min-w-0 flex-1">
-          <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
-          <p className="text-xl font-bold text-gray-900 truncate">{value}</p>
-          {subtitle && <p className="text-xs text-text-secondary">{subtitle}</p>}
-          {trend && (
-            <div className={`flex items-center gap-1 text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
-              {trend.positive ? <ArrowUpRight size={12} /> : <TrendingDown size={12} />}
-              <span>{Math.abs(trend.value)}%</span>
-            </div>
-          )}
-        </div>
-        <div className={`p-2.5 rounded-xl ${iconBgs[gradient]} shrink-0 ml-3`}>
-          {icon}
-        </div>
+    <Card className={`relative p-4 border bg-linear-to-br ${gradients[gradient]} transition-shadow hover:shadow-md`}>
+      <div className={`absolute top-2 right-2 p-1.5 rounded-lg ${iconBgs[gradient]}`}>
+        {icon}
+      </div>
+      <div className="space-y-1.5 pr-10">
+        <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold text-gray-900 truncate">{value}</p>
+        {subtitle && <p className="text-xs text-text-secondary truncate">{subtitle}</p>}
+        {trend && (
+          <div className={`flex items-center gap-1 text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
+            {trend.positive ? <ArrowUpRight size={12} /> : <TrendingDown size={12} />}
+            <span>{Math.abs(trend.value)}%</span>
+          </div>
+        )}
       </div>
     </Card>
   );
@@ -60,14 +58,14 @@ function KpiCard({
 
 function KpiSkeleton() {
   return (
-    <Card className="p-4 border bg-linear-to-br from-gray-50 to-gray-100/50">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
-          <div className="skeleton h-3 w-20 rounded" />
-          <div className="skeleton h-6 w-28 rounded" />
-          <div className="skeleton h-3 w-16 rounded" />
-        </div>
-        <div className="skeleton h-10 w-10 rounded-xl" />
+    <Card className="relative p-4 border bg-linear-to-br from-gray-50 to-gray-100/50">
+      <div className="absolute top-2 right-2 p-1.5 rounded-lg bg-gray-200">
+        <div className="skeleton h-4 w-4 rounded" />
+      </div>
+      <div className="space-y-2 pr-10">
+        <div className="skeleton h-3 w-20 rounded" />
+        <div className="skeleton h-6 w-28 rounded" />
+        <div className="skeleton h-3 w-16 rounded" />
       </div>
     </Card>
   );
@@ -78,7 +76,7 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
     return (
       <div className="space-y-4">
         <div className="skeleton h-6 w-40 rounded" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <KpiSkeleton key={i} />
           ))}
@@ -104,7 +102,7 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
           label="Ventas Totales"
           value={formatBs(data.totalSalesBs)}

@@ -70,7 +70,7 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
         <div className={`flex items-center gap-2 p-2 rounded-lg mb-4 text-sm ${trend >= 0 ? 'bg-success/5 text-success' : 'bg-danger/5 text-danger'}`}>
           {trend >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
           <span className="font-medium">
-            {trend >= 0 ? 'Tendencia al alza' : 'Tendencia a la baja'}: {Math.abs(trend).toFixed(1)}% entre primera y segunda mitad del periodo
+            {trend >= 0 ? 'Al alza' : 'A la baja'}: {Math.abs(trend).toFixed(1)}%
           </span>
         </div>
       )}

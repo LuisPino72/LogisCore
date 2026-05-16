@@ -1,6 +1,6 @@
 import { useState, Suspense, lazy } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, type BottomNavItem } from '@/common/components';
-import { Calendar, BarChart3, PieChart, ShoppingBag, Wallet, FileText } from 'lucide-react';
+import { BarChart3, PieChart, ShoppingBag, Wallet, FileText } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
@@ -46,7 +46,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     topProducts,
     paymentBreakdown,
     cashAnalysis,
-    refetch,
+    refetch: _refetch,
   } = useReports(tenantId);
 
   const [showCustomDate, setShowCustomDate] = useState(false);
@@ -82,19 +82,19 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Select
-            value={filters.timeRange}
-            onChange={(e) => handleTimeRangeChange(e.target.value)}
-          >
-            {TIME_RANGE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-          <Button variant="ghost" size="sm" onClick={refetch} disabled={loading}>
-            {loading ? <Spinner size="sm" /> : <Calendar size={16} />}
-          </Button>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-medium text-text-secondary uppercase tracking-wide hidden sm:block">Periodo</label>
+            <Select
+              value={filters.timeRange}
+              onChange={(e) => handleTimeRangeChange(e.target.value)}
+            >
+              {TIME_RANGE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </div>
           <ExportButton
             activeTab={activeTab}
             summary={summary}
@@ -113,23 +113,36 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             <DatePicker
               label="Desde"
               value={filters.startDate ? filters.startDate.slice(0, 10) : ''}
-              onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilters((f) => ({ ...f, startDate: v ? `${v}T00:00:00` : undefined }))
+              }}
             />
           </div>
           <div className="flex-1">
             <DatePicker
               label="Hasta"
               value={filters.endDate ? filters.endDate.slice(0, 10) : ''}
-              onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilters((f) => ({ ...f, endDate: v ? `${v}T23:59:59` : undefined }))
+              }}
             />
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <Button
               variant="primary"
               size="sm"
               onClick={() => setFilters((f) => ({ ...f, timeRange: 'custom' }))}
             >
               Aplicar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCustomDate(false)}
+            >
+              Cerrar
             </Button>
           </div>
         </Card>
@@ -180,7 +193,6 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
 
       {/* Mobile Bottom Nav */}
       <BottomNav
-        sidebarOffset={false}
         activeId={activeTab}
         items={bottomNavItems}
       />
