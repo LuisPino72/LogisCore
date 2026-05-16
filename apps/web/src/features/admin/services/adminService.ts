@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
-import type { Tenant, UserRole, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics } from '../types';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
@@ -114,6 +114,30 @@ export const adminService = {
       role: u.role as 'owner' | 'employee',
       createdAt: u.created_at as string,
     }));
+
+    // Fetch emails from auth.users via edge function
+    const tokenResult = await getAdminToken();
+    if (tokenResult.ok) {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-users`,
+          { headers: { 'Authorization': `Bearer ${tokenResult.data}` } },
+        );
+        if (response.ok) {
+          const allUsers: GlobalUser[] = await response.json();
+          const userMap = new Map(allUsers.map((u) => [u.userId, { email: u.email, name: u.name }]));
+          for (const u of users) {
+            const match = userMap.get(u.userId);
+            if (match) {
+              u.email = match.email;
+              u.name = match.name;
+            }
+          }
+        }
+      } catch {
+        // fallback: keep email/name empty
+      }
+    }
 
     return success(users);
   },

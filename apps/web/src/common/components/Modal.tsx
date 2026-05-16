@@ -31,10 +31,12 @@ export function Modal({
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (closeOnEsc && e.key === 'Escape') {
-      onClose();
+      onCloseRef.current();
       return;
     }
 
@@ -58,7 +60,7 @@ export function Modal({
         }
       }
     }
-  }, [closeOnEsc, onClose]);
+  }, [closeOnEsc]);
 
   useEffect(() => {
     if (!isOpen) return;

@@ -19,7 +19,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
   return (
     <nav
       className={cn(
-        'sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 pl-14',
+        'sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30',
         className,
       )}
     >

@@ -21,8 +21,7 @@ import {
   LogoutButton,
 } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, LayoutDashboard, RotateCcw, KeyRound, BarChart3 } from 'lucide-react';
-import { AdminDashboard } from './AdminDashboard';
+import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, RotateCcw, KeyRound, BarChart3 } from 'lucide-react';
 import { AnalyticsModal } from './AnalyticsModal';
 
 interface EmployeeForm {
@@ -50,7 +49,7 @@ const emptyCreateForm: CreateForm = {
   employees: [],
 };
 
-type Sheet = 'dashboard' | 'tenants' | 'users' | 'all-users' | 'subscriptions';
+type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions';
 
 function getSubscriptionProgress(daysRemaining: number): { pct: number; color: string } {
   const maxDays = 30;
@@ -61,15 +60,15 @@ function getSubscriptionProgress(daysRemaining: number): { pct: number; color: s
 
 export function AdminPanelPage() {
   const {
-    tenants, users, allUsers, subscriptions, dashboardStats, analytics, isLoading, error,
-    fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, fetchDashboardStats, fetchAnalytics,
+    tenants, users, allUsers, subscriptions, analytics, isLoading, error,
+    fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, fetchAnalytics,
     renewSubscription, createTenant, addEmployee, updateTenant, removeEmployee,
     softDeleteTenant, hardDeleteTenant, restoreTenant, resetPassword,
   } = useAdminPanel();
 
   const { filteredTenants, setSearch, setStatus, setPlan } = useTenantFilters(tenants);
 
-  const [activeSheet, setActiveSheet] = useState<Sheet>('dashboard');
+  const [activeSheet, setActiveSheet] = useState<Sheet>('tenants');
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [selectedTenantName, setSelectedTenantName] = useState('');
 
@@ -83,6 +82,9 @@ export function AdminPanelPage() {
 
   const [analyticsTarget, setAnalyticsTarget] = useState<{ id: string; name: string } | null>(null);
   const [showAnalyticsLoading, setShowAnalyticsLoading] = useState(false);
+
+  const [deleteEmployeeTarget, setDeleteEmployeeTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
 
   const [resetPassTarget, setResetPassTarget] = useState<{ userId: string; email: string; name: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -98,9 +100,6 @@ export function AdminPanelPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { addToast } = useToastStore();
 
-  // Notification counts
-  const expiredCount = subscriptions.filter((s) => s.daysRemaining <= 0).length;
-  const totalBadge = expiredCount > 0 ? expiredCount : undefined;
   const handleCloseDeleteModal = useCallback(() => {
     setDeleteTarget(null);
     setDeleteConfirmText('');
@@ -124,8 +123,7 @@ export function AdminPanelPage() {
     fetchTenants();
     fetchAllUsers();
     fetchSubscriptions();
-    fetchDashboardStats();
-  }, [fetchTenants, fetchAllUsers, fetchSubscriptions, fetchDashboardStats]);
+  }, [fetchTenants, fetchAllUsers, fetchSubscriptions]);
 
   const handleSelectTenant = (tenant: Tenant) => {
     setSelectedTenantId(tenant.id);
@@ -200,8 +198,21 @@ export function AdminPanelPage() {
     setIsSubmitting(false);
   };
 
-  const handleRemoveEmployee = async (userRoleId: string) => {
-    await removeEmployee(userRoleId);
+  const handleRemoveEmployee = (userRoleId: string, name: string) => {
+    setDeleteEmployeeTarget({ id: userRoleId, name });
+  };
+
+  const handleConfirmDeleteEmployee = async () => {
+    if (!deleteEmployeeTarget) return;
+    setIsDeletingEmployee(true);
+    const result = await removeEmployee(deleteEmployeeTarget.id);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Empleado eliminado.', duration: 4000 });
+    } else {
+      addToast({ type: 'error', message: result.error.message, duration: 5000 });
+    }
+    setIsDeletingEmployee(false);
+    setDeleteEmployeeTarget(null);
   };
 
   const handleDeleteTenant = async () => {
@@ -242,7 +253,7 @@ export function AdminPanelPage() {
 
   const handleResetPass = (user: UserRole) => {
     setResetPassTarget({
-      userId: user.id,
+      userId: user.userId,
       email: user.email ?? user.id,
       name: user.name ?? user.email ?? user.id,
     });
@@ -339,25 +350,25 @@ export function AdminPanelPage() {
   ];
 
   const userColumns: Column<UserRole>[] = [
-    { key: 'id', header: 'ID', hideOnMobile: true },
+    { key: 'email', header: 'Email' },
     { key: 'role', header: 'Rol' },
     { key: 'createdAt', header: 'Creado', hideOnMobile: true },
     {
       key: 'actions',
       header: 'Acciones',
-      render: (u) => {
-        if (u.role === 'owner') return <Badge variant="info">Propietario</Badge>;
-        return (
-          <div className="flex gap-1">
-            <Button variant="ghost" size="sm" onClick={() => handleResetPass(u)} title="Restablecer contraseña">
-              <KeyRound size={16} />
-            </Button>
-            <Button variant="danger" size="sm" onClick={() => handleRemoveEmployee(u.id)}>
+      render: (u) => (
+        <div className="flex gap-1 items-center">
+          {u.role === 'owner' && <Badge variant="info">Propietario</Badge>}
+          <Button variant="ghost" size="sm" onClick={() => handleResetPass(u)} title="Restablecer contraseña">
+            <KeyRound size={16} />
+          </Button>
+          {u.role !== 'owner' && (
+            <Button variant="danger" size="sm" onClick={() => handleRemoveEmployee(u.id, u.name)}>
               <Trash2 size={16} />
             </Button>
-          </div>
-        );
-      },
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -394,7 +405,7 @@ export function AdminPanelPage() {
             <span className="font-title font-semibold text-sm text-primary">Panel Admin</span>
           </div>
           <div className="flex-1" />
-          {activeSheet === 'dashboard' || activeSheet === 'tenants' ? (
+          {activeSheet === 'tenants' ? (
             <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
               <Plus size={16} />
               <span className="hidden sm:inline">Nuevo Local</span>
@@ -415,18 +426,6 @@ export function AdminPanelPage() {
     >
       {/* Desktop tabs */}
       <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-14 z-10 max-w-6xl mx-auto">
-        <button
-          type="button"
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
-            activeSheet === 'dashboard'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-text-secondary hover:text-gray-700'
-          }`}
-          onClick={() => setActiveSheet('dashboard')}
-        >
-          <LayoutDashboard size={20} />
-          Dashboard
-        </button>
         <button
           type="button"
           className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
@@ -466,13 +465,6 @@ export function AdminPanelPage() {
       </div>
 
       <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-0">
-        {activeSheet === 'dashboard' && (
-          <AdminDashboard
-            stats={dashboardStats ?? { totalActiveTenants: 0, totalInactiveTenants: 0, expiringSubscriptions: 0, totalUsers: 0 }}
-            expiredCount={expiredCount}
-          />
-        )}
-
         {activeSheet === 'tenants' && (
           <Card>
             <div className="p-4 pb-0">
@@ -671,7 +663,6 @@ export function AdminPanelPage() {
       <BottomNav
         activeId={activeSheet}
         items={[
-          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, badge: totalBadge, onClick: () => setActiveSheet('dashboard') },
           { id: 'tenants', label: 'Locales', icon: <Building2 size={20} />, onClick: () => setActiveSheet('tenants') },
           { id: 'all-users', label: 'Usuarios', icon: <UsersRound size={20} />, onClick: () => setActiveSheet('all-users') },
           { id: 'subscriptions', label: 'Suscripciones', icon: <CreditCard size={20} />, onClick: () => setActiveSheet('subscriptions') },
@@ -832,6 +823,11 @@ export function AdminPanelPage() {
             value={editForm.direccion}
             onChange={(e) => setEditForm((p) => ({ ...p, direccion: e.target.value }))}
           />
+          <div className="border-t border-gray-100 pt-3">
+            <Button variant="secondary" fullWidth onClick={() => { setShowAddEmployeeModal(true); setShowEditModal(false); }}>
+              <UserPlus size={16} /> Agregar empleado
+            </Button>
+          </div>
           {createError && <p className="text-danger text-sm">{createError}</p>}
           <div className="flex gap-2">
             <Button variant="primary" fullWidth onClick={handleSaveEdit} disabled={isSubmitting}>
@@ -1020,6 +1016,32 @@ export function AdminPanelPage() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
           />
+        </div>
+      </Modal>
+
+      {/* Confirmar eliminación de empleado */}
+      <Modal
+        isOpen={deleteEmployeeTarget !== null}
+        onClose={() => setDeleteEmployeeTarget(null)}
+        title="Eliminar empleado"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => setDeleteEmployeeTarget(null)} disabled={isDeletingEmployee}>
+              Cancelar
+            </Button>
+            <Button variant="danger" fullWidth onClick={handleConfirmDeleteEmployee} loading={isDeletingEmployee}>
+              {isDeletingEmployee ? 'Eliminando...' : 'Eliminar'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <Alert variant="warning">
+            ¿Estás seguro de que quieres eliminar a <strong>{deleteEmployeeTarget?.name}</strong>?
+          </Alert>
+          <p className="text-sm text-gray-600">
+            Esta acción desactivará al empleado. No podrá acceder al sistema hasta que un administrador lo reactive.
+          </p>
         </div>
       </Modal>
     </AppShell>

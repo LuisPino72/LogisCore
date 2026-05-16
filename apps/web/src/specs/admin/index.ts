@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Admin Spec - ADMIN-001..008 */
+/** Admin Spec - ADMIN-001..008 (ADMIN-004 removed) */
 
 export const CreateTenantSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(100),
@@ -31,16 +31,6 @@ export const UpdateTenantSchema = z.object({
 });
 
 export type UpdateTenant = z.infer<typeof UpdateTenantSchema>;
-
-// ADMIN-004: Dashboard stats
-export const DashboardStatsSchema = z.object({
-  totalActiveTenants: z.number().min(0),
-  totalInactiveTenants: z.number().min(0),
-  expiringSubscriptions: z.number().min(0),
-  totalUsers: z.number().min(0),
-});
-
-export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
 
 // ADMIN-005: Tenant filters
 export const TenantFilterSchema = z.object({

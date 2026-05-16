@@ -11,7 +11,6 @@ import {
 import { SystemEvents } from '@logiscore/core/src/event-bus';
 import { AdminErrors } from '../../specs/admin/errors';
 import {
-  DashboardStatsSchema,
   RestoreTenantSchema,
   ResetPasswordSchema,
   TenantAnalyticsSchema,
@@ -178,45 +177,6 @@ describe('ADMIN-001: AdminPanel', () => {
   });
 
   // ADMIN-004: Dashboard
-  describe('ADMIN-004: Dashboard de estadisticas', () => {
-    it('Given: admin autenticado / When: fetchDashboardStats / Then: devuelve DashboardStats con 4 KPIs', async () => {
-      const mockStats = {
-        totalActiveTenants: 5,
-        totalInactiveTenants: 2,
-        expiringSubscriptions: 1,
-        totalUsers: 48,
-      };
-
-      mockAdminService.fetchDashboardStats.mockResolvedValue({ ok: true, data: mockStats });
-
-      const result = await mockAdminService.fetchDashboardStats();
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        const parsed = DashboardStatsSchema.safeParse(result.data);
-        expect(parsed.success).toBe(true);
-        expect(parsed.data!.totalActiveTenants).toBe(5);
-        expect(parsed.data!.totalInactiveTenants).toBe(2);
-        expect(parsed.data!.expiringSubscriptions).toBe(1);
-        expect(parsed.data!.totalUsers).toBe(48);
-      }
-    });
-
-    it('DEBE rechazar DashboardStats con valores negativos', () => {
-      const parsed = DashboardStatsSchema.safeParse({
-        totalActiveTenants: -1,
-        totalInactiveTenants: 0,
-        expiringSubscriptions: 0,
-        totalUsers: 0,
-      });
-      expect(parsed.success).toBe(false);
-    });
-
-    it('DEBE mostrar alerta si hay suscripciones vencidas', () => {
-      const expiredCount = 3;
-      expect(expiredCount).toBeGreaterThan(0);
-    });
-  });
-
   // ADMIN-005: Search & Filter
   describe('ADMIN-005: Buscar y filtrar locales', () => {
     it('Given: admin en panel / When: escribe en SearchInput / Then: filtra por nombre o RIF', () => {

@@ -1,11 +1,10 @@
 {
   "module": "admin",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "specs": {
     "ADMIN-001": "Crear tenant con owner y empleados",
     "ADMIN-002": "Gestionar suscripciones (renovar/vencer)",
     "ADMIN-003": "Listar usuarios globales y por tenant",
-    "ADMIN-004": "Dashboard de estadisticas (locales activos/inactivos, usuarios totales, suscripciones por vencer)",
     "ADMIN-005": "Buscar y filtrar locales por nombre, RIF, estado y plan",
     "ADMIN-006": "Reactivar tenant soft-deleteado",
     "ADMIN-007": "Restablecer contrasena de empleado via Edge Function",
