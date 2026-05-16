@@ -9,13 +9,25 @@ interface PaymentBreakdownProps {
 
 export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   if (loading) {
-    return <Card className="p-4 h-72 animate-pulse bg-gray-100"><div /></Card>;
+    return (
+      <Card className="p-4">
+        <div className="space-y-3">
+          <div className="skeleton h-5 w-40 rounded" />
+          <div className="skeleton h-48 rounded-lg" />
+          <div className="grid grid-cols-2 gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="skeleton h-6 rounded" />
+            ))}
+          </div>
+        </div>
+      </Card>
+    );
   }
 
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-gray-500">No hay datos de pagos para el periodo seleccionado.</p>
+        <p className="text-sm text-text-secondary">No hay datos de pagos para el periodo seleccionado.</p>
       </Card>
     );
   }
@@ -28,11 +40,28 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   };
 
   const formatBs = (v: number) =>
-    new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', maximumFractionDigits: 0 }).format(v);
+    new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', minimumFractionDigits: 2 }).format(v);
+
+  const totalBs = data.reduce((s, d) => s + d.totalBs, 0);
+
+  const CustomCenterLabel = () => (
+    <text
+      x="50%"
+      y="50%"
+      textAnchor="middle"
+      dominantBaseline="central"
+    >
+      <tspan x="50%" dy="-0.4em" className="fill-gray-400" style={{ fontSize: 11 }}>Total</tspan>
+      <tspan x="50%" dy="1.3em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 700 }}>
+        {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
+      </tspan>
+      <tspan x="50%" dy="1.2em" className="fill-gray-400" style={{ fontSize: 9 }}>Bs</tspan>
+    </text>
+  );
 
   return (
     <Card className="p-4">
-      <h3 className="text-sm font-bold text-gray-900 mb-4">Métodos de Pago</h3>
+      <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Métodos de Pago</h3>
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -55,19 +84,23 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
               formatter={(value, name) => [formatBs(Number(value)), name]}
               contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
             />
+            <CustomCenterLabel />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         {data.map((d) => (
-          <div key={d.method} className="flex items-center gap-2 text-xs">
+          <div key={d.method} className="flex items-center gap-2 text-xs p-2 rounded-lg bg-gray-50">
             <span
               className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: colors[d.method] ?? '#9ca3af' }}
             />
-            <span className="text-gray-600 truncate">{d.label}</span>
-            <span className="ml-auto font-semibold text-gray-900">{d.percentage}%</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-600 truncate">{d.label}</p>
+              <p className="text-[11px] text-text-secondary">{formatBs(d.totalBs)}</p>
+            </div>
+            <span className="font-semibold text-gray-900 shrink-0">{d.percentage}%</span>
           </div>
         ))}
       </div>

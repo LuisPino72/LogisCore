@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Button, Input, Modal } from '../../../common/components';
+import { Button, Input, Modal, Select } from '../../../common/components';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import type { Product } from '../../../specs/inventory';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
@@ -24,6 +24,16 @@ function getProductUnit(products: Product[], productId: string): string {
   const p = products.find((pr) => pr.id === productId);
   if (!p) return '';
   return p.isWeighted ? (p.unit === 'lt' ? 'Lt' : 'Kg') : 'Und';
+}
+
+function getProductSku(products: Product[], productId: string): string {
+  const p = products.find((pr) => pr.id === productId);
+  return p?.sku ?? '';
+}
+
+function isWeighted(products: Product[], productId: string): boolean {
+  const p = products.find((pr) => pr.id === productId);
+  return p?.isWeighted ?? false;
 }
 
 export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, editOrder }: OrderFormProps) {
@@ -106,45 +116,77 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar orden de compra' : 'Nueva orden de compra'}>
-      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        <div className="input-wrapper">
-          <label className="input-label">Proveedor</label>
-          <select className="select" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-            <option value="">Seleccionar...</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </div>
+      <div className="space-y-4">
+        <Select
+          label="Proveedor"
+          value={supplierId}
+          onChange={(e) => setSupplierId(e.target.value)}
+          validation={{ required: true }}
+        >
+          <option value="">Seleccionar...</option>
+          {suppliers.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </Select>
 
         <div className="space-y-2">
           <label className="input-label">Items</label>
           {items.map((item, idx) => {
             const unit = getProductUnit(products, item.productId);
-            const isDecimal = unit === 'Kg' || unit === 'Lt';
+            const sku = getProductSku(products, item.productId);
+            const weighted = isWeighted(products, item.productId);
+            const hasProduct = !!item.productId;
+
             return (
-              <div key={idx} className="flex gap-2 items-start">
-                <div className="flex-1 min-w-0 space-y-1">
-                  <select
-                    className="select text-sm"
-                    value={item.productId}
-                    onChange={(e) => updateItem(idx, 'productId', e.target.value)}
-                  >
-                    <option value="">Producto...</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                    ))}
-                  </select>
-                  <div className="flex gap-2">
+              <div key={idx} className="rounded-lg border border-border bg-surface-alt p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Select
+                      value={item.productId}
+                      onChange={(e) => updateItem(idx, 'productId', e.target.value)}
+                      validation={{ required: true }}
+                    >
+                      <option value="">Producto...</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+                      ))}
+                    </Select>
+                  </div>
+                  {items.length > 1 && (
+                    <Button variant="ghost" size="sm" onClick={() => removeItem(idx)} className="text-danger shrink-0 mt-0.5">
+                      <X size={16} />
+                    </Button>
+                  )}
+                </div>
+
+                {hasProduct && (
+                  <div className="flex items-center gap-2">
+                    {weighted && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded-full">
+                        {unit}
+                      </span>
+                    )}
+                    {sku && (
+                      <span className="text-[10px] text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded font-mono">
+                        {sku}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <div className="flex-1">
                     <Input
                       type="number"
                       min="0"
-                      step={isDecimal ? '0.01' : '1'}
+                      step={weighted ? '0.01' : '1'}
                       placeholder={`Cant (${unit || 'Und'})`}
                       value={item.quantity || ''}
                       onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
-                      inputClassName="text-sm px-2 py-1"
+                      inputClassName="text-sm"
                     />
+                  </div>
+                  <div className="flex-1">
                     <Input
                       type="number"
                       step="0.01"
@@ -152,15 +194,10 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       placeholder="Costo total $"
                       value={item.totalCostUsd || ''}
                       onChange={(e) => updateItem(idx, 'totalCostUsd', parseFloat(e.target.value) || 0)}
-                      inputClassName="text-sm px-2 py-1"
+                      inputClassName="text-sm"
                     />
                   </div>
                 </div>
-                {items.length > 1 && (
-                  <Button variant="ghost" size="sm" onClick={() => removeItem(idx)} className="text-danger mt-1">
-                    <X size={16} />
-                  </Button>
-                )}
               </div>
             );
           })}
@@ -176,13 +213,13 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
             placeholder="Ej: Entrega en 3 días"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            inputClassName="text-sm px-2 py-2"
+            inputClassName="text-sm"
           />
         </div>
 
-        <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
-          <span className="text-sm font-medium">Total:</span>
-          <span className="text-lg font-bold text-primary">$ {totalUsd.toFixed(2)}</span>
+        <div className="flex justify-between items-center bg-primary/5 border border-primary/10 p-3 rounded-lg">
+          <span className="text-sm font-medium text-primary">Total:</span>
+          <span className="text-xl font-bold text-primary">$ {totalUsd.toFixed(2)}</span>
         </div>
 
         {error && <p className="text-xs text-danger">{error}</p>}

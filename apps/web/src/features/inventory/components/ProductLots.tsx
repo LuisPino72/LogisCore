@@ -60,46 +60,67 @@ export function ProductLots({ productId, tenantId: _tenantId }: ProductLotsProps
 
   return (
     <div className="space-y-3">
-      {lots.map((lot) => (
-        <Card key={lot.id} className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Package size={16} className="text-primary" />
-              <span className="text-xs font-mono text-gray-500">#{lot.id.slice(0, 8)}</span>
-            </div>
-            <Badge variant={lot.remainingQuantity > 0 ? 'success' : 'neutral'}>
-              {lot.remainingQuantity} restantes
-            </Badge>
-          </div>
+      {lots.map((lot, index) => {
+        const consumed = lot.quantityAdded - lot.remainingQuantity;
+        const pct = lot.quantityAdded > 0 ? Math.round((consumed / lot.quantityAdded) * 100) : 0;
+        const isFirst = index === 0;
 
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <Calendar size={14} className="text-gray-400" />
-              <div>
-                <p className="text-gray-500">Fecha ingreso</p>
-                <p className="font-semibold text-gray-800">{formatDate(lot.createdAt)}</p>
+        return (
+          <Card key={lot.id} className={`p-4 transition-shadow hover:shadow-md ${isFirst ? 'border-l-4 border-l-accent' : ''}`}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {isFirst && (
+                  <Badge variant="warning" className="text-[10px]">FIFO — Activo</Badge>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <Package size={14} className="text-primary" />
+                  <span className="text-xs font-mono text-text-secondary">#{lot.id.slice(0, 8)}</span>
+                </div>
+              </div>
+              <Badge variant={lot.remainingQuantity > 0 ? 'success' : 'neutral'}>
+                {lot.remainingQuantity} restantes
+              </Badge>
+            </div>
+
+            {lot.quantityAdded > 0 && (
+              <div className="space-y-1 mb-3">
+                <div className="flex justify-between text-xs text-text-secondary">
+                  <span>Consumo</span>
+                  <span>{consumed}/{lot.quantityAdded} ({pct}%)</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor: pct >= 100 ? 'var(--color-success)' : 'var(--color-accent)',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Calendar size={14} className="text-gray-400 shrink-0" />
+                <div>
+                  <p className="text-text-secondary">Fecha ingreso</p>
+                  <p className="font-semibold text-gray-800">{formatDate(lot.createdAt)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <DollarSign size={14} className="text-gray-400 shrink-0" />
+                <div>
+                  <p className="text-text-secondary">Costo unitario</p>
+                  <p className="font-semibold text-gray-800">
+                    {lot.costUsdPerUnit ? `$${lot.costUsdPerUnit.toFixed(4)}` : '-'}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <DollarSign size={14} className="text-gray-400" />
-              <div>
-                <p className="text-gray-500">Costo unitario</p>
-                <p className="font-semibold text-gray-800">
-                  {lot.costUsdPerUnit ? `$${lot.costUsdPerUnit.toFixed(4)}` : '-'}
-                </p>
-              </div>
-            </div>
-            <div>
-              <p className="text-gray-500">Cantidad inicial</p>
-              <p className="font-semibold text-gray-800">{lot.quantityAdded}</p>
-            </div>
-            <div>
-              <p className="text-gray-500">Consumido</p>
-              <p className="font-semibold text-gray-800">{lot.quantityAdded - lot.remainingQuantity}</p>
-            </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 }

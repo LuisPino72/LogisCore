@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, MoreVertical } from 'lucide-react';
-import { Button, Badge, DataTable, Dropdown, EmptyState } from '../../../common/components';
+import { Button, Badge, DataTable, Dropdown, EmptyState, Select } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import type { Product, Category } from '../types';
@@ -32,12 +32,16 @@ function ProductThumbnail({ product }: { product: Product }) {
       <img
         src={product.imageUrl}
         alt={product.name}
-        className="w-8 h-8 rounded-full object-cover shrink-0"
+        className="w-8 h-8 rounded-full object-cover shrink-0 border border-gray-100"
         loading="lazy"
       />
     );
   }
-  return <Package size={20} className="text-gray-400 shrink-0" />;
+  return (
+    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+      <Package size={16} className="text-gray-400" />
+    </div>
+  );
 }
 
 export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
@@ -179,16 +183,17 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         <div className="flex-1">
           <ProductSearchInput value={searchQuery} onChange={handleSearch} />
         </div>
-        <select
-          className="input text-sm w-full sm:max-w-[160px]"
-          value={filterCategory}
-          onChange={(e) => handleCategoryFilter(e.target.value)}
-        >
-          <option value="">Todas las categorías</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
-          ))}
-        </select>
+        <div className="w-full sm:max-w-[180px]">
+          <Select
+            value={filterCategory}
+            onChange={(e) => handleCategoryFilter(e.target.value)}
+          >
+            <option value="">Todas las categorías</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       <DataTable

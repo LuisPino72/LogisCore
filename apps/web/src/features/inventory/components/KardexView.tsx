@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Card, Badge, Spinner, EmptyState, DataTable } from '@/common/components';
+import { Card, Badge, EmptyState, DataTable } from '@/common/components';
 import type { Column } from '@/common/components';
 import { inventoryService } from '../services/inventoryService';
 import type { MovementRow } from '../types';
@@ -63,8 +63,16 @@ export function KardexView({ productId, productName }: KardexViewProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Spinner size="sm" />
+      <div className="space-y-3">
+        <div className="skeleton h-5 w-40 rounded" />
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="skeleton h-16 rounded-lg" />
+          ))}
+        </div>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="skeleton h-10 rounded" />
+        ))}
       </div>
     );
   }
@@ -84,6 +92,10 @@ export function KardexView({ productId, productName }: KardexViewProps) {
       />
     );
   }
+
+  const totalEntries = movements.reduce((s, m) => s + m.entry, 0);
+  const totalExits = movements.reduce((s, m) => s + m.exit, 0);
+  const currentBalance = movements.length > 0 ? movements[movements.length - 1].balance : 0;
 
   const columns: Column<MovementRow>[] = [
     {
@@ -135,11 +147,29 @@ export function KardexView({ productId, productName }: KardexViewProps) {
   ];
 
   return (
-    <DataTable
-      columns={columns}
-      data={movements}
-      keyExtractor={(item: MovementRow) => item.date + item.type}
-      emptyMessage="Sin movimientos"
-    />
+    <div className="space-y-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200/60 text-center">
+          <p className="text-[10px] text-text-secondary uppercase tracking-wide">Entradas</p>
+          <p className="text-base font-bold text-emerald-700">{totalEntries.toFixed(2)}</p>
+        </div>
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200/60 text-center">
+          <p className="text-[10px] text-text-secondary uppercase tracking-wide">Salidas</p>
+          <p className="text-base font-bold text-red-700">{totalExits.toFixed(2)}</p>
+        </div>
+        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200/60 text-center">
+          <p className="text-[10px] text-text-secondary uppercase tracking-wide">Saldo</p>
+          <p className="text-base font-bold text-blue-700">{currentBalance.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={movements}
+        keyExtractor={(item: MovementRow) => item.date + item.type}
+        emptyMessage="Sin movimientos"
+      />
+    </div>
   );
 }

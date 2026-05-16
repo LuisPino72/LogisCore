@@ -133,99 +133,111 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-title font-bold">Inventario</h1>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Package size={22} className="text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-title font-bold">Inventario</h1>
+            <p className="text-xs text-text-secondary">Gestiona productos y stock</p>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           {totalLowStock > 0 && <LowStockBadge count={totalLowStock} />}
         </div>
       </div>
 
       {/* Desktop tabs */}
-      <div className="hidden sm:flex border-b border-gray-200 bg-white sticky top-14 z-10">
-        <Button
-          variant="ghost"
-          className={`rounded-none border-b-2 px-5 py-3 ${
+      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-14 z-10">
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
             activeTab === 'productos'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
           }`}
           onClick={() => setActiveTab('productos')}
         >
-          <Package size={16} />
-          <span className="ml-1">Productos</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className={`rounded-none border-b-2 px-5 py-3 ${
+          <Package size={20} />
+          Productos
+        </button>
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
             activeTab === 'categorias'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
           }`}
           onClick={() => setActiveTab('categorias')}
         >
-          <ListTree size={16} />
-          <span className="ml-1">Categorías</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className={`rounded-none border-b-2 px-5 py-3 ${
+          <ListTree size={20} />
+          Categorías
+        </button>
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
             activeTab === 'historial'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
           }`}
           onClick={() => setActiveTab('historial')}
         >
-          <History size={16} />
-          <span className="ml-1">Historial</span>
-        </Button>
+          <History size={20} />
+          Historial
+        </button>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 sm:pb-0">
-        <Card>
-          {activeTab === 'productos' && (
-            <ProductList
-              products={products}
+      <Card>
+        {activeTab === 'productos' && (
+          <ProductList
+            products={products}
+            categories={categories}
+            onSearch={search}
+            isOwner={isOwner}
+            onNewProduct={openNewProduct}
+            onEditProduct={openEditProduct}
+            onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
+            onAdjust={(id) => { setSelectedProductId(id); setShowAdjustment(true); }}
+            onViewLots={(id) => setSelectedProductLotsId(id)}
+            onViewKardex={(id) => {
+              const product = products.find((p) => p.id === id);
+              if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
+            }}
+            onRefresh={refresh}
+          />
+        )}
+
+        {activeTab === 'categorias' && (
+          <div className="p-4">
+            <CategoryManager
               categories={categories}
-              onSearch={search}
               isOwner={isOwner}
-              onNewProduct={openNewProduct}
-              onEditProduct={openEditProduct}
-              onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
-              onAdjust={(id) => { setSelectedProductId(id); setShowAdjustment(true); }}
-              onViewLots={(id) => setSelectedProductLotsId(id)}
-              onViewKardex={(id) => {
-                const product = products.find((p) => p.id === id);
-                if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
-              }}
-              onRefresh={refresh}
+              onCreate={async (name) => { if (!tenantId) return false; return createCategory(name, tenantId); }}
+              onUpdate={async (id, name) => { if (!tenantId) return false; return updateCategory(id, name, tenantId); }}
+              onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
             />
-          )}
+          </div>
+        )}
 
-          {activeTab === 'categorias' && (
-            <div className="p-4">
-              <CategoryManager
-                categories={categories}
-                isOwner={isOwner}
-                onCreate={async (name) => { if (!tenantId) return false; return createCategory(name, tenantId); }}
-                onUpdate={async (id, name) => { if (!tenantId) return false; return updateCategory(id, name, tenantId); }}
-                onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
-              />
+        {activeTab === 'historial' && (
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <History size={16} className="text-primary" />
+              </div>
+              <h2 className="text-sm font-title font-bold text-gray-900">Historial de movimientos</h2>
             </div>
-          )}
-
-          {activeTab === 'historial' && (
-            <div className="p-4">
-              <h2 className="text-sm font-semibold mb-4">Historial de movimientos</h2>
-              {!isOwner ? (
-                <p className="text-sm text-gray-500">Solo el propietario puede ver el historial.</p>
-              ) : (
-                <MovementHistory products={products} />
-              )}
-            </div>
-          )}
-        </Card>
-      </div>
+            {!isOwner ? (
+              <p className="text-sm text-text-secondary text-center py-4">Solo el propietario puede ver el historial.</p>
+            ) : (
+              <MovementHistory products={products} />
+            )}
+          </div>
+        )}
+      </Card>
 
       {/* Mobile Bottom Nav */}
       <BottomNav
@@ -262,19 +274,19 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             </Select>
 
             {products.find((p) => p.id === adjProductId) && (
-              <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+              <div className="text-xs text-text-secondary bg-gray-50 p-2 rounded">
                 Stock actual: <strong>{products.find((p) => p.id === adjProductId)?.stock}</strong>
               </div>
             )}
 
             <div className="input-wrapper">
               <label className="input-label">Cantidad</label>
-              <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} inputClassName="text-sm px-2 py-2" />
+              <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} inputClassName="text-sm" />
             </div>
 
             <div className="input-wrapper">
               <label className="input-label">Motivo (obligatorio)</label>
-              <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} inputClassName="text-sm px-2 py-2" />
+              <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} inputClassName="text-sm" />
             </div>
 
             {adjError && <p className="text-xs text-danger">{adjError}</p>}

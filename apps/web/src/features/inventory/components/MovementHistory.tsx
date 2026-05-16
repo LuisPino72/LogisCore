@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { History, TrendingUp, TrendingDown, Package, ChevronDown } from 'lucide-react';
-import { Badge, DataTable, Button, Select } from '../../../common/components';
+import { Badge, DataTable, Button, Select, Card } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import type { Product } from '../types';
 import { displayStock } from '../types';
@@ -107,6 +107,17 @@ export function MovementHistory({ products }: MovementHistoryProps) {
     },
   ], [products]);
 
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <div className="skeleton h-10 w-full rounded-lg" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="skeleton h-12 rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Select
@@ -121,7 +132,13 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       </Select>
 
       {!selectedProductId && (
-        <p className="text-sm text-gray-400 text-center py-4">Selecciona un producto para ver su historial</p>
+        <Card className="p-8 text-center">
+          <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <History size={28} className="text-gray-300" />
+          </div>
+          <p className="text-sm font-medium text-gray-500">Selecciona un producto</p>
+          <p className="text-xs text-text-secondary mt-1">para ver su historial de movimientos</p>
+        </Card>
       )}
 
       {selectedProductId && (

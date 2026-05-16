@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Truck, ShoppingCart, Plus, Search, AlertTriangle } from 'lucide-react';
-import { Button, Card, EmptyState, Input, Modal } from '../../../common/components';
+import { useState, useMemo } from 'react';
+import { ShoppingCart, Truck, AlertTriangle } from 'lucide-react';
+import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal } from '../../../common/components';
+import { cn } from '../../../lib/utils';
 import { usePurchases } from '../hooks/usePurchases';
 import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
@@ -35,6 +36,11 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const [search, setSearch] = useState('');
 
   const isOwner = role === 'owner' || role === 'admin';
+
+  const pendingOrdersCount = useMemo(
+    () => orders.filter((o) => o.status === 'draft' || o.status === 'confirmed' || o.status === 'partially_received').length,
+    [orders]
+  );
 
   const handleCreateSupplier = async (data: CreateSupplierInput) => {
     if (!tenantId || !userId) return false;
@@ -90,53 +96,83 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     setShowSupplierForm(true);
   };
 
+  const bottomNavItems: BottomNavItem[] = useMemo(() => [
+    {
+      id: 'ordenes',
+      label: 'Órdenes',
+      icon: <ShoppingCart size={20} />,
+      badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
+      onClick: () => setActiveTab('ordenes'),
+    },
+    {
+      id: 'proveedores',
+      label: 'Proveedores',
+      icon: <Truck size={20} />,
+      onClick: () => setActiveTab('proveedores'),
+    },
+  ], [pendingOrdersCount, setActiveTab]);
+
   if (!tenantId) {
     return <EmptyState icon={<ShoppingCart size={48} />} title="Selecciona un tenant" description="No hay tenant activo" />;
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-title font-bold">Compras</h1>
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-6">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <ShoppingCart size={22} className="text-primary" />
+        </div>
+        <div>
+          <h1 className="text-lg font-title font-bold">Compras</h1>
+          <p className="text-xs text-text-secondary">Gestiona órdenes y proveedores</p>
+        </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto pb-1 items-center scrollbar-none">
-        <Button
-          variant={activeTab === 'ordenes' ? 'primary' : 'ghost'}
-          size="sm"
+      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 pb-0">
+        <button
+          type="button"
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'ordenes'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
+          )}
           onClick={() => setActiveTab('ordenes')}
-          className="shrink-0"
         >
-          <ShoppingCart size={16} />
-          <span className="ml-1">Órdenes</span>
-        </Button>
-        <Button
-          variant={activeTab === 'proveedores' ? 'primary' : 'ghost'}
-          size="sm"
+          <ShoppingCart size={16} className="inline mr-1.5 -mt-0.5" />
+          Órdenes
+        </button>
+        <button
+          type="button"
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'proveedores'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
+          )}
           onClick={() => setActiveTab('proveedores')}
-          className="shrink-0"
         >
-          <Truck size={16} />
-          <span className="ml-1">Proveedores</span>
-        </Button>
+          <Truck size={16} className="inline mr-1.5 -mt-0.5" />
+          Proveedores
+        </button>
       </div>
 
       <Card>
         {activeTab === 'ordenes' && (
           <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
               <div className="flex-1">
-                <Input
+                <SearchInput
                   placeholder="Buscar orden..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  inputClassName="text-sm"
+                  onClear={() => setSearch('')}
                 />
               </div>
               {isOwner && (
-                <Button variant="primary" size="sm" onClick={openNewOrder}>
-                  <Plus size={16} />
-                  <span className="hidden sm:inline ml-1">Nueva orden</span>
+                <Button variant="primary" size="sm" onClick={openNewOrder} className="shrink-0">
+                  <span className="hidden sm:inline">Nueva orden</span>
+                  <span className="sm:hidden">+</span>
                 </Button>
               )}
             </div>
@@ -166,20 +202,19 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
         {activeTab === 'proveedores' && (
           <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <Input
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <SearchInput
                   placeholder="Buscar proveedor..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  inputClassName="text-sm pl-9"
+                  onClear={() => setSearch('')}
                 />
               </div>
               {isOwner && (
-                <Button variant="primary" size="sm" onClick={openNewSupplier}>
-                  <Plus size={16} />
-                  <span className="hidden sm:inline ml-1">Nuevo</span>
+                <Button variant="primary" size="sm" onClick={openNewSupplier} className="shrink-0">
+                  <span className="hidden sm:inline">Nuevo</span>
+                  <span className="sm:hidden">+</span>
                 </Button>
               )}
             </div>
@@ -189,12 +224,20 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               )}
               loading={loading}
               isOwner={isOwner}
+              activeOrdersBySupplier={orders.reduce((acc, o) => {
+                if (o.status !== 'received' && o.status !== 'cancelled') {
+                  acc[o.supplierId] = (acc[o.supplierId] || 0) + 1;
+                }
+                return acc;
+              }, {} as Record<string, number>)}
               onEdit={handleEditSupplier}
               onDelete={(id, name) => setConfirmDeleteSupplier({ id, name })}
             />
           </div>
         )}
       </Card>
+
+      <BottomNav items={bottomNavItems} activeId={activeTab} className="sm:hidden" />
 
       {showSupplierForm && (
         <SupplierForm

@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy } from 'react';
-import { Card, Button, Select, Spinner, BottomNav } from '@/common/components';
+import { Card, Button, Select, Spinner, BottomNav, DatePicker, type BottomNavItem } from '@/common/components';
 import { Calendar, BarChart3, PieChart, ShoppingBag, Wallet, FileText } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
@@ -18,14 +18,15 @@ const TIME_RANGE_OPTIONS: { value: ReportTimeRange; label: string }[] = [
   { value: 'last7days', label: 'Últimos 7 días' },
   { value: 'thisMonth', label: 'Este mes' },
   { value: 'lastMonth', label: 'Mes pasado' },
+  { value: 'custom', label: 'Personalizado' },
 ];
 
 const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'summary', label: 'Resumen', icon: <FileText size={16} /> },
-  { id: 'profits', label: 'Ganancias', icon: <BarChart3 size={16} /> },
-  { id: 'products', label: 'Productos', icon: <ShoppingBag size={16} /> },
-  { id: 'payments', label: 'Pagos', icon: <PieChart size={16} /> },
-  { id: 'cash', label: 'Caja', icon: <Wallet size={16} /> },
+  { id: 'summary', label: 'Resumen', icon: <FileText size={20} /> },
+  { id: 'profits', label: 'Ganancias', icon: <BarChart3 size={20} /> },
+  { id: 'products', label: 'Productos', icon: <ShoppingBag size={20} /> },
+  { id: 'payments', label: 'Pagos', icon: <PieChart size={20} /> },
+  { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
 ];
 
 interface ReportsPageProps {
@@ -60,19 +61,30 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     }
   };
 
+  const bottomNavItems: BottomNavItem[] = TABS.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    icon: tab.icon,
+    onClick: () => setActiveTab(tab.id),
+  }));
+
   return (
-    <div className="p-4 max-w-6xl mx-auto space-y-4 pb-24">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Reportes</h1>
-          <p className="text-sm text-gray-500">Análisis de ventas y ganancias</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+            <BarChart3 size={22} className="text-accent" />
+          </div>
+          <div>
+            <h1 className="text-lg font-title font-bold">Reportes</h1>
+            <p className="text-xs text-text-secondary">Análisis de ventas y ganancias</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Select
             value={filters.timeRange}
             onChange={(e) => handleTimeRangeChange(e.target.value)}
-            className="text-sm"
           >
             {TIME_RANGE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -83,36 +95,30 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           <Button variant="ghost" size="sm" onClick={refetch} disabled={loading}>
             {loading ? <Spinner size="sm" /> : <Calendar size={16} />}
           </Button>
-          <div className="export-button-group">
-            <ExportButton
-              activeTab={activeTab}
-              summary={summary}
-              profitOverTime={profitOverTime}
-              topProducts={topProducts}
-              paymentBreakdown={paymentBreakdown}
-              cashAnalysis={cashAnalysis}
-              loading={loading}
-            />
-          </div>
+          <ExportButton
+            activeTab={activeTab}
+            summary={summary}
+            profitOverTime={profitOverTime}
+            topProducts={topProducts}
+            paymentBreakdown={paymentBreakdown}
+            cashAnalysis={cashAnalysis}
+            loading={loading}
+          />
         </div>
       </div>
 
       {showCustomDate && (
-        <Card className="p-3 flex flex-col sm:flex-row gap-3">
+        <Card className="p-3 sm:p-4 flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <label className="text-xs text-gray-500 block mb-1">Desde</label>
-            <input
-              type="date"
-              className="input w-full text-sm"
+            <DatePicker
+              label="Desde"
               value={filters.startDate ? filters.startDate.slice(0, 10) : ''}
               onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
             />
           </div>
           <div className="flex-1">
-            <label className="text-xs text-gray-500 block mb-1">Hasta</label>
-            <input
-              type="date"
-              className="input w-full text-sm"
+            <DatePicker
+              label="Hasta"
               value={filters.endDate ? filters.endDate.slice(0, 10) : ''}
               onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value ? new Date(e.target.value).toISOString() : undefined }))}
             />
@@ -141,10 +147,10 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-text-secondary hover:text-gray-700'
             }`}
           >
             {tab.icon}
@@ -154,7 +160,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       </div>
 
       {/* Content */}
-      <div className="space-y-4">
+      <div className="space-y-4 sm:space-y-6">
         <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
           {activeTab === 'summary' && (
             <>
@@ -172,16 +178,11 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         </Suspense>
       </div>
 
-      {/* Mobile Bottom Nav for Tabs */}
+      {/* Mobile Bottom Nav */}
       <BottomNav
         sidebarOffset={false}
         activeId={activeTab}
-        items={TABS.map((tab) => ({
-          id: tab.id,
-          label: tab.label,
-          icon: tab.icon,
-          onClick: () => setActiveTab(tab.id),
-        }))}
+        items={bottomNavItems}
       />
     </div>
   );

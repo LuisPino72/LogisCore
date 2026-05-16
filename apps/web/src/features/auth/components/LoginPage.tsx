@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { Button, Input, Alert, Card, Checkbox } from '../../../common/components';
 import { useAuthStore } from '../stores/authStore';
 
@@ -10,6 +10,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   const { login, isLoggingIn, loginError, fieldErrors, clearLoginError } = useAuthStore();
 
@@ -32,19 +33,42 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-surface to-accent/5 flex items-center justify-center p-4">
-      <Card className="max-w-sm w-full animate-slide-up">
-        <div className="flex flex-col items-center gap-2 mb-6">
-          <img
-            src="/Emblema.ico"
-            alt="LogisCore"
-            className="w-16 h-16"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-          <h1 className="text-xl font-title font-bold text-primary">LogisCore</h1>
-          <p className="text-sm text-gray-500">Inicia sesión para continuar</p>
+    <div className="min-h-screen bg-linear-to-br from-primary via-primary-dark to-primary flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-accent rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-light rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/20 rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/10 rounded-full" />
+      </div>
+
+      {/* Grid pattern overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+          backgroundSize: '32px 32px',
+        }}
+      />
+
+      <Card className="max-w-md w-full animate-slide-up shadow-2xl border-white/10 p-6 sm:p-8 relative z-10">
+        <div className="flex flex-col items-center gap-3 mb-6">
+          {logoError ? (
+            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
+              <Shield size={32} className="text-white" />
+            </div>
+          ) : (
+            <img
+              src="/Emblema.ico"
+              alt="LogisCore"
+              className="w-16 h-16"
+              onError={() => setLogoError(true)}
+            />
+          )}
+          <div className="text-center">
+            <h1 className="text-2xl font-title font-bold text-white">LogisCore</h1>
+            <p className="text-sm text-white/70 mt-1">Inicia sesión para continuar</p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -57,7 +81,6 @@ export function LoginPage() {
             error={fieldErrors.email}
             iconLeft={<Mail size={18} className="text-gray-400" />}
             autoComplete="email"
-            maxLength={30}
             autoFocus
           />
 
@@ -80,7 +103,6 @@ export function LoginPage() {
               </button>
             }
             autoComplete="current-password"
-            maxLength={30}
           />
 
           <div className="flex items-center">

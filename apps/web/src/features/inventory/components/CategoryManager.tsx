@@ -57,13 +57,15 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
     <div className="space-y-3">
       {isOwner && (
         <div className="flex gap-2">
-          <Input
-            placeholder="Nueva categoría..."
-            value={newName}
-            onChange={(e) => { setNewName(e.target.value); setError(''); }}
-            error={error}
-          />
-          <Button variant="primary" size="sm" onClick={handleCreate} disabled={creating}>
+          <div className="flex-1">
+            <Input
+              placeholder="Nueva categoría..."
+              value={newName}
+              onChange={(e) => { setNewName(e.target.value); setError(''); }}
+              error={error}
+            />
+          </div>
+          <Button variant="primary" size="sm" onClick={handleCreate} disabled={creating} className="shrink-0">
             <Plus size={16} />
           </Button>
         </div>
@@ -74,29 +76,35 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
       ) : (
         <div className="space-y-1">
           {categories.map((cat) => (
-            <div key={cat.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-gray-50">
+            <div key={cat.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
               {editingId === cat.id ? (
                 <div className="flex items-center gap-2 flex-1">
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                    <Edit3 size={14} className="text-accent" />
+                  </div>
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="text-sm!"
+                    inputClassName="text-sm"
+                    autoFocus
                   />
-                      <Button variant="ghost" size="sm" onClick={saveEdit}>
+                  <Button variant="ghost" size="sm" onClick={saveEdit} className="shrink-0">
                     <Check size={16} className="text-success" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                  <Button variant="ghost" size="sm" onClick={cancelEdit} className="shrink-0">
                     <X size={16} className="text-danger" />
                   </Button>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 min-w-0 truncate">
-                    <ListTree size={16} className="text-gray-400 shrink-0" />
-                    <span className="text-sm truncate">{cat.name}</span>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <ListTree size={14} className="text-primary" />
+                    </div>
+                    <span className="text-sm font-medium truncate">{cat.name}</span>
                   </div>
                   {isOwner && (
-                    <div className="flex gap-1 shrink-0">
+                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="sm" onClick={() => startEdit(cat)}>
                         <Edit3 size={16} />
                       </Button>

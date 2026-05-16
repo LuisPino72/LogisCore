@@ -18,7 +18,7 @@ import {
   LogoutButton,
 } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw } from 'lucide-react';
+import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield } from 'lucide-react';
 
 interface EmployeeForm {
   email: string;
@@ -44,6 +44,13 @@ const emptyCreateForm: CreateForm = {
 };
 
 type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions';
+
+function getSubscriptionProgress(daysRemaining: number): { pct: number; color: string } {
+  const maxDays = 30;
+  const pct = Math.min(Math.max((daysRemaining / maxDays) * 100, 0), 100);
+  const color = daysRemaining <= 0 ? 'var(--color-danger)' : daysRemaining <= 3 ? 'var(--color-warning)' : daysRemaining <= 7 ? 'var(--color-accent)' : 'var(--color-success)';
+  return { pct, color };
+}
 
 export function AdminPanelPage() {
   const {
@@ -231,7 +238,7 @@ export function AdminPanelPage() {
     { key: 'name', header: 'Nombre' },
     { key: 'rif', header: 'RIF', hideOnMobile: true },
     { key: 'slug', header: 'Slug', hideOnMobile: true },
-    { key: 'plan', header: 'Plan'},
+    { key: 'plan', header: 'Plan' },
     {
       key: 'status',
       header: 'Estado',
@@ -309,8 +316,10 @@ export function AdminPanelPage() {
       topBar={
         <div className="flex items-center gap-3 px-2">
           <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
-            <Store size={18} className="text-primary" />
-            <span className="font-semibold text-sm text-primary">Panel Admin</span>
+            <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Store size={16} className="text-primary" />
+            </div>
+            <span className="font-title font-semibold text-sm text-primary">Panel Admin</span>
           </div>
           <div className="flex-1" />
           {activeSheet === 'tenants' ? (
@@ -333,177 +342,210 @@ export function AdminPanelPage() {
       }
     >
       {/* Desktop tabs */}
-      <div className="hidden sm:flex border-b border-gray-200 bg-white sticky top-14 z-10">
-        <Button
-          variant="ghost"
-          className={`rounded-none border-b-2 px-5 py-3 ${
+      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-14 z-10 max-w-6xl mx-auto">
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
             activeSheet === 'tenants'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
           }`}
           onClick={() => setActiveSheet('tenants')}
         >
-          <Building2 size={16} />
+          <Building2 size={20} />
           Locales
-        </Button>
-        <Button
-          variant="ghost"
-          className={`rounded-none border-b-2 px-5 py-3 ${
+        </button>
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
             activeSheet === 'all-users'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
           }`}
           onClick={() => setActiveSheet('all-users')}
         >
-          <UsersRound size={16} />
+          <UsersRound size={20} />
           Usuarios
-        </Button>
-        <Button
-          variant="ghost"
-          className={`rounded-none border-b-2 px-5 py-3 ${
+        </button>
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
             activeSheet === 'subscriptions'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
           }`}
           onClick={() => setActiveSheet('subscriptions')}
         >
-          <CreditCard size={16} />
+          <CreditCard size={20} />
           Suscripciones
-        </Button>
+        </button>
       </div>
 
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-0">
         {activeSheet === 'tenants' && (
           <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Locales</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{tenants.length} local{tenants.length !== 1 ? 'es' : ''}</p>
+            <div className="p-4 pb-0">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Building2 size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-title font-bold text-gray-900">Locales</h2>
+                  <p className="text-xs text-text-secondary">{tenants.length} local{tenants.length !== 1 ? 'es' : ''}</p>
+                </div>
               </div>
             </div>
-            <DataTable
-              columns={tenantColumns}
-              data={tenants}
-              emptyMessage="No hay locales creados. Crea el primero."
-              keyExtractor={(t: Tenant) => t.id}
-              renderCardOnMobile
-            />
+            <div className="p-4 pt-0">
+              <DataTable
+                columns={tenantColumns}
+                data={tenants}
+                emptyMessage="No hay locales creados. Crea el primero."
+                keyExtractor={(t: Tenant) => t.id}
+                renderCardOnMobile
+              />
+            </div>
           </Card>
         )}
 
         {activeSheet === 'users' && (
           <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Usuarios</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{selectedTenantName} — {users.length} usuario{users.length !== 1 ? 's' : ''}</p>
+            <div className="p-4 pb-0">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <UsersIcon size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-title font-bold text-gray-900">Usuarios</h2>
+                  <p className="text-xs text-text-secondary">{selectedTenantName} — {users.length} usuario{users.length !== 1 ? 's' : ''}</p>
+                </div>
               </div>
             </div>
-            <DataTable
-              columns={userColumns}
-              data={users}
-              emptyMessage="No hay usuarios en este local."
-              keyExtractor={(u: UserRole) => u.id}
-              renderCardOnMobile
-            />
+            <div className="p-4 pt-0">
+              <DataTable
+                columns={userColumns}
+                data={users}
+                emptyMessage="No hay usuarios en este local."
+                keyExtractor={(u: UserRole) => u.id}
+                renderCardOnMobile
+              />
+            </div>
           </Card>
         )}
 
         {activeSheet === 'all-users' && (
           <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Todos los Usuarios</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{allUsers.length} usuario{allUsers.length !== 1 ? 's' : ''} registrados</p>
+            <div className="p-4 pb-0">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <UsersRound size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-title font-bold text-gray-900">Todos los Usuarios</h2>
+                  <p className="text-xs text-text-secondary">{allUsers.length} usuario{allUsers.length !== 1 ? 's' : ''} registrados</p>
+                </div>
               </div>
             </div>
-            <DataTable
-              columns={[
-                { key: 'email', header: 'Email', render: (u: GlobalUser) => (
-                  <span className="truncate block max-w-[200px]" title={u.email}>{u.email}</span>
-                )},
-                { key: 'name', header: 'Nombre' },
-                { key: 'role', header: 'Rol' },
-                { key: 'tenantName', header: 'Local'},
-              ]}
-              data={allUsers}
-              emptyMessage="No hay usuarios registrados."
-              keyExtractor={(u: GlobalUser) => u.id}
-              renderCardOnMobile
-            />
+            <div className="p-4 pt-0">
+              <DataTable
+                columns={[
+                  { key: 'email', header: 'Email', render: (u: GlobalUser) => (
+                    <span className="truncate block" title={u.email}>{u.email}</span>
+                  )},
+                  { key: 'name', header: 'Nombre' },
+                  { key: 'role', header: 'Rol' },
+                  { key: 'tenantName', header: 'Local' },
+                ]}
+                data={allUsers}
+                emptyMessage="No hay usuarios registrados."
+                keyExtractor={(u: GlobalUser) => u.id}
+                renderCardOnMobile
+              />
+            </div>
           </Card>
         )}
 
         {activeSheet === 'subscriptions' && (
           <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Suscripciones</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{subscriptions.length} local{subscriptions.length !== 1 ? 'es' : ''}</p>
+            <div className="p-4 pb-0">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <CreditCard size={20} className="text-accent" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-title font-bold text-gray-900">Suscripciones</h2>
+                  <p className="text-xs text-text-secondary">{subscriptions.length} local{subscriptions.length !== 1 ? 'es' : ''}</p>
+                </div>
               </div>
             </div>
-            <DataTable
-              columns={[
-                { key: 'tenantName', header: 'Local' },
-                {
-                  key: 'plan',
-                  header: 'Plan',
-                  hideOnMobile: true,
-                  render: (s: SubscriptionView) => (
-                    <Badge variant="info">{s.plan}</Badge>
-                  ),
-                },
-                {
-                  key: 'status',
-                  header: 'Estado',
-                  render: (s: SubscriptionView) => {
-                    const variant = s.status === 'active'
-                      ? (s.daysRemaining <= 3 ? 'warning' : 'success')
-                      : 'danger';
-                    return <Badge variant={variant}>{s.status}</Badge>;
+            <div className="p-4 pt-0">
+              <DataTable
+                columns={[
+                  { key: 'tenantName', header: 'Local' },
+                  {
+                    key: 'plan',
+                    header: 'Plan',
+                    hideOnMobile: true,
+                    render: (s: SubscriptionView) => (
+                      <Badge variant="info">{s.plan}</Badge>
+                    ),
                   },
-                },
-                {
-                  key: 'expiresAt',
-                  header: 'Vence',
-                  render: (s: SubscriptionView) => {
-                    if (!s.expiresAt) return <span className="text-gray-400">-</span>;
-                    const date = new Date(s.expiresAt).toLocaleDateString('es-ES');
-                    const color = s.daysRemaining <= 0 ? 'text-danger font-bold'
-                      : s.daysRemaining <= 3 ? 'text-warning font-bold'
-                      : s.daysRemaining <= 7 ? 'text-orange-600'
-                      : 'text-gray-700';
-                    return (
-                      <span className={color}>
-                        {date} {s.daysRemaining <= 0 ? '(Vencido)' : `(${s.daysRemaining}d)`}
-                      </span>
-                    );
+                  {
+                    key: 'status',
+                    header: 'Estado',
+                    render: (s: SubscriptionView) => {
+                      const variant = s.status === 'active'
+                        ? (s.daysRemaining <= 3 ? 'warning' : 'success')
+                        : 'danger';
+                      return <Badge variant={variant}>{s.status === 'active' ? 'Activa' : 'Vencida'}</Badge>;
+                    },
                   },
-                },
-                {
-                  key: 'actions',
-                  header: 'Acción',
-                  render: (s: SubscriptionView) => {
-                    const canRenew = s.daysRemaining <= 0;
-                    return (
-                      <Button
-                        variant={canRenew ? 'primary' : 'ghost'}
-                        size="sm"
-                        disabled={!canRenew}
-                        onClick={() => setRenovateTarget(s)}
-                      >
-                        <RefreshCw size={14} />
-                        <span className="hidden sm:inline">{canRenew ? 'Renovar +30d' : 'Activa'}</span>
-                      </Button>
-                    );
+                  {
+                    key: 'expiresAt',
+                    header: 'Vence',
+                    render: (s: SubscriptionView) => {
+                      if (!s.expiresAt) return <span className="text-gray-400">-</span>;
+                      const date = new Date(s.expiresAt).toLocaleDateString('es-ES');
+                      const { pct, color } = getSubscriptionProgress(s.daysRemaining);
+                      return (
+                        <div className="space-y-1 min-w-[100px]">
+                          <span className={`text-xs ${s.daysRemaining <= 0 ? 'text-danger font-bold' : s.daysRemaining <= 3 ? 'text-warning font-bold' : s.daysRemaining <= 7 ? 'text-orange-600' : 'text-gray-700'}`}>
+                            {date} {s.daysRemaining <= 0 ? '(Vencido)' : `(${s.daysRemaining}d)`}
+                          </span>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%`, backgroundColor: color }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    },
                   },
-                },
-              ]}
-              data={subscriptions}
-              emptyMessage="No hay suscripciones registradas."
-              keyExtractor={(s: SubscriptionView) => s.tenantId}
-              renderCardOnMobile
-            />
+                  {
+                    key: 'actions',
+                    header: 'Acción',
+                    render: (s: SubscriptionView) => {
+                      const canRenew = s.daysRemaining <= 0;
+                      return (
+                        <Button
+                          variant={canRenew ? 'primary' : 'ghost'}
+                          size="sm"
+                          disabled={!canRenew}
+                          onClick={() => setRenovateTarget(s)}
+                        >
+                          <RefreshCw size={14} />
+                          <span className="hidden sm:inline">{canRenew ? 'Renovar +30d' : 'Activa'}</span>
+                        </Button>
+                      );
+                    },
+                  },
+                ]}
+                data={subscriptions}
+                emptyMessage="No hay suscripciones registradas."
+                keyExtractor={(s: SubscriptionView) => s.tenantId}
+                renderCardOnMobile
+              />
+            </div>
           </Card>
         )}
       </div>
@@ -524,9 +566,15 @@ export function AdminPanelPage() {
         onClose={handleCloseCreateModal}
         title="Crear nuevo local"
       >
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Datos del Tenant</p>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          {/* Tenant section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Building2 size={16} className="text-primary" />
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Datos del Tenant</p>
+            </div>
             <Input
               placeholder="Nombre"
               value={createForm.tenant.name}
@@ -536,12 +584,17 @@ export function AdminPanelPage() {
               placeholder="RIF (J-123456789)"
               value={createForm.tenant.rif}
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value.toUpperCase() } }))}
-              className="mt-2"
             />
           </div>
 
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Propietario (obligatorio)</p>
+          {/* Owner section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Shield size={16} className="text-accent" />
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Propietario (obligatorio)</p>
+            </div>
             <Input
               placeholder="Nombre del owner"
               value={createForm.owner.name}
@@ -552,20 +605,24 @@ export function AdminPanelPage() {
               type="email"
               value={createForm.owner.email}
               onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, email: e.target.value } }))}
-              className="mt-2"
             />
             <Input
               placeholder="Contraseña"
               type="password"
               value={createForm.owner.password}
               onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, password: e.target.value } }))}
-              className="mt-2"
             />
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-700">Empleados (opcional, max 3)</p>
+          {/* Employees section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <UserPlus size={16} className="text-blue-600" />
+                </div>
+                <p className="text-sm font-semibold text-gray-700">Empleados (opcional, max 3)</p>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -576,41 +633,37 @@ export function AdminPanelPage() {
               </Button>
             </div>
             {createForm.employees.map((emp, i) => (
-              <Card key={i} className="mb-2">
-                <div className="card-body py-2 px-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-500">Empleado #{i + 1}</span>
-                    <Button variant="danger" size="sm" onClick={() => removeEmployeeRow(i)}>
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Nombre"
-                      value={emp.name}
-                      onChange={(e) => updateEmployeeRow(i, 'name', e.target.value)}
-                    />
-                    <Input
-                      placeholder="Email"
-                      type="email"
-                      value={emp.email}
-                      onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
-                    />
-                    <Input
-                      placeholder="Contraseña"
-                      type="password"
-                      value={emp.password}
-                      onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
-                    />
-                  </div>
+              <div key={i} className="rounded-lg bg-surface-alt border border-border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-text-secondary">Empleado #{i + 1}</span>
+                  <Button variant="danger" size="sm" onClick={() => removeEmployeeRow(i)}>
+                    <Trash2 size={14} />
+                  </Button>
                 </div>
-              </Card>
+                <Input
+                  placeholder="Nombre"
+                  value={emp.name}
+                  onChange={(e) => updateEmployeeRow(i, 'name', e.target.value)}
+                />
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={emp.email}
+                  onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
+                />
+                <Input
+                  placeholder="Contraseña"
+                  type="password"
+                  value={emp.password}
+                  onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
+                />
+              </div>
             ))}
           </div>
 
           {createError && <p className="text-danger text-sm">{createError}</p>}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-2">
             <Button
               variant="primary"
               fullWidth
