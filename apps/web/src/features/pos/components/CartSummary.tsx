@@ -100,7 +100,7 @@ export function CartSummary({
         </Button>
         <Button
           variant="primary"
-          className="flex-[2] min-h-[44px]"
+          className="flex-2 min-h-[44px]"
           disabled={!isOpen || items.length === 0 || !paymentMethod}
           loading={loading}
           onClick={onPay}

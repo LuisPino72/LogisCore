@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -95,7 +96,7 @@ export function Modal({
     full: 'modal-content-full',
   };
 
-  return (
+  return createPortal(
     <div
       className="modal-overlay"
       onClick={closeOnOverlay ? onClose : undefined}
@@ -123,6 +124,7 @@ export function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,6 +1,7 @@
 import { Card, Badge } from '@/common/components';
 import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, CreditCard, Package, ArrowUpRight, Receipt } from 'lucide-react';
 import type { ExecutiveSummaryData } from '@/features/reports/types';
+import { formatBs } from '@/lib/formatBs';
 
 interface ExecutiveSummaryProps {
   data: ExecutiveSummaryData | null;
@@ -86,9 +87,6 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
   }
 
   if (!data) return null;
-
-  const formatBs = (v: number) =>
-    new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', minimumFractionDigits: 2 }).format(v);
 
   return (
     <div className="space-y-4">

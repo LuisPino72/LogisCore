@@ -1,6 +1,7 @@
 import { Card, Badge } from '@/common/components';
 import { TrendingUp, TrendingDown, Minus, DollarSign } from 'lucide-react';
 import type { CashRegisterSummaryData } from '@/features/reports/types';
+import { formatBs } from '@/lib/formatBs';
 
 interface CashAnalysisProps {
   data: CashRegisterSummaryData[];
@@ -33,10 +34,6 @@ function DiffIndicator({ differenceBs }: { differenceBs: number | null | undefin
       </span>
     </div>
   );
-}
-
-function formatBs(v: number) {
-  return new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', minimumFractionDigits: 2 }).format(v);
 }
 
 function formatDate(iso: string) {

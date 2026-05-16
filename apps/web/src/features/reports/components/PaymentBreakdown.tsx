@@ -1,6 +1,7 @@
 import { Card } from '@/common/components';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { PaymentBreakdownData } from '@/features/reports/types';
+import { formatBs } from '@/lib/formatBs';
 
 interface PaymentBreakdownProps {
   data: PaymentBreakdownData[];
@@ -38,9 +39,6 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
     tarjeta_bs: '#8b5cf6',
     efectivo_usd: '#f59e0b',
   };
-
-  const formatBs = (v: number) =>
-    new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', minimumFractionDigits: 2 }).format(v);
 
   const totalBs = data.reduce((s, d) => s + d.totalBs, 0);
 

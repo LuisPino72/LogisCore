@@ -37,7 +37,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
 
   const formatRate = (val: number | null) => {
     if (val === null) return '-';
-    return `Bs. ${val.toFixed(2)}`;
+    return `Bs ${val.toFixed(2)}`;
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -112,7 +112,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
             </p>
 
             <div className="input-wrapper">
-              <label className="input-label">Tasa (Bs. por $)</label>
+              <label className="input-label">Tasa (Bs por $)</label>
               <Input
                 type="number"
                 step="0.01"
