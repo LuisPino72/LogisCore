@@ -727,6 +727,7 @@ export function AdminPanelPage() {
             <Input
               placeholder="Contraseña"
               type="password"
+              showPassword
               value={createForm.owner.password}
               onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, password: e.target.value } }))}
             />
@@ -772,6 +773,7 @@ export function AdminPanelPage() {
                 <Input
                   placeholder="Contraseña"
                   type="password"
+                  showPassword
                   value={emp.password}
                   onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
                 />
@@ -860,6 +862,7 @@ export function AdminPanelPage() {
           <Input
             placeholder="Contraseña"
             type="password"
+            showPassword
             value={newEmployee.password}
             onChange={(e) => setNewEmployee((p) => ({ ...p, password: e.target.value }))}
           />
@@ -1012,6 +1015,7 @@ export function AdminPanelPage() {
           <Input
             label="Nueva contraseña"
             type="password"
+            showPassword
             placeholder="Mínimo 6 caracteres"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}

@@ -1,4 +1,5 @@
 import { forwardRef, useState, type ReactNode, type ChangeEvent } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { validateValue, sanitizeNumber, type ValidationRule } from '../../lib/validation';
 
@@ -17,6 +18,7 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
   decimals?: number;
   allowNegative?: boolean;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
+  showPassword?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(({
@@ -35,12 +37,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   allowNegative = false,
   onChange,
   value,
+  showPassword = false,
   ...props
 }, ref) => {
   const [internalError, setInternalError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   const displayError = externalError || (touched ? internalError : null);
+  const isPassword = props.type === 'password';
+  const effectiveType = showPassword && isPassword ? (visible ? 'text' : 'password') : props.type;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     let rawValue = e.target.value;
@@ -83,6 +89,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 
   const hasRequired = validation?.required || props.required;
 
+  const toggleVisibility = () => setVisible((v) => !v);
+
+  const passwordIcon = showPassword && isPassword ? (
+    <button
+      type="button"
+      onClick={toggleVisibility}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+      aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+      tabIndex={-1}
+    >
+      {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+    </button>
+  ) : iconRight ? (
+    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{iconRight}</div>
+  ) : null;
+
   return (
     <div className={cn('input-wrapper', className)}>
       {label && (
@@ -102,19 +124,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
         <div className="relative flex-1">
           <input
             ref={ref}
+            {...props}
+            type={effectiveType}
             className={cn(
               'input',
               (iconLeft && !iconOutside) && 'pl-10',
-              iconRight && 'pr-10',
+              (iconRight || (showPassword && isPassword)) && 'pr-10',
               displayError && 'input-error',
               inputClassName
             )}
             value={value}
             onChange={handleChange}
             onBlur={handleBlur}
-            {...props}
           />
-          {iconRight && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{iconRight}</div>}
+          {passwordIcon}
         </div>
       </div>
       {displayError && <span className="input-error-text">{displayError}</span>}
