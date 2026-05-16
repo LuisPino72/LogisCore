@@ -34,7 +34,7 @@ function toCategory(raw: Record<string, unknown>): Category {
   return {
     id: raw.id as string,
     name: raw.name as string,
-    slug: raw.slug as string,
+    isPredefined: raw.isPredefined as boolean | undefined,
   };
 }
 
@@ -262,11 +262,10 @@ export const inventoryService = {
   async createCategory(input: { name: string; tenantId: string }): Promise<Result<Category, AppError>> {
     const db = getDb();
     const id = generateId();
-    const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const cat = { id, name: input.name, slug, tenantId: input.tenantId };
+    const cat = { id, name: input.name, tenantId: input.tenantId };
     await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
       await db.categories.add(cat);
-      await syncQueue.enqueue('categories', 'CREATE', id, { id, name: input.name, slug }, input.tenantId);
+      await syncQueue.enqueue('categories', 'CREATE', id, { id, name: input.name }, input.tenantId);
       await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name });
     });
     await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name }, { tenantId: input.tenantId });
@@ -275,15 +274,14 @@ export const inventoryService = {
 
   async updateCategory(id: string, name: string, tenantId: string): Promise<Result<Category, AppError>> {
     const db = getDb();
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const updated = { name, slug };
+    const updated = { name };
     await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
       await db.categories.update(id, updated);
-      await syncQueue.enqueue('categories', 'UPDATE', id, { id, name, slug }, tenantId);
+      await syncQueue.enqueue('categories', 'UPDATE', id, { id, name }, tenantId);
       await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name });
     });
     await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name }, { tenantId });
-    return success({ id, name, slug });
+    return success({ id, name });
   },
 
   async getCategories(tenantId: string): Promise<Result<Category[], AppError>> {
@@ -304,11 +302,11 @@ export const inventoryService = {
         for (const cat of data) {
           const localCat = {
             id: cat.id, tenantId,
-            name: cat.name, slug: cat.slug,
+            name: cat.name, isPredefined: cat.is_predefined,
           };
           await db.categories.put(localCat);
         }
-        rows = data.map((d) => ({ id: d.id, name: d.name, slug: d.slug, tenantId }));
+        rows = data.map((d) => ({ id: d.id, name: d.name, isPredefined: d.is_predefined, tenantId }));
       }
     }
 

@@ -1,13 +1,14 @@
 import { useState, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { adminService } from '../services/adminService';
-import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory, CreateGlobalCategoryInput } from '../types';
 
 interface UseAdminPanelReturn {
   tenants: Tenant[];
   users: UserRole[];
   allUsers: GlobalUser[];
   subscriptions: SubscriptionView[];
+  globalCategories: GlobalCategory[];
   dashboardStats: DashboardStats | null;
   analytics: TenantAnalytics | null;
   isLoading: boolean;
@@ -16,6 +17,7 @@ interface UseAdminPanelReturn {
   fetchUsers: (tenantId?: string) => Promise<void>;
   fetchAllUsers: () => Promise<void>;
   fetchSubscriptions: () => Promise<void>;
+  fetchGlobalCategories: () => Promise<void>;
   fetchDashboardStats: () => Promise<void>;
   fetchAnalytics: (tenantId: string) => Promise<void>;
   renewSubscription: (tenantId: string) => Promise<Result<void, AppError>>;
@@ -27,6 +29,9 @@ interface UseAdminPanelReturn {
   hardDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
   restoreTenant: (id: string) => Promise<Result<void, AppError>>;
   resetPassword: (userId: string, newPassword: string) => Promise<Result<void, AppError>>;
+  createGlobalCategory: (input: CreateGlobalCategoryInput) => Promise<Result<GlobalCategory, AppError>>;
+  updateGlobalCategory: (id: string, name: string) => Promise<Result<GlobalCategory, AppError>>;
+  deleteGlobalCategory: (id: string) => Promise<Result<void, AppError>>;
 }
 
 export function useAdminPanel(): UseAdminPanelReturn {
@@ -34,6 +39,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [allUsers, setAllUsers] = useState<GlobalUser[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionView[]>([]);
+  const [globalCategories, setGlobalCategories] = useState<GlobalCategory[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [analytics, setAnalytics] = useState<TenantAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -162,6 +168,42 @@ export function useAdminPanel(): UseAdminPanelReturn {
     }
   }, []);
 
+  const fetchGlobalCategories = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const result = await adminService.fetchGlobalCategories();
+    if (result.ok) {
+      setGlobalCategories(result.data);
+    } else {
+      setError(result.error.message);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const createGlobalCategory = useCallback(async (input: CreateGlobalCategoryInput) => {
+    const result = await adminService.createGlobalCategory(input);
+    if (result.ok) {
+      await fetchGlobalCategories();
+    }
+    return result;
+  }, [fetchGlobalCategories]);
+
+  const updateGlobalCategory = useCallback(async (id: string, name: string) => {
+    const result = await adminService.updateGlobalCategory(id, name);
+    if (result.ok) {
+      await fetchGlobalCategories();
+    }
+    return result;
+  }, [fetchGlobalCategories]);
+
+  const deleteGlobalCategory = useCallback(async (id: string) => {
+    const result = await adminService.deleteGlobalCategory(id);
+    if (result.ok) {
+      await fetchGlobalCategories();
+    }
+    return result;
+  }, [fetchGlobalCategories]);
+
   const fetchAnalytics = useCallback(async (tenantId: string) => {
     setAnalytics(null);
     const result = await adminService.getTenantAnalytics(tenantId);
@@ -175,6 +217,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     users,
     allUsers,
     subscriptions,
+    globalCategories,
     dashboardStats,
     analytics,
     isLoading,
@@ -183,6 +226,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     fetchUsers,
     fetchAllUsers,
     fetchSubscriptions,
+    fetchGlobalCategories,
     fetchDashboardStats,
     fetchAnalytics,
     renewSubscription,
@@ -194,5 +238,8 @@ export function useAdminPanel(): UseAdminPanelReturn {
     hardDeleteTenant,
     restoreTenant,
     resetPassword,
+    createGlobalCategory,
+    updateGlobalCategory,
+    deleteGlobalCategory,
   };
 }

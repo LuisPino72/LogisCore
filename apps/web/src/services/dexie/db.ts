@@ -25,7 +25,7 @@ export interface DexieCategory {
   id: string;
   tenantId: string;
   name: string;
-  slug: string;
+  isPredefined?: boolean;
   deletedAt?: string;
 }
 
@@ -181,7 +181,7 @@ export class LogisCoreDB extends Dexie {
       syncMeta: 'table',
       outbox: '++id, event, status, createdAt, nextRetryAt, [status+nextRetryAt]',
       products: 'id, tenantId, sku, categoryId, name, [tenantId+deletedAt]',
-      categories: 'id, tenantId, slug, [tenantId+deletedAt]',
+      categories: 'id, tenantId, [tenantId+deletedAt]',
       inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt]',
       inventoryLots: 'id, tenantId, productId, remainingQuantity, createdAt, [productId+remainingQuantity]',
       sales: 'id, tenantId, [tenantId+deletedAt], [tenantId+createdAt]',

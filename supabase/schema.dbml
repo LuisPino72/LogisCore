@@ -98,9 +98,9 @@ Table products {
 
 Table categories {
   id uuid [pk]
-  tenant_id uuid [not null, ref: > tenants.id]
+  tenant_id uuid [ref: > tenants.id]         -- nullable for global predefined categories
   name text [not null]
-  slug text [not null]
+  is_predefined boolean [not null, default: false]
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
   deleted_at timestamptz

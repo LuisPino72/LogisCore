@@ -23,7 +23,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "slug": { "type": "string" }
+        "isPredefined": { "type": "boolean" }
       }
     },
     "InventoryMovement": {

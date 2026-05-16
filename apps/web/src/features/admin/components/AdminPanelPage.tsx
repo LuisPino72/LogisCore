@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { useTenantFilters } from '../hooks/useTenantFilters';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { CreateTenantWithUsersInputSchema } from '../types';
-import type { Tenant, UserRole, GlobalUser, SubscriptionView } from '../types';
+import type { Tenant, UserRole, GlobalUser, SubscriptionView, GlobalCategory } from '../types';
 import type { Column } from '../../../common/components/DataTable';
 import {
   Alert,
@@ -21,7 +21,7 @@ import {
   LogoutButton,
 } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, RotateCcw, KeyRound, BarChart3 } from 'lucide-react';
+import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, RotateCcw, KeyRound, BarChart3, Tags } from 'lucide-react';
 import { AnalyticsModal } from './AnalyticsModal';
 
 interface EmployeeForm {
@@ -49,7 +49,7 @@ const emptyCreateForm: CreateForm = {
   employees: [],
 };
 
-type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions';
+type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories';
 
 function getSubscriptionProgress(daysRemaining: number): { pct: number; color: string } {
   const maxDays = 30;
@@ -60,10 +60,11 @@ function getSubscriptionProgress(daysRemaining: number): { pct: number; color: s
 
 export function AdminPanelPage() {
   const {
-    tenants, users, allUsers, subscriptions, analytics, isLoading, error,
-    fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, fetchAnalytics,
+    tenants, users, allUsers, subscriptions, globalCategories, analytics, isLoading, error,
+    fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, fetchGlobalCategories, fetchAnalytics,
     renewSubscription, createTenant, addEmployee, updateTenant, removeEmployee,
     softDeleteTenant, hardDeleteTenant, restoreTenant, resetPassword,
+    createGlobalCategory, updateGlobalCategory, deleteGlobalCategory,
   } = useAdminPanel();
 
   const { filteredTenants, setSearch, setStatus, setPlan } = useTenantFilters(tenants);
@@ -87,6 +88,16 @@ export function AdminPanelPage() {
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
 
   const [resetPassTarget, setResetPassTarget] = useState<{ userId: string; email: string; name: string } | null>(null);
+  const [showCreateGlobalCatModal, setShowCreateGlobalCatModal] = useState(false);
+  const [showEditGlobalCatModal, setShowEditGlobalCatModal] = useState(false);
+  const [globalCatNewName, setGlobalCatNewName] = useState('');
+  const [globalCatEditId, setGlobalCatEditId] = useState<string | null>(null);
+  const [globalCatEditName, setGlobalCatEditName] = useState('');
+  const [globalCatDeleteTarget, setGlobalCatDeleteTarget] = useState<GlobalCategory | null>(null);
+  const [globalCatConfirmText, setGlobalCatConfirmText] = useState('');
+  const [globalCatError, setGlobalCatError] = useState<string | null>(null);
+  const [globalCatSubmitting, setGlobalCatSubmitting] = useState(false);
+  const [globalCatSearch, setGlobalCatSearch] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [resetPassError, setResetPassError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
@@ -99,6 +110,12 @@ export function AdminPanelPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { addToast } = useToastStore();
+
+  const filteredGlobalCategories = useMemo(() => {
+    if (!globalCatSearch.trim()) return globalCategories;
+    const q = globalCatSearch.toLowerCase();
+    return globalCategories.filter((c) => c.name.toLowerCase().includes(q));
+  }, [globalCategories, globalCatSearch]);
 
   const handleCloseDeleteModal = useCallback(() => {
     setDeleteTarget(null);
@@ -123,7 +140,8 @@ export function AdminPanelPage() {
     fetchTenants();
     fetchAllUsers();
     fetchSubscriptions();
-  }, [fetchTenants, fetchAllUsers, fetchSubscriptions]);
+    fetchGlobalCategories();
+  }, [fetchTenants, fetchAllUsers, fetchSubscriptions, fetchGlobalCategories]);
 
   const handleSelectTenant = (tenant: Tenant) => {
     setSelectedTenantId(tenant.id);
@@ -419,6 +437,11 @@ export function AdminPanelPage() {
                 <Plus size={16} /> Empleado
               </Button>
             </div>
+          ) : activeSheet === 'global-categories' ? (
+            <Button variant="primary" size="sm" onClick={() => { setGlobalCatNewName(''); setGlobalCatError(null); setShowCreateGlobalCatModal(true); }}>
+              <Plus size={16} />
+              <span className="hidden sm:inline">Nueva Categoría</span>
+            </Button>
           ) : null}
           <LogoutButton />
         </div>
@@ -461,6 +484,18 @@ export function AdminPanelPage() {
         >
           <CreditCard size={20} />
           Suscripciones
+        </button>
+        <button
+          type="button"
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+            activeSheet === 'global-categories'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-text-secondary hover:text-gray-700'
+          }`}
+          onClick={() => setActiveSheet('global-categories')}
+        >
+          <Tags size={20} />
+          Categorías
         </button>
       </div>
 
@@ -657,6 +692,85 @@ export function AdminPanelPage() {
             </div>
           </Card>
         )}
+
+        {activeSheet === 'global-categories' && (
+          <Card>
+            <div className="p-4 pb-0">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Tags size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-title font-bold text-gray-900">Categorías Globales</h2>
+                  <p className="text-xs text-text-secondary">{globalCategories.length} categoría{globalCategories.length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <SearchInput
+                placeholder="Buscar categoría..."
+                value={globalCatSearch}
+                onChange={(e) => setGlobalCatSearch(e.target.value)}
+                className="mb-4"
+              />
+            </div>
+            <div className="p-4 pt-0">
+              {/* Desktop table */}
+              <div className="hidden sm:block">
+                <DataTable
+                  columns={[
+                    { key: 'name', header: 'Nombre' },
+                    {
+                      key: 'createdAt',
+                      header: 'Creado',
+                      render: (c: GlobalCategory) => new Date(c.createdAt).toLocaleDateString('es-ES'),
+                    },
+                    {
+                      key: 'actions',
+                      header: 'Acciones',
+                      render: (c: GlobalCategory) => (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => { setGlobalCatEditId(c.id); setGlobalCatEditName(c.name); setGlobalCatError(null); setShowEditGlobalCatModal(true); }}>
+                            <span className="hidden sm:inline">Editar</span>
+                            <span className="sm:hidden">✎</span>
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => { setGlobalCatDeleteTarget(c); setGlobalCatConfirmText(''); }}>
+                            <Trash2 size={16} className="text-gray-400 hover:text-danger" />
+                          </Button>
+                        </div>
+                      ),
+                    },
+                  ]}
+                  data={filteredGlobalCategories}
+                  emptyMessage={globalCatSearch ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas. Crea la primera para que esté disponible en todos los nuevos locales.'}
+                  keyExtractor={(c: GlobalCategory) => c.id}
+                />
+              </div>
+              {/* Mobile cards */}
+              <div className="sm:hidden space-y-2">
+                {filteredGlobalCategories.length === 0 ? (
+                  <p className="text-center text-sm text-text-secondary py-8">{globalCatSearch ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas.'}</p>
+                ) : (
+                  filteredGlobalCategories.map((c) => (
+                    <div key={c.id} className="flex flex-col gap-2 px-3 py-3 rounded-lg border border-gray-100 bg-white">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
+                        <p className="text-xs text-text-secondary">{new Date(c.createdAt).toLocaleDateString('es-ES')}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" fullWidth onClick={() => { setGlobalCatEditId(c.id); setGlobalCatEditName(c.name); setGlobalCatError(null); setShowEditGlobalCatModal(true); }}>
+                          <span className="hidden sm:inline">Editar</span>
+                          <span className="sm:hidden">✎</span>
+                        </Button>
+                        <Button variant="ghost" size="sm" fullWidth onClick={() => { setGlobalCatDeleteTarget(c); setGlobalCatConfirmText(''); }}>
+                          <Trash2 size={16} className="text-gray-400" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Mobile Bottom Nav */}
@@ -666,6 +780,7 @@ export function AdminPanelPage() {
           { id: 'tenants', label: 'Locales', icon: <Building2 size={20} />, onClick: () => setActiveSheet('tenants') },
           { id: 'all-users', label: 'Usuarios', icon: <UsersRound size={20} />, onClick: () => setActiveSheet('all-users') },
           { id: 'subscriptions', label: 'Suscripciones', icon: <CreditCard size={20} />, onClick: () => setActiveSheet('subscriptions') },
+          { id: 'global-categories', label: 'Categorías', icon: <Tags size={20} />, onClick: () => setActiveSheet('global-categories') },
         ]}
       />
 
@@ -1046,6 +1161,132 @@ export function AdminPanelPage() {
           <p className="text-sm text-gray-600">
             Esta acción desactivará al empleado. No podrá acceder al sistema hasta que un administrador lo reactive.
           </p>
+        </div>
+      </Modal>
+
+      {/* Crear categoría global */}
+      <Modal
+        isOpen={showCreateGlobalCatModal}
+        onClose={() => setShowCreateGlobalCatModal(false)}
+        title="Nueva categoría global"
+      >
+        <div className="space-y-4">
+          <Input
+            placeholder="Nombre de la categoría"
+            value={globalCatNewName}
+            onChange={(e) => { setGlobalCatNewName(e.target.value); setGlobalCatError(null); }}
+            error={globalCatError ?? undefined}
+          />
+          {globalCatError && <p className="text-danger text-sm">{globalCatError}</p>}
+          <div className="flex gap-2">
+            <Button variant="primary" fullWidth onClick={async () => {
+              if (!globalCatNewName.trim()) { setGlobalCatError('Ingresa un nombre'); return; }
+              setGlobalCatSubmitting(true);
+              const result = await createGlobalCategory({ name: globalCatNewName.trim() });
+              setGlobalCatSubmitting(false);
+              if (result.ok) {
+                setShowCreateGlobalCatModal(false);
+                setGlobalCatNewName('');
+              } else {
+                setGlobalCatError(result.error.message);
+              }
+            }} disabled={globalCatSubmitting}>
+              {globalCatSubmitting ? 'Creando...' : 'Crear'}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setShowCreateGlobalCatModal(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Editar categoría global */}
+      <Modal
+        isOpen={showEditGlobalCatModal}
+        onClose={() => setShowEditGlobalCatModal(false)}
+        title="Editar categoría global"
+      >
+        <div className="space-y-4">
+          <Input
+            placeholder="Nombre de la categoría"
+            value={globalCatEditName}
+            onChange={(e) => { setGlobalCatEditName(e.target.value); setGlobalCatError(null); }}
+            error={globalCatError ?? undefined}
+          />
+          {globalCatError && <p className="text-danger text-sm">{globalCatError}</p>}
+          <div className="flex gap-2">
+            <Button variant="primary" fullWidth onClick={async () => {
+              if (!globalCatEditId || !globalCatEditName.trim()) { setGlobalCatError('Ingresa un nombre'); return; }
+              setGlobalCatSubmitting(true);
+              const result = await updateGlobalCategory(globalCatEditId, globalCatEditName.trim());
+              setGlobalCatSubmitting(false);
+              if (result.ok) {
+                setShowEditGlobalCatModal(false);
+                setGlobalCatEditId(null);
+              } else {
+                setGlobalCatError(result.error.message);
+              }
+            }} disabled={globalCatSubmitting}>
+              {globalCatSubmitting ? 'Guardando...' : 'Guardar'}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setShowEditGlobalCatModal(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Eliminar categoría global */}
+      <Modal
+        isOpen={globalCatDeleteTarget !== null}
+        onClose={() => setGlobalCatDeleteTarget(null)}
+        title="Eliminar categoría global"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => setGlobalCatDeleteTarget(null)} disabled={globalCatSubmitting}>
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              disabled={globalCatConfirmText !== 'BORRAR' || globalCatSubmitting}
+              loading={globalCatSubmitting}
+              onClick={async () => {
+                if (!globalCatDeleteTarget) return;
+                setGlobalCatSubmitting(true);
+                const result = await deleteGlobalCategory(globalCatDeleteTarget.id);
+                setGlobalCatSubmitting(false);
+                if (result.ok) {
+                  addToast({ type: 'success', message: 'Categoría eliminada.', duration: 4000 });
+                } else {
+                  addToast({ type: 'error', message: result.error.message, duration: 5000 });
+                }
+                setGlobalCatDeleteTarget(null);
+                setGlobalCatConfirmText('');
+              }}
+            >
+              {globalCatSubmitting ? 'Eliminando...' : 'Eliminar permanentemente'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <Alert variant="error">
+            ¡ATENCIÓN! Esta acción eliminará la categoría global. Los locales que ya la tienen como predefinida conservarán su copia local, pero dejará de estar disponible para nuevos locales.
+          </Alert>
+          <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+            <p><span className="font-medium text-gray-700">Categoría:</span> {globalCatDeleteTarget?.name}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600 mb-1">
+              Escribe <strong>BORRAR</strong> para confirmar:
+            </p>
+            <Input
+              placeholder="BORRAR"
+              value={globalCatConfirmText}
+              onChange={(e) => setGlobalCatConfirmText(e.target.value)}
+            />
+          </div>
         </div>
       </Modal>
     </AppShell>

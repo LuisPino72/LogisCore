@@ -35,7 +35,7 @@ export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
 export const CategorySchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),
-  slug: z.string().regex(/^[a-z0-9-]+$/),
+  isPredefined: z.boolean().optional(),
 });
 
 export type Category = z.infer<typeof CategorySchema>;

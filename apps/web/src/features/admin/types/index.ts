@@ -110,3 +110,16 @@ export interface ResetPasswordInput {
   userId: string;
   newPassword: string;
 }
+
+export interface GlobalCategory {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export const CreateGlobalCategorySchema = z.object({
+  name: z.string().min(1, 'Nombre requerido').max(100),
+}).strict();
+
+export type CreateGlobalCategoryInput = z.infer<typeof CreateGlobalCategorySchema>;

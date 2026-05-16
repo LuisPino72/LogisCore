@@ -76,7 +76,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
       ) : (
         <div className="space-y-1">
           {categories.map((cat) => (
-            <div key={cat.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+            <div key={cat.id} className="flex items-center justify-between gap-1 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
               {editingId === cat.id ? (
                 <div className="flex items-center gap-2 flex-1">
                   <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
@@ -97,19 +97,19 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <ListTree size={14} className="text-primary" />
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="hidden sm:flex w-8 h-8 rounded-lg bg-primary/10 items-center justify-center shrink-0">
+                        <ListTree size={14} className="text-primary" />
+                      </div>
+                      <span className="text-sm font-medium truncate">{cat.name}</span>
                     </div>
-                    <span className="text-sm font-medium truncate">{cat.name}</span>
-                  </div>
                   {isOwner && (
-                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" onClick={() => startEdit(cat)}>
-                        <Edit3 size={16} />
+                    <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="sm" onClick={() => startEdit(cat)} className="p-1.5 min-w-[32px] min-h-[32px]">
+                        <Edit3 size={14} />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)}>
-                        <Trash2 size={16} className="text-danger" />
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-[32px] min-h-[32px]">
+                        <Trash2 size={14} className="text-danger" />
                       </Button>
                     </div>
                   )}

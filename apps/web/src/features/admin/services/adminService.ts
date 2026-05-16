@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
-import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory, CreateGlobalCategoryInput } from '../types';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
@@ -424,6 +424,82 @@ export const adminService = {
       expiringSubscriptions,
       totalUsers,
     });
+  },
+
+  async fetchGlobalCategories(): Promise<Result<GlobalCategory[], AppError>> {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, created_at, updated_at')
+      .is('tenant_id', null)
+      .is('deleted_at', null)
+      .order('name');
+
+    if (error) {
+      return failure(new AppError('CATEGORY_QUERY_FAILED', 'Error al cargar categorías globales'));
+    }
+
+    const categories: GlobalCategory[] = (data ?? []).map((c: Record<string, unknown>) => ({
+      id: c.id as string,
+      name: c.name as string,
+      createdAt: c.created_at as string,
+      updatedAt: c.updated_at as string | undefined,
+    }));
+
+    return success(categories);
+  },
+
+  async createGlobalCategory(input: CreateGlobalCategoryInput): Promise<Result<GlobalCategory, AppError>> {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({ name: input.name, is_predefined: true, tenant_id: null })
+      .select('id, name, created_at, updated_at')
+      .single();
+
+    if (error || !data) {
+      return failure(new AppError('CATEGORY_CREATE_FAILED', error?.message ?? 'Error al crear categoría'));
+    }
+
+    const category: GlobalCategory = {
+      id: data.id,
+      name: data.name,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    return success(category);
+  },
+
+  async updateGlobalCategory(id: string, name: string): Promise<Result<GlobalCategory, AppError>> {
+    const { data, error } = await supabase
+      .from('categories')
+      .update({ name })
+      .eq('id', id)
+      .select('id, name, created_at, updated_at')
+      .single();
+
+    if (error || !data) {
+      return failure(new AppError('CATEGORY_UPDATE_FAILED', error?.message ?? 'Error al actualizar categoría'));
+    }
+
+    return success({
+      id: data.id,
+      name: data.name,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    });
+  },
+
+  async deleteGlobalCategory(id: string): Promise<Result<void, AppError>> {
+    const { error } = await supabase
+      .from('categories')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      return failure(new AppError('CATEGORY_DELETE_FAILED', error?.message ?? 'Error al eliminar categoría'));
+    }
+
+    return success(undefined);
   },
 
   async getTenantAnalytics(tenantId: string): Promise<Result<TenantAnalytics, AppError>> {
