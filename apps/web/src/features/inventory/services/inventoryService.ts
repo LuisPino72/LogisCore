@@ -493,7 +493,7 @@ export const inventoryService = {
 
   async uploadProductImage(file: File, tenantId: string, productId: string): Promise<Result<string, AppError>> {
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    const MAX_SIZE = 2 * 1024 * 1024;
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return failure(new AppError('INVENTORY_IMAGE_INVALID_TYPE', 'Formato no permitido. Usa JPG, PNG o WebP.'));
@@ -507,51 +507,72 @@ export const inventoryService = {
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const filePath = `${tenantUuid}/${productId}.${ext}`;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      return failure(new AppError('INVENTORY_IMAGE_NO_SESSION', 'No hay sesión activa.'));
+    let token: string;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token ?? '';
+      if (!token) {
+        return failure(new AppError('INVENTORY_IMAGE_NO_SESSION', 'No hay sesión activa.'));
+      }
+    } catch (err) {
+      logger.error('uploadProductImage', 'Auth session error:', err);
+      return failure(new AppError('INVENTORY_IMAGE_NO_SESSION', 'Error de autenticación. Intenta cerrar sesión y volver a entrar.'));
     }
 
     const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
 
-    const buffer = await file.arrayBuffer();
-    const res = await fetch(storageUrl, {
-      method: 'PUT',
-      headers: {
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${token}`,
-        'content-type': file.type,
-        'cache-control': '3600',
-      },
-      body: buffer,
-    });
+    try {
+      const buffer = await file.arrayBuffer();
+      const res = await fetch(storageUrl, {
+        method: 'PUT',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          'content-type': file.type,
+          'cache-control': '3600',
+        },
+        body: buffer,
+      });
 
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '');
-      logger.error('uploadProductImage', 'Storage error:', res.status, errBody);
-      return failure(new AppError('INVENTORY_IMAGE_UPLOAD_FAILED', 'Error al subir la imagen. Verifica permisos de Storage.'));
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        logger.error('uploadProductImage', 'Storage error:', res.status, errBody);
+        if (res.status === 403) {
+          return failure(new AppError('INVENTORY_IMAGE_UPLOAD_FAILED', 'Permiso denegado. Verifica que el bucket "Products" sea público.'));
+        }
+        if (res.status === 413) {
+          return failure(new AppError('INVENTORY_IMAGE_TOO_LARGE', 'La imagen es demasiado grande. Máximo 2MB.'));
+        }
+        return failure(new AppError('INVENTORY_IMAGE_UPLOAD_FAILED', `Error al subir la imagen (${res.status}). Verifica tu conexión.`));
+      }
+    } catch (err) {
+      logger.error('uploadProductImage', 'Network error:', err);
+      return failure(new AppError('INVENTORY_IMAGE_UPLOAD_FAILED', 'Error de red al subir la imagen. Verifica tu conexión a internet.'));
     }
 
     const publicUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/Products/${filePath}`;
 
-    const db = getDb();
-    await db.products.update(productId, { imageUrl: publicUrl });
+    try {
+      const db = getDb();
+      await db.products.update(productId, { imageUrl: publicUrl });
 
-    const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/products?id=eq.${productId}`;
-    await fetch(restUrl, {
-      method: 'PATCH',
-      headers: {
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ image_url: publicUrl }),
-    });
+      const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/products?id=eq.${productId}`;
+      await fetch(restUrl, {
+        method: 'PATCH',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image_url: publicUrl }),
+      });
 
-    const dbItem = await db.products.get(productId);
-    if (dbItem) {
-      await syncQueue.enqueue('products', 'UPDATE', productId, toSnake({ ...dbItem, image_url: publicUrl } as unknown as Record<string, unknown>), tenantId);
+      const dbItem = await db.products.get(productId);
+      if (dbItem) {
+        await syncQueue.enqueue('products', 'UPDATE', productId, toSnake({ ...dbItem, image_url: publicUrl } as unknown as Record<string, unknown>), tenantId);
+      }
+    } catch (err) {
+      logger.error('uploadProductImage', 'DB update error:', err);
     }
 
     return success(publicUrl);

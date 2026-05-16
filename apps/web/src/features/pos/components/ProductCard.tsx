@@ -29,9 +29,24 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
     <Card
       interactive
       onClick={() => onAdd(product)}
-      className="flex flex-col gap-0 overflow-hidden p-0 active:scale-[0.97] transition-transform"
+      className="relative flex flex-col gap-0 overflow-hidden p-0 active:scale-[0.97] transition-transform"
     >
-      <div className="relative aspect-square bg-surface-alt flex items-center justify-center overflow-hidden">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleFavorite(product.id);
+        }}
+        className="absolute top-1.5 right-1.5 z-20 w-[36px] h-[36px] flex items-center justify-center rounded-full bg-white/80 hover:bg-white active:bg-white transition-colors shadow-sm"
+        aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+      >
+        <Star
+          size={16}
+          className={isFavorite ? 'text-warning fill-warning' : 'text-gray-400'}
+        />
+      </button>
+
+      <div className="relative aspect-4/3 bg-surface-alt flex items-center justify-center overflow-hidden">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
@@ -42,21 +57,6 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
         ) : (
           <ImageIcon size={32} className="text-gray-300" />
         )}
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(product.id);
-          }}
-          className="absolute top-1 right-1 w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white/80 hover:bg-white active:bg-white transition-colors z-10 shadow-sm"
-          aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-        >
-          <Star
-            size={16}
-            className={isFavorite ? 'text-warning fill-warning' : 'text-gray-400'}
-          />
-        </button>
 
         {product.isTaxable && (
           <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-info/80 text-white text-[10px] font-semibold leading-none z-10">
@@ -71,7 +71,7 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
         )}
       </div>
 
-      <div className="flex flex-col gap-1 p-2.5 flex-1">
+      <div className="flex flex-col gap-1 p-2 flex-1">
         <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-tight">
           {product.name}
         </p>

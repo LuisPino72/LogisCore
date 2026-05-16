@@ -111,8 +111,10 @@ export function CartPanel({
           size="full"
           className="pb-safe"
         >
-          <div className="pb-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
-            {renderContent()}
+          <div className="flex flex-col" style={{ maxHeight: '85dvh' }}>
+            <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+              {renderContent()}
+            </div>
           </div>
         </Modal>
       </div>

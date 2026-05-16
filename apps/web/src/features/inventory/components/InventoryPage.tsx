@@ -3,6 +3,7 @@ import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, Select, BottomNav } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
+import { useToastStore } from '../../../stores/toastStore';
 import { inventoryService } from '../services/inventoryService';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
@@ -31,6 +32,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   } = useInventory(tenantId);
 
   const { totalLowStock } = useStockAlerts(tenantId);
+  const { addToast } = useToastStore();
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showAdjustment, setShowAdjustment] = useState(false);
@@ -50,7 +52,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (!tenantId || !userId) return false;
     const product = await createProduct(tenantId, userId, data);
     if (product && imageFile) {
-      await inventoryService.uploadProductImage(imageFile, tenantId, product.id);
+      const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, product.id);
+      if (!imgResult.ok) {
+        addToast({ type: 'warning', message: `Producto creado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
+      }
     }
     if (product) setShowProductForm(false);
     return !!product;
@@ -60,7 +65,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (!editProduct || !tenantId) return false;
     const ok = await updateProduct(editProduct.id, data, tenantId);
     if (ok && imageFile) {
-      await inventoryService.uploadProductImage(imageFile, tenantId, editProduct.id);
+      const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, editProduct.id);
+      if (!imgResult.ok) {
+        addToast({ type: 'warning', message: `Producto actualizado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
+      }
       refresh();
     }
     if (ok) setShowProductForm(false);

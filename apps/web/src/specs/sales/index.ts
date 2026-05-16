@@ -51,8 +51,8 @@ export const SaleSchema = z.object({
 export type Sale = z.infer<typeof SaleSchema>;
 
 export const METADATA_PAGOS = {
-  efectivo_bs: { label: 'Efectivo Bs', moneda: 'Bs', requiereVuelto: true, aplicaIgtf: false },
-  pago_movil: { label: 'Pago Móvil', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
-  tarjeta_bs: { label: 'Tarjeta Bs', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
-  efectivo_usd: { label: 'Efectivo USD', moneda: 'USD', requiereVuelto: true, aplicaIgtf: true },
+  efectivo_bs: { label: 'Efectivo', moneda: 'Bs', requiereVuelto: true, aplicaIgtf: false },
+  pago_movil: { label: 'P. Móvil', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
+  tarjeta_bs: { label: 'Tarjeta', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
+  efectivo_usd: { label: 'Efectivo $', moneda: 'USD', requiereVuelto: true, aplicaIgtf: true },
 } as const;

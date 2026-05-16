@@ -175,7 +175,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="flex flex-row h-full w-full pl-14 md:pl-0">
+    <div className="flex flex-row h-full w-full md:pl-0">
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
           <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} />
