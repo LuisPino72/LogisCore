@@ -72,9 +72,10 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
     <div ref={ref} className={cn('relative inline-block', className)} onKeyDown={handleKeyDown}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center"
+        className="flex items-center min-h-[44px] min-w-[44px]"
         aria-haspopup="true"
         aria-expanded={open}
+        aria-label="Abrir menú"
       >
         {trigger}
       </button>

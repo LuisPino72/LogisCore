@@ -24,7 +24,7 @@ export function Tabs({ tabs, activeKey, onChange, className }: TabsProps) {
           key={tab.key}
           onClick={() => onChange(tab.key)}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors',
+            'flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors min-h-[44px]',
             activeKey === tab.key
               ? 'border-primary text-primary'
               : 'border-transparent text-gray-500 hover:text-gray-700',

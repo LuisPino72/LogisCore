@@ -49,7 +49,7 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
             e.stopPropagation();
             onToggleFavorite(product.id);
           }}
-          className="absolute top-1 right-1 w-[36px] h-[36px] flex items-center justify-center rounded-full bg-white/80 hover:bg-white active:bg-white transition-colors z-10 shadow-sm"
+          className="absolute top-1 right-1 w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white/80 hover:bg-white active:bg-white transition-colors z-10 shadow-sm"
           aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
         >
           <Star

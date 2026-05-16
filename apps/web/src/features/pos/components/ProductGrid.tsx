@@ -63,11 +63,11 @@ export function ProductGrid({
       {categories.length > 0 && (
         <>
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <button type="button" onClick={() => onCategoryChange(null)} className="shrink-0">
+            <button type="button" onClick={() => onCategoryChange(null)} className="shrink-0 min-h-[44px] px-1 flex items-center">
               <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
             </button>
             {visibleCategories.map((cat) => (
-              <button key={cat.id} type="button" onClick={() => onCategoryChange(cat.id)} className="shrink-0">
+              <button key={cat.id} type="button" onClick={() => onCategoryChange(cat.id)} className="shrink-0 min-h-[44px] px-1 flex items-center">
                 <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
               </button>
             ))}
@@ -75,7 +75,7 @@ export function ProductGrid({
               <button
                 type="button"
                 onClick={() => setShowAllCategories(true)}
-                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 transition-colors"
+                className="shrink-0 min-h-[44px] flex items-center gap-1 px-2 rounded-full bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 transition-colors"
               >
                 <ListTree size={12} />
                 +{categories.length - VISIBLE_CATEGORIES}

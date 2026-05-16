@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Badge, Modal, DataTable, Dropdown } from '../../../common/components';
+import { Button, Badge, Modal, DataTable, Dropdown, EmptyState, Skeleton } from '../../../common/components';
 import type { DropdownItem } from '../../../common/components';
 import { Eye, Ban, ShoppingCart, Calendar, ChevronDown, MoreVertical } from 'lucide-react';
 import type { Column } from '../../../common/components';
@@ -106,13 +106,18 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading }: Sa
   return (
     <div className="flex flex-col h-full p-3">
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-sm text-gray-500">Cargando ventas...</span>
+        <div className="flex-1 space-y-3 py-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} variant="shimmer" className="h-12 rounded-lg" />
+          ))}
         </div>
       ) : sales.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-          <Calendar size={40} className="text-gray-300 mb-3" />
-          <p className="text-sm text-gray-500">Aún no hay ventas registradas.</p>
+        <div className="flex-1 flex items-center justify-center">
+          <EmptyState
+            icon={<Calendar size={40} />}
+            title="Sin ventas"
+            description="Aún no hay ventas registradas."
+          />
         </div>
       ) : (
         <div className="flex-1 overflow-auto">

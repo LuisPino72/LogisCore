@@ -26,7 +26,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
         <h4 className="text-sm font-semibold text-gray-700">Ventas en cola</h4>
         <Badge variant="info">{carts.length}/10</Badge>
       </div>
-      <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+      <div className="flex flex-col gap-1.5 max-h-32 md:max-h-48 overflow-y-auto">
         {carts.map((cart) => {
           const totalItems = cart.cart.reduce((sum, item) => sum + item.quantity, 0);
           const totalUsd = cart.cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);

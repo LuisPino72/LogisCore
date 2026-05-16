@@ -97,10 +97,10 @@ export function FileUpload({
                   URL.revokeObjectURL(url);
                   setPreviews((p) => p.filter((_, j) => j !== i));
                 }}
-                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
+                className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm min-w-[44px] min-h-[44px]"
                 aria-label="Eliminar"
               >
-                <X size={12} />
+                <X size={14} />
               </button>
             </div>
           ))}

@@ -183,7 +183,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Scan size={18} />
           </Button>
           <div className="flex-1" />
-          <div className="flex bg-surface-alt rounded-lg p-0.5">
+          <div className="hidden md:flex bg-surface-alt rounded-lg p-0.5">
             <button
               type="button"
               onClick={() => setActiveTab('sell')}

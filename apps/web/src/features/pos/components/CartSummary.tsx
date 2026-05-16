@@ -49,9 +49,9 @@ export function CartSummary({
   return (
     <div className="border-t border-border pt-3 space-y-2">
       <div className="flex justify-between text-sm text-gray-600">
-          <span>Subtotal</span>
-          <span>$ {fmt(subtotalUsd)} / Bs {fmt(subtotalBs)}</span>
-        </div>
+        <span>Subtotal</span>
+        <span>$ {fmt(subtotalUsd)} / Bs {fmt(subtotalBs)}</span>
+      </div>
 
       {paymentMethod === 'efectivo_usd' && (
         <div className="flex justify-between text-sm text-gray-600">

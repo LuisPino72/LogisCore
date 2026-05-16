@@ -90,7 +90,9 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
           <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
             <Camera size={16} /> Escanear código
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+          <Button variant="ghost" size="sm" onClick={onClose} className="min-w-[44px] min-h-[44px]" aria-label="Cerrar escáner">
+            <span className="text-lg leading-none">&times;</span>
+          </Button>
         </div>
 
         <div className="relative">
