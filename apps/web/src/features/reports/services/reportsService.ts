@@ -185,6 +185,11 @@ export const reportsService = {
         }
       }
 
+      // Non-sellable expenses (compras del período)
+      const nsResult = await this.getNonSellableExpenses(tenantId, start, end);
+      const nonSellableExpensesUsd = nsResult.ok ? nsResult.data.totalUsd : 0;
+      const nonSellableExpensesBs = nsResult.ok ? nsResult.data.totalBs : 0;
+
       // Comparacion vs ayer
       let salesVsYesterdayPercent: number | undefined;
       if (filters.timeRange === 'today') {
@@ -209,6 +214,8 @@ export const reportsService = {
         totalIgtfBs: preciseRound(totalIgtfBs, 2),
         topProductName,
         salesVsYesterdayPercent,
+        nonSellableExpensesUsd,
+        nonSellableExpensesBs,
       });
     } catch (err) {
       console.error('[reportsService.getExecutiveSummary]', err);
@@ -426,6 +433,52 @@ export const reportsService = {
     } catch (err) {
       console.error('[reportsService.getCategoryProfit]', err);
       return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al generar ganancia por categoria.'));
+    }
+  },
+
+  async getNonSellableExpenses(tenantId: string, start: string, end: string): Promise<Result<{ totalUsd: number; totalBs: number }, AppError>> {
+    try {
+      const db = getDb();
+      const nsProducts = await db.products
+        .where({ tenantId })
+        .filter((p) => !p.deletedAt && p.isSellable === false)
+        .toArray();
+
+      if (nsProducts.length === 0) return success({ totalUsd: 0, totalBs: 0 });
+
+      const nsProductIds = new Set(nsProducts.map((p) => p.id));
+      const lots = await db.inventoryLots
+        .where({ tenantId })
+        .filter((l) => l.createdAt >= start && l.createdAt <= end)
+        .toArray();
+
+      let totalUsd = 0;
+      for (const lot of lots) {
+        if (!nsProductIds.has(lot.productId)) continue;
+        const cost = lot.costUsdPerUnit ?? 0;
+        totalUsd += lot.quantityAdded * cost;
+      }
+      totalUsd = preciseRound(totalUsd, 2);
+
+      // Get average exchange rate for the period
+      const salesInRange = await db.sales
+        .where('[tenantId+createdAt]')
+        .between([tenantId, start], [tenantId, end])
+        .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
+        .toArray();
+
+      let avgRate = 0;
+      if (salesInRange.length > 0) {
+        const sumRate = salesInRange.reduce((sum, s) => sum + s.exchangeRate, 0);
+        avgRate = sumRate / salesInRange.length;
+      }
+
+      const totalBs = avgRate > 0 ? preciseRound(totalUsd * avgRate, 2) : 0;
+
+      return success({ totalUsd, totalBs });
+    } catch (err) {
+      console.error('[reportsService.getNonSellableExpenses]', err);
+      return success({ totalUsd: 0, totalBs: 0 });
     }
   },
 };

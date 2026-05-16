@@ -1,5 +1,5 @@
 import { Card, Badge } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, CreditCard, Package, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, CreditCard, Package, ArrowUpRight, Receipt } from 'lucide-react';
 import type { ExecutiveSummaryData } from '@/features/reports/types';
 
 interface ExecutiveSummaryProps {
@@ -129,6 +129,13 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
           value={formatBs(data.totalIgtfBs)}
           icon={<CreditCard size={18} />}
           gradient="red"
+        />
+        <KpiCard
+          label="Gastos de Consumo"
+          value={formatBs(data.nonSellableExpensesBs)}
+          subtitle={`USD ${data.nonSellableExpensesUsd.toFixed(2)}`}
+          icon={<Receipt size={18} />}
+          gradient="amber"
         />
       </div>
 

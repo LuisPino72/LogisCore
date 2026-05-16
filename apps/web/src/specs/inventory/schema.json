@@ -12,6 +12,7 @@
         "priceUsd": { "type": "number", "minimum": 0.01 },
         "categoryId": { "type": ["string", "null"] },
         "isWeighted": { "type": "boolean" },
+        "isSellable": { "type": "boolean" },
         "unit": { "type": "string", "enum": ["kg", "gr", "lt", "m", "unidad"] },
         "stock": { "type": "integer", "minimum": 0 },
         "stockMin": { "type": ["integer", "null"] },

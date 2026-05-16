@@ -208,6 +208,17 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </p>
           </div>
 
+          <div className="input-wrapper">
+            <Checkbox
+              label="Disponible para venta"
+              checked={formData.isSellable}
+              onChange={(e) => setField('isSellable', e.target.checked)}
+            />
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Desmarca si este producto es para consumo propio y no debe aparecer en el POS.
+            </p>
+          </div>
+
           <div className="flex gap-3 pt-2">
           <Button variant="ghost" fullWidth onClick={handleClose}>
             Cancelar

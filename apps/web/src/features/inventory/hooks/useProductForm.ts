@@ -23,6 +23,7 @@ const defaultFormData: ProductFormData = {
   categoryId: undefined,
   isWeighted: false,
   isTaxable: true,
+  isSellable: true,
   productType: 'unidad',
   unit: 'unidad',
   stockInicial: 0,
@@ -71,6 +72,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       categoryId: formData.categoryId,
       isWeighted: formData.isWeighted,
       isTaxable: formData.isTaxable,
+      isSellable: formData.isSellable,
       unit: formData.unit,
       stockMin: formData.stockMin || undefined,
     });

@@ -19,9 +19,10 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
   return (
     <nav
       className={cn(
-        'sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30',
+        'sm:hidden fixed bottom-0 right-0 bg-white border-t border-gray-200 z-30',
         className,
       )}
+      style={{ left: 'var(--sidebar-width)' }}
     >
       <div className="flex items-stretch h-14">
         {items.map((item) => (

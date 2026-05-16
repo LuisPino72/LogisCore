@@ -14,6 +14,7 @@ export interface DexieProduct {
   categoryId?: string;
   isWeighted: boolean;
   isTaxable: boolean;
+  isSellable?: boolean;
   unit: 'kg' | 'gr' | 'lt' | 'm' | 'unidad';
   stock: number;
   stockMin?: number;

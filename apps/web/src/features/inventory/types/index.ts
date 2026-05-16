@@ -13,6 +13,7 @@ export interface ProductFormData {
   categoryId?: string;
   isWeighted: boolean;
   isTaxable: boolean;
+  isSellable: boolean;
   productType: 'unidad' | 'pesable_kg' | 'pesable_lt';
   unit: string;
   stockInicial: number;

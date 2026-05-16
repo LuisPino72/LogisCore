@@ -16,6 +16,8 @@ export interface ExecutiveSummaryData {
   totalIgtfBs: number;
   topProductName?: string;
   salesVsYesterdayPercent?: number;
+  nonSellableExpensesUsd: number;
+  nonSellableExpensesBs: number;
 }
 
 export interface DailyProfitPoint {

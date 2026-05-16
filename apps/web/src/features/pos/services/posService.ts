@@ -92,7 +92,7 @@ export const posService = {
       const db = getDb();
       let rows = await db.products
         .where({ tenantId })
-        .filter((p) => !p.deletedAt && p.stock > 0)
+        .filter((p) => !p.deletedAt && p.stock > 0 && p.isSellable !== false)
         .toArray();
 
       if (rows.length === 0) {
@@ -102,7 +102,8 @@ export const posService = {
           .select('*')
           .eq('tenant_id', uuid)
           .is('deleted_at', null)
-          .gt('stock', 0);
+          .gt('stock', 0)
+          .eq('is_sellable', true);
 
         if (data) {
           for (const prod of data) {
@@ -115,6 +116,7 @@ export const posService = {
               categoryId: prod.category_id as string | undefined,
               isWeighted: prod.is_weighted as boolean,
               isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
+              isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
               unit: prod.unit as Product['unit'],
               stock: prod.stock as number,
               stockMin: prod.stock_min as number | undefined,
@@ -124,7 +126,7 @@ export const posService = {
           }
           rows = await db.products
             .where({ tenantId })
-            .filter((p) => !p.deletedAt && p.stock > 0)
+            .filter((p) => !p.deletedAt && p.stock > 0 && p.isSellable !== false)
             .toArray();
         }
       }
@@ -137,6 +139,7 @@ export const posService = {
         categoryId: r.categoryId,
         isWeighted: r.isWeighted,
         isTaxable: r.isTaxable !== undefined ? r.isTaxable : true,
+        isSellable: r.isSellable !== undefined ? r.isSellable : true,
         unit: r.unit,
         stock: r.stock,
         stockMin: r.stockMin,

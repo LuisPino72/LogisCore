@@ -87,6 +87,7 @@ Table products {
   category_id uuid [ref: > categories.id]
   is_weighted boolean [not null, default: false]
   is_taxable boolean [not null, default: true]
+  is_sellable boolean [not null, default: true]
   unit text [not null]
   stock integer [not null, default: 0]
   stock_min integer
