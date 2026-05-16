@@ -18,7 +18,7 @@ export const adminService = {
   async fetchTenants(): Promise<Result<Tenant[], AppError>> {
     const { data, error } = await supabase
       .from('tenants')
-      .select('id, name, slug, rif, created_at, deleted_at, subscriptions!inner(plan, status)')
+      .select('id, name, slug, rif, direccion, telefono, created_at, deleted_at, subscriptions!inner(plan, status)')
       .order('deleted_at', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
 
@@ -33,6 +33,8 @@ export const adminService = {
         name: t.name as string,
         slug: t.slug as string,
         rif: t.rif as string,
+        direccion: t.direccion as string | undefined,
+        telefono: t.telefono as string | undefined,
         plan: (subs?.plan as string) ?? 'basic',
         createdAt: t.created_at as string,
         deletedAt: t.deleted_at as string | undefined,
@@ -214,12 +216,12 @@ export const adminService = {
     }
   },
 
-  async updateTenant(id: string, data: Partial<Pick<Tenant, 'name' | 'rif'>>): Promise<Result<Tenant, AppError>> {
+  async updateTenant(id: string, data: Partial<Pick<Tenant, 'name' | 'rif' | 'direccion' | 'telefono'>>): Promise<Result<Tenant, AppError>> {
     const { data: updated, error } = await supabase
       .from('tenants')
       .update(data)
       .eq('id', id)
-      .select('id, name, slug, rif, created_at')
+      .select('id, name, slug, rif, direccion, telefono, created_at')
       .single();
 
     if (error || !updated) {
@@ -231,6 +233,8 @@ export const adminService = {
       name: updated.name,
       slug: updated.slug,
       rif: updated.rif,
+      direccion: updated.direccion as string | undefined,
+      telefono: updated.telefono as string | undefined,
       plan: 'basic',
       createdAt: updated.created_at,
     });
@@ -252,7 +256,7 @@ export const adminService = {
   async fetchSubscriptionView(): Promise<Result<SubscriptionView[], AppError>> {
     const { data, error } = await supabase
       .from('tenants')
-      .select('id, name, slug, subscriptions(plan, status, expires_at)')
+      .select('id, name, slug, direccion, telefono, subscriptions(plan, status, expires_at)')
       .is('deleted_at', null)
       .order('name');
 

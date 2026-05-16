@@ -27,7 +27,7 @@ interface EmployeeForm {
 }
 
 interface CreateForm {
-  tenant: { name: string; rif: string };
+  tenant: { name: string; rif: string; direccion: string; telefono: string };
   owner: { email: string; password: string; name: string };
   employees: EmployeeForm[];
 }
@@ -35,10 +35,12 @@ interface CreateForm {
 interface EditForm {
   name: string;
   rif: string;
+  direccion: string;
+  telefono: string;
 }
 
 const emptyCreateForm: CreateForm = {
-  tenant: { name: '', rif: '' },
+  tenant: { name: '', rif: '', direccion: '', telefono: '' },
   owner: { email: '', password: '', name: '' },
   employees: [],
 };
@@ -73,7 +75,7 @@ export function AdminPanelPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
-  const [editForm, setEditForm] = useState<EditForm>({ name: '', rif: '' });
+  const [editForm, setEditForm] = useState<EditForm>({ name: '', rif: '', direccion: '', telefono: '' });
   const [newEmployee, setNewEmployee] = useState<EmployeeForm>({ email: '', password: '', name: '' });
 
   const [createError, setCreateError] = useState<string | null>(null);
@@ -122,7 +124,7 @@ export function AdminPanelPage() {
   };
 
   const handleOpenEdit = (tenant: Tenant) => {
-    setEditForm({ name: tenant.name, rif: tenant.rif });
+    setEditForm({ name: tenant.name, rif: tenant.rif, direccion: tenant.direccion ?? '', telefono: tenant.telefono ?? '' });
     setSelectedTenantId(tenant.id);
     setShowEditModal(true);
   };
@@ -248,6 +250,7 @@ export function AdminPanelPage() {
           : <Badge variant="success">Activo</Badge>
       ),
     },
+    { key: 'telefono', header: 'Teléfono', render: (t) => t.telefono || '-' },
     {
       key: 'actions',
       header: 'Acciones',
@@ -584,6 +587,16 @@ export function AdminPanelPage() {
               value={createForm.tenant.rif}
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value.toUpperCase() } }))}
             />
+            <Input
+              placeholder="Teléfono (04121234567)"
+              value={createForm.tenant.telefono}
+              onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: e.target.value } }))}
+            />
+            <Input
+              placeholder="Dirección"
+              value={createForm.tenant.direccion}
+              onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, direccion: e.target.value } }))}
+            />
           </div>
 
           {/* Owner section */}
@@ -693,6 +706,16 @@ export function AdminPanelPage() {
             placeholder="RIF"
             value={editForm.rif}
             onChange={(e) => setEditForm((p) => ({ ...p, rif: e.target.value.toUpperCase() }))}
+          />
+          <Input
+            placeholder="Teléfono (04121234567)"
+            value={editForm.telefono}
+            onChange={(e) => setEditForm((p) => ({ ...p, telefono: e.target.value }))}
+          />
+          <Input
+            placeholder="Dirección"
+            value={editForm.direccion}
+            onChange={(e) => setEditForm((p) => ({ ...p, direccion: e.target.value }))}
           />
           {createError && <p className="text-danger text-sm">{createError}</p>}
           <div className="flex gap-2">

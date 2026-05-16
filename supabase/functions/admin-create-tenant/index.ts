@@ -12,7 +12,7 @@ interface UserInput {
 }
 
 interface RequestBody {
-  tenant?: { name: string; rif: string } | null;
+  tenant?: { name: string; rif: string; direccion?: string; telefono?: string } | null;
   owner?: UserInput | null;
   employees?: UserInput[];
   existingTenantId?: string;
@@ -168,8 +168,14 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
   // Create tenant
   const { data: tenantRaw, error: tenantError } = await supabaseAdmin
     .from('tenants')
-    .insert({ name: tenantInput.name, rif: tenantInput.rif, slug })
-    .select('id, name, slug, rif, created_at')
+    .insert({
+      name: tenantInput.name,
+      rif: tenantInput.rif,
+      slug,
+      direccion: tenantInput.direccion ?? null,
+      telefono: tenantInput.telefono ?? null,
+    })
+    .select('id, name, slug, rif, direccion, telefono, created_at')
     .single();
 
   if (tenantError) {

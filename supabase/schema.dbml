@@ -14,6 +14,8 @@ Table tenants {
   slug text [unique, not null]
   name text [not null]
   rif text [not null]
+  direccion text
+  telefono text
   created_at timestamptz [default: `now()`]
   deleted_at timestamptz
 }

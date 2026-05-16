@@ -20,11 +20,9 @@ import {
 import {
   ShoppingCart,
   Package,
-  Settings,
   Store,
   ArrowLeft,
   LayoutDashboard,
-  Wallet,
   FileText,
   Truck,
 } from 'lucide-react';
@@ -42,9 +40,7 @@ const ALL_MODULES: SidebarModule[] = [
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
   { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
   { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
-  { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
-  { id: 'settings', label: 'Ajustes', icon: <Settings size={20} /> },
 ];
 
 const EMPLOYEE_ALLOWED = new Set(['dashboard', 'pos', 'inventory']);
@@ -54,9 +50,7 @@ const MODULE_LABELS: Record<string, string> = {
   pos: 'POS',
   inventory: 'Inventario',
   purchases: 'Compras',
-  cash: 'Caja',
   reports: 'Reportes',
-  settings: 'Ajustes',
 };
 
 function LoadingScreen() {
