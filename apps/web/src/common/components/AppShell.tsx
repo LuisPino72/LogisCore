@@ -13,8 +13,9 @@ interface AppShellProps {
 
 export const AppShell = memo(function AppShell({ children, topBar, bottomNav, sidebar, sidebarOpen = true, sidebarExpanded = false, className }: AppShellProps) {
   const sidebarWidth = sidebar && sidebarOpen ? (sidebarExpanded ? '12rem' : '3.5rem') : '0px';
+  const sidebarWidthMd = sidebar && sidebarOpen ? (sidebarExpanded ? '12rem' : '3.5rem') : '0px';
   return (
-    <div className={cn('app-shell', className)} style={{ ['--sidebar-width' as unknown as string]: sidebarWidth } as React.CSSProperties}>
+    <div className={cn('app-shell', className)} style={{ '--sidebar-width': sidebarWidth, '--sidebar-width-md': sidebarWidthMd } as React.CSSProperties}>
       {sidebar}
         <div className={cn('app-shell-main', sidebar && 'app-shell-main--with-sidebar')} style={{ paddingLeft: `var(--sidebar-width)` }}>
         <header className="app-topbar">

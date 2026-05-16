@@ -35,7 +35,7 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
           fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200
           flex flex-col h-dvh
           transform transition-[width,transform] duration-300 ease-in-out
-          ${expanded ? 'w-48' : 'w-14 md:w-48'}
+          ${expanded ? 'w-48' : 'w-14'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
         aria-expanded={expanded}
@@ -95,7 +95,9 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
                 }`}
                 onClick={() => {
                   onNavigate(mod.id);
-                  onToggleExpanded?.(false);
+                  if (window.innerWidth < 768) {
+                    onToggleExpanded?.(false);
+                  }
                 }}
                 title={!expanded ? mod.label : undefined}
               >
