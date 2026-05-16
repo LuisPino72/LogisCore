@@ -8,6 +8,7 @@ import {
   Alert,
   AppShell,
   Badge,
+  BottomNav,
   Button,
   Card,
   DataTable,
@@ -508,37 +509,15 @@ export function AdminPanelPage() {
       </div>
 
       {/* Mobile Bottom Nav */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <div className="flex items-stretch h-16">
-          <button
-            onClick={() => setActiveSheet('tenants')}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-              activeSheet === 'tenants' ? 'text-primary' : 'text-gray-400'
-            }`}
-          >
-            <Building2 size={20} />
-            <span className="text-[10px] font-medium">Locales</span>
-          </button>
-          <button
-            onClick={() => setActiveSheet('all-users')}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-              activeSheet === 'all-users' ? 'text-primary' : 'text-gray-400'
-            }`}
-          >
-            <UsersRound size={20} />
-            <span className="text-[10px] font-medium">Usuarios</span>
-          </button>
-          <button
-            onClick={() => setActiveSheet('subscriptions')}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-              activeSheet === 'subscriptions' ? 'text-primary' : 'text-gray-400'
-            }`}
-          >
-            <CreditCard size={20} />
-            <span className="text-[10px] font-medium">Suscripciones</span>
-          </button>
-        </div>
-      </div>
+      <BottomNav
+        sidebarOffset={false}
+        activeId={activeSheet}
+        items={[
+          { id: 'tenants', label: 'Locales', icon: <Building2 size={20} />, onClick: () => setActiveSheet('tenants') },
+          { id: 'all-users', label: 'Usuarios', icon: <UsersRound size={20} />, onClick: () => setActiveSheet('all-users') },
+          { id: 'subscriptions', label: 'Suscripciones', icon: <CreditCard size={20} />, onClick: () => setActiveSheet('subscriptions') },
+        ]}
+      />
 
       <Modal
         isOpen={showCreateModal}

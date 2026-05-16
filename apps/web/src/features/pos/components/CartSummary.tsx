@@ -70,7 +70,7 @@ export function CartSummary({
         <span>Bs {fmt(totalBs)} / $ {fmt(totalUsd)}</span>
       </div>
 
-      <div className="flex gap-1 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap">
         {PAYMENT_METHODS.map((m) => {
           const meta = METADATA_PAGOS[m];
           return (
@@ -78,9 +78,9 @@ export function CartSummary({
               key={m}
               type="button"
               onClick={() => onPaymentMethodChange(m)}
-              className="cursor-pointer"
+              className="cursor-pointer min-h-[44px] flex items-center px-1"
             >
-              <Badge variant={paymentMethod === m ? 'info' : 'neutral'}>
+              <Badge variant={paymentMethod === m ? 'info' : 'neutral'} className="text-xs px-2 py-1">
                 {meta.label}
               </Badge>
             </button>
@@ -91,16 +91,16 @@ export function CartSummary({
       <div className="flex gap-2">
         <Button
           variant="secondary"
-          className="flex-1"
+          className="flex-1 min-h-[44px]"
           disabled={items.length === 0}
           onClick={onPark}
         >
-          <Pause size={14} />
+          <Pause size={16} />
           Pausar
         </Button>
         <Button
           variant="primary"
-          className="flex-2"
+          className="flex-[2] min-h-[44px]"
           disabled={!isOpen || items.length === 0 || !paymentMethod}
           loading={loading}
           onClick={onPay}

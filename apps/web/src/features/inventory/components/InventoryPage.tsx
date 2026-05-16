@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, Select } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, Select, BottomNav } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { inventoryService } from '../services/inventoryService';
@@ -228,37 +228,14 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       </div>
 
       {/* Mobile Bottom Nav */}
-      <div className="sm:hidden fixed bottom-0 left-14 right-0 bg-white border-t border-gray-200 z-30">
-        <div className="flex items-stretch h-14">
-          <button
-            onClick={() => setActiveTab('productos')}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-              activeTab === 'productos' ? 'text-primary' : 'text-gray-400'
-            }`}
-          >
-            <Package size={20} />
-            <span className="text-[10px] font-medium">Productos</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('categorias')}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-              activeTab === 'categorias' ? 'text-primary' : 'text-gray-400'
-            }`}
-          >
-            <ListTree size={20} />
-            <span className="text-[10px] font-medium">Categorías</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('historial')}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-              activeTab === 'historial' ? 'text-primary' : 'text-gray-400'
-            }`}
-          >
-            <History size={20} />
-            <span className="text-[10px] font-medium">Historial</span>
-          </button>
-        </div>
-      </div>
+      <BottomNav
+        activeId={activeTab}
+        items={[
+          { id: 'productos', label: 'Productos', icon: <Package size={20} />, onClick: () => setActiveTab('productos') },
+          { id: 'categorias', label: 'Categorías', icon: <ListTree size={20} />, onClick: () => setActiveTab('categorias') },
+          { id: 'historial', label: 'Historial', icon: <History size={20} />, onClick: () => setActiveTab('historial') },
+        ]}
+      />
 
       {showProductForm && (
         <ProductForm

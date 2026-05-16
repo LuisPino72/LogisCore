@@ -7,7 +7,7 @@ interface CashStatusBadgeProps {
 }
 
 export function CashStatusBadge({ isOpen, onClick, role }: CashStatusBadgeProps) {
-  if (role !== 'owner') return null;
+  if (role !== 'owner' && role !== 'admin') return null;
 
   return (
     <button

@@ -1,8 +1,11 @@
-import { SearchInput, EmptyState, Skeleton, Badge } from '../../../common/components';
-import { Package } from 'lucide-react';
+import { useState } from 'react';
+import { SearchInput, EmptyState, Skeleton, Badge, Modal } from '../../../common/components';
+import { Package, ListTree } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import type { Product } from '../../../specs/inventory';
 import type { Category } from '../../../specs/inventory';
+
+const VISIBLE_CATEGORIES = 6;
 
 interface ProductGridProps {
   products: Product[];
@@ -31,6 +34,8 @@ export function ProductGrid({
   favoriteIds,
   exchangeRateBs,
 }: ProductGridProps) {
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
   let filtered = searchQuery
     ? products.filter(
         (p) =>
@@ -43,6 +48,9 @@ export function ProductGrid({
     filtered = filtered.filter((p) => p.categoryId === selectedCategory);
   }
 
+  const visibleCategories = categories.slice(0, VISIBLE_CATEGORIES);
+  const hasMoreCategories = categories.length > VISIBLE_CATEGORIES;
+
   return (
     <div className="flex flex-col gap-3 p-3 h-full">
       <SearchInput
@@ -53,16 +61,55 @@ export function ProductGrid({
       />
 
       {categories.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          <button type="button" onClick={() => onCategoryChange(null)}>
-            <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
-          </button>
-          {categories.map((cat) => (
-            <button key={cat.id} type="button" onClick={() => onCategoryChange(cat.id)}>
-              <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
+        <>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <button type="button" onClick={() => onCategoryChange(null)} className="shrink-0">
+              <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
             </button>
-          ))}
-        </div>
+            {visibleCategories.map((cat) => (
+              <button key={cat.id} type="button" onClick={() => onCategoryChange(cat.id)} className="shrink-0">
+                <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
+              </button>
+            ))}
+            {hasMoreCategories && (
+              <button
+                type="button"
+                onClick={() => setShowAllCategories(true)}
+                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 transition-colors"
+              >
+                <ListTree size={12} />
+                +{categories.length - VISIBLE_CATEGORIES}
+              </button>
+            )}
+          </div>
+
+          <Modal
+            isOpen={showAllCategories}
+            onClose={() => setShowAllCategories(false)}
+            title="Todas las categorías"
+            size="sm"
+          >
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => { onCategoryChange(null); setShowAllCategories(false); }}
+                className="shrink-0"
+              >
+                <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => { onCategoryChange(cat.id); setShowAllCategories(false); }}
+                  className="shrink-0"
+                >
+                  <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
+                </button>
+              ))}
+            </div>
+          </Modal>
+        </>
       )}
 
       {loading ? (
@@ -78,7 +125,7 @@ export function ProductGrid({
           description={searchQuery || selectedCategory ? 'No se encontraron resultados.' : 'Agrega productos desde el módulo de Inventario.'}
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto flex-1 pb-20 md:pb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto flex-1 pb-16 md:pb-4">
           {filtered.map((product) => (
             <ProductCard
               key={product.id}

@@ -2,6 +2,7 @@ export { Alert } from './Alert';
 export { AppShell } from './AppShell';
 export { Badge } from './Badge';
 export { BottomNav } from './BottomNav';
+export type { BottomNavItem } from './BottomNav';
 export { Button } from './Button';
 export { Card } from './Card';
 export { Checkbox } from './Checkbox';

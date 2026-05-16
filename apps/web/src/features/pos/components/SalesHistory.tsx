@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Button, Badge, Modal, DataTable } from '../../../common/components';
-import { Eye, Ban, ShoppingCart, Calendar, ChevronDown } from 'lucide-react';
+import { Button, Badge, Modal, DataTable, Dropdown } from '../../../common/components';
+import type { DropdownItem } from '../../../common/components';
+import { Eye, Ban, ShoppingCart, Calendar, ChevronDown, MoreVertical } from 'lucide-react';
 import type { Column } from '../../../common/components';
 import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
@@ -78,12 +79,27 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading }: Sa
       key: 'actions',
       header: '',
       className: 'text-right',
-      render: (sale) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="sm" icon={<Eye size={14} />} onClick={() => handleView(sale)} />
-          <Button variant="ghost" size="sm" icon={<Ban size={14} className="text-danger" />} onClick={() => onVoid(sale.id)} />
-        </div>
-      ),
+      render: (sale) => {
+        const actions: DropdownItem[] = [
+          { label: 'Ver detalle', icon: <Eye size={16} />, onClick: () => handleView(sale) },
+          { label: 'Anular venta', icon: <Ban size={16} className="text-danger" />, onClick: () => onVoid(sale.id), variant: 'danger' as const },
+        ];
+        return (
+          <>
+            <div className="hidden sm:flex items-center justify-end gap-1">
+              <Button variant="ghost" size="sm" icon={<Eye size={16} />} onClick={() => handleView(sale)} />
+              <Button variant="ghost" size="sm" icon={<Ban size={16} className="text-danger" />} onClick={() => onVoid(sale.id)} />
+            </div>
+            <div className="sm:hidden flex justify-end">
+              <Dropdown
+                align="right"
+                trigger={<MoreVertical size={20} className="text-gray-500" />}
+                items={actions}
+              />
+            </div>
+          </>
+        );
+      },
     },
   ];
 

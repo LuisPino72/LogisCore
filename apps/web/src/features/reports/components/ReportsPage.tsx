@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy } from 'react';
-import { Card, Button, Select, Spinner } from '@/common/components';
+import { Card, Button, Select, Spinner, BottomNav } from '@/common/components';
 import { Calendar, BarChart3, PieChart, ShoppingBag, Wallet, FileText } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
@@ -173,22 +173,16 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       </div>
 
       {/* Mobile Bottom Nav for Tabs */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
-        <div className="flex items-center justify-around overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-medium min-w-[60px] ${
-                activeTab === tab.id ? 'text-primary' : 'text-gray-500'
-              }`}
-            >
-              {tab.icon}
-              <span className="truncate max-w-[60px]">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <BottomNav
+        sidebarOffset={false}
+        activeId={activeTab}
+        items={TABS.map((tab) => ({
+          id: tab.id,
+          label: tab.label,
+          icon: tab.icon,
+          onClick: () => setActiveTab(tab.id),
+        }))}
+      />
     </div>
   );
 }

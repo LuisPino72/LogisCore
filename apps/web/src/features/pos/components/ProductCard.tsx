@@ -29,7 +29,7 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
     <Card
       interactive
       onClick={() => onAdd(product)}
-      className="flex flex-col gap-0 overflow-hidden p-0"
+      className="flex flex-col gap-0 overflow-hidden p-0 active:scale-[0.97] transition-transform"
     >
       <div className="relative aspect-square bg-surface-alt flex items-center justify-center overflow-hidden">
         {product.imageUrl ? (
@@ -49,10 +49,11 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
             e.stopPropagation();
             onToggleFavorite(product.id);
           }}
-          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-white/80 hover:bg-white transition-colors z-10 shadow-sm"
+          className="absolute top-1 right-1 w-[36px] h-[36px] flex items-center justify-center rounded-full bg-white/80 hover:bg-white active:bg-white transition-colors z-10 shadow-sm"
+          aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
         >
           <Star
-            size={14}
+            size={16}
             className={isFavorite ? 'text-warning fill-warning' : 'text-gray-400'}
           />
         </button>

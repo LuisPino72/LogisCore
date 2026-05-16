@@ -95,7 +95,7 @@ export function CartPanel({
         <Button
           variant={cart.length > 0 ? 'primary' : 'secondary'}
           size="lg"
-          className="fixed bottom-20 right-4 z-40 shadow-lg rounded-full px-4"
+          className="fixed bottom-4 right-4 z-40 shadow-lg rounded-full px-4"
           onClick={onMobileToggle}
         >
           <ShoppingCart size={20} />
@@ -109,8 +109,11 @@ export function CartPanel({
           onClose={onMobileToggle}
           title={`Carrito (${itemCount})`}
           size="full"
+          className="pb-safe"
         >
-          {renderContent()}
+          <div className="pb-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+            {renderContent()}
+          </div>
         </Modal>
       </div>
     </>

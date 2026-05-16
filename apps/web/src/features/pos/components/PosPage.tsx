@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Alert, Badge, Button } from '../../../common/components';
+import { Alert, Badge, Button, BottomNav } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { AlertTriangle, Scan } from 'lucide-react';
+import { AlertTriangle, Scan, Package, History as HistoryIcon } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { useCashRegister } from '../hooks/useCashRegister';
 import { ProductGrid } from './ProductGrid';
@@ -175,11 +175,11 @@ export function PosPage({ tenantId }: PosPageProps) {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="flex flex-row h-full w-full">
+    <div className="flex flex-row h-full w-full pl-14 md:pl-0">
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
           <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} />
-          <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1" title="Escanear código de barras">
+          <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-[44px] min-h-[44px]" title="Escanear código de barras">
             <Scan size={18} />
           </Button>
           <div className="flex-1" />
@@ -187,14 +187,14 @@ export function PosPage({ tenantId }: PosPageProps) {
             <button
               type="button"
               onClick={() => setActiveTab('sell')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'sell' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`min-h-[44px] px-3 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'sell' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Vender
             </button>
             <button
               type="button"
               onClick={() => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); }}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${activeTab === 'history' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`min-h-[44px] px-3 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'history' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Historial
             </button>
@@ -211,10 +211,10 @@ export function PosPage({ tenantId }: PosPageProps) {
           <div className="px-3 pt-1">
             <div className="flex items-center gap-2 p-2 rounded-lg bg-warning/10 border border-warning/20">
               <AlertTriangle size={16} className="text-warning shrink-0" />
-              <span className="text-xs text-warning font-medium">
-                Stock bajo: {lowStockAlert.map((p) => p.name).join(', ')}
+              <span className="text-xs text-warning font-medium truncate">
+                Stock bajo: {lowStockAlert.slice(0, 3).map((p) => p.name).join(', ')}{lowStockAlert.length > 3 ? ` +${lowStockAlert.length - 3}` : ''}
               </span>
-              <Badge variant="warning" className="ml-auto text-[10px]">{lowStockAlert.length}</Badge>
+              <Badge variant="warning" className="ml-auto text-[10px] shrink-0">{lowStockAlert.length}</Badge>
             </div>
           </div>
         )}
@@ -277,6 +277,16 @@ export function PosPage({ tenantId }: PosPageProps) {
         isMobileOpen={mobileCartOpen}
         itemCount={cartItemCount}
         onMobileToggle={() => setMobileCartOpen((v) => !v)}
+      />
+
+      {/* Mobile Bottom Nav */}
+      <BottomNav
+        sidebarOffset
+        activeId={activeTab}
+        items={[
+          { id: 'sell', label: 'Vender', icon: <Package size={20} />, onClick: () => setActiveTab('sell') },
+          { id: 'history', label: 'Historial', icon: <HistoryIcon size={20} />, onClick: () => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); } },
+        ]}
       />
 
       <PaymentModal

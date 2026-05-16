@@ -1,45 +1,52 @@
-import { memo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
-interface NavItem {
-  key: string;
+export interface BottomNavItem {
+  id: string;
   label: string;
   icon: ReactNode;
-  onClick: () => void;
   badge?: number;
+  onClick: () => void;
 }
 
 interface BottomNavProps {
-  items: NavItem[];
-  activeKey: string;
+  items: BottomNavItem[];
+  activeId: string;
   className?: string;
+  sidebarOffset?: boolean;
 }
 
-export const BottomNav = memo(function BottomNav({ items, activeKey, className }: BottomNavProps) {
+export function BottomNav({ items, activeId, className, sidebarOffset = true }: BottomNavProps) {
   return (
-    <nav className={cn('bottom-nav', className)}>
-      <div className="bottom-nav-inner">
+    <nav
+      className={cn(
+        'sm:hidden fixed bottom-0 bg-white border-t border-gray-200 z-30',
+        sidebarOffset ? 'left-14 right-0' : 'left-0 right-0',
+        className,
+      )}
+    >
+      <div className="flex items-stretch h-14">
         {items.map((item) => (
           <button
-            key={item.key}
-            className={cn(
-              'bottom-nav-item',
-              activeKey === item.key && 'bottom-nav-active',
-            )}
+            key={item.id}
             onClick={item.onClick}
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative',
+              activeId === item.id ? 'text-primary' : 'text-gray-400',
+            )}
           >
-            <div className="relative">
-              <div className="bottom-nav-icon">{item.icon}</div>
+            <span className="relative">
+              {item.icon}
               {item.badge !== undefined && item.badge > 0 && (
-                <span className="bottom-nav-badge">
-                  {item.badge > 99 ? '99+' : item.badge}
+                <span className="absolute -top-1.5 -right-2 bg-danger text-white text-[9px] font-bold px-1 py-0.5 rounded-full min-w-[14px] text-center leading-none">
+                  {item.badge}
                 </span>
               )}
-            </div>
-            <span className="bottom-nav-label">{item.label}</span>
+            </span>
+            <span className="text-[10px] font-medium truncate max-w-[64px]">{item.label}</span>
           </button>
         ))}
       </div>
     </nav>
   );
-});
+}

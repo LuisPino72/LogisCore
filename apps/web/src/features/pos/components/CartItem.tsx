@@ -10,9 +10,15 @@ interface CartItemRowProps {
 
 export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
   const step = item.isWeighted ? 0.01 : 1;
+  const decimals = item.isWeighted ? 2 : 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
+    const raw = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = raw.split('.');
+    const sanitized = decimals > 0
+      ? (parts[0] || '0') + (parts.length > 1 ? '.' + parts[1].slice(0, decimals) : '')
+      : parts[0] || '0';
+    const val = parseFloat(sanitized);
     if (!isNaN(val) && val > 0) {
       onUpdateQuantity(item.productId, val);
     }
@@ -28,7 +34,7 @@ export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowPro
       </div>
       <div className="shrink-0 w-20">
         <Input
-          type="number"
+          type="text"
           inputMode="decimal"
           step={step}
           value={item.quantity}
@@ -42,8 +48,9 @@ export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowPro
       <Button
         variant="ghost"
         size="sm"
-        icon={<Trash2 size={14} />}
+        icon={<Trash2 size={16} />}
         onClick={() => onRemove(item.productId)}
+        className="min-w-[44px] min-h-[44px]"
       />
     </div>
   );
