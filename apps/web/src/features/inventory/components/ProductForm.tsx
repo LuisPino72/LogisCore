@@ -105,7 +105,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             ) : (
               <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors shrink-0">
                 <ImagePlus size={20} className="text-gray-400" />
-                <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={handleImageChange} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
               </label>
             )}
             <p className="text-[10px] text-gray-400">JPG, PNG o WebP. Se comprime automáticamente.</p>
