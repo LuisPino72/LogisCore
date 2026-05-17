@@ -13,6 +13,7 @@ import {
   Button,
   Card,
   DataTable,
+  Dropdown,
   Input,
   Modal,
   SearchInput,
@@ -21,7 +22,7 @@ import {
   LogoutButton,
 } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, RotateCcw, KeyRound, BarChart3, Tags } from 'lucide-react';
+import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, RotateCcw, KeyRound, BarChart3, Tags, MoreVertical } from 'lucide-react';
 import { AnalyticsModal } from './AnalyticsModal';
 
 interface EmployeeForm {
@@ -339,7 +340,7 @@ export function AdminPanelPage() {
       key: 'actions',
       header: 'Acciones',
       render: (t) => (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-row flex-wrap gap-1 items-center">
           <Button variant="ghost" size="sm" onClick={() => handleNavigateTenant(t.slug)} title="Ver local">
             <Eye size={16} />
           </Button>
@@ -347,21 +348,23 @@ export function AdminPanelPage() {
             <span className="hidden sm:inline">Editar</span>
             <span className="sm:hidden">✎</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleSelectTenant(t)} title="Ver usuarios">
-            <UsersIcon size={16} />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleAnalytics(t)} title="Analíticas">
-            <BarChart3 size={16} />
-          </Button>
-          {t.deletedAt ? (
-            <Button variant="ghost" size="sm" onClick={() => restoreTenant(t.id)} title="Reactivar">
-              <RotateCcw size={16} className="text-green-600" />
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(t)} title="Eliminar">
-              <Trash2 size={16} className="text-gray-400 hover:text-danger" />
-            </Button>
-          )}
+          <Dropdown
+            align="left"
+            trigger={<MoreVertical size={18} className="text-gray-500" />}
+            items={[
+              { label: 'Ver usuarios', icon: <UsersIcon size={16} />, onClick: () => handleSelectTenant(t) },
+              { label: 'Analíticas', icon: <BarChart3 size={16} />, onClick: () => handleAnalytics(t) },
+              ...(t.deletedAt
+                ? [
+                    { label: 'Reactivar', icon: <RotateCcw size={16} className="text-green-600" />, onClick: () => restoreTenant(t.id) },
+                    { label: 'Eliminar permanentemente', icon: <Trash2 size={16} />, onClick: () => setDeleteTarget(t), variant: 'danger' as const },
+                  ]
+                : [
+                    { label: 'Desactivar', icon: <Trash2 size={16} />, onClick: () => setDeleteTarget(t), variant: 'danger' as const },
+                  ]
+              ),
+            ]}
+          />
         </div>
       ),
     },
