@@ -14,6 +14,16 @@ export function corsHeaders(reqOrigin: string): Record<string, string> {
   };
 }
 
+function decodeJWTPayload(token: string): Record<string, unknown> {
+  try {
+    const payload = token.split('.')[1];
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(json);
+  } catch {
+    return {};
+  }
+}
+
 export async function verifyAdmin(request: Request): Promise<
   { ok: true; userId: string; email: string; response: null }
   | { ok: false; userId: null; email: null; response: Response }
@@ -49,7 +59,17 @@ export async function verifyAdmin(request: Request): Promise<
     };
   }
 
-  const role = user.app_metadata?.role as string | undefined;
+  // El role se inyecta en el JWT via custom_access_token_hook, no en raw_app_meta_data
+  // Decodificamos el JWT localmente para obtener app_metadata.role
+  let role: string | undefined;
+  try {
+    const payload = decodeJWTPayload(authHeader);
+    const jwtAppMeta = payload.app_metadata as Record<string, unknown> | undefined;
+    role = jwtAppMeta?.role as string | undefined;
+  } catch {
+    role = user.app_metadata?.role as string | undefined;
+  }
+
   if (role !== 'admin') {
     return {
       ok: false, userId: null, email: null,

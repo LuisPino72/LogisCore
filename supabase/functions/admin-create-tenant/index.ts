@@ -73,7 +73,8 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
     );
   }
 
-  if (!/^[VJEGP]\d{9}$/.test(tenantInput.rif)) {
+  const rif = tenantInput.rif.replace(/-/g, '');
+  if (!/^[VJEGP]\d{9}$/.test(rif)) {
     return new Response(
       JSON.stringify({ code: 'INVALID_RIF', message: 'Formato RIF inválido. Debe ser letra (V,J,E,G,P) + 9 dígitos (ej: J-123456789)' }),
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
@@ -125,7 +126,7 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
     .from('tenants')
     .insert({
       name: tenantInput.name,
-      rif: tenantInput.rif,
+      rif,
       slug,
       direccion: tenantInput.direccion ?? null,
       telefono: tenantInput.telefono ?? null,
