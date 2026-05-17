@@ -1,13 +1,7 @@
-// Edge Function: fetch-bcv-rate (SPEC-ID: DASH-001)
-// Consulta API de tasa BCV, inserta en exchange_rates y retorna la tasa.
-// Si se envía tenant_id -> inserta solo para ese tenant.
-// Si NO se envía tenant_id -> inserta para TODOS los tenants (modo cron).
-// Ejecutada con service_role para insertar en la tabla.
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { corsHeaders } from '../_shared/rbac-middleware.ts';
 
-// Rate limit: max 1 request por tenant cada 60 segundos (evita abuso)
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -17,14 +11,6 @@ function checkRateLimit(key: string): boolean {
   if (now - lastCall < RATE_LIMIT_WINDOW_MS) return false;
   rateLimitMap.set(key, now);
   return true;
-}
-
-function corsHeaders(): Record<string, string> {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
 }
 
 interface BcvApiRate {
@@ -37,16 +23,12 @@ interface BcvApiRate {
   fechaActualizacion: string;
 }
 
-interface BcvApiResponse {
-  fecha?: string;
-  promedio?: number;
-  promedio_real?: number;
-  codigo?: string;
-}
-
 serve(async (req: Request) => {
+  const origin = req.headers.get('origin') ?? '';
+  const headers = corsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders() });
+    return new Response('ok', { headers });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -55,7 +37,7 @@ serve(async (req: Request) => {
   if (!supabaseUrl || !supabaseServiceKey) {
     return new Response(
       JSON.stringify({ code: 'CONFIG_ERROR', message: 'Server misconfiguration' }),
-      { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 
@@ -63,12 +45,11 @@ serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const tenant_id = body?.tenant_id as string | undefined;
 
-    // Rate limiting por tenant
     const rateKey = tenant_id ?? 'global';
     if (!checkRateLimit(rateKey)) {
       return new Response(
         JSON.stringify({ code: 'RATE_LIMITED', message: 'Demasiadas solicitudes. Espera 60 segundos.' }),
-        { status: 429, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+        { status: 429, headers: { ...headers, 'Content-Type': 'application/json' } },
       );
     }
 
@@ -76,7 +57,6 @@ serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    // Fetch BCV rate from dolarapi.com con timeout de 10s
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
 
@@ -93,7 +73,7 @@ serve(async (req: Request) => {
         : 'Error de conexión al consultar API del BCV';
       return new Response(
         JSON.stringify({ code: 'BCV_API_ERROR', message }),
-        { status: 502, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+        { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } },
       );
     }
     clearTimeout(timeout);
@@ -101,7 +81,7 @@ serve(async (req: Request) => {
     if (!bcvRes.ok) {
       return new Response(
         JSON.stringify({ code: 'BCV_API_ERROR', message: 'Error al consultar API del BCV' }),
-        { status: 502, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+        { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } },
       );
     }
 
@@ -111,7 +91,7 @@ serve(async (req: Request) => {
     if (!oficialRate || !oficialRate.promedio || oficialRate.promedio <= 0) {
       return new Response(
         JSON.stringify({ code: 'BCV_INVALID_RATE', message: 'Tasa BCV inválida desde API' }),
-        { status: 502, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+        { status: 502, headers: { ...headers, 'Content-Type': 'application/json' } },
       );
     }
 
@@ -119,7 +99,6 @@ serve(async (req: Request) => {
     const fetchedAt = oficialRate.fechaActualizacion ?? new Date().toISOString();
 
     if (tenant_id) {
-      // Upsert: reemplaza la tasa existente para este tenant
       const { data, error } = await supabaseAdmin
         .from('exchange_rates')
         .upsert(
@@ -132,17 +111,16 @@ serve(async (req: Request) => {
       if (error) {
         return new Response(
           JSON.stringify({ code: 'DB_UPSERT_ERROR', message: error.message }),
-          { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+          { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
         );
       }
 
       return new Response(
         JSON.stringify(data),
-        { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+        { status: 200, headers: { ...headers, 'Content-Type': 'application/json' } },
       );
     }
 
-    // Upsert for ALL tenants (modo cron)
     const { data: tenants, error: tenantError } = await supabaseAdmin
       .from('tenants')
       .select('id')
@@ -151,7 +129,7 @@ serve(async (req: Request) => {
     if (tenantError) {
       return new Response(
         JSON.stringify({ code: 'TENANTS_QUERY_ERROR', message: tenantError.message }),
-        { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
       );
     }
 
@@ -171,12 +149,12 @@ serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({ rate, tenants: results.length, fetched_at: fetchedAt }),
-      { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+      { status: 200, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
     return new Response(
       JSON.stringify({ code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Error desconocido' }),
-      { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } },
+      { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 });

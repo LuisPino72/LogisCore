@@ -17,6 +17,8 @@ interface AuthState {
   isLoggingIn: boolean;
   loginError: string | null;
   fieldErrors: FieldErrors;
+  loginAttempts: number;
+  loginCooldownUntil: number;
 
   setLoading: () => void;
   setSession: (session: UserSession) => void;
@@ -26,13 +28,15 @@ interface AuthState {
   clearLoginError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   status: 'idle',
   session: null,
   error: null,
   isLoggingIn: false,
   loginError: null,
   fieldErrors: {},
+  loginAttempts: 0,
+  loginCooldownUntil: 0,
 
   setLoading: () => set({ status: 'loading', error: null }),
   setSession: (session) => set({ status: 'authenticated', session, error: null }),
@@ -41,12 +45,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   reset: () => set({ status: 'idle', session: null, error: null }),
 
   login: async (email, password) => {
+    const state = get();
+    if (Date.now() < state.loginCooldownUntil) {
+      const waitSeconds = Math.ceil((state.loginCooldownUntil - Date.now()) / 1000);
+      set({ loginError: `Demasiados intentos. Espera ${waitSeconds} segundos.` });
+      return;
+    }
+
     const parsed = LoginInputSchema.safeParse({ email, password });
     if (!parsed.success) {
       const fieldErrors: FieldErrors = {};
       for (const issue of parsed.error.issues) {
         if (issue.path[0] === 'email') fieldErrors.email = 'Email inválido';
-        if (issue.path[0] === 'password') fieldErrors.password = 'Debe tener al menos 6 caracteres';
+        if (issue.path[0] === 'password') fieldErrors.password = issue.message;
       }
       set({ fieldErrors, loginError: null });
       return;
@@ -62,14 +73,20 @@ export const useAuthStore = create<AuthState>((set) => ({
         session: result.data,
         isLoggingIn: false,
         loginError: null,
+        loginAttempts: 0,
+        loginCooldownUntil: 0,
       });
       if (result.data.tenantId) {
         authService.startSync();
       }
     } else {
+      const attempts = get().loginAttempts + 1;
+      const delay = Math.min(attempts * 2000, 30000);
       set({
         isLoggingIn: false,
         loginError: result.error.message,
+        loginAttempts: attempts,
+        loginCooldownUntil: Date.now() + delay,
       });
     }
   },

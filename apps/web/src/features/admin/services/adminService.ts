@@ -4,7 +4,13 @@ import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTe
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
-const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-tenant`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+const EDGE_FUNCTIONS = {
+  createTenant: `${SUPABASE_URL}/functions/v1/admin-create-tenant`,
+  listUsers: `${SUPABASE_URL}/functions/v1/admin-list-users`,
+  resetPassword: `${SUPABASE_URL}/functions/v1/admin-reset-password`,
+} as const;
 
 async function getAdminToken(): Promise<Result<string, AppError>> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -120,7 +126,7 @@ export const adminService = {
     if (tokenResult.ok) {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-users`,
+          EDGE_FUNCTIONS.listUsers,
           { headers: { 'Authorization': `Bearer ${tokenResult.data}` } },
         );
         if (response.ok) {
@@ -168,7 +174,7 @@ export const adminService = {
     if (!tokenResult.ok) return tokenResult;
 
     try {
-      const response = await fetch(EDGE_FUNCTION_URL, {
+      const response = await fetch(EDGE_FUNCTIONS.createTenant, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -210,7 +216,7 @@ export const adminService = {
     if (!tokenResult.ok) return tokenResult;
 
     try {
-      const response = await fetch(EDGE_FUNCTION_URL, {
+      const response = await fetch(EDGE_FUNCTIONS.createTenant, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -364,7 +370,7 @@ export const adminService = {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-reset-password`,
+        EDGE_FUNCTIONS.resetPassword,
         {
           method: 'POST',
           headers: {

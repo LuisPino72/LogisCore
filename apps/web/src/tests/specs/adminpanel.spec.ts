@@ -250,15 +250,15 @@ describe('ADMIN-001: AdminPanel', () => {
     it('Given: admin / When: resetPassword(userId, newPassword) / Then: contrasena actualizada', async () => {
       mockAdminService.resetPassword.mockResolvedValue({ ok: true, data: undefined });
 
-      const result = await mockAdminService.resetPassword('uuid-user', 'newPass123');
+      const result = await mockAdminService.resetPassword('uuid-user', 'NewP@ss123');
       expect(result.ok).toBe(true);
 
-      const parsed = ResetPasswordSchema.safeParse({ userId: '550e8400-e29b-41d4-a716-446655440000', newPassword: 'newPass123' });
+      const parsed = ResetPasswordSchema.safeParse({ userId: '550e8400-e29b-41d4-a716-446655440000', newPassword: 'NewP@ss123' });
       expect(parsed.success).toBe(true);
     });
 
-    it('DEBE rechazar contrasena menor a 6 caracteres', () => {
-      const parsed = ResetPasswordSchema.safeParse({ userId: '550e8400-e29b-41d4-a716-446655440000', newPassword: '12345' });
+    it('DEBE rechazar contrasena menor a 8 caracteres', () => {
+      const parsed = ResetPasswordSchema.safeParse({ userId: '550e8400-e29b-41d4-a716-446655440000', newPassword: 'Ab@123' });
       expect(parsed.success).toBe(false);
     });
 

@@ -12,36 +12,40 @@ describe('AUTH-001: Login', () => {
   });
 
   describe('DEBE permitir login con credenciales validas', () => {
-    it('Given: Usuario con email "owner@bodega.com" y password "123456"', () => {
-      const input = { email: 'owner@bodega.com', password: '123456' };
+    it('Given: Usuario con email "owner@bodega.com" y password "Valid@123"', () => {
+      const input = { email: 'owner@bodega.com', password: 'Valid@123' };
       
-      // When: Llama a authService.login
       const validateResult = validateLoginInput(input);
       
-      // Then: Validacion exitosa (Zod parse no lanza)
       expect(validateResult.email).toBe('owner@bodega.com');
-      expect(validateResult.password).toBe('123456');
+      expect(validateResult.password).toBe('Valid@123');
     });
   });
 
   describe('DEBE rechazar email invalido', () => {
     it('Given: Email "no-es-email"', () => {
-      const input = { email: 'no-es-email', password: '123456' };
+      const input = { email: 'no-es-email', password: 'Valid@123' };
       
-      // When: Valida con LoginInputSchema
-      // Then: ZodError (email invalido)
       expect(() => {
         validateLoginInput(input);
       }).toThrow();
     });
   });
 
-  describe('DEBE rechazar password menor a 6 caracteres', () => {
-    it('Given: Password "123"', () => {
-      const input = { email: 'test@test.com', password: '123' };
+  describe('DEBE rechazar password menor a 8 caracteres', () => {
+    it('Given: Password "Abc@12"', () => {
+      const input = { email: 'test@test.com', password: 'Abc@12' };
       
-      // When: Valida con LoginInputSchema
-      // Then: ZodError (password muy corta)
+      expect(() => {
+        validateLoginInput(input);
+      }).toThrow();
+    });
+  });
+
+  describe('DEBE rechazar password sin mayuscula', () => {
+    it('Given: Password "valid@123"', () => {
+      const input = { email: 'test@test.com', password: 'valid@123' };
+      
       expect(() => {
         validateLoginInput(input);
       }).toThrow();
@@ -50,17 +54,7 @@ describe('AUTH-001: Login', () => {
 
   describe('DEBE rechazar email mayor a 30 caracteres', () => {
     it('Given: Email de 31 caracteres', () => {
-      const input = { email: 'a'.repeat(31) + '@test.com', password: '123456' };
-      
-      expect(() => {
-        validateLoginInput(input);
-      }).toThrow();
-    });
-  });
-
-  describe('DEBE rechazar password mayor a 20 caracteres', () => {
-    it('Given: Password de 21 caracteres', () => {
-      const input = { email: 'test@test.com', password: 'a'.repeat(21) };
+      const input = { email: 'a'.repeat(31) + '@test.com', password: 'Valid@123' };
       
       expect(() => {
         validateLoginInput(input);

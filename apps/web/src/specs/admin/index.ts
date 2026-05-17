@@ -11,7 +11,13 @@ export type CreateTenant = z.infer<typeof CreateTenantSchema>;
 
 export const CreateUserSchema = z.object({
   email: z.string().email('Email inválido').max(30),
-  password: z.string().min(6, 'Debe tener al menos 6 caracteres').max(20),
+  password: z.string()
+    .min(8, 'Mínimo 8 caracteres')
+    .max(100)
+    .regex(/[A-Z]/, 'Debe contener una mayúscula')
+    .regex(/[a-z]/, 'Debe contener una minúscula')
+    .regex(/[0-9]/, 'Debe contener un número')
+    .regex(/[^A-Za-z0-9]/, 'Debe contener un símbolo'),
   name: z.string().min(1, 'Nombre requerido').max(100),
 });
 
@@ -51,7 +57,13 @@ export type RestoreTenant = z.infer<typeof RestoreTenantSchema>;
 // ADMIN-007: Reset password
 export const ResetPasswordSchema = z.object({
   userId: z.string().uuid(),
-  newPassword: z.string().min(6, 'Mínimo 6 caracteres').max(100),
+  newPassword: z.string()
+    .min(8, 'Mínimo 8 caracteres')
+    .max(100)
+    .regex(/[A-Z]/, 'Debe contener una mayúscula')
+    .regex(/[a-z]/, 'Debe contener una minúscula')
+    .regex(/[0-9]/, 'Debe contener un número')
+    .regex(/[^A-Za-z0-9]/, 'Debe contener un símbolo'),
 });
 
 export type ResetPassword = z.infer<typeof ResetPasswordSchema>;

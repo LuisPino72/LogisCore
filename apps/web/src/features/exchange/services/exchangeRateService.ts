@@ -4,7 +4,8 @@ import { logger } from '../../../lib/logger';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { ExchangeRateResponse } from '../types';
 
-const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-bcv-rate`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/fetch-bcv-rate`;
 
 async function getAuthToken(): Promise<Result<string, AppError>> {
   const { data: { session } } = await supabase.auth.getSession();

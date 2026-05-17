@@ -4,7 +4,13 @@ import { z } from 'zod';
 
 export const LoginInputSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
+  password: z.string()
+    .min(8, 'Mínimo 8 caracteres')
+    .max(100)
+    .regex(/[A-Z]/, 'Debe contener una mayúscula')
+    .regex(/[a-z]/, 'Debe contener una minúscula')
+    .regex(/[0-9]/, 'Debe contener un número')
+    .regex(/[^A-Za-z0-9]/, 'Debe contener un símbolo'),
 });
 
 export type LoginInput = z.infer<typeof LoginInputSchema>;

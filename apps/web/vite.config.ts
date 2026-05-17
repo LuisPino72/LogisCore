@@ -15,6 +15,6 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    host: true,
+    host: process.env.VITE_DEV_HOST === 'true' ? true : 'localhost',
   },
 });

@@ -221,9 +221,11 @@ export function initDb(tenantSlug: string): LogisCoreDB {
   return dbInstance;
 }
 
-export function destroyDb(): void {
+export async function destroyDb(): Promise<void> {
   if (dbInstance) {
+    const dbName = dbInstance.name;
     dbInstance.close();
     dbInstance = null;
+    await Dexie.delete(dbName);
   }
 }

@@ -179,7 +179,7 @@ export const authService = {
 
     // 4. Limpieza de infraestructura
     this.stopSync();
-    destroyDb();
+    await destroyDb();
     TenantTranslator.clearCache();
     await supabase.auth.signOut();
     return success(undefined);
