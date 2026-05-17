@@ -70,7 +70,7 @@ export function CartSummary({
         <span>Bs {fmt(totalBs)} / $ {fmt(totalUsd)}</span>
       </div>
 
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="flex gap-0.5 flex-wrap">
         {PAYMENT_METHODS.map((m) => {
           const meta = METADATA_PAGOS[m];
           return (

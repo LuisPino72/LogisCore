@@ -39,7 +39,7 @@ export function CartPanel({
   const renderContent = useCallback(
     () => (
       <div className="flex flex-col h-full">
-        <div className="px-3 py-2 border-b border-border">
+        <div className="hidden md:block px-3 py-2 border-b border-border">
           <h3 className="text-sm font-semibold text-gray-700">Carrito ({itemCount})</h3>
         </div>
 
@@ -108,10 +108,9 @@ export function CartPanel({
           isOpen={isMobileOpen}
           onClose={onMobileToggle}
           title={`Carrito (${itemCount})`}
-          size="full"
-          className="pb-safe"
+          className="max-w-none! m-1!"
         >
-          <div className="flex flex-col" style={{ maxHeight: '85dvh' }}>
+          <div className="flex flex-col" style={{ maxHeight: '96dvh' }}>
             <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
               {renderContent()}
             </div>
