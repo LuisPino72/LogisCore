@@ -44,7 +44,19 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
   const isEditing = !!editSupplier;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? 'Editar proveedor' : 'Nuevo proveedor'}
+      footer={
+        <div className="flex gap-3 w-full">
+          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
+          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear proveedor'}
+          </Button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         <div className="input-wrapper">
           <label className="input-label">Nombre</label>
@@ -66,12 +78,6 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           />
         </div>
         {error && name.trim() && <p className="text-xs text-danger">{error}</p>}
-        <div className="flex gap-3 pt-2">
-          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear proveedor'}
-          </Button>
-        </div>
       </div>
     </Modal>
   );

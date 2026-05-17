@@ -113,7 +113,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
       ) : (
         <div className="space-y-1">
           {filtered.map((cat) => (
-            <div key={cat.id} className="flex items-center justify-between gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+            <div key={cat.id} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="hidden sm:flex w-8 h-8 rounded-lg bg-primary/10 items-center justify-center shrink-0">
                   <ListTree size={14} className="text-primary" />

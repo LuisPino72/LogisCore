@@ -60,7 +60,21 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={isEditing ? 'Editar producto' : 'Nuevo producto'}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={isEditing ? 'Editar producto' : 'Nuevo producto'}
+      footer={
+        <div className="flex gap-3 w-full">
+          <Button variant="ghost" fullWidth onClick={handleClose}>
+            Cancelar
+          </Button>
+          <Button variant="primary" fullWidth onClick={formSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear producto'}
+          </Button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         <div className="input-wrapper text-center">
           <label className="input-label text-center">Nombre del producto</label>
@@ -219,14 +233,6 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </p>
           </div>
 
-          <div className="flex gap-3 pt-2">
-          <Button variant="ghost" fullWidth onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button variant="primary" fullWidth onClick={formSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear producto'}
-          </Button>
-        </div>
       </div>
 
       <BarcodeScannerModal

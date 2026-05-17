@@ -70,7 +70,24 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
   }).length;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Recibir mercancía">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Recibir mercancía"
+      footer={
+        <div className="flex gap-3 w-full">
+          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
+          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Procesando...' : (
+              <>
+                <CheckCircle size={16} />
+                <span className="ml-1">Confirmar recepción</span>
+              </>
+            )}
+          </Button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10">
           <Package size={18} className="text-primary shrink-0" />
@@ -150,18 +167,6 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
         )}
 
         {error && <p className="text-xs text-danger">{error}</p>}
-
-        <div className="flex gap-3 pt-2">
-          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Procesando...' : (
-              <>
-                <CheckCircle size={16} />
-                <span className="ml-1">Confirmar recepción</span>
-              </>
-            )}
-          </Button>
-        </div>
       </div>
     </Modal>
   );

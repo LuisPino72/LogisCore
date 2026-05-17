@@ -115,7 +115,19 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar orden de compra' : 'Nueva orden de compra'}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? 'Editar orden de compra' : 'Nueva orden de compra'}
+      footer={
+        <div className="flex gap-3 w-full">
+          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
+          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear orden'}
+          </Button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         <Select
           label="Proveedor"
@@ -223,13 +235,6 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
         </div>
 
         {error && <p className="text-xs text-danger">{error}</p>}
-
-        <div className="flex gap-3 pt-2">
-          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear orden'}
-          </Button>
-        </div>
       </div>
     </Modal>
   );

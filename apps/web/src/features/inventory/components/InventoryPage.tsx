@@ -268,7 +268,17 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       )}
 
       {showAdjustment && (
-        <Modal isOpen={showAdjustment} onClose={() => { setShowAdjustment(false); setSelectedProductId(null); }} title="Ajuste de stock">
+        <Modal
+          isOpen={showAdjustment}
+          onClose={() => { setShowAdjustment(false); setSelectedProductId(null); }}
+          title="Ajuste de stock"
+          footer={
+            <div className="flex gap-3 w-full">
+              <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setSelectedProductId(null); }}>Cancelar</Button>
+              <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
+            </div>
+          }
+        >
           <div className="space-y-4">
             <Select
               label="Producto"
@@ -298,17 +308,26 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             </div>
 
             {adjError && <p className="text-xs text-danger">{adjError}</p>}
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setSelectedProductId(null); }}>Cancelar</Button>
-              <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
-            </div>
           </div>
         </Modal>
       )}
 
       {confirmDelete && (
-        <Modal isOpen={true} onClose={() => setConfirmDelete(null)} title="Confirmar eliminación">
+        <Modal
+          isOpen={true}
+          onClose={() => setConfirmDelete(null)}
+          title="Confirmar eliminación"
+          footer={
+            <div className="flex gap-3 w-full">
+              <Button variant="ghost" fullWidth onClick={() => setConfirmDelete(null)}>
+                Cancelar
+              </Button>
+              <Button variant="danger" fullWidth onClick={handleConfirmDelete}>
+                Eliminar
+              </Button>
+            </div>
+          }
+        >
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
@@ -322,14 +341,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                     : 'La categoría se marcará como eliminada (soft delete).'}
                 </p>
               </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="ghost" fullWidth onClick={() => setConfirmDelete(null)}>
-                Cancelar
-              </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmDelete}>
-                Eliminar
-              </Button>
             </div>
           </div>
         </Modal>

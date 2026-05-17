@@ -108,10 +108,10 @@ export function CartPanel({
           isOpen={isMobileOpen}
           onClose={onMobileToggle}
           title={`Carrito (${itemCount})`}
-          className="max-w-none! m-1!"
+          className="max-w-none! m-0! modal-cart"
         >
-          <div className="flex flex-col" style={{ maxHeight: '96dvh' }}>
-            <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+          <div className="flex flex-col h-[100dvh]">
+            <div className="flex-1 overflow-y-auto">
               {renderContent()}
             </div>
           </div>

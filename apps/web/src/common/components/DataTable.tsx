@@ -224,7 +224,7 @@ export function DataTable<T>({
                     if (col.hideOnMobile) return null;
                     const content = col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? '');
                     if (col.key === 'actions') {
-                      return <div key={col.key} className="mt-2 flex items-center gap-2">{content}</div>;
+                      return <div key={col.key} className="mt-2 flex items-center gap-0.5 flex-wrap">{content}</div>;
                     }
                     return (
                       <div key={col.key} className="flex items-start gap-2">
