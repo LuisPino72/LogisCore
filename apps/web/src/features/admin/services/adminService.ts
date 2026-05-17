@@ -352,10 +352,7 @@ export const adminService = {
   },
 
   async restoreTenant(id: string): Promise<Result<void, AppError>> {
-    const { error } = await supabase
-      .from('tenants')
-      .update({ deleted_at: null })
-      .eq('id', id);
+    const { error } = await supabase.rpc('restore_tenant_cascade', { p_tenant_id: id });
 
     if (error) {
       return failure(new AppError(AdminErrors.ADMIN_RESTORE_FAILED, 'Error al reactivar el local'));
