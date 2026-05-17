@@ -196,7 +196,8 @@
  .data-table-header { @apply hidden sm:grid bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider; grid-template-columns: var(--cols); }
  .data-table-row { @apply grid border-b border-gray-100 hover:bg-gray-50/50 transition-all duration-150; grid-template-columns: var(--cols); }
  /* ensure cells can shrink on small widths and text truncates */
- .data-table-cell { @apply px-4 py-3 text-sm text-gray-700 flex items-center min-w-0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   .data-table-cell { @apply px-2 py-3 text-sm text-gray-700 flex items-center min-w-0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .data-table-cell.overflow-visible { overflow: visible; white-space: normal; }
 .data-table-empty { @apply py-12; }
 
  @media (max-width: 639px) {

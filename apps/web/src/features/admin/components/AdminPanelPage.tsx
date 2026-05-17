@@ -339,6 +339,7 @@ export function AdminPanelPage() {
     {
       key: 'actions',
       header: 'Acciones',
+      className: 'overflow-visible px-1',
       render: (t) => (
         <div className="flex flex-row flex-wrap gap-1 items-center">
           <Button variant="ghost" size="sm" onClick={() => handleNavigateTenant(t.slug)} title="Ver local">
