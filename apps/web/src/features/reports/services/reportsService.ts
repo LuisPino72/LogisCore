@@ -171,7 +171,7 @@ export const reportsService = {
 
       totalSalesBs = preciseRound(totalSalesBs, 2);
       totalCostBs = preciseRound(totalCostBs, 2);
-      const grossProfitBs = preciseRound(totalSalesBs - totalCostBs - totalIgtfBs, 2);
+      const grossProfitBs = preciseRound(totalSalesBs - totalCostBs, 2);
       const profitMarginPercent = totalSalesBs > 0 ? preciseRound((grossProfitBs / totalSalesBs) * 100, 2) : 0;
       const totalTransactions = data.length;
       const averageTicketBs = totalTransactions > 0 ? preciseRound(totalSalesBs / totalTransactions, 2) : 0;

@@ -1,4 +1,5 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
+import { preciseRound } from '@logiscore/shared';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { TenantTranslator } from '../../../services/tenantTranslator';
@@ -7,6 +8,11 @@ import type { TenantInfoResponse, SubscriptionResponse } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { getDb } from '../../../services/dexie/db';
+
+function calcItemCost(quantity: number, costUsdPerUnit: number | undefined): number {
+  if (!costUsdPerUnit || costUsdPerUnit <= 0) return 0;
+  return quantity * costUsdPerUnit;
+}
 
 export const dashboardService = {
   async getTenantInfo(tenantId: string): Promise<Result<TenantInfoResponse, AppError>> {
@@ -121,11 +127,11 @@ export const dashboardService = {
       let totalEarnings = 0;
       for (const item of todayItems) {
         const revenue = item.totalPriceUsd;
-        const cost = (item.costUsdPerUnit ?? 0) * item.quantity;
+        const cost = calcItemCost(item.quantity, item.costUsdPerUnit);
         totalEarnings += revenue - cost;
       }
 
-      return success(Math.round(totalEarnings * 100) / 100);
+      return success(preciseRound(totalEarnings, 2));
     } catch (err) {
       logger.error('Dashboard', 'Error en getTodayEarnings:', err);
       return failure(new AppError('DASHBOARD_TODAY_EARNINGS_FAILED', 'Error al calcular ganancias del día'));

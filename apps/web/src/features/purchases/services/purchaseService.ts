@@ -1,5 +1,5 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
-import { toSnake, generateId } from '@logiscore/shared';
+import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -203,7 +203,7 @@ export const purchaseService = {
       productId: item.productId,
       productName: productMap.get(item.productId) ?? '',
       quantity: item.quantity,
-      costUsdPerUnit: +(item.totalCostUsd / item.quantity).toFixed(2),
+      costUsdPerUnit: preciseRound(item.totalCostUsd / item.quantity, 2),
       receivedQuantity: 0,
       totalUsd: item.totalCostUsd,
       createdAt: now,
@@ -259,7 +259,7 @@ export const purchaseService = {
       productId: item.productId,
       productName: productMap.get(item.productId) ?? '',
       quantity: item.quantity,
-      costUsdPerUnit: +(item.totalCostUsd / item.quantity).toFixed(2),
+      costUsdPerUnit: preciseRound(item.totalCostUsd / item.quantity, 2),
       receivedQuantity: 0,
       totalUsd: item.totalCostUsd,
       createdAt: now,

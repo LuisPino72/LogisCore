@@ -1,13 +1,16 @@
 /** Constantes fiscales del Motor Fiscal Venezolano (Regla de Oro #8). */
 
 /** Tasa IGTF: 3% sobre pagos en divisas (USD). */
-export const IGTF_RATE = 0.03;
+export const IGTF_RATE = 0;
 
 /** Patrón de validación RIF venezolano: 1 letra (V,J,E,G,P) + 9 dígitos. */
 export const RIF_PATTERN = /^[VJEGP]\d{9}$/;
 
 /** Diferencia máxima permitida en céntimos (Regla de Oro #8). */
 export const MAX_CENTS_DIFFERENCE = 0.01;
+
+/** Tasa IVA: 16% sobre productos gravables. */
+export const IVA_RATE = 0.16;
 
 /** Precisión decimal para dinero (NUMERIC(19,2) en Postgres). */
 export const MONEY_DECIMALS = 2;

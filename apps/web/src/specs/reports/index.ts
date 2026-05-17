@@ -76,6 +76,8 @@ export const ExecutiveSummarySchema = z.object({
   totalIgtfBs: z.number().min(0),
   topProductName: z.string().optional(),
   salesVsYesterdayPercent: z.number().optional(),
+  nonSellableExpensesUsd: z.number().min(0),
+  nonSellableExpensesBs: z.number().min(0),
 });
 
 export type ExecutiveSummary = z.infer<typeof ExecutiveSummarySchema>;

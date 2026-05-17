@@ -1,5 +1,5 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
-import { preciseRound, toSnake, generateId } from '@logiscore/shared';
+import { preciseRound, toSnake, generateId, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -182,27 +182,20 @@ export const posService = {
     let subtotalBs = 0;
     let subtotalTaxableBs = 0;
     for (const item of items) {
+      const prod = await getDb().products.get(item.productId);
+      const isTaxable = prod?.isTaxable !== undefined ? prod.isTaxable : true;
       const lineBs = preciseRound(item.unitPriceUsd * item.quantity * rawExchangeRate, 2);
       subtotalBs += lineBs;
+      if (isTaxable) subtotalTaxableBs += lineBs;
     }
     subtotalBs = preciseRound(subtotalBs, 2);
-
-    const dbForProducts = getDb();
-    for (const item of items) {
-      const prod = await dbForProducts.products.get(item.productId);
-      const isTaxable = prod?.isTaxable !== undefined ? prod.isTaxable : true;
-      if (isTaxable) {
-        const lineBs = preciseRound(item.unitPriceUsd * item.quantity * rawExchangeRate, 2);
-        subtotalTaxableBs += lineBs;
-      }
-    }
     subtotalTaxableBs = preciseRound(subtotalTaxableBs, 2);
 
     const igtfBs = paymentMethod === 'efectivo_usd'
-      ? preciseRound(subtotalBs * 0.03, 2)
+      ? preciseRound(subtotalBs * IGTF_RATE, 2)
       : 0;
 
-    const ivaBs = preciseRound(subtotalTaxableBs * 0.16, 2);
+    const ivaBs = preciseRound(subtotalTaxableBs * IVA_RATE, 2);
 
     const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs, 2);
 
@@ -287,7 +280,7 @@ export const posService = {
           const newStock = previousStock - storageQuantity;
           await db.products.update(cartItem.productId, { stock: newStock });
 
-          const costUsdPerUnit = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 4) : 0;
+          const costUsdPerUnit = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 2) : 0;
 
           const saleItemId = generateId();
           await db.saleItems.add({
@@ -652,12 +645,11 @@ export const posService = {
 
           const previousStock = product.stock;
           const storageQty = product.isWeighted
-            ? item.quantity
+            ? convertToStorage(item.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
             : Math.round(item.quantity);
           const newStock = previousStock + storageQty;
           await db.products.update(item.productId, { stock: newStock });
 
-          // Reverse FIFO: restore lots from newest to oldest
           const lots = await db.inventoryLots
             .where({ productId: item.productId })
             .filter((l) => l.remainingQuantity >= 0)
@@ -669,13 +661,16 @@ export const posService = {
             if (toRestore <= 0) break;
             const currentLot = await db.inventoryLots.get(lot.id);
             if (!currentLot) continue;
-            const newRemaining = currentLot.remainingQuantity + toRestore;
+            const consumedFromLot = currentLot.quantityAdded - currentLot.remainingQuantity;
+            if (consumedFromLot <= 0) continue;
+            const restoreAmount = Math.min(toRestore, consumedFromLot);
+            const newRemaining = currentLot.remainingQuantity + restoreAmount;
             const newVersion = (currentLot.version ?? 0) + 1;
             await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
             await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
               id: lot.id, remainingQuantity: newRemaining, version: newVersion,
             } as unknown as Record<string, unknown>), tenantId);
-            toRestore = 0;
+            toRestore -= restoreAmount;
           }
 
           const movementId = generateId();
