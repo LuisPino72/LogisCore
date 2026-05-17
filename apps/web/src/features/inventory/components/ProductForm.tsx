@@ -108,7 +108,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={handleImageChange} />
               </label>
             )}
-            <p className="text-[10px] text-gray-400">JPG, PNG o WebP. Máx 2MB.</p>
+            <p className="text-[10px] text-gray-400">JPG, PNG o WebP. Se comprime automáticamente.</p>
           </div>
         </div>
 

@@ -8,6 +8,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { InventoryErrors } from '../../../specs/inventory/errors';
+import imageCompression from 'browser-image-compression';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, MovementRow } from '../types';
 import { convertToStorage } from '../types';
 
@@ -493,17 +494,32 @@ export const inventoryService = {
 
   async uploadProductImage(file: File, tenantId: string, productId: string): Promise<Result<string, AppError>> {
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-    const MAX_SIZE = 2 * 1024 * 1024;
+    const MAX_ORIGINAL_SIZE = 10 * 1024 * 1024;
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return failure(new AppError('INVENTORY_IMAGE_INVALID_TYPE', 'Formato no permitido. Usa JPG, PNG o WebP.'));
     }
 
-    if (file.size > MAX_SIZE) {
-      return failure(new AppError('INVENTORY_IMAGE_TOO_LARGE', 'La imagen no debe superar 2MB.'));
+    if (file.size > MAX_ORIGINAL_SIZE) {
+      return failure(new AppError('INVENTORY_IMAGE_TOO_LARGE', 'La imagen es demasiado grande. Máximo 10MB.'));
     }
 
-    const ext = file.name.split('.').pop() ?? 'jpg';
+    let compressedFile: File;
+    try {
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+        fileType: file.type === 'image/png' ? 'image/png' : 'image/jpeg',
+      };
+      compressedFile = await imageCompression(file, options);
+      logger.info('uploadProductImage', `Imagen comprimida: ${file.size} bytes → ${compressedFile.size} bytes`);
+    } catch (err) {
+      logger.error('uploadProductImage', 'Compresión fallida, usando original:', err);
+      compressedFile = file;
+    }
+
+    const ext = compressedFile.name.split('.').pop() ?? 'jpg';
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const filePath = `${tenantUuid}/${productId}.${ext}`;
 
@@ -522,13 +538,13 @@ export const inventoryService = {
     const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
 
     try {
-      const buffer = await file.arrayBuffer();
+      const buffer = await compressedFile.arrayBuffer();
       const res = await fetch(storageUrl, {
         method: 'PUT',
         headers: {
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           Authorization: `Bearer ${token}`,
-          'content-type': file.type,
+          'content-type': compressedFile.type,
           'cache-control': '3600',
         },
         body: buffer,

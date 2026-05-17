@@ -14,12 +14,12 @@
     "@logiscore/core": "*",
     "@logiscore/shared": "*",
     "@supabase/supabase-js": "^2.47.0",
+    "browser-image-compression": "^2.0.2",
     "dexie": "^4.0.0",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.14.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-
     "recharts": "^3.8.1",
     "zod": "^3.24.0",
     "zustand": "^5.0.0"
