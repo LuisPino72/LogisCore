@@ -187,7 +187,7 @@ describe('SALE-004: Cobrar venta', () => {
 describe('SALE-007: IGTF', () => {
   beforeEach(() => { resetMockDb(); });
 
-  it('Given: efectivo_usd. When: vender. Then: IGTF 3% aplicado', async () => {
+  it('Given: efectivo_usd. When: vender. Then: IGTF 0 (desactivado)', async () => {
     mockCashRegister();
     mockProduct(50);
     mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
@@ -201,7 +201,7 @@ describe('SALE-007: IGTF', () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data.igtfBs).toBe(30); // 3% of 1000
+    expect(result.data.igtfBs).toBe(0); // IGTF desactivado (IGTF_RATE=0)
   });
 });
 

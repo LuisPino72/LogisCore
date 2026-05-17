@@ -20,9 +20,9 @@ describe('LogisCore Shared Package', () => {
     expect(result.error).toBe('MISSING_RIF');
   });
 
-  it('calculateIGTF - 3% on USD payments', () => {
+  it('calculateIGTF - 0% when IGTF_RATE is 0', () => {
     const igtf = calculateIGTF(100, 90);
-    expect(igtf).toBe(270);
+    expect(igtf).toBe(0);
   });
 
   it('preciseRound - 2 decimals', () => {

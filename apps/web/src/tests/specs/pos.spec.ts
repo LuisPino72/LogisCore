@@ -145,10 +145,10 @@ describe('POS-002: Caja cerrada bloquea venta', () => {
   });
 });
 
-describe('POS-003: IGTF solo en efectivo_usd', () => {
+describe('POS-003: IGTF desactivado (IGTF_RATE=0)', () => {
   beforeEach(() => { resetMockDb(); });
 
-  it('Given: subtotal ~1000 Bs. When: efectivo_usd. Then: igtf=30', async () => {
+  it('Given: subtotal ~1000 Bs. When: efectivo_usd. Then: igtf=0 (rate=0)', async () => {
     mockCashRegister();
     mockProduct(50);
     mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
@@ -161,9 +161,9 @@ describe('POS-003: IGTF solo en efectivo_usd', () => {
 
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.data.igtfBs).toBe(30);
+    expect(r.data.igtfBs).toBe(0);
     expect(r.data.ivaBs).toBe(160);
-    expect(r.data.totalBs).toBe(1190);
+    expect(r.data.totalBs).toBe(1160);
   });
 
   it('Given: mismo subtotal. When: efectivo_bs. Then: igtf=0', async () => {
