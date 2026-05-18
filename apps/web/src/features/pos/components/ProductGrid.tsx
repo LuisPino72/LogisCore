@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SearchInput, EmptyState, Skeleton, Badge, Modal } from '../../../common/components';
+import { SearchInput, EmptyState, Skeleton, Badge, Modal, Button } from '../../../common/components';
 import { Package, ListTree } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import type { Product } from '../../../specs/inventory';
@@ -35,6 +35,7 @@ export function ProductGrid({
   exchangeRateBs,
 }: ProductGridProps) {
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
 
   let filtered = searchQuery
     ? products.filter(
@@ -85,28 +86,43 @@ export function ProductGrid({
 
           <Modal
             isOpen={showAllCategories}
-            onClose={() => setShowAllCategories(false)}
+            onClose={() => { setShowAllCategories(false); setCategorySearch(''); }}
             title="Todas las categorías"
             size="sm"
           >
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => { onCategoryChange(null); setShowAllCategories(false); }}
-                className="shrink-0"
-              >
-                <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
-              </button>
-              {categories.map((cat) => (
+            <div className="space-y-3">
+              <SearchInput
+                placeholder="Buscar categoría..."
+                value={categorySearch}
+                onChange={(e) => setCategorySearch(e.target.value)}
+                onClear={() => setCategorySearch('')}
+              />
+              <div className="flex flex-wrap gap-2">
                 <button
-                  key={cat.id}
                   type="button"
-                  onClick={() => { onCategoryChange(cat.id); setShowAllCategories(false); }}
+                  onClick={() => { onCategoryChange(null); setShowAllCategories(false); setCategorySearch(''); }}
                   className="shrink-0"
                 >
-                  <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
+                  <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
                 </button>
-              ))}
+                {categories
+                  .filter((cat) => cat.name.toLowerCase().includes(categorySearch.toLowerCase()))
+                  .map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => { onCategoryChange(cat.id); setShowAllCategories(false); setCategorySearch(''); }}
+                      className="shrink-0"
+                    >
+                      <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
+                    </button>
+                  ))}
+                {categories.filter((cat) => cat.name.toLowerCase().includes(categorySearch.toLowerCase())).length === 0 && (
+                  <div className="w-full text-center text-sm text-gray-400 py-4">
+                    No se encontraron categorías
+                  </div>
+                )}
+              </div>
             </div>
           </Modal>
         </>
@@ -123,6 +139,11 @@ export function ProductGrid({
           icon={<Package size={40} />}
           title="Sin productos"
           description={searchQuery || selectedCategory ? 'No se encontraron resultados.' : 'Agrega productos desde el módulo de Inventario.'}
+          action={!searchQuery && !selectedCategory ? (
+            <Button variant="primary" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { module: 'inventory' } }))}>
+              Ir a Inventario
+            </Button>
+          ) : undefined}
         />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto flex-1 pb-16 md:pb-4">

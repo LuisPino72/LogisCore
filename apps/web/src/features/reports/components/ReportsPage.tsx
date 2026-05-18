@@ -76,7 +76,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             <BarChart3 size={22} className="text-accent" />
           </div>
           <div>
-            <h1 className="text-lg font-title font-bold">Reportes</h1>
+            <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Reportes</h1>
             <p className="text-xs text-text-secondary">Análisis de ventas y ganancias</p>
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
   Spinner,
   ToastContainer,
   Sidebar,
+  ErrorBoundary,
   type SidebarModule,
 } from './common/components';
 import {
@@ -188,7 +189,9 @@ function DashboardLayout() {
       sidebarOpen={sidebarOpen}
       sidebarExpanded={sidebarExpanded}
     >
-      {renderContent()}
+      <ErrorBoundary moduleName="Dashboard">
+        {renderContent()}
+      </ErrorBoundary>
     </AppShell>
   );
 }
@@ -252,7 +255,9 @@ const App = () => {
   if (currentView === 'admin' && role === 'admin') {
     return (
       <>
-        <AdminPanelPage />
+        <ErrorBoundary moduleName="Admin Panel">
+          <AdminPanelPage />
+        </ErrorBoundary>
         <ToastContainer />
       </>
     );

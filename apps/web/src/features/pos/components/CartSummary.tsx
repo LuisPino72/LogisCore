@@ -60,10 +60,12 @@ export function CartSummary({
         </div>
       )}
 
-      <div className="flex justify-between text-sm text-gray-600">
-        <span>IVA (16%)</span>
-        <span>Bs {fmt(ivaBs)} / $ {fmt(ivaUsd)}</span>
-      </div>
+      {subtotalTaxableBs > 0 && (
+        <div className="flex justify-between text-sm text-gray-600">
+          <span>IVA (16%)</span>
+          <span>Bs {fmt(ivaBs)} / $ {fmt(ivaUsd)}</span>
+        </div>
+      )}
 
       <div className="flex justify-between text-base font-bold text-gray-900">
         <span>Total</span>

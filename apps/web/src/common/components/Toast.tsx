@@ -1,6 +1,13 @@
 import { type FC, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 import { useToastStore } from '../../stores/toastStore';
+
+const ICON_MAP = {
+  success: CheckCircle,
+  error: XCircle,
+  warning: AlertTriangle,
+  info: Info,
+};
 
 export const ToastContainer: FC = () => {
   const { toasts, removeToast } = useToastStore();
@@ -21,25 +28,29 @@ export const ToastContainer: FC = () => {
   };
 
   return (
-    <div className="toast-container">
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`toast toast-${toast.type} relative overflow-hidden ${leavingIds.has(toast.id) ? 'opacity-0 translate-x-4' : ''}`}
-          style={{ transition: 'opacity 0.2s, transform 0.2s' }}
-        >
-          <p className="toast-message">{toast.message}</p>
-          <button className="toast-close" onClick={() => handleRemove(toast.id)}>
-            <X size={16} />
-          </button>
-          {toast.duration && toast.duration > 0 && (
-            <div
-              className="toast-progress"
-              style={{ animationDuration: `${toast.duration}ms` }}
-            />
-          )}
-        </div>
-      ))}
+    <div className="toast-container" role="status" aria-live="polite">
+      {toasts.map((toast) => {
+        const Icon = ICON_MAP[toast.type] ?? Info;
+        return (
+          <div
+            key={toast.id}
+            className={`toast toast-${toast.type} relative overflow-hidden ${leavingIds.has(toast.id) ? 'opacity-0 translate-x-4' : ''}`}
+            style={{ transition: 'opacity 0.2s, transform 0.2s' }}
+          >
+            <Icon size={18} className="shrink-0 mt-0.5" />
+            <p className="toast-message">{toast.message}</p>
+            <button className="toast-close" onClick={() => handleRemove(toast.id)} aria-label="Cerrar notificación">
+              <X size={16} />
+            </button>
+            {toast.duration && toast.duration > 0 && (
+              <div
+                className="toast-progress"
+                style={{ animationDuration: `${toast.duration}ms` }}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

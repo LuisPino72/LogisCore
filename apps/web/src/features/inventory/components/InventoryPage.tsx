@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, Select, BottomNav } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, BottomNav, SearchInput } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
@@ -45,6 +45,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
   const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
+  const [adjProductSearch, setAdjProductSearch] = useState('');
 
   const isOwner = role === 'owner' || role === 'admin';
 
@@ -129,7 +130,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     return (
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-title font-bold">Inventario</h1>
+          <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Inventario</h1>
         </div>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -149,7 +150,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <Package size={22} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-title font-bold">Inventario</h1>
+            <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Inventario</h1>
             <p className="text-xs text-text-secondary">Gestiona productos y stock</p>
           </div>
         </div>
@@ -270,7 +271,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       {showAdjustment && (
         <Modal
           isOpen={showAdjustment}
-          onClose={() => { setShowAdjustment(false); setSelectedProductId(null); }}
+          onClose={() => { setShowAdjustment(false); setSelectedProductId(null); setAdjProductSearch(''); }}
           title="Ajuste de stock"
           footer={
             <div className="flex gap-3 w-full">
@@ -280,16 +281,48 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           }
         >
           <div className="space-y-4">
-            <Select
-              label="Producto"
-              value={adjProductId}
-              onChange={(e) => setAdjProductId(e.target.value)}
-            >
-              <option value="">Seleccionar...</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-              ))}
-            </Select>
+            <div className="space-y-2">
+              <label className="input-label">Producto</label>
+              <SearchInput
+                placeholder="Buscar por nombre o SKU..."
+                value={adjProductSearch}
+                onChange={(e) => setAdjProductSearch(e.target.value)}
+                onClear={() => setAdjProductSearch('')}
+              />
+              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                {products
+                  .filter((p) =>
+                    p.name.toLowerCase().includes(adjProductSearch.toLowerCase()) ||
+                    p.sku.toLowerCase().includes(adjProductSearch.toLowerCase())
+                  )
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors min-h-[44px] ${
+                        adjProductId === p.id
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                      onClick={() => {
+                        setAdjProductId(p.id);
+                        setAdjProductSearch('');
+                      }}
+                    >
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-gray-400 ml-2">({p.sku})</span>
+                    </button>
+                  ))}
+                {products.filter((p) =>
+                  p.name.toLowerCase().includes(adjProductSearch.toLowerCase()) ||
+                  p.sku.toLowerCase().includes(adjProductSearch.toLowerCase())
+                ).length === 0 && (
+                  <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                    No se encontraron productos
+                  </div>
+                )}
+              </div>
+            </div>
 
             {products.find((p) => p.id === adjProductId) && (
               <div className="text-xs text-text-secondary bg-gray-50 p-2 rounded">

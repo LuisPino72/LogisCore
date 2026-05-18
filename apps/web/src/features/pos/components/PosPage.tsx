@@ -71,8 +71,9 @@ export function PosPage({ tenantId }: PosPageProps) {
         return;
       }
       addToCart(product, 1);
+      addToast({ type: 'success', message: `${product.name} agregado`, duration: 1500 });
     },
-    [addToCart],
+    [addToCart, addToast],
   );
 
   const handleWeightedConfirm = useCallback(() => {
@@ -83,7 +84,8 @@ export function PosPage({ tenantId }: PosPageProps) {
     setShowPaymentModal(false);
     setWeightedProduct(null);
     setWeightedQty('');
-  }, [weightedProduct, weightedQty, addToCart]);
+    addToast({ type: 'success', message: `${weightedProduct.name} agregado`, duration: 1500 });
+  }, [weightedProduct, weightedQty, addToCart, addToast]);
 
   const handlePay = useCallback(async () => {
     if (!tenantId || !userId || !paymentMethod) return;

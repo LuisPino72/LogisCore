@@ -162,7 +162,7 @@
 
 /* ───────────────────── TOAST ───────────────────── */
 .toast-container { @apply fixed top-4 right-4 z-100 flex flex-col gap-2 max-w-sm; }
-.toast { @apply flex items-start gap-3 px-4 py-3 rounded-lg shadow-xl animate-slide-down backdrop-blur-md border; }
+.toast { @apply flex items-start gap-2.5 px-4 py-3 rounded-lg shadow-xl animate-slide-down backdrop-blur-md border; }
 .toast-success { @apply bg-green-50/90 border-green-200 text-green-800; }
 .toast-error { @apply bg-red-50/90 border-red-200 text-red-800; }
 .toast-warning { @apply bg-amber-50/90 border-amber-200 text-amber-800; }

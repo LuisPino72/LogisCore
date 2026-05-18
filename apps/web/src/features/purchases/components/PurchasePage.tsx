@@ -123,7 +123,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
           <ShoppingCart size={22} className="text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-title font-bold">Compras</h1>
+          <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Compras</h1>
           <p className="text-xs text-text-secondary">Gestiona órdenes y proveedores</p>
         </div>
       </div>
