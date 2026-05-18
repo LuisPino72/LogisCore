@@ -34,9 +34,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
           if (scanLockRef.current) return;
           scanLockRef.current = true;
           onScan(decodedText);
-          scanner.stop().catch(() => {});
-          setScanning(false);
-          scannerRef.current = null;
+          setTimeout(() => { scanLockRef.current = false; }, 1500);
         },
         () => {}, // no-op for scan failure
       );

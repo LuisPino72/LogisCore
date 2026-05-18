@@ -157,7 +157,11 @@ export function PosPage({ tenantId }: PosPageProps) {
       if (!tenantId) return;
       const result = await inventoryService.getProductBySku(code, tenantId);
       if (result.ok && result.data) {
-        addToCart(result.data, result.data.isWeighted ? 0 : 1);
+        if (result.data.isWeighted) {
+          addToast({ type: 'info', message: `${result.data.name} es pesable. Agrégalo manualmente.`, duration: 3000 });
+          return;
+        }
+        addToCart(result.data, 1);
         addToast({ type: 'success', message: `${result.data.name} agregado`, duration: 2000 });
       } else {
         addToast({ type: 'error', message: `Producto con código "${code}" no encontrado.`, duration: 4000 });
