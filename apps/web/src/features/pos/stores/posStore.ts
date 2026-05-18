@@ -4,6 +4,7 @@ import type { PosState, PaymentMethod, ParkedCart } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { posService } from '../services/posService';
 import { exchangeRateService } from '../../../features/exchange/services/exchangeRateService';
+import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateSaleInput } from '../../../specs/pos';
 
 const MAX_PARKED_CARTS = 10;
@@ -61,6 +62,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
         return bFav - aFav;
       });
       set({ products: sorted, favoriteProductIds: favIds, loading: false });
+      imageCacheService.preloadAll(result.data);
     } else {
       set({ loading: false, error: result.error.message });
     }

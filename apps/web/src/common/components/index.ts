@@ -13,6 +13,7 @@ export { Dropdown } from './Dropdown';
 export type { DropdownItem } from './Dropdown';
 export { EmptyState } from './EmptyState';
 export { FileUpload } from './FileUpload';
+export { ImageWithFallback } from './ImageWithFallback';
 export { Input } from './Input';
 export { Spinner, Skeleton } from './Loading';
 export { Modal } from './Modal';

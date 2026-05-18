@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Product, ProductFilters, InventoryState } from '../types';
 import { inventoryService } from '../services/inventoryService';
+import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateProductInput, AdjustStockInput } from '../types';
 
 interface InventoryStore extends InventoryState {
@@ -41,6 +42,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     const result = await inventoryService.getProducts(tenantId, filters);
     if (result.ok) {
       set({ products: result.data, loading: false });
+      imageCacheService.preloadAll(result.data);
     } else {
       set({ loading: false, error: result.error.message });
     }

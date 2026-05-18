@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, MoreVertical } from 'lucide-react';
-import { Button, Badge, DataTable, Dropdown, EmptyState, Select } from '../../../common/components';
+import { Button, Badge, DataTable, Dropdown, EmptyState, Select, ImageWithFallback } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import type { Product, Category } from '../types';
@@ -27,20 +27,14 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
 }
 
 function ProductThumbnail({ product }: { product: Product }) {
-  if (product.imageUrl) {
-    return (
-      <img
-        src={product.imageUrl}
-        alt={product.name}
-        className="w-8 h-8 rounded-full object-cover shrink-0 border border-gray-100"
-        loading="lazy"
-      />
-    );
-  }
   return (
-    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-      <Package size={16} className="text-gray-400" />
-    </div>
+    <ImageWithFallback
+      productId={product.id}
+      imageUrl={product.imageUrl}
+      alt={product.name}
+      className="w-8 h-8 rounded-full shrink-0"
+      skeletonClassName="rounded-full"
+    />
   );
 }
 

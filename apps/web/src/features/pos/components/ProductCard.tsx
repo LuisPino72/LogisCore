@@ -1,5 +1,5 @@
-import { Image as ImageIcon, Star } from 'lucide-react';
-import { Card, Badge } from '../../../common/components';
+import { Star } from 'lucide-react';
+import { Card, Badge, ImageWithFallback } from '../../../common/components';
 import type { Product } from '../../../specs/inventory';
 import { displayStock } from '../../inventory/types';
 
@@ -50,17 +50,14 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
         />
       </button>
 
-      <div className="relative aspect-4/3 bg-surface-alt flex items-center justify-center overflow-hidden">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <ImageIcon size={32} className="text-gray-300" />
-        )}
+      <div className="relative aspect-4/3 overflow-hidden">
+        <ImageWithFallback
+          productId={product.id}
+          imageUrl={product.imageUrl}
+          alt={product.name}
+          className="w-full h-full"
+          skeletonClassName="rounded-none"
+        />
 
         {product.isTaxable && (
           <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-info/80 text-white text-[10px] font-semibold leading-none z-10">

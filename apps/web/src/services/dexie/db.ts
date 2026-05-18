@@ -122,6 +122,15 @@ export interface DexieProductFavorite {
   createdAt: string;
 }
 
+export interface DexieProductImage {
+  productId: string;
+  tenantId: string;
+  imageUrl: string;
+  data: ArrayBuffer;
+  mimeType: string;
+  cachedAt: string;
+}
+
 export interface DexieSupplier {
   id: string;
   tenantId: string;
@@ -170,13 +179,14 @@ export class LogisCoreDB extends Dexie {
   cashRegisters!: Table<DexieCashRegister, string>;
   parkedCarts!: Table<DexieParkedCart, string>;
   productFavorites!: Table<DexieProductFavorite, [string, string]>;
+  productImages!: Table<DexieProductImage, string>;
   suppliers!: Table<DexieSupplier, string>;
   purchaseOrders!: Table<DexiePurchaseOrder, string>;
   purchaseOrderItems!: Table<DexiePurchaseOrderItem, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(9).stores({
+    this.version(10).stores({
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
       syncMeta: 'table',
@@ -190,6 +200,7 @@ export class LogisCoreDB extends Dexie {
       cashRegisters: 'id, tenantId, [tenantId+deletedAt]',
       parkedCarts: 'id, tenantId, [tenantId+createdAt]',
       productFavorites: '[productId+tenantId], tenantId',
+      productImages: 'productId, tenantId, cachedAt',
       suppliers: 'id, tenantId, [tenantId+deletedAt]',
       purchaseOrders: 'id, tenantId, supplierId, status, [tenantId+status], [tenantId+deletedAt]',
       purchaseOrderItems: 'id, orderId, productId, [orderId]',
