@@ -13,6 +13,7 @@ interface FieldErrors {
 interface AuthState {
   status: AuthStatus;
   session: UserSession | null;
+  selectedTenantSlug: string | null;
   error: string | null;
   isLoggingIn: boolean;
   loginError: string | null;
@@ -22,6 +23,7 @@ interface AuthState {
 
   setLoading: () => void;
   setSession: (session: UserSession) => void;
+  setSelectedTenantSlug: (slug: string | null) => void;
   clearSession: (error?: string) => void;
   reset: () => void;
   login: (email: string, password: string) => Promise<void>;
@@ -31,6 +33,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   status: 'idle',
   session: null,
+  selectedTenantSlug: null,
   error: null,
   isLoggingIn: false,
   loginError: null,
@@ -40,9 +43,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setLoading: () => set({ status: 'loading', error: null }),
   setSession: (session) => set({ status: 'authenticated', session, error: null }),
+  setSelectedTenantSlug: (slug) => set({ selectedTenantSlug: slug }),
   clearSession: (error) =>
-    set({ status: 'unauthenticated', session: null, error: error ?? null }),
-  reset: () => set({ status: 'idle', session: null, error: null }),
+    set({ status: 'unauthenticated', session: null, selectedTenantSlug: null, error: error ?? null }),
+  reset: () => set({ status: 'idle', session: null, selectedTenantSlug: null, error: null }),
 
   login: async (email, password) => {
     const state = get();

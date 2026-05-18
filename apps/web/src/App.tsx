@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthStore } from './features/auth/stores/authStore';
 import { authService } from './features/auth/services/authService';
-import { useNavigationStore } from './stores/navigationStore';
-import { usePermissionStore } from './stores/permissionStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { initDb, destroyDb } from './services/dexie/db';
 import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
@@ -46,12 +45,12 @@ const ALL_MODULES: SidebarModule[] = [
 
 const EMPLOYEE_ALLOWED = new Set(['dashboard', 'pos', 'inventory']);
 
-const MODULE_LABELS: Record<string, string> = {
-  dashboard: 'Dashboard',
-  pos: 'POS',
-  inventory: 'Inventario',
-  purchases: 'Compras',
-  reports: 'Reportes',
+const MODULE_ROUTE_MAP: Record<string, string> = {
+  dashboard: '/dashboard',
+  inventory: '/inventory',
+  purchases: '/purchases',
+  pos: '/pos',
+  reports: '/reports',
 };
 
 function LoadingScreen() {
@@ -76,31 +75,23 @@ function ErrorScreen({ message }: { message: string }) {
   );
 }
 
-function ModulePlaceholder({ moduleId }: { moduleId: string }) {
-  const label = MODULE_LABELS[moduleId] ?? moduleId;
-  return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <Card>
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">
-            <Package size={32} className="text-gray-400" />
-          </div>
-          <h2 className="text-lg font-title font-bold text-gray-700 mb-1">{label}</h2>
-          <p className="text-sm text-gray-500 max-w-xs">
-            Este módulo está en desarrollo. Pronto podrás usarlo.
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
+function useSyncModuleFromRoute() {
+  const location = useLocation();
+  const path = location.pathname;
+  if (path.startsWith('/inventory')) return 'inventory';
+  if (path.startsWith('/purchases')) return 'purchases';
+  if (path.startsWith('/pos')) return 'pos';
+  if (path.startsWith('/reports')) return 'reports';
+  return 'dashboard';
 }
 
 function DashboardLayout() {
   const session = useAuthStore((s) => s.session);
-  const selectedTenantSlug = useNavigationStore((s) => s.selectedTenantSlug);
-  const [activeModule, setActiveModule] = useState('dashboard');
+  const selectedTenantSlug = useAuthStore((s) => s.selectedTenantSlug);
+  const navigate = useNavigate();
+  const activeModule = useSyncModuleFromRoute();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarExpanded, setSidebarExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true); 
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
 
   const isAdmin = session?.role === 'admin';
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
@@ -113,8 +104,9 @@ function DashboardLayout() {
   const effectiveTenantId = useTenantResolution({ session, selectedTenantSlug, isAdminViewingTenant });
 
   const handleNavigate = useCallback((moduleId: string) => {
-    setActiveModule(moduleId);
-  }, []);
+    const route = MODULE_ROUTE_MAP[moduleId] ?? '/dashboard';
+    navigate(route);
+  }, [navigate]);
 
   const handleLogout = useCallback(async () => {
     const result = await authService.signOut();
@@ -123,33 +115,10 @@ function DashboardLayout() {
     }
   }, []);
 
-  const renderContent = () => {
-    // Employee route protection: redirigir al dashboard si no tiene permiso
-    if (role === 'employee' && !EMPLOYEE_ALLOWED.has(activeModule)) {
-      return <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />;
-    }
-    switch (activeModule) {
-      case 'dashboard':
-        return <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />;
-      case 'inventory':
-        return <InventoryPage tenantId={effectiveTenantId} />;
-      case 'purchases':
-        return <PurchasePage tenantId={effectiveTenantId} />;
-      case 'pos':
-        return <PosPage tenantId={effectiveTenantId} />;
-      case 'reports':
-        return <ReportsPage tenantId={effectiveTenantId} />;
-      default:
-        return <ModulePlaceholder moduleId={activeModule} />;
-    }
-  };
-
   return (
     <AppShell
       topBar={
-
         <>
-          {/* topbar menu button removed: sidebar has its own hamburger in mobile */}
           {isAdminViewingTenant && (
             <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}>
               <ArrowLeft size={18} />
@@ -190,35 +159,63 @@ function DashboardLayout() {
       sidebarExpanded={sidebarExpanded}
     >
       <ErrorBoundary moduleName="Dashboard">
-        {renderContent()}
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />} />
+          <Route path="/inventory" element={<InventoryPage tenantId={effectiveTenantId} />} />
+          <Route path="/purchases" element={<PurchasePage tenantId={effectiveTenantId} />} />
+          <Route path="/pos" element={<PosPage tenantId={effectiveTenantId} />} />
+          <Route path="/reports" element={<ReportsPage tenantId={effectiveTenantId} />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </ErrorBoundary>
     </AppShell>
   );
 }
 
-const App = () => {
-  const { isAuthenticated, isLoading, role } = useAuth();
-  const error = useAuthStore((s) => s.error);
-  const session = useAuthStore((s) => s.session);
-  const { currentView, setView } = useNavigationStore();
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const role = useAuthStore((s) => s.session?.role);
 
-  useEffect(() => {
-    if (isAuthenticated && currentView === 'loading') {
-      setView(role === 'admin' ? 'admin' : 'dashboard', role === 'admin' ? null : (session?.tenantSlug ?? null));
-    }
-  }, [isAuthenticated, role, session, currentView, setView]);
+  if (isLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
+  if (role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const role = useAuthStore((s) => s.session?.role);
+
+  if (isLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (role !== 'admin') return <Navigate to="/dashboard" replace />;
+
+  return <>{children}</>;
+}
+
+function AuthRedirect() {
+  const { isAuthenticated } = useAuth();
+  const role = useAuthStore((s) => s.session?.role);
+
+  if (isAuthenticated) {
+    return <Navigate to={role === 'admin' ? '/admin' : '/dashboard'} replace />;
+  }
+
+  return <LoginPage />;
+}
+
+function AppRoutes() {
   useEffect(() => {
     const subs: ReturnType<typeof EventBus.on>[] = [];
 
     subs.push(
       EventBus.on(SystemEvents.USER_LOGIN, (payload: unknown) => {
-        const { role: loginRole, tenantSlug } = payload as { role?: string; tenantSlug?: string | null };
-        if (loginRole === 'admin') {
-          setView('admin');
-        } else {
-          setView('dashboard', tenantSlug ?? null);
-        }
+        const { tenantSlug } = payload as { role?: string; tenantSlug?: string | null };
+        useAuthStore.getState().setSelectedTenantSlug(tenantSlug ?? null);
       }),
     );
 
@@ -226,48 +223,63 @@ const App = () => {
       EventBus.on(SystemEvents.ADMIN_NAVIGATE_TENANT, (payload: unknown) => {
         const { tenantSlug } = payload as { tenantSlug: string };
         initDb(tenantSlug);
-        setView('dashboard', tenantSlug);
+        useAuthStore.getState().setSelectedTenantSlug(tenantSlug);
       }),
     );
 
     subs.push(
       EventBus.on(SystemEvents.ADMIN_EXIT_TENANT, () => {
         destroyDb();
-        setView('admin');
+        useAuthStore.getState().setSelectedTenantSlug(null);
       }),
     );
 
     subs.push(
       EventBus.on(SystemEvents.USER_LOGOUT, () => {
-        useNavigationStore.getState().setView('login');
-        usePermissionStore.getState().clear();
         useAuthStore.getState().clearSession();
       }),
     );
 
     return () => subs.forEach((s) => EventBus.off(s));
-  }, [setView]);
+  }, []);
+
+  return (
+    <Routes>
+      <Route path="/login" element={<AuthRedirect />} />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <ErrorBoundary moduleName="Admin Panel">
+              <AdminPanelPage />
+            </ErrorBoundary>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
+
+const App = () => {
+  const { isLoading } = useAuth();
+  const error = useAuthStore((s) => s.error);
 
   if (isLoading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} />;
-  if (!isAuthenticated) return <LoginPage />;
-
-  if (currentView === 'admin' && role === 'admin') {
-    return (
-      <>
-        <ErrorBoundary moduleName="Admin Panel">
-          <AdminPanelPage />
-        </ErrorBoundary>
-        <ToastContainer />
-      </>
-    );
-  }
 
   return (
-    <>
-      <DashboardLayout />
+    <BrowserRouter>
+      <AppRoutes />
       <ToastContainer />
-    </>
+    </BrowserRouter>
   );
 };
 

@@ -1,6 +1,6 @@
 import { useState, Suspense, lazy } from 'react';
-import { Card, Button, Select, Spinner, BottomNav, DatePicker, type BottomNavItem } from '@/common/components';
-import { BarChart3, PieChart, ShoppingBag, Wallet, FileText } from 'lucide-react';
+import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem } from '@/common/components';
+import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
@@ -194,6 +194,28 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       <BottomNav
         activeId={activeTab}
         items={bottomNavItems}
+      />
+
+      <ModuleOnboarding
+        moduleId="reports"
+        steps={[
+          {
+            title: 'Analiza tu Negocio',
+            description: 'Aquí ves cuánto vendiste, cuánto ganaste y qué productos se venden más. Selecciona un periodo para ver los datos.',
+            icon: <FileText size={24} className="text-white" />,
+          },
+          {
+            title: 'Ganancias',
+            description: 'Mira cómo han sido tus ventas en el tiempo. La ganancia es la diferencia entre lo que cobraste y lo que te costó el producto.',
+            icon: <TrendingUp size={24} className="text-white" />,
+          },
+          {
+            title: 'Formas de Pago',
+            description: 'Ve cuánto has recibido en efectivo, transferencia u otros métodos. Útil para cuadrar tu caja al final del día.',
+            icon: <PieChart size={24} className="text-white" />,
+          },
+        ]}
+        onComplete={() => {}}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ShoppingCart, Truck, AlertTriangle } from 'lucide-react';
-import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal } from '../../../common/components';
+import { ShoppingCart, Truck, AlertTriangle, Plus, ClipboardCheck } from 'lucide-react';
+import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal, ModuleOnboarding } from '../../../common/components';
 import { cn } from '../../../lib/utils';
 import { usePurchases } from '../hooks/usePurchases';
 import { SupplierList } from './SupplierList';
@@ -118,14 +118,22 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-          <ShoppingCart size={22} className="text-primary" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <ShoppingCart size={22} className="text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Compras</h1>
+            <p className="text-xs text-text-secondary">Gestiona órdenes y proveedores</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Compras</h1>
-          <p className="text-xs text-text-secondary">Gestiona órdenes y proveedores</p>
-        </div>
+        {isOwner && (
+          <Button variant="primary" size="sm" onClick={activeTab === 'ordenes' ? openNewOrder : openNewSupplier}>
+            <Plus size={16} />
+            <span className="hidden sm:inline">{activeTab === 'ordenes' ? 'Nueva orden' : 'Nuevo proveedor'}</span>
+          </Button>
+        )}
       </div>
 
       <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 pb-0">
@@ -160,22 +168,12 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
       <Card>
         {activeTab === 'ordenes' && (
           <div className="p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <SearchInput
-                  placeholder="Buscar orden..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onClear={() => setSearch('')}
-                />
-              </div>
-              {isOwner && (
-                <Button variant="primary" size="sm" onClick={openNewOrder} className="shrink-0">
-                  <span className="hidden sm:inline">Nueva orden</span>
-                  <span className="sm:hidden">+</span>
-                </Button>
-              )}
-            </div>
+            <SearchInput
+              placeholder="Buscar orden..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch('')}
+            />
             <OrderList
               orders={orders.filter((o) =>
                 o.supplierName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -202,22 +200,12 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
         {activeTab === 'proveedores' && (
           <div className="p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <SearchInput
-                  placeholder="Buscar proveedor..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onClear={() => setSearch('')}
-                />
-              </div>
-              {isOwner && (
-                <Button variant="primary" size="sm" onClick={openNewSupplier} className="shrink-0">
-                  <span className="hidden sm:inline">Nuevo</span>
-                  <span className="sm:hidden">+</span>
-                </Button>
-              )}
-            </div>
+            <SearchInput
+              placeholder="Buscar proveedor..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch('')}
+            />
             <SupplierList
               suppliers={suppliers.filter((s) =>
                 s.name.toLowerCase().includes(search.toLowerCase())
@@ -336,6 +324,28 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
           </div>
         </Modal>
       )}
+
+      <ModuleOnboarding
+        moduleId="purchases"
+        steps={[
+          {
+            title: 'Gestiona tus Compras',
+            description: 'Aquí creas órdenes de compra a tus proveedores y registras la recepción de productos. Cada orden actualiza automáticamente tu inventario.',
+            icon: <ShoppingCart size={24} className="text-white" />,
+          },
+          {
+            title: 'Proveedores',
+            description: 'Registra tus proveedores con nombre, RIF y contacto. Así podrás crear órdenes de compra rápidamente seleccionándolos.',
+            icon: <Truck size={24} className="text-white" />,
+          },
+          {
+            title: 'Recibir Órdenes',
+            description: 'Cuando llegue tu pedido, toca "Recibir" en la orden. Puedes recibir parcialmente si no llegó todo. El stock se actualiza automáticamente.',
+            icon: <ClipboardCheck size={24} className="text-white" />,
+          },
+        ]}
+        onComplete={() => {}}
+      />
     </div>
   );
 }

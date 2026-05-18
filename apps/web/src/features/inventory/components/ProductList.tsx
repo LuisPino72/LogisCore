@@ -156,12 +156,6 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
 
   return (
     <div className="space-y-3 p-4">
-      {isOwner && (
-        <Button variant="primary" size="sm" onClick={onNewProduct}>
-          <Plus size={16} /> Nuevo producto
-        </Button>
-      )}
-
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
           <ProductSearchInput value={searchQuery} onChange={handleSearch} />

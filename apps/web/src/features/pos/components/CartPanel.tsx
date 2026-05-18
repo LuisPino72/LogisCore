@@ -110,7 +110,7 @@ export function CartPanel({
           title={`Carrito (${itemCount})`}
           className="max-w-none! m-0! modal-cart"
         >
-          <div className="flex flex-col h-[100dvh]">
+          <div className="flex flex-col h-dvh">
             <div className="flex-1 overflow-y-auto">
               {renderContent()}
             </div>

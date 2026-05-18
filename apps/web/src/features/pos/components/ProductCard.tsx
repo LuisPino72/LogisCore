@@ -29,6 +29,10 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
     <Card
       interactive
       onClick={() => onAdd(product)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(product); } }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Agregar ${product.name} al carrito`}
       className="relative flex flex-col gap-0 overflow-hidden p-0 active:scale-[0.97] transition-transform"
     >
       <button

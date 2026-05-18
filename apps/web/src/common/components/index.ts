@@ -23,6 +23,7 @@ export { Tabs } from './Tabs';
 export type { Tab } from './Tabs';
 export { Textarea } from './Textarea';
 export { ToastContainer } from './Toast';
+export { ModuleOnboarding } from './ModuleOnboarding';
 export { ErrorBoundary } from './ErrorBoundary';
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';

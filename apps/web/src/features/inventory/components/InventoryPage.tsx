@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Package, ListTree, History, AlertTriangle } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, BottomNav, SearchInput } from '../../../common/components';
+import { Package, ListTree, History, AlertTriangle, Plus, Settings } from 'lucide-react';
+import { Button, Card, EmptyState, Modal, Input, BottomNav, SearchInput, ModuleOnboarding } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
@@ -156,6 +156,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         </div>
         <div className="flex items-center gap-2">
           {totalLowStock > 0 && <LowStockBadge count={totalLowStock} />}
+          {isOwner && (
+            <Button variant="primary" size="sm" onClick={openNewProduct}>
+              <Plus size={16} />
+              <span className="hidden sm:inline">Nuevo producto</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -398,6 +404,33 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           <KardexView productId={selectedKardexProduct.id} productName={selectedKardexProduct.name} />
         </Modal>
       )}
+
+      <ModuleOnboarding
+        moduleId="inventory"
+        steps={[
+          {
+            title: 'Gestiona tu Inventario',
+            description: 'Aquí agregas, editas y controlas todos tus productos. Cada producto tiene nombre, código SKU, precio y stock.',
+            icon: <Package size={24} className="text-white" />,
+          },
+          {
+            title: 'Categorías',
+            description: 'Organiza tus productos en categorías para encontrarlos más rápido al vender. Puedes crear, editar y eliminar categorías.',
+            icon: <ListTree size={24} className="text-white" />,
+          },
+          {
+            title: 'Ajustes de Stock',
+            description: 'Usa "Ajustar stock" para corregir cantidades cuando haya diferencias. Siempre indica el motivo: merma, rotura, stock inicial, etc.',
+            icon: <Settings size={24} className="text-white" />,
+          },
+          {
+            title: 'Historial de Movimientos',
+            description: 'Aquí ves todos los cambios de stock: ventas, ajustes, recepciones de compras. Solo el propietario puede ver el historial.',
+            icon: <History size={24} className="text-white" />,
+          },
+        ]}
+        onComplete={() => {}}
+      />
     </div>
   );
 }

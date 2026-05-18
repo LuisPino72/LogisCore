@@ -30,7 +30,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
             onClick={item.onClick}
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors relative',
-              activeId === item.id ? 'text-primary' : 'text-gray-400',
+              activeId === item.id ? 'text-primary' : 'text-gray-500',
             )}
           >
             <span className="relative">

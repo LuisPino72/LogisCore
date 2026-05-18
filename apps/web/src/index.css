@@ -91,7 +91,7 @@
 .input:focus { @apply bg-white border-primary ring-4 ring-primary/10; }
 .input-error { @apply border-danger bg-red-50/30 ring-1 ring-danger/20; }
 .input-error:focus { @apply border-danger ring-4 ring-danger/10; }
-.input-hint { @apply text-xs text-gray-500; }
+.input-hint { @apply text-xs text-gray-600; }
 .input-error-text { @apply text-xs text-danger; }
 .input-with-icon { @apply pl-10; }
 .input-icon-left { @apply absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none; }

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Alert, Badge, Button, BottomNav } from '../../../common/components';
+import { Alert, Badge, Button, BottomNav, ModuleOnboarding } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { AlertTriangle, Scan, Package, History as HistoryIcon } from 'lucide-react';
+import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { useCashRegister } from '../hooks/useCashRegister';
 import { ProductGrid } from './ProductGrid';
@@ -185,19 +185,29 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Scan size={18} />
           </Button>
           <div className="flex-1" />
-          <div className="hidden md:flex bg-surface-alt rounded-lg p-0.5">
+          <div className="hidden md:flex items-center gap-1 border-b border-gray-200">
             <button
               type="button"
               onClick={() => setActiveTab('sell')}
-              className={`min-h-[44px] px-3 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'sell' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'sell'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-secondary hover:text-gray-700'
+              }`}
             >
+              <Package size={16} />
               Vender
             </button>
             <button
               type="button"
               onClick={() => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); }}
-              className={`min-h-[44px] px-3 py-2 text-xs font-medium rounded-md transition-colors ${activeTab === 'history' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'history'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-secondary hover:text-gray-700'
+              }`}
             >
+              <HistoryIcon size={16} />
               Historial
             </button>
           </div>
@@ -327,6 +337,33 @@ export function PosPage({ tenantId }: PosPageProps) {
         isOpen={showBarcodeScanner}
         onClose={() => setShowBarcodeScanner(false)}
         onScan={handleBarcodeScan}
+      />
+
+      <ModuleOnboarding
+        moduleId="pos"
+        steps={[
+          {
+            title: 'Bienvenido al Punto de Venta',
+            description: 'Aquí es donde registras tus ventas. Toca un producto para agregarlo al carrito. Puedes buscar por nombre o código SKU.',
+            icon: <ShoppingCart size={24} className="text-white" />,
+          },
+          {
+            title: 'Abrir Caja Primero',
+            description: 'Antes de vender, debes abrir la caja tocando el indicador de estado. Ingresa el monto inicial con el que inicias tu jornada.',
+            icon: <DollarSign size={24} className="text-white" />,
+          },
+          {
+            title: 'Productos Pesables',
+            description: 'Los productos que se venden por peso (kg, lt) te pedirán la cantidad antes de agregarlos al carrito. Los demás se agregan directamente.',
+            icon: <Package size={24} className="text-white" />,
+          },
+          {
+            title: 'Cobrar y Pausar',
+            description: 'Cuando estés listo, selecciona el método de pago y toca "Pagar". Si un cliente se va sin pagar, puedes "Pausar" el carrito y retomarlo después.',
+            icon: <Scan size={24} className="text-white" />,
+          },
+        ]}
+        onComplete={() => {}}
       />
     </div>
   );
