@@ -174,12 +174,14 @@ function DashboardLayout() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-  const role = useAuthStore((s) => s.session?.role);
+  const session = useAuthStore((s) => s.session);
+  const selectedTenantSlug = useAuthStore((s) => s.selectedTenantSlug);
+  const role = session?.role;
 
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  if (role === 'admin') {
+  if (role === 'admin' && !selectedTenantSlug) {
     return <Navigate to="/admin" replace />;
   }
 
@@ -209,6 +211,8 @@ function AuthRedirect() {
 }
 
 function AppRoutes() {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const subs: ReturnType<typeof EventBus.on>[] = [];
 
@@ -224,6 +228,7 @@ function AppRoutes() {
         const { tenantSlug } = payload as { tenantSlug: string };
         initDb(tenantSlug);
         useAuthStore.getState().setSelectedTenantSlug(tenantSlug);
+        navigate('/dashboard');
       }),
     );
 
@@ -231,6 +236,7 @@ function AppRoutes() {
       EventBus.on(SystemEvents.ADMIN_EXIT_TENANT, () => {
         destroyDb();
         useAuthStore.getState().setSelectedTenantSlug(null);
+        navigate('/admin');
       }),
     );
 
@@ -241,7 +247,7 @@ function AppRoutes() {
     );
 
     return () => subs.forEach((s) => EventBus.off(s));
-  }, []);
+  }, [navigate]);
 
   return (
     <Routes>
