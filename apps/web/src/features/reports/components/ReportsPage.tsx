@@ -1,6 +1,7 @@
 import { useState, Suspense, lazy } from 'react';
-import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem } from '@/common/components';
-import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp } from 'lucide-react';
+import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState } from '@/common/components';
+import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
@@ -34,6 +35,23 @@ interface ReportsPageProps {
 }
 
 export function ReportsPage({ tenantId }: ReportsPageProps) {
+  const role = useAuthStore((s) => s.session?.role);
+  const isOwner = role === 'owner' || role === 'admin';
+
+  if (!isOwner) {
+    return (
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        <Card>
+          <EmptyState
+            icon={<ShieldBan size={48} />}
+            title="Acceso restringido"
+            description="Solo el propietario del local puede acceder a los reportes."
+          />
+        </Card>
+      </div>
+    );
+  }
+
   const {
     filters,
     setFilters,
