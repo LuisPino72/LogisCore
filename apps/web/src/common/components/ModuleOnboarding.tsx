@@ -61,7 +61,7 @@ export function ModuleOnboarding({ moduleId, steps, onComplete }: ModuleOnboardi
   const isLast = currentStep === steps.length - 1;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+    <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="bg-linear-to-br from-primary to-primary-dark p-5 text-white relative">
