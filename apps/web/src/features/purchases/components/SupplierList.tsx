@@ -40,9 +40,9 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
         return (
           <div
             key={s.id}
-            className="flex items-center justify-between p-3 rounded-xl border border-border bg-white transition-shadow hover:shadow-sm"
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-xl border border-border bg-white transition-shadow hover:shadow-sm"
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-3 min-w-0 w-full">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <Truck size={18} className="text-primary" />
               </div>
@@ -65,7 +65,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
               </div>
             </div>
             {isOwner && (
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1 shrink-0 w-full sm:w-auto justify-end">
                 <Button variant="ghost" size="sm" onClick={() => onEdit(s)}>
                   <Pencil size={16} />
                 </Button>
