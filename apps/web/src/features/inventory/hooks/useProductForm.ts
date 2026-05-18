@@ -88,9 +88,10 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       return;
     }
 
+    const isEditing = options.initialValues !== undefined;
     const success = await options.onSubmit({
       ...parsed.data,
-      stockInicial: formData.stockInicial,
+      stockInicial: isEditing ? 0 : formData.stockInicial,
     });
 
     setIsSubmitting(false);

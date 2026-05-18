@@ -65,15 +65,19 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const handleEditProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
     if (!editProduct || !tenantId) return false;
     const ok = await updateProduct(editProduct.id, data, tenantId);
-    if (ok && imageFile) {
+    if (!ok) {
+      addToast({ type: 'error', message: 'Error al actualizar el producto. Verifica que los datos sean correctos y que el SKU no esté duplicado.', duration: 5000 });
+      return false;
+    }
+    if (imageFile) {
       const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, editProduct.id);
       if (!imgResult.ok) {
         addToast({ type: 'warning', message: `Producto actualizado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
       }
       refresh();
     }
-    if (ok) setShowProductForm(false);
-    return ok;
+    setShowProductForm(false);
+    return true;
   };
 
   const handleAdjustStock = async (productId: string, quantity: number, reason: string) => {

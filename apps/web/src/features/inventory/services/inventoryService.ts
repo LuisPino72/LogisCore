@@ -139,7 +139,21 @@ export const inventoryService = {
       if (!existing) {
         return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
       }
-      const cleanInput = input as Record<string, unknown>;
+
+      // Validar SKU duplicado si el SKU ha cambiado
+      if (input.sku && input.sku !== existing.sku) {
+        const duplicate = await db.products
+          .where({ tenantId })
+          .filter((p) => p.sku === input.sku && p.id !== id && !p.deletedAt)
+          .first();
+        if (duplicate) {
+          return failure(new AppError('PRODUCT_SKU_DUPLICATE', 'El SKU ya está asignado a otro producto.'));
+        }
+      }
+
+      // Eliminar campos que no existen en la tabla products de Supabase
+      const { stockInicial, ...safeInput } = input as Record<string, unknown> & { stockInicial?: unknown };
+      const cleanInput = safeInput;
       const updated = { ...existing, ...cleanInput };
       await db.transaction('rw', [db.products, db.syncQueue, db.outbox], async () => {
         await db.products.put(updated);

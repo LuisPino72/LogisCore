@@ -3,6 +3,7 @@ import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { initDb, destroyDb } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
+import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
@@ -177,8 +178,18 @@ export const authService = {
       });
     }
 
-    // 4. Limpieza de infraestructura
+    // 4. Flush de sync antes de destruir la base de datos local
     this.stopSync();
+    try {
+      const pendingCount = await syncQueue.getPendingCount();
+      if (pendingCount > 0) {
+        await syncEngine.push();
+      }
+    } catch {
+      // Si el flush falla, continuar con logout de todos modos
+    }
+
+    // 5. Limpieza de infraestructura
     await destroyDb();
     TenantTranslator.clearCache();
     await supabase.auth.signOut();
