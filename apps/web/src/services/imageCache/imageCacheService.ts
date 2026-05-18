@@ -8,9 +8,8 @@ async function cacheInBg(url: string): Promise<void> {
     const existing = await cache.match(url);
     if (existing) return;
     await cache.add(url);
-    console.log('[CACHE] Cached in background:', url.substring(0, 80), '...');
-  } catch (err) {
-    console.warn('[CACHE] Failed to cache in background:', url.substring(0, 80), err);
+  } catch {
+    // silent
   }
 }
 
@@ -22,21 +21,17 @@ export const imageCacheService = {
    * If cached → blob URL (instant).
    * If not   → raw Supabase URL (triggers network load).
    */
-  async acquireImageUrl(productId: string, imageUrl: string): Promise<string> {
+  async acquireImageUrl(_productId: string, imageUrl: string): Promise<string> {
     try {
       const cache = await caches.open(CACHE_NAME);
       const cached = await cache.match(imageUrl);
       if (cached) {
         const blob = await cached.blob();
-        const url = URL.createObjectURL(blob);
-        console.log('[CACHE] HIT  → blob for', productId, 'size', blob.size);
-        return url;
+        return URL.createObjectURL(blob);
       }
       cacheInBg(imageUrl);
-      console.log('[CACHE] MISS → raw URL for', productId, imageUrl.substring(0, 80));
       return imageUrl;
-    } catch (err) {
-      console.warn('[CACHE] Error acquiring image:', productId, err);
+    } catch {
       return imageUrl;
     }
   },
@@ -45,9 +40,7 @@ export const imageCacheService = {
   async preloadAll(products: { imageUrl?: string | null }[]): Promise<void> {
     const urls = products.filter((p) => p.imageUrl).map((p) => p.imageUrl!);
     if (urls.length === 0) return;
-    console.log('[CACHE] Preloading', urls.length, 'images');
     await Promise.allSettled(urls.map((url) => cacheInBg(url)));
-    console.log('[CACHE] Preload done');
   },
 
   /** Remove a single entry from cache. */
@@ -55,7 +48,6 @@ export const imageCacheService = {
     try {
       const cache = await caches.open(CACHE_NAME);
       await cache.delete(imageUrl);
-      console.log('[CACHE] Invalidated:', imageUrl.substring(0, 80));
     } catch {
       // silent
     }

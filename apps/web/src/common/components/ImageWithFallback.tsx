@@ -11,6 +11,9 @@ interface ImageWithFallbackProps {
   skeletonClassName?: string;
 }
 
+// Cache para sobrevivir a remounts y cambios temporales en el store
+const globalImageUrlCache = new Map<string, string>();
+
 export function ImageWithFallback({
   productId,
   imageUrl,
@@ -25,65 +28,58 @@ export function ImageWithFallback({
   const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    console.log('[IWF] Mount/Update', { productId, hasImageUrl: !!imageUrl });
-    if (!imageUrl) {
-      console.log('[IWF] No imageUrl → error state');
+    // Si el store temporalmente pierde imageUrl, usamos el último conocido
+    if (imageUrl) {
+      globalImageUrlCache.set(productId, imageUrl);
+    }
+    const effectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
+
+    if (!effectiveImageUrl) {
       setLoading(false);
       setError(true);
+      setSrc(null);
+      setImgReady(false);
       return;
     }
 
-    let cancelled = false;
+    let isActive = true;
 
     (async () => {
-      console.log('[IWF] Calling acquireImageUrl for', productId);
-      const result = await imageCacheService.acquireImageUrl(productId, imageUrl!);
-      console.log('[IWF] acquireImageUrl returned for', productId, { isBlob: result.startsWith('blob:'), len: result.length });
-      if (cancelled) {
-        console.log('[IWF] Cancelled for', productId);
-        if (result.startsWith('blob:')) URL.revokeObjectURL(result);
-        return;
-      }
+      const result = await imageCacheService.acquireImageUrl(productId, effectiveImageUrl);
+      if (!isActive) return;
       if (result.startsWith('blob:')) {
         if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
         objectUrlRef.current = result;
       }
       setSrc(result);
-      // Keep loading=true until the actual <img> fires onLoad (handled below)
-      // For blob URLs, they've likely loaded already by the time we reach here,
-      // but for consistency, we still wait for onLoad.
+      setLoading(false);
       setImgReady(false);
-      console.log('[IWF] Set src for', productId, 'waiting for onLoad');
     })();
 
     return () => {
-      console.log('[IWF] Cleanup effect for', productId);
-      cancelled = true;
+      isActive = false;
     };
   }, [productId, imageUrl]);
 
-  // Cleanup object URLs on unmount
+  // Cleanup: revocar solo la URL que fue efectivamente seteada en este componente
   useEffect(() => {
     return () => {
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
       }
     };
   }, []);
 
   const handleLoad = () => {
-    console.log('[IWF] onLoad fired for', productId);
     setImgReady(true);
-    setLoading(false);
   };
 
   const handleError = () => {
-    console.log('[IWF] onError fired for', productId, 'src=', src?.substring(0, 80));
     setError(true);
-    setLoading(false);
   };
 
-  if (error || (!loading && !src)) {
+  if (error || (!src && !loading)) {
     return (
       <div className={cn('flex items-center justify-center bg-surface-alt', className)}>
         <Package size={24} className="text-gray-300" />
@@ -91,10 +87,11 @@ export function ImageWithFallback({
     );
   }
 
+  const showSkeleton = (loading || (src && !imgReady)) && !error;
+
   return (
     <div className={cn('relative overflow-hidden', className)}>
-      {/* Skeleton visible while loading or while img not ready */}
-      {(loading || (src && !imgReady && !error)) && (
+      {showSkeleton && (
         <div
           className={cn(
             'absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer',
