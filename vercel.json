@@ -3,5 +3,6 @@
   "outputDirectory": "apps/web/dist",
   "framework": "vite",
   "installCommand": "npm install",
-  "devCommand": "turbo dev"
+  "devCommand": "turbo dev",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
