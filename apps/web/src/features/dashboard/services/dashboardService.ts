@@ -3,19 +3,66 @@ import { preciseRound } from '@logiscore/shared';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { TenantTranslator } from '../../../services/tenantTranslator';
+import { getDb, isDbReady, type DexieTenantRef } from '../../../services/dexie/db';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { TenantInfoResponse, SubscriptionResponse } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { inventoryService } from '../../inventory/services/inventoryService';
-import { getDb } from '../../../services/dexie/db';
+
+const CACHE_SUB_KEY = 'logiscore_cached_subscription';
+const CACHE_EMP_KEY = 'logiscore_cached_employee_count';
 
 function calcItemCost(quantity: number, costUsdPerUnit: number | undefined): number {
   if (!costUsdPerUnit || costUsdPerUnit <= 0) return 0;
   return quantity * costUsdPerUnit;
 }
 
+async function cacheTenantInfo(tenantId: string, info: TenantInfoResponse): Promise<void> {
+  if (!isDbReady()) return;
+  try {
+    const db = getDb();
+    const existing = await db.tenantRefs.get(tenantId);
+    const ref: DexieTenantRef = {
+      id: tenantId,
+      slug: info.slug,
+      name: info.name,
+      rif: info.rif,
+    };
+    if (existing?.name) ref.name = existing.name;
+    await db.tenantRefs.put(ref);
+  } catch { /* best-effort */ }
+}
+
+async function readCachedTenantInfo(tenantId: string): Promise<TenantInfoResponse | null> {
+  if (!isDbReady()) return null;
+  try {
+    const db = getDb();
+    const ref = await db.tenantRefs.get(tenantId);
+    if (ref) {
+      return { name: ref.name, slug: ref.slug, rif: ref.rif ?? '' };
+    }
+  } catch { /* best-effort */ }
+  return null;
+}
+
+function readCachedSubscription(): SubscriptionResponse | null {
+  try {
+    const raw = localStorage.getItem(CACHE_SUB_KEY);
+    if (raw) return JSON.parse(raw) as SubscriptionResponse;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function readCachedEmployeeCount(): number | null {
+  try {
+    const raw = localStorage.getItem(CACHE_EMP_KEY);
+    if (raw !== null) return Number(raw);
+  } catch { /* ignore */ }
+  return null;
+}
+
 export const dashboardService = {
-  async getTenantInfo(tenantId: string): Promise<Result<TenantInfoResponse, AppError>> {
+  async getTenantInfo(tenantId: string): Promise<Result<TenantInfoResponse | null, AppError>> {
     const { data, error } = await supabase
       .from('tenants')
       .select('name, slug, rif')
@@ -23,25 +70,35 @@ export const dashboardService = {
       .is('deleted_at', null)
       .single();
 
-    if (error) {
-      return failure(new AppError(DashboardErrors.TENANT_INFO_FAILED, 'Error al cargar información del negocio'));
+    if (!error && data) {
+      await cacheTenantInfo(tenantId, data);
+      return success(data);
     }
 
-    return success(data);
+    const cached = await readCachedTenantInfo(tenantId);
+    if (cached) return success(cached);
+
+    if (!navigator.onLine) return success(null);
+    return failure(new AppError(DashboardErrors.TENANT_INFO_FAILED, 'Error al cargar información del negocio'));
   },
 
-  async getSubscriptionInfo(tenantId: string): Promise<Result<SubscriptionResponse, AppError>> {
+  async getSubscriptionInfo(tenantId: string): Promise<Result<SubscriptionResponse | null, AppError>> {
     const { data, error } = await supabase
       .from('subscriptions')
       .select('plan, status, expires_at')
       .eq('tenant_id', tenantId)
       .single();
 
-    if (error) {
-      return failure(new AppError(DashboardErrors.SUBSCRIPTION_INFO_FAILED, 'Error al cargar suscripción'));
+    if (!error && data) {
+      localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(data));
+      return success(data);
     }
 
-    return success(data);
+    const cached = readCachedSubscription();
+    if (cached) return success(cached);
+
+    if (!navigator.onLine) return success(null);
+    return failure(new AppError(DashboardErrors.SUBSCRIPTION_INFO_FAILED, 'Error al cargar suscripción'));
   },
 
   async getEmployeeCount(tenantId: string): Promise<Result<number, AppError>> {
@@ -52,11 +109,16 @@ export const dashboardService = {
       .eq('role', 'employee')
       .is('deleted_at', null);
 
-    if (error) {
-      return failure(new AppError(DashboardErrors.EMPLOYEES_LOAD_FAILED, 'Error al cargar empleados'));
+    if (!error) {
+      localStorage.setItem(CACHE_EMP_KEY, String(count ?? 0));
+      return success(count ?? 0);
     }
 
-    return success(count ?? 0);
+    const cached = readCachedEmployeeCount();
+    if (cached !== null) return success(cached);
+
+    if (!navigator.onLine) return success(0);
+    return failure(new AppError(DashboardErrors.EMPLOYEES_LOAD_FAILED, 'Error al cargar empleados'));
   },
 
   async getLowStockProducts(tenantId: string): Promise<Result<Product[], AppError>> {

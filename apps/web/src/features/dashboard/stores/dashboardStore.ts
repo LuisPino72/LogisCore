@@ -29,20 +29,18 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
       dashboardService.getTodayEarnings(tenantId),
     ]);
 
-    const errors: string[] = [];
-
-    if (!tenantResult.ok) errors.push('Información del negocio');
-    if (!subResult.ok) errors.push('Suscripción');
-    if (!empResult.ok) errors.push('Empleados');
-    if (!earningsResult.ok) errors.push('Ganancias del día');
-
     set({
       tenantInfo: tenantResult.ok ? tenantResult.data : null,
       subscription: subResult.ok ? subResult.data : null,
       employees: empResult.ok ? empResult.data : 0,
       todayEarnings: earningsResult.ok ? earningsResult.data : 0,
       loading: false,
-      error: errors.length > 0 ? `Error al cargar: ${errors.join(', ')}` : null,
+      error: !navigator.onLine ? null
+        : [!tenantResult.ok && 'Información del negocio',
+           !subResult.ok && 'Suscripción',
+           !empResult.ok && 'Empleados',
+           !earningsResult.ok && 'Ganancias del día',
+          ].filter(Boolean).join(', ') || null,
     });
   },
 

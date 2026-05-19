@@ -1,5 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 import type { TenantInfo } from '@logiscore/core';
+
+export interface DexieTenantRef extends TenantInfo {
+  rif?: string;
+}
 import type { SyncQueueItem, SyncMeta } from '../sync/types';
 import type { OutboxEntry } from '@logiscore/core';
 
@@ -175,7 +179,7 @@ export interface DexiePurchaseOrderItem {
 }
 
 export class LogisCoreDB extends Dexie {
-  tenantRefs!: Table<TenantInfo, string>;
+  tenantRefs!: Table<DexieTenantRef, string>;
   syncQueue!: Table<SyncQueueItem, number>;
   syncMeta!: Table<SyncMeta, string>;
   outbox!: Table<OutboxEntry, number>;

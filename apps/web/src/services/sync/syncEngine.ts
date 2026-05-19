@@ -257,6 +257,7 @@ export class SyncEngine {
   start(): void {
     if (this.running) return;
     this.running = true;
+    this.pull().catch(() => {});
     this.scheduleNext();
   }
 
