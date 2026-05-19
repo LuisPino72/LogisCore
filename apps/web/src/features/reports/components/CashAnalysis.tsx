@@ -95,16 +95,17 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="text-sm font-bold text-gray-900">
                       <DollarSign size={14} className="inline -mt-0.5 text-primary" />
-                      Caja #{reg.registerId.slice(0, 8)}
+                      Caja &mdash; {formatDate(reg.openedAt)}
                     </h4>
                     <Badge variant={reg.status === 'open' ? 'success' : 'neutral'}>
                       {reg.status === 'open' ? 'Abierta' : 'Cerrada'}
                     </Badge>
                   </div>
-                  <p className="text-xs text-text-secondary mt-1">
-                    {formatDate(reg.openedAt)}
-                    {reg.closedAt && ` → ${formatDate(reg.closedAt)}`}
-                  </p>
+                  {reg.closedAt && (
+                    <p className="text-xs text-text-secondary mt-1">
+                      Cerrada el {formatDate(reg.closedAt)}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right shrink-0 ml-3">
                   <p className="text-xs text-text-secondary">Ventas</p>

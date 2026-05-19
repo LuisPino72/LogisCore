@@ -107,7 +107,7 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): XLSX.WorkSheet
   ];
   cashAnalysis.forEach((r) => {
     rows.push([
-      r.registerId.slice(0, 8),
+      new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
       formatBs(r.openingBalanceBs),
       formatBs(r.totalSalesBs),
       formatBs(r.totalIgtfBs),

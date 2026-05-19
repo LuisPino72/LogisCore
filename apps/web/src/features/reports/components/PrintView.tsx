@@ -315,7 +315,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <tbody>
                 {cashAnalysis.map((r, i) => (
                   <tr key={i}>
-                    <td>{r.registerId.slice(0, 8)}</td>
+                    <td>{new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
                     <td>{formatBs(r.openingBalanceBs)}</td>
                     <td>{formatBs(r.totalSalesBs)}</td>
                     <td>{formatBs(r.totalIgtfBs)}</td>
