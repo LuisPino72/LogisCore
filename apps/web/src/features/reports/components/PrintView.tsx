@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
@@ -15,125 +16,334 @@ interface PrintViewProps {
   cashAnalysis: CashRegisterSummaryData[];
 }
 
-function Table({ title, headers, rows }: { title: string; headers: string[]; rows: (string | number | undefined | null)[][] }) {
+const printStyles = `
+  @page { margin: 20mm 15mm; size: A4 portrait; }
+
+  .print-all-report {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: white;
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .print-header {
+    text-align: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid #2563eb;
+  }
+
+  .print-title {
+    font-size: 20pt;
+    font-weight: 800;
+    margin: 0 0 4px;
+    color: #111;
+    letter-spacing: -0.02em;
+  }
+
+  .print-subtitle {
+    font-size: 9pt;
+    color: #555;
+    margin: 0;
+  }
+
+  .print-domain {
+    font-size: 8pt;
+    color: #888;
+    margin: 2px 0 0;
+  }
+
+  .print-section {
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-section-title {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 0 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #2563eb;
+    color: #111;
+  }
+
+  .print-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .print-kpi {
+    border: 1px solid #e0e0e0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: #fafafa;
+  }
+
+  .print-kpi-label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #666;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .print-kpi-value {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #111;
+  }
+
+  .print-kpi-subtitle {
+    font-size: 7pt;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  .print-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+
+  .print-table th {
+    background: #2563eb;
+    color: white;
+    font-weight: 600;
+    text-align: left;
+    padding: 6px 8px;
+    border: 1px solid #1d4ed8;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .print-table td {
+    padding: 5px 8px;
+    border: 1px solid #d0d0d0;
+  }
+
+  .print-table tr:nth-child(even) td {
+    background: #f5f7fa;
+  }
+
+  .print-table tr:last-child td {
+    border-bottom: 2px solid #2563eb;
+  }
+
+  .print-empty {
+    color: #888;
+    font-style: italic;
+    padding: 16px;
+    text-align: center;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+  }
+
+  .print-footer {
+    text-align: center;
+    margin-top: 28px;
+    padding-top: 12px;
+    border-top: 2px solid #e0e0e0;
+    font-size: 7pt;
+    color: #999;
+  }
+`;
+
+export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function PrintView(
+  { summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis },
+  ref,
+) {
+  const reportDate = new Date().toLocaleDateString('es-VE', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+
   return (
-    <div className="print-section" style={{ breakInside: 'avoid', marginBottom: 24, pageBreakInside: 'avoid' }}>
-      <h2 className="print-section-title">{title}</h2>
-      <table className="print-table">
-        <thead>
-          <tr>
-            {headers.map((h) => (
-              <th key={h}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {row.map((cell, j) => (
-                <td key={j}>{cell ?? '-'}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div ref={ref} className="print-all-report">
+      <style>{printStyles}</style>
+
+      <div className="print-header">
+        <h1 className="print-title">LogisCore ERP</h1>
+        <p className="print-subtitle">Reporte de Gesti&oacute;n &mdash; {reportDate}</p>
+        <p className="print-domain">Dominio: {window.location.host}</p>
+      </div>
+
+      {/* Resumen Ejecutivo */}
+      <div className="print-section">
+        <h2 className="print-section-title">Resumen Ejecutivo</h2>
+        {summary ? (
+          <div className="print-kpi-grid">
+            <KpiCard label="Ventas Totales" value={formatBs(summary.totalSalesBs)} subtitle={`${summary.totalTransactions} transacciones`} />
+            <KpiCard label="Ganancia Bruta" value={formatBs(summary.grossProfitBs)} subtitle={`Margen ${summary.profitMarginPercent}%`} />
+            <KpiCard label="Costo Total" value={formatBs(summary.totalCostBs)} />
+            <KpiCard label="Ticket Promedio" value={formatBs(summary.averageTicketBs)} />
+            <KpiCard label="IGTF Total" value={formatBs(summary.totalIgtfBs)} />
+            <KpiCard label="Gastos de Consumo" value={`${formatBs(summary.nonSellableExpensesBs)} / USD ${summary.nonSellableExpensesUsd.toFixed(2)}`} />
+            {summary.topProductName && <KpiCard label="Top Producto" value={summary.topProductName} />}
+            {summary.salesVsYesterdayPercent !== undefined && (
+              <KpiCard label="Vs Ayer" value={`${summary.salesVsYesterdayPercent}%`} />
+            )}
+          </div>
+        ) : (
+          <div className="print-empty">Sin datos de resumen</div>
+        )}
+      </div>
+
+      {/* Ganancias en el Tiempo */}
+      {profitOverTime.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Ganancias en el Tiempo</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Ventas Bs</th>
+                  <th>Costo Bs</th>
+                  <th>Ganancia Bs</th>
+                  <th>Transacciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profitOverTime.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.label}</td>
+                    <td>{formatBs(p.salesBs)}</td>
+                    <td>{formatBs(p.costBs)}</td>
+                    <td>{formatBs(p.profitBs)}</td>
+                    <td>{p.transactions}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Top Productos */}
+      {topProducts.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Top Productos por Ganancia</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>SKU</th>
+                  <th>Vendidos</th>
+                  <th>Ingreso Bs</th>
+                  <th>Costo Bs</th>
+                  <th>Ganancia Bs</th>
+                  <th>Margen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topProducts.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.name}</td>
+                    <td>{p.sku}</td>
+                    <td>{p.quantitySold}</td>
+                    <td>{formatBs(p.revenueBs)}</td>
+                    <td>{formatBs(p.costBs)}</td>
+                    <td>{formatBs(p.profitBs)}</td>
+                    <td>{p.marginPercent}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Métodos de Pago */}
+      {paymentBreakdown.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Métodos de Pago</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>M&eacute;todo</th>
+                  <th>Transacciones</th>
+                  <th>Total Bs</th>
+                  <th>%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paymentBreakdown.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.label}</td>
+                    <td>{p.count}</td>
+                    <td>{formatBs(p.totalBs)}</td>
+                    <td>{p.percentage}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Análisis de Caja */}
+      {cashAnalysis.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Análisis de Caja</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Caja</th>
+                  <th>Apertura Bs</th>
+                  <th>Ventas Bs</th>
+                  <th>IGTF Bs</th>
+                  <th>Esperado Bs</th>
+                  <th>Cierre Bs</th>
+                  <th>Diferencia Bs</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cashAnalysis.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.registerId.slice(0, 8)}</td>
+                    <td>{formatBs(r.openingBalanceBs)}</td>
+                    <td>{formatBs(r.totalSalesBs)}</td>
+                    <td>{formatBs(r.totalIgtfBs)}</td>
+                    <td>{r.expectedClosingBs !== undefined ? formatBs(r.expectedClosingBs) : '-'}</td>
+                    <td>{r.closingBalanceBs !== undefined ? formatBs(r.closingBalanceBs) : '-'}</td>
+                    <td>{r.differenceBs !== undefined ? formatBs(r.differenceBs) : '-'}</td>
+                    <td>{r.status === 'open' ? 'Abierta' : 'Cerrada'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="print-footer">
+        LogisCore ERP — Reporte generado automáticamente el {reportDate}
+      </div>
     </div>
   );
-}
+});
 
-function KpiRow({ label, value, subtitle }: { label: string; value: string; subtitle?: string }) {
+function KpiCard({ label, value, subtitle }: { label: string; value: string; subtitle?: string }) {
   return (
     <div className="print-kpi">
       <div className="print-kpi-label">{label}</div>
       <div className="print-kpi-value">{value}</div>
       {subtitle && <div className="print-kpi-subtitle">{subtitle}</div>}
-    </div>
-  );
-}
-
-export function PrintView({ summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis }: PrintViewProps) {
-  const reportDate = new Date().toLocaleDateString('es-VE', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  return (
-    <div className="print-all-report">
-      <div className="print-header">
-        <h1 className="print-title">LogisCore - Reporte</h1>
-        <p className="print-date">Generado el {reportDate}</p>
-      </div>
-
-      {/* Section 1: Resumen Ejecutivo */}
-      <div className="print-section" style={{ breakInside: 'avoid', marginBottom: 24, pageBreakInside: 'avoid' }}>
-        <h2 className="print-section-title">Resumen Ejecutivo</h2>
-        {summary ? (
-          <div className="print-kpi-grid">
-            <KpiRow label="Ventas Totales" value={formatBs(summary.totalSalesBs)} subtitle={`${summary.totalTransactions} transacciones`} />
-            <KpiRow label="Ganancia Bruta" value={formatBs(summary.grossProfitBs)} subtitle={`Margen ${summary.profitMarginPercent}%`} />
-            <KpiRow label="Costo Total" value={formatBs(summary.totalCostBs)} />
-            <KpiRow label="Ticket Promedio" value={formatBs(summary.averageTicketBs)} />
-            <KpiRow label="IGTF Total" value={formatBs(summary.totalIgtfBs)} />
-            <KpiRow label="Gastos de Consumo" value={`${formatBs(summary.nonSellableExpensesBs)} / USD ${summary.nonSellableExpensesUsd.toFixed(2)}`} />
-            {summary.topProductName && <KpiRow label="Top Producto" value={summary.topProductName} />}
-            {summary.salesVsYesterdayPercent !== undefined && (
-              <KpiRow label="Vs Ayer" value={`${summary.salesVsYesterdayPercent}%`} />
-            )}
-          </div>
-        ) : (
-          <p style={{ color: '#666', fontStyle: 'italic' }}>Sin datos de resumen</p>
-        )}
-      </div>
-
-      {/* Section 2: Ganancias */}
-      {profitOverTime.length > 0 && (
-        <Table
-          title="Ganancias en el Tiempo"
-          headers={['Fecha', 'Ventas Bs', 'Costo Bs', 'Ganancia Bs', 'Transacciones']}
-          rows={profitOverTime.map((p) => [p.label, formatBs(p.salesBs), formatBs(p.costBs), formatBs(p.profitBs), p.transactions])}
-        />
-      )}
-
-      {/* Section 3: Top Productos */}
-      {topProducts.length > 0 && (
-        <Table
-          title="Top Productos por Ganancia"
-          headers={['Producto', 'SKU', 'Vendidos', 'Ingreso Bs', 'Costo Bs', 'Ganancia Bs', 'Margen %']}
-          rows={topProducts.map((p) => [p.name, p.sku, p.quantitySold, formatBs(p.revenueBs), formatBs(p.costBs), formatBs(p.profitBs), `${p.marginPercent}%`])}
-        />
-      )}
-
-      {/* Section 4: Métodos de Pago */}
-      {paymentBreakdown.length > 0 && (
-        <Table
-          title="Métodos de Pago"
-          headers={['Método', 'Transacciones', 'Total Bs', '%']}
-          rows={paymentBreakdown.map((p) => [p.label, p.count, formatBs(p.totalBs), `${p.percentage}%`])}
-        />
-      )}
-
-      {/* Section 5: Caja */}
-      {cashAnalysis.length > 0 && (
-        <Table
-          title="Análisis de Caja"
-          headers={['Caja', 'Apertura Bs', 'Ventas Bs', 'IGTF Bs', 'Esperado Bs', 'Cierre Bs', 'Diferencia Bs', 'Estado']}
-          rows={cashAnalysis.map((r) => [
-            r.registerId.slice(0, 8),
-            formatBs(r.openingBalanceBs),
-            formatBs(r.totalSalesBs),
-            formatBs(r.totalIgtfBs),
-            r.expectedClosingBs !== undefined ? formatBs(r.expectedClosingBs) : '-',
-            r.closingBalanceBs !== undefined ? formatBs(r.closingBalanceBs) : '-',
-            r.differenceBs !== undefined ? formatBs(r.differenceBs) : '-',
-            r.status === 'open' ? 'Abierta' : 'Cerrada',
-          ])}
-        />
-      )}
-
-      <div className="print-footer">
-        <p>LogisCore ERP &mdash; Reporte generado automáticamente</p>
-      </div>
     </div>
   );
 }

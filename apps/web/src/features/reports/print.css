@@ -1,6 +1,16 @@
-/* Oculto en pantalla, solo visible al imprimir */
-.print-all-report { display: none; }
+/* PrintView se renderiza off-screen para que react-to-print lo clone */
+.print-container {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 210mm;
+  background: white;
+  z-index: -1;
+  opacity: 0.01;
+  pointer-events: none;
+}
 
+/* Fallback para Ctrl+P directo */
 @media print {
   html, body {
     background: white !important;
@@ -21,111 +31,14 @@
 
   .print-all-report {
     display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
+  }
+
+  .print-container {
+    position: static;
     width: 100%;
-    padding: 0;
-    background: white !important;
-  }
-
-  .print-header {
-    text-align: center;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid #333;
-  }
-
-  .print-title {
-    font-size: 18pt;
-    font-weight: 700;
-    margin: 0;
-    color: #000;
-  }
-
-  .print-date {
-    font-size: 9pt;
-    color: #555;
-    margin: 4px 0 0;
-  }
-
-  .print-section-title {
-    font-size: 12pt;
-    font-weight: 700;
-    margin: 0 0 8px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid #999;
-    color: #000;
-  }
-
-  .print-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-
-  .print-kpi {
-    border: 1px solid #ccc;
-    padding: 8px;
-    border-radius: 4px;
-  }
-
-  .print-kpi-label {
-    font-size: 7pt;
-    text-transform: uppercase;
-    color: #555;
-    letter-spacing: 0.05em;
-    margin-bottom: 2px;
-  }
-
-  .print-kpi-value {
-    font-size: 12pt;
-    font-weight: 700;
-    color: #000;
-  }
-
-  .print-kpi-subtitle {
-    font-size: 7pt;
-    color: #777;
-    margin-top: 2px;
-  }
-
-  .print-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 8pt;
-    margin-bottom: 0;
-  }
-
-  .print-table th {
-    background: #e5e7eb;
-    font-weight: 700;
-    text-align: left;
-    padding: 5px 6px;
-    border: 1px solid #ccc;
-  }
-
-  .print-table td {
-    padding: 4px 6px;
-    border: 1px solid #ddd;
-  }
-
-  .print-table tr:nth-child(even) td {
-    background: #f9fafb;
-  }
-
-  .print-footer {
-    text-align: center;
-    margin-top: 24px;
-    font-size: 7pt;
-    color: #999;
-    border-top: 1px solid #ddd;
-    padding-top: 8px;
-  }
-
-  .print-section {
-    break-inside: avoid;
-    page-break-inside: avoid;
+    opacity: 1;
+    z-index: auto;
+    pointer-events: auto;
   }
 
   @page {

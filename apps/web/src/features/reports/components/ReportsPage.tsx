@@ -1,6 +1,7 @@
-import { useState, Suspense, lazy, useEffect, useCallback } from 'react';
+import { useState, Suspense, lazy, useRef } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
@@ -86,25 +87,12 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     onClick: () => setActiveTab(tab.id),
   }));
 
-  const [printing, setPrinting] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = useCallback(() => {
-    setPrinting(true);
-  }, []);
-
-  useEffect(() => {
-    if (!printing) return;
-    const id = requestAnimationFrame(() => {
-      window.print();
-    });
-    return () => cancelAnimationFrame(id);
-  }, [printing]);
-
-  useEffect(() => {
-    const handler = () => setPrinting(false);
-    window.addEventListener('afterprint', handler);
-    return () => window.removeEventListener('afterprint', handler);
-  }, []);
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: () => `LogisCore-Reporte-${new Date().toISOString().slice(0, 10)}`,
+  });
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-6">
@@ -257,15 +245,16 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         onComplete={() => {}}
       />
 
-      {printing && (
+      <div className="print-container">
         <PrintView
+          ref={printRef}
           summary={summary}
           profitOverTime={profitOverTime}
           topProducts={topProducts}
           paymentBreakdown={paymentBreakdown}
           cashAnalysis={cashAnalysis}
         />
-      )}
+      </div>
     </div>
   );
 }
