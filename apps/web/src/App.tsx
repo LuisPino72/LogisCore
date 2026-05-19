@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthStore } from './features/auth/stores/authStore';
 import { authService } from './features/auth/services/authService';
+import { sessionGuard } from './features/auth/services/sessionGuardService';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { initDb, destroyDb } from './services/dexie/db';
 import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
@@ -277,6 +278,17 @@ function AppRoutes() {
 const App = () => {
   const { isLoading } = useAuth();
   const error = useAuthStore((s) => s.error);
+  const session = useAuthStore((s) => s.session);
+  const authStatus = useAuthStore((s) => s.status);
+
+  useEffect(() => {
+    if (authStatus === 'authenticated' && session?.role !== 'admin') {
+      sessionGuard.startHeartbeat();
+    } else {
+      sessionGuard.stopHeartbeat();
+    }
+    return () => sessionGuard.stopHeartbeat();
+  }, [authStatus, session?.role]);
 
   if (isLoading) return <LoadingScreen />;
   if (error) return <ErrorScreen message={error} />;

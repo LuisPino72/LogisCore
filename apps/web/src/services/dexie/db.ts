@@ -131,6 +131,15 @@ export interface DexieProductImage {
   cachedAt: string;
 }
 
+export interface DexieExchangeRate {
+  id: string;
+  tenantId: string;
+  rate: number;
+  source: 'bcv_api' | 'manual';
+  fetchedAt: string | null;
+  createdAt: string;
+}
+
 export interface DexieSupplier {
   id: string;
   tenantId: string;
@@ -183,10 +192,12 @@ export class LogisCoreDB extends Dexie {
   suppliers!: Table<DexieSupplier, string>;
   purchaseOrders!: Table<DexiePurchaseOrder, string>;
   purchaseOrderItems!: Table<DexiePurchaseOrderItem, string>;
+  exchangeRates!: Table<DexieExchangeRate, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(10).stores({
+    this.version(11).stores({
+      exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
       syncMeta: 'table',

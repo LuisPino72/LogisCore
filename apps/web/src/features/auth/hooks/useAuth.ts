@@ -29,7 +29,11 @@ export function useAuth(): {
             clearSession();
           }
         } else {
-          clearSession(result.error.message);
+          if (result.error.code === 'AUTH_SESSION_ACTIVE') {
+            clearSession();
+          } else {
+            clearSession(result.error.message);
+          }
         }
       });
 

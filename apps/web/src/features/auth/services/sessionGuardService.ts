@@ -1,0 +1,111 @@
+import { AppError, Result, success, failure } from '@logiscore/core';
+import { supabase } from '../../../services/supabase/client';
+
+const SESSION_TOKEN_KEY = 'logiscore_session_token';
+const HEARTBEAT_MS = 3 * 60 * 1000;
+
+function deviceLabel(): string {
+  const ua = navigator.userAgent;
+  if (ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+  if (ua.includes('Android')) return 'Android';
+  if (ua.includes('Windows')) return 'Windows PC';
+  if (ua.includes('Mac')) return 'macOS';
+  if (ua.includes('Linux')) return 'Linux';
+  return 'Desconocido';
+}
+
+class SessionGuardService {
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private token: string | null = null;
+
+  getSessionToken(): string | null {
+    if (!this.token) {
+      this.token = localStorage.getItem(SESSION_TOKEN_KEY);
+    }
+    return this.token;
+  }
+
+  generateSessionToken(): string {
+    this.token = crypto.randomUUID();
+    localStorage.setItem(SESSION_TOKEN_KEY, this.token);
+    return this.token;
+  }
+
+  restoreSessionToken(): string | null {
+    const stored = localStorage.getItem(SESSION_TOKEN_KEY);
+    if (stored) {
+      this.token = stored;
+      return stored;
+    }
+    return null;
+  }
+
+  async claim(adminBypass: boolean): Promise<Result<void, AppError>> {
+    if (adminBypass) return success(undefined);
+
+    const token = this.getSessionToken();
+    if (!token) return success(undefined);
+
+    const { error } = await supabase.rpc('claim_active_session', {
+      p_session_token: token,
+      p_device_label: deviceLabel(),
+    });
+
+    if (error) {
+      if (error.message === 'SESSION_ALREADY_ACTIVE') {
+        this.clearToken();
+        return failure(
+          new AppError(
+            'AUTH_SESSION_ACTIVE',
+            'Ya hay una sesión activa en otro dispositivo. Cierra sesión allá primero.',
+          ),
+        );
+      }
+      return failure(new AppError('AUTH_SESSION_ERROR', 'Error al validar sesión.'));
+    }
+
+    return success(undefined);
+  }
+
+  private async sendHeartbeat(): Promise<void> {
+    const token = this.getSessionToken();
+    if (!token || !navigator.onLine) return;
+    await supabase.rpc('session_heartbeat', { p_session_token: token });
+  }
+
+  async release(): Promise<void> {
+    const token = this.getSessionToken();
+    if (token) {
+      await supabase.rpc('release_active_session', { p_session_token: token });
+    }
+    this.clearToken();
+  }
+
+  startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.sendHeartbeat();
+    this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), HEARTBEAT_MS);
+    document.addEventListener('visibilitychange', this.handleVisibility);
+  }
+
+  stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    document.removeEventListener('visibilitychange', this.handleVisibility);
+  }
+
+  private handleVisibility = (): void => {
+    if (document.visibilityState === 'visible') {
+      this.sendHeartbeat();
+    }
+  };
+
+  private clearToken(): void {
+    this.token = null;
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  }
+}
+
+export const sessionGuard = new SessionGuardService();

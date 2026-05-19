@@ -6,6 +6,8 @@ import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { sessionGuard } from './sessionGuardService';
+import { offlineGrace } from './offlineGraceService';
 
 function decodeJWTPayload(token: string): Record<string, unknown> {
   try {
@@ -97,7 +99,45 @@ export const authService = {
       );
     }
 
+    const tenantUuid = extractTenantId(session);
+    const isAdmin = role === 'admin';
+
+    // --- Offline bootstrap dentro de gracia ---
+    if (!navigator.onLine) {
+      if (offlineGrace.isExpired()) {
+        return failure(new AppError('OFFLINE_GRACE_EXPIRED', 'Tu período sin conexión expiró. Conecta a internet para continuar.'));
+      }
+
+      const tenantSlug = offlineGrace.getTenantSlug();
+      if (tenantSlug) {
+        initDb(tenantSlug);
+      }
+      return success({
+        userId: session.user.id,
+        email: session.user.email ?? '',
+        role: role as UserSession['role'],
+        tenantId: tenantUuid,
+        tenantSlug,
+        accessToken: session.access_token,
+        expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
+      });
+    }
+
+    // --- Online normal flow ---
+    if (!isAdmin) {
+      sessionGuard.restoreSessionToken();
+      const claimResult = await sessionGuard.claim(false);
+      if (!claimResult.ok) {
+        await supabase.auth.signOut();
+        return success(null);
+      }
+    }
+
     const userSession = await buildUserSession(session);
+
+    if (userSession.tenantSlug) {
+      offlineGrace.extend(userSession.tenantSlug);
+    }
 
     if (userSession.tenantId) {
       const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
@@ -126,7 +166,22 @@ export const authService = {
       );
     }
 
+    const isAdmin = role === 'admin';
+
+    if (!isAdmin) {
+      sessionGuard.generateSessionToken();
+      const claimResult = await sessionGuard.claim(false);
+      if (!claimResult.ok) {
+        await supabase.auth.signOut();
+        return claimResult;
+      }
+    }
+
     const userSession = await buildUserSession(data.session);
+
+    if (userSession.tenantSlug) {
+      offlineGrace.extend(userSession.tenantSlug);
+    }
 
     if (userSession.tenantId) {
       const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
@@ -163,22 +218,27 @@ export const authService = {
 
   async signOut(): Promise<Result<void, AppError>> {
     // 1. Emitir evento de navegación para limpiar UI inmediatamente
-    // (evento de navegación, NO write de negocio — Regla #17 no aplica)
     EventBus.emit(SystemEvents.USER_LOGOUT);
 
-    // 2. Obtener sesión para auditoría (no bloqueante)
-    const sessionResult = await this.bootstrapSession();
-    const currentSession = sessionResult.ok ? sessionResult.data : null;
+    // 2. Obtener sesión para auditoría (directo, sin bootstrap para evitar re-claim)
+    const { data: { session } } = await supabase.auth.getSession();
+    const auditRole = session ? extractRole(session) : null;
+    const isAdmin = auditRole === 'admin';
 
-    // 3. Audit trail solo si tenemos sesión válida (necesita JWT para RLS)
-    if (currentSession) {
-      await emitWithAudit('USER.LOGOUT', 'AUTH', { email: currentSession.email }, {
-        userId: currentSession.userId,
-        tenantUuid: currentSession.tenantId ?? null,
+    // 3. Audit trail
+    if (session) {
+      await emitWithAudit('USER.LOGOUT', 'AUTH', { email: session.user.email ?? '' }, {
+        userId: session.user.id,
+        tenantUuid: extractTenantId(session) ?? null,
       });
     }
 
-    // 4. Flush de sync antes de destruir la base de datos local
+    // 4. Liberar sesión activa (admin exento)
+    if (!isAdmin) {
+      await sessionGuard.release();
+    }
+
+    // 5. Flush de sync antes de destruir DB local
     this.stopSync();
     try {
       const pendingCount = await syncQueue.getPendingCount();
@@ -189,7 +249,8 @@ export const authService = {
       // Si el flush falla, continuar con logout de todos modos
     }
 
-    // 5. Limpieza de infraestructura
+    // 6. Limpieza de infraestructura
+    offlineGrace.clear();
     await destroyDb();
     TenantTranslator.clearCache();
     await supabase.auth.signOut();

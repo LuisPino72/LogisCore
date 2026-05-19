@@ -1,5 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
+import { getDb, isDbReady } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { ExchangeRateResponse } from '../types';
@@ -15,6 +16,48 @@ async function getAuthToken(): Promise<Result<string, AppError>> {
   return success(session.access_token);
 }
 
+async function cacheToDexie(rate: ExchangeRateResponse, tenantId: string): Promise<void> {
+  if (!isDbReady()) return;
+  try {
+    const db = getDb();
+    await db.exchangeRates.put({
+      id: rate.id,
+      tenantId,
+      rate: rate.rate,
+      source: rate.source,
+      fetchedAt: rate.fetched_at,
+      createdAt: rate.created_at,
+    });
+  } catch (err) {
+    logger.warn('Exchange', 'Error caching rate to Dexie:', err);
+  }
+}
+
+async function readFromDexie(tenantId: string): Promise<ExchangeRateResponse | null> {
+  if (!isDbReady()) return null;
+  try {
+    const db = getDb();
+    const cached = await db.exchangeRates
+      .where('tenantId')
+      .equals(tenantId)
+      .reverse()
+      .sortBy('createdAt');
+
+    if (cached.length > 0) {
+      return {
+        id: cached[0].id,
+        rate: cached[0].rate,
+        source: cached[0].source,
+        fetched_at: cached[0].fetchedAt,
+        created_at: cached[0].createdAt,
+      };
+    }
+  } catch (err) {
+    logger.warn('Exchange', 'Error reading Dexie cache:', err);
+  }
+  return null;
+}
+
 export const exchangeRateService = {
   async fetchLatest(tenantId: string): Promise<Result<ExchangeRateResponse | null, AppError>> {
     const { data, error } = await supabase
@@ -27,7 +70,15 @@ export const exchangeRateService = {
       .maybeSingle();
 
     if (error) {
+      if (!navigator.onLine) {
+        const cached = await readFromDexie(tenantId);
+        if (cached) return success(cached);
+      }
       return failure(new AppError(DashboardErrors.TASA_BCV_FETCH_FAILED, 'Error al cargar tasa BCV'));
+    }
+
+    if (data) {
+      await cacheToDexie(data, tenantId);
     }
 
     return success(data);
@@ -56,6 +107,7 @@ export const exchangeRateService = {
       }
 
       const data: ExchangeRateResponse = await response.json();
+      await cacheToDexie(data, tenantId);
       return success(data);
     } catch (err) {
       logger.error('Exchange', 'Error en triggerBcvFetch:', err);
@@ -84,6 +136,10 @@ export const exchangeRateService = {
 
     if (error) {
       return failure(new AppError(DashboardErrors.TASA_BCV_FETCH_FAILED, 'Error al guardar tasa manual'));
+    }
+
+    if (data) {
+      await cacheToDexie(data, tenantId);
     }
 
     return success(data);
