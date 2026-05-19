@@ -43,8 +43,10 @@ class SessionGuardService {
   async claim(adminBypass: boolean): Promise<Result<void, AppError>> {
     if (adminBypass) return success(undefined);
 
-    const token = this.getSessionToken();
-    if (!token) return success(undefined);
+    let token = this.getSessionToken();
+    if (!token) {
+      token = this.generateSessionToken();
+    }
 
     const { error } = await supabase.rpc('claim_active_session', {
       p_session_token: token,

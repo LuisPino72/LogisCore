@@ -154,7 +154,8 @@ export const dashboardService = {
 
       if (itemsError || !cloudItems) return success(0);
 
-      const itemsMap = new Map<string, any[]>();
+      interface CloudSaleItem { sale_id: string; quantity: number; unit_price_usd: number; cost_usd_per_unit: number | null }
+      const itemsMap = new Map<string, CloudSaleItem[]>();
       for (const item of cloudItems) {
         const sId = item.sale_id;
         if (!itemsMap.has(sId)) itemsMap.set(sId, []);
@@ -166,7 +167,7 @@ export const dashboardService = {
         const items = itemsMap.get(sale.id) ?? [];
         for (const item of items) {
           const revenue = item.unit_price_usd * item.quantity;
-          const cost = item.cost_usd_per_unit * item.quantity;
+          const cost = (item.cost_usd_per_unit ?? 0) * item.quantity;
           totalEarningsCloud += (revenue - cost);
         }
       }

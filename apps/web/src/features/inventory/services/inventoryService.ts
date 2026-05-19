@@ -152,9 +152,9 @@ export const inventoryService = {
       }
 
       // Eliminar campos que no existen en la tabla products de Supabase
-      const { stockInicial, ...safeInput } = input as Record<string, unknown> & { stockInicial?: unknown };
-      const cleanInput = safeInput;
-      const updated = { ...existing, ...cleanInput };
+      const safeInput = { ...input as Record<string, unknown> };
+      delete safeInput.stockInicial;
+      const updated = { ...existing, ...safeInput };
       await db.transaction('rw', [db.products, db.syncQueue, db.outbox], async () => {
         await db.products.put(updated);
         await syncQueue.enqueue('products', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);

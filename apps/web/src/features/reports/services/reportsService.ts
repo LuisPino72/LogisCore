@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { preciseRound } from '@logiscore/shared';
-import { getDb } from '../../../services/dexie/db';
+import { getDb, type DexieSale } from '../../../services/dexie/db';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
@@ -394,7 +394,7 @@ export const reportsService = {
             totalBs: Number(s.total_bs) || 0,
             paymentMethod: s.payment_method || 'efectivo_bs',
             createdAt: new Date().toISOString(),
-          } as any));
+          } as DexieSale));
         }
       }
 
