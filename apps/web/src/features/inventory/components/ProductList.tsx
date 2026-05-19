@@ -58,6 +58,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         header: 'Producto',
         render: (product) => (
           <div className="flex flex-col items-center text-center gap-2">
+          <div className="relative w-full">
             <div className="relative w-full aspect-4/3 rounded-lg overflow-hidden bg-gray-100">
               <ImageWithFallback
                 productId={product.id}
@@ -66,20 +67,25 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
                 className="w-full h-full object-cover"
                 skeletonClassName="rounded-lg"
               />
-              {isOwner && (
-                <div className="absolute top-1 right-1 z-20">
-                  <Dropdown
-                    align="right"
-                    trigger={<MoreVertical size={20} className="text-gray-500 drop-shadow-md" />}
-                    items={[
-                      { label: 'Ver lotes', icon: <Layers size={16} />, onClick: () => onViewLots(product.id) },
-                      { label: 'Ver Kardex', icon: <ClipboardList size={16} />, onClick: () => onViewKardex(product.id) },
-                      { label: 'Ajustar stock', icon: <Plus size={16} />, onClick: () => onAdjust(product.id) },
-                    ]}
-                  />
-                </div>
-              )}
             </div>
+            {isOwner && (
+              <div className="absolute bottom-9 left-18 sm:top-1 sm:right-1 z-20">
+                <Dropdown
+                  align="right"
+                  trigger={
+                    <div className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors">
+                      <MoreVertical size={18} className="text-gray-600" />
+                    </div>
+                  }
+                  items={[
+                    { label: 'Lotes', icon: <Layers size={16} />, onClick: () => onViewLots(product.id) },
+                    { label: 'Kardex', icon: <ClipboardList size={16} />, onClick: () => onViewKardex(product.id) },
+                    { label: 'Ajustar', icon: <Plus size={16} />, onClick: () => onAdjust(product.id) },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
             <div className="sm:hidden w-full space-y-1">
               <div className="font-medium text-sm">{product.name}</div>
               <span className="text-[12px] text-gray-500">{product.sku}</span>
