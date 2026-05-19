@@ -20,22 +20,21 @@ interface ProductListProps {
   onRefresh: () => void;
 }
 
+function getStockLabel(product: Product): string {
+  if (product.isWeighted) return product.unit === 'lt' ? 'Lt' : 'Kg';
+  return 'Total';
+}
+
+function getStockBadgeContent(product: Product): string {
+  const display = displayStock(product.stock, product.unit);
+  const label = getStockLabel(product);
+  return `${display} ${label}`;
+}
+
 function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   if (product.stockMin && product.stock <= product.stockMin) return 'danger';
   if (product.stockMin && product.stock <= product.stockMin * 2) return 'warning';
   return 'success';
-}
-
-function ProductThumbnail({ product }: { product: Product }) {
-  return (
-    <ImageWithFallback
-      productId={product.id}
-      imageUrl={product.imageUrl}
-      alt={product.name}
-      className="w-8 h-8 rounded-full shrink-0"
-      skeletonClassName="rounded-full"
-    />
-  );
 }
 
 export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
@@ -58,18 +57,59 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         key: 'name',
         header: 'Producto',
         render: (product) => (
-          <div className="flex items-center gap-3">
-            <ProductThumbnail product={product} />
-            <div className="min-w-0">
-              <div className="font-medium text-sm truncate">{product.name}</div>
-              <span className="text-[12px]">{product.sku}</span>
+          <div className="flex flex-col items-center text-center gap-2">
+            <div className="relative w-full aspect-4/3 rounded-lg overflow-hidden bg-gray-100">
+              <ImageWithFallback
+                productId={product.id}
+                imageUrl={product.imageUrl}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                skeletonClassName="rounded-lg"
+              />
+              {isOwner && (
+                <div className="absolute top-1 right-1 z-20">
+                  <Dropdown
+                    align="right"
+                    trigger={<MoreVertical size={20} className="text-gray-500 drop-shadow-md" />}
+                    items={[
+                      { label: 'Ver lotes', icon: <Layers size={16} />, onClick: () => onViewLots(product.id) },
+                      { label: 'Ver Kardex', icon: <ClipboardList size={16} />, onClick: () => onViewKardex(product.id) },
+                      { label: 'Ajustar stock', icon: <Plus size={16} />, onClick: () => onAdjust(product.id) },
+                    ]}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="sm:hidden w-full space-y-1">
+              <div className="font-medium text-sm">{product.name}</div>
+              <span className="text-[12px] text-gray-500">{product.sku}</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant={getStockVariant(product)}>
+                    {getStockBadgeContent(product)}
+                  </Badge>
+                  {product.stockMin && product.stock <= product.stockMin && (
+                    <AlertTriangle size={12} className="text-danger shrink-0" />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ),
       },
       {
+        key: 'sku',
+        header: 'SKU',
+        hideOnMobile: true,
+        render: (product) => (
+          <span className="text-[12px] text-gray-500 font-mono">{product.sku}</span>
+        ),
+      },
+      {
         key: 'price',
         header: 'Precio',
+        hideOnMobile: true,
         render: (product) => (
           <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
         ),
@@ -77,10 +117,11 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
       {
         key: 'stock',
         header: 'Total',
+        hideOnMobile: true,
         render: (product) => (
-          <div className="flex items-center gap-2 key">
+          <div className="flex items-center gap-2">
             <Badge variant={getStockVariant(product)}>
-            {displayStock (product.stock, product.unit)}
+              {getStockBadgeContent(product)}
             </Badge>
             {product.stockMin && product.stock <= product.stockMin && (
               <AlertTriangle size={12} className="text-danger shrink-0" />
@@ -103,6 +144,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
       cols.push({
         key: 'actions',
         header: '',
+        hideOnMobile: true,
         className: 'text-right',
         render: (product) => (
           <div className="flex items-center gap-0.5 justify-end flex-wrap">
@@ -112,22 +154,13 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
             <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1" title="Eliminar">
               <Trash2 size={16} className="text-danger" />
             </Button>
-            <Dropdown
-              align="right"
-              trigger={<MoreVertical size={20} className="text-gray-500" />}
-              items={[
-                { label: 'Ver lotes', icon: <Layers size={16} />, onClick: () => onViewLots(product.id) },
-                { label: 'Ver Kardex', icon: <ClipboardList size={16} />, onClick: () => onViewKardex(product.id) },
-                { label: 'Ajustar stock', icon: <Plus size={16} />, onClick: () => onAdjust(product.id) },
-              ]}
-            />
           </div>
         ),
       });
     }
 
     return cols;
-  }, [isOwner, onAdjust, onEditProduct, onRequestDelete, categories]);
+  }, [isOwner, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (

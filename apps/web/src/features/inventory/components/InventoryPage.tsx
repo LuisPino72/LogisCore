@@ -49,6 +49,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
   const isOwner = role === 'owner' || role === 'admin';
 
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+
+  const openNewCategory = () => setShowCategoryForm(true);
+
   const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
     if (!tenantId || !userId) return false;
     const product = await createProduct(tenantId, userId, data);
@@ -151,19 +155,23 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Package size={22} className="text-primary" />
+            {activeTab === 'categorias' ? <ListTree size={22} className="text-primary" /> : <Package size={22} className="text-primary" />}
           </div>
           <div>
-            <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Inventario</h1>
-            <p className="text-xs text-text-secondary">Gestiona productos y stock</p>
+            <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>
+              {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
+            </h1>
+            <p className="text-xs text-text-secondary">
+              {activeTab === 'categorias' ? 'Gestiona tus categorías' : activeTab === 'historial' ? 'Movimientos de stock' : 'Gestiona productos y stock'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {totalLowStock > 0 && <LowStockBadge count={totalLowStock} />}
-          {isOwner && (
-            <Button variant="primary" size="sm" onClick={openNewProduct}>
+          {totalLowStock > 0 && activeTab === 'productos' && <LowStockBadge count={totalLowStock} />}
+          {isOwner && activeTab !== 'historial' && (
+            <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct}>
               <Plus size={16} />
-              <span className="hidden sm:inline">Nuevo producto</span>
+              <span className="hidden sm:inline">{activeTab === 'categorias' ? 'Nueva categoría' : 'Nuevo producto'}</span>
             </Button>
           )}
         </div>
@@ -237,6 +245,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               onCreate={async (name) => { if (!tenantId) return false; return createCategory(name, tenantId); }}
               onUpdate={async (id, name) => { if (!tenantId) return false; return updateCategory(id, name, tenantId); }}
               onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
+              isOpen={showCategoryForm}
+              onClose={() => setShowCategoryForm(false)}
             />
           </div>
         )}

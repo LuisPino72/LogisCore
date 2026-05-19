@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { ListTree, Trash2, Plus, Edit3, Search } from 'lucide-react';
-import { Button, Input, Modal, EmptyState } from '../../../common/components';
+import { useState, useMemo, useEffect } from 'react';
+import { ListTree, Trash2, Edit3 } from 'lucide-react';
+import { Button, SearchInput, Input, Modal, EmptyState } from '../../../common/components';
 import type { Category } from '../types';
 
 interface CategoryManagerProps {
@@ -28,12 +28,14 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
     return categories.filter((c) => c.name.toLowerCase().includes(q));
   }, [categories, search]);
 
-  const openCreate = () => {
-    setModalMode('create');
-    setFormName('');
-    setFormError('');
-    setShowModal(true);
-  };
+  useEffect(() => {
+    if (isOpen && !showModal) {
+      setModalMode('create');
+      setFormName('');
+      setFormError('');
+      setShowModal(true);
+    }
+  }, [isOpen, showModal]);
 
   const openEdit = (cat: Category) => {
     setModalMode('edit');
@@ -48,6 +50,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
     setFormName('');
     setFormError('');
     setEditingId(null);
+    onClose?.();
   };
 
   const handleSubmit = async () => {
@@ -76,32 +79,21 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
   const content = (
     <div className="space-y-3">
       {isOwner && (
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <Input
-              placeholder="Buscar categoría..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Button variant="primary" size="sm" onClick={openCreate} className="shrink-0 min-w-[44px]">
-            <Plus size={16} />
-          </Button>
-        </div>
+        <SearchInput
+          placeholder="Buscar categoría..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onClear={() => setSearch('')}
+        />
       )}
 
       {!isOwner && (
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          <Input
-            placeholder="Buscar categoría..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        <SearchInput
+          placeholder="Buscar categoría..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onClear={() => setSearch('')}
+        />
       )}
 
       {filtered.length === 0 ? (
@@ -166,9 +158,9 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
     </div>
   );
 
-  if (onClose !== undefined) {
+  if (onClose !== undefined && isOpen) {
     return (
-      <Modal isOpen={isOpen ?? false} onClose={onClose} title="Gestionar categorías">
+      <Modal isOpen={true} onClose={onClose} title="Gestionar categorías">
         {content}
       </Modal>
     );

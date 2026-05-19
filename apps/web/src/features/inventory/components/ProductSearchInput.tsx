@@ -11,6 +11,7 @@ export function ProductSearchInput({ value, onChange, placeholder = 'Buscar por 
     <SearchInput
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onClear={() => onChange('')}
       placeholder={placeholder}
     />
   );

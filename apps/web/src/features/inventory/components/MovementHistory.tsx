@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { History, TrendingUp, TrendingDown, Package, ChevronDown } from 'lucide-react';
-import { Badge, DataTable, Button, Select, Card } from '../../../common/components';
+import { Badge, DataTable, Button, Card, SearchInput } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import type { Product } from '../types';
 import { displayStock } from '../types';
@@ -46,10 +46,33 @@ export function MovementHistory({ products }: MovementHistoryProps) {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!productSearch.trim()) return products;
+    const q = productSearch.toLowerCase();
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+    );
+  }, [products, productSearch]);
 
   const handleProductChange = async (productId: string) => {
     setSelectedProductId(productId);
     setDisplayCount(PAGE_SIZE);
+    setShowDropdown(false);
+    setProductSearch('');
     if (!productId) { setMovements([]); return; }
     setLoading(true);
     const result = await inventoryService.getMovementHistory(productId);
@@ -69,11 +92,16 @@ export function MovementHistory({ products }: MovementHistoryProps) {
         const sign = mov.type === 'sale' ? -1 : (mov.type === 'purchase' ? 1 : Math.sign(mov.quantity));
         const signedQty = Math.abs(mov.quantity) * sign;
         return (
-          <div className="flex items-center gap-2">
-            {getTypeIcon(mov.type)}
-            <Badge variant={getTypeBadge(mov.type)}>{getTypeLabel(mov)}</Badge>
-            <span className="text-sm font-semibold">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              {getTypeIcon(mov.type)}
+              <Badge variant={getTypeBadge(mov.type)}>{getTypeLabel(mov)}</Badge>
+            </div>
+            <p className="text-sm font-semibold">
               {signedQty > 0 ? '+' : ''}{signedQty}{prod?.isWeighted ? ` ${prod.unit}` : ''}
+            </p>
+            <span className="text-[10px] text-gray-400">
+              {new Date(mov.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
         );
@@ -98,6 +126,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
     {
       key: 'date',
       header: 'Fecha',
+      hideOnMobile: true,
       className: 'text-right',
       render: (mov) => (
         <span className="text-[10px] text-gray-400">
@@ -120,16 +149,70 @@ export function MovementHistory({ products }: MovementHistoryProps) {
 
   return (
     <div className="space-y-4">
-      <Select
-        label="Seleccionar producto"
-        value={selectedProductId}
-        onChange={(e) => handleProductChange(e.target.value)}
-      >
-        <option value="">Seleccionar producto...</option>
-        {products.map((p) => (
-          <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-        ))}
-      </Select>
+      <div className="space-y-2" ref={dropdownRef}>
+        <label className="input-label">Seleccionar producto</label>
+        <SearchInput
+          placeholder="Buscar por nombre o SKU..."
+          value={selectedProductId
+            ? (products.find((p) => p.id === selectedProductId)?.name ?? '')
+            : productSearch}
+          onChange={(e) => {
+            if (selectedProductId) {
+              setSelectedProductId('');
+              setMovements([]);
+            }
+            setProductSearch(e.target.value);
+            setShowDropdown(true);
+          }}
+          onClear={() => {
+            setSelectedProductId('');
+            setMovements([]);
+            setProductSearch('');
+            setShowDropdown(false);
+          }}
+          onFocus={() => {
+            if (selectedProductId) {
+              setSelectedProductId('');
+              setMovements([]);
+              setProductSearch('');
+            }
+            setShowDropdown(true);
+          }}
+        />
+        {selectedProductId && (
+          <button
+            type="button"
+            onClick={() => { setSelectedProductId(''); setMovements([]); }}
+            className="text-xs text-primary font-medium hover:underline"
+          >
+            Limpiar selección
+          </button>
+        )}
+        {showDropdown && filteredProducts.length > 0 && (
+          <div className="absolute z-30 w-full mt-1 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+            {filteredProducts.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`w-full text-left px-3 py-2 text-sm transition-colors min-h-[44px] ${
+                  selectedProductId === p.id
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+                onClick={() => handleProductChange(p.id)}
+              >
+                <span className="font-medium">{p.name}</span>
+                <span className="text-gray-400 ml-2">({p.sku})</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {showDropdown && filteredProducts.length === 0 && (
+          <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-4 text-sm text-gray-400 text-center">
+            No se encontraron productos
+          </div>
+        )}
+      </div>
 
       {!selectedProductId && (
         <Card className="p-8 text-center">
