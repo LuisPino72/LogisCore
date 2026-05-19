@@ -40,32 +40,30 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
         return (
           <div
             key={s.id}
-            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-xl border border-border bg-white transition-shadow hover:shadow-sm"
+            className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 pt-8 rounded-xl border border-border bg-white transition-shadow hover:shadow-sm"
           >
-            <div className="flex items-center gap-3 min-w-0 w-full">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Truck size={18} className="text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
-                <div className="flex items-center gap-2">
-                  {s.phone && (
-                    <p className="text-xs text-text-secondary flex items-center gap-1">
-                      <Phone size={12} />
-                      {s.phone}
-                    </p>
-                  )}
-                  {activeOrders > 0 && (
-                    <Badge variant="info" className="flex items-center gap-0.5">
-                      <ShoppingCart size={10} />
-                      <span>{activeOrders}</span>
-                    </Badge>
-                  )}
-                </div>
+            <div className="absolute top-1.5 left-2 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+              <Truck size={14} className="text-primary" />
+            </div>
+            <div className="min-w-0 w-full">
+              <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+              <div className="flex items-center gap-2">
+                {s.phone && (
+                  <p className="text-xs text-text-secondary flex items-center gap-1 truncate">
+                    <Phone size={12} className="shrink-0" />
+                    <span className="truncate">{s.phone}</span>
+                  </p>
+                )}
+                {activeOrders > 0 && (
+                  <Badge variant="info" className="flex items-center gap-0.5">
+                    <ShoppingCart size={10} />
+                    <span>{activeOrders}</span>
+                  </Badge>
+                )}
               </div>
             </div>
             {isOwner && (
-              <div className="flex items-center gap-1 shrink-0 w-full sm:w-auto justify-end">
+              <div className="flex items-center gap-1 shrink-0 w-full sm:w-auto justify-center sm:justify-end">
                 <Button variant="ghost" size="sm" onClick={() => onEdit(s)}>
                   <Pencil size={16} />
                 </Button>

@@ -257,7 +257,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               <div>
                 <p className="text-sm font-semibold">¿Eliminar proveedor {confirmDeleteSupplier.name}?</p>
                 <p className="text-xs text-gray-500">
-                  El proveedor se marcará como eliminado (soft delete).
+                  El proveedor se borrará definitivamente.
                 </p>
               </div>
             </div>
@@ -309,7 +309,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               <div>
                 <p className="text-sm font-semibold">¿Eliminar orden de {confirmDeleteOrder.name}?</p>
                 <p className="text-xs text-gray-500">
-                  La orden se ocultará de la lista (soft delete).
+                  La orden se ocultará de la lista.
                 </p>
               </div>
             </div>

@@ -380,8 +380,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 <p className="text-sm font-semibold">¿Eliminar {confirmDelete.name}?</p>
                 <p className="text-xs text-gray-500">
                   {confirmDelete.type === 'product'
-                    ? 'El producto se marcará como eliminado (soft delete).'
-                    : 'La categoría se marcará como eliminada (soft delete).'}
+                    ? 'El producto se borrará definitivamente.'
+                    : 'La categoría se borrará definitivamente.'}
                 </p>
               </div>
             </div>
