@@ -63,6 +63,7 @@ export function CashRegisterModal({
             inputMode="decimal"
             value={balance}
             onChange={(e) => setBalance(e.target.value)}
+            validation={{ required: true, min: 0.01 }}
             placeholder="0.00"
           />
         ) : (
@@ -91,6 +92,7 @@ export function CashRegisterModal({
               inputMode="decimal"
               value={declaredClosing}
               onChange={(e) => setDeclaredClosing(e.target.value)}
+              validation={{ required: true, min: 0 }}
               placeholder="0.00"
             />
           </>

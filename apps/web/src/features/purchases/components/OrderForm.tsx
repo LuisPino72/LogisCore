@@ -225,6 +225,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
             placeholder="Ej: Entrega en 3 días"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            validation={{ maxLength: 25 }}
             inputClassName="text-sm"
           />
         </div>

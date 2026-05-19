@@ -1,5 +1,5 @@
 import { useState, Suspense, lazy, useRef } from 'react';
-import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState } from '@/common/components';
+import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -123,15 +123,17 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               ))}
             </Select>
           </div>
-          <ExportButton
-            summary={summary}
-            profitOverTime={profitOverTime}
-            topProducts={topProducts}
-            paymentBreakdown={paymentBreakdown}
-            cashAnalysis={cashAnalysis}
-            loading={loading}
-            onPrint={handlePrint}
-          />
+          <Tooltip content="Exportar o imprimir reportes" position="left">
+            <ExportButton
+              summary={summary}
+              profitOverTime={profitOverTime}
+              topProducts={topProducts}
+              paymentBreakdown={paymentBreakdown}
+              cashAnalysis={cashAnalysis}
+              loading={loading}
+              onPrint={handlePrint}
+            />
+          </Tooltip>
         </div>
       </div>
 
@@ -185,18 +187,19 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       {/* Tabs Desktop */}
       <div className="hidden sm:flex items-center gap-1 border-b border-gray-200">
         {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-text-secondary hover:text-gray-700'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
+          <Tooltip key={tab.id} content={`Ver ${tab.label.toLowerCase()}`} position="bottom">
+            <button
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-secondary hover:text-gray-700'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          </Tooltip>
         ))}
       </div>
 

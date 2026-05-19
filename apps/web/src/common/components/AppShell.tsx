@@ -32,7 +32,7 @@ export const AppShell = memo(function AppShell({ children, topBar, bottomNav, si
   return (
     <div className={cn('app-shell', className)} style={{ '--sidebar-width': sidebarWidth, '--sidebar-width-md': sidebarWidthMd, '--sidebar-actual': sidebarActual } as React.CSSProperties}>
       {sidebar}
-        <div className={cn('app-shell-main', sidebar && 'app-shell-main--with-sidebar')} style={{ paddingLeft: `var(--sidebar-width)` }}>
+        <div className={cn('app-shell-main', sidebar && 'app-shell-main--with-sidebar')}>
         <header className="app-topbar">
           {topBar}
         </header>

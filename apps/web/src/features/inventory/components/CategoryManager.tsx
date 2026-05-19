@@ -136,6 +136,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
               value={formName}
               onChange={(e) => { setFormName(e.target.value); setFormError(''); }}
               error={formError}
+              validation={{ required: true, maxLength: 30 }}
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
             />

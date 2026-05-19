@@ -1,6 +1,6 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { cn } from '../../lib/utils';
-import { type ValidationRule } from '../../lib/validation';
+import { validateValue, type ValidationRule } from '../../lib/validation';
 
 interface DatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
@@ -8,7 +8,7 @@ interface DatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
   hint?: string;
   className?: string;
   validation?: ValidationRule;
-  _onValidate?: (_error: string | null) => void;
+  onValidate?: (_error: string | null) => void;
   minDate?: string;
   maxDate?: string;
   formatHint?: string;
@@ -20,16 +20,28 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
   hint,
   className,
   validation,
-  _onValidate,
+  onValidate,
   minDate,
   maxDate,
   value,
   formatHint,
   ...props
 }, ref) => {
-  const displayError = externalError;
+  const [internalError, setInternalError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
+
+  const displayError = externalError || (touched ? internalError : null);
 
   const hasRequired = validation?.required || props.required;
+
+  const handleBlur = () => {
+    setTouched(true);
+    if (validation && typeof value === 'string') {
+      const err = validateValue(value, validation);
+      setInternalError(err);
+      onValidate?.(err);
+    }
+  };
 
   return (
     <div className={cn('input-wrapper', className)}>
@@ -47,6 +59,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
           min={minDate}
           max={maxDate}
           value={value}
+          onBlur={handleBlur}
           {...props}
         />
         {formatHint && !value && (

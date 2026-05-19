@@ -83,6 +83,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             value={formData.name}
             onChange={(e) => setField('name', e.target.value)}
             error={errors.name}
+            validation={{ required: true, maxLength: 50 }}
             inputClassName="text-sm px-2 py-2"
           />
         </div>
@@ -121,6 +122,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 value={formData.sku}
                 onChange={(e) => setField('sku', e.target.value)}
                 error={errors.sku}
+                validation={{ required: true, maxLength: 50 }}
                 inputClassName="text-sm px-2 py-2 flex-1"
               />
               <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-2 shrink-0" title="Escanear código de barras">
@@ -138,6 +140,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               value={formData.priceUsd || ''}
               onChange={(e) => setField('priceUsd', parseFloat(e.target.value) || 0)}
               error={errors.priceUsd}
+              validation={{ required: true, min: 0.01, max: 9999 }}
               inputClassName="text-sm px-2 py-2"
             />
           </div>
@@ -170,6 +173,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 placeholder="0"
                 value={formData.stockInicial || ''}
                 onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
+                validation={{ min: 0 }}
               />
               <p className="text-[10px] text-gray-400 mt-0.5">
                 {formData.productType === 'pesable_kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
@@ -185,6 +189,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               placeholder="0"
               value={formData.stockMin || ''}
               onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+              validation={{ min: 0, max: 999 }}
             />
           </div>
         </div>

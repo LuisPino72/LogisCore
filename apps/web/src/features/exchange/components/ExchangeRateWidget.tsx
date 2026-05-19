@@ -121,6 +121,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
                 value={manualRate}
                 onChange={(e) => setManualRate(e.target.value)}
                 error={manualError}
+                validation={{ required: true, min: 0.01, max: 9999 }}
               />
             </div>
 

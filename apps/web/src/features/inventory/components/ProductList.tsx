@@ -58,15 +58,13 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         header: '',
         hideOnMobile: true,
         render: (product) => (
-          <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-            <ImageWithFallback
-              productId={product.id}
-              imageUrl={product.imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover"
-              skeletonClassName="rounded-lg"
-            />
-          </div>
+          <ImageWithFallback
+            productId={product.id}
+            imageUrl={product.imageUrl}
+            alt={product.name}
+            className="w-20 h-20 shrink-0 rounded-lg object-cover"
+            skeletonClassName="rounded-lg"
+          />
         ),
       },
       {

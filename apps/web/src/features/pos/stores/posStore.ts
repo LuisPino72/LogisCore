@@ -154,6 +154,15 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   addToCart: (product, quantity) => {
     const { cart } = get();
+    const currentQtyInCart = cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+    const totalRequested = currentQtyInCart + quantity;
+    if (totalRequested > product.stock) {
+      const available = product.unit === 'kg' || product.unit === 'lt'
+        ? (product.stock / 1000).toFixed(2)
+        : product.stock;
+      set({ error: `Stock insuficiente. Disponible: ${available} ${product.unit === 'lt' ? 'Lt' : product.unit === 'kg' ? 'Kg' : ''}` });
+      return;
+    }
     const existing = cart.find((item) => item.productId === product.id);
     if (existing) {
       const newQty = preciseRound(existing.quantity + quantity, 2);

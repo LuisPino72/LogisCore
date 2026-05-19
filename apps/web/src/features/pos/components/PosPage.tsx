@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Alert, Badge, Button, BottomNav, ModuleOnboarding } from '../../../common/components';
+import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
@@ -191,39 +191,45 @@ export function PosPage({ tenantId }: PosPageProps) {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="flex flex-row h-full w-full md:pl-0">
+    <div className="flex flex-row h-full w-full min-w-0">
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
           <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} />
-          <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-[44px] min-h-[44px]" title="Escanear código de barras">
-            <Scan size={18} />
-          </Button>
+          <Tooltip content="Escanear código de barras" position="bottom">
+            <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-[44px] min-h-[44px]">
+              <Scan size={18} />
+            </Button>
+          </Tooltip>
           <div className="flex-1" />
           <div className="hidden md:flex items-center gap-1 border-b border-gray-200">
-            <button
-              type="button"
-              onClick={() => setActiveTab('sell')}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'sell'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-text-secondary hover:text-gray-700'
-              }`}
-            >
-              <Package size={16} />
-              Vender
-            </button>
-            <button
-              type="button"
-              onClick={() => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); }}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'history'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-text-secondary hover:text-gray-700'
-              }`}
-            >
-              <HistoryIcon size={16} />
-              Historial
-            </button>
+            <Tooltip content="Registrar ventas" position="bottom">
+              <button
+                type="button"
+                onClick={() => setActiveTab('sell')}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'sell'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-secondary hover:text-gray-700'
+                }`}
+              >
+                <Package size={16} />
+                Vender
+              </button>
+            </Tooltip>
+            <Tooltip content="Ventas realizadas y anulaciones" position="bottom">
+              <button
+                type="button"
+                onClick={() => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); }}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'history'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-secondary hover:text-gray-700'
+                }`}
+              >
+                <HistoryIcon size={16} />
+                Historial
+              </button>
+            </Tooltip>
           </div>
         </div>
 

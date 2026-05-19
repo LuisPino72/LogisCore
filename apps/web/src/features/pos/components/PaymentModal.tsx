@@ -53,6 +53,7 @@ export function PaymentModal({
             onQuantityChange(e.target.value);
           }}
           error={error}
+          validation={{ required: 'Ingresa la cantidad', min: 0.01, max: 999 }}
           placeholder="0.00"
         />
 

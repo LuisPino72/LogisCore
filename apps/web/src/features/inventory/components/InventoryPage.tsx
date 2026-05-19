@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Package, ListTree, History, AlertTriangle, Plus, Settings } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
@@ -181,42 +181,48 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
       {/* Desktop tabs */}
       <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-14 z-10">
-        <button
-          type="button"
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
-            activeTab === 'productos'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-text-secondary hover:text-gray-700'
-          }`}
-          onClick={() => setActiveTab('productos')}
-        >
-          <Package size={20} />
-          Productos
-        </button>
-        <button
-          type="button"
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
-            activeTab === 'categorias'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-text-secondary hover:text-gray-700'
-          }`}
-          onClick={() => setActiveTab('categorias')}
-        >
-          <ListTree size={20} />
-          Categorías
-        </button>
-        <button
-          type="button"
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
-            activeTab === 'historial'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-text-secondary hover:text-gray-700'
-          }`}
-          onClick={() => setActiveTab('historial')}
-        >
-          <History size={20} />
-          Historial
-        </button>
+        <Tooltip content="Gestiona productos y stock" position="bottom">
+          <button
+            type="button"
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+              activeTab === 'productos'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-text-secondary hover:text-gray-700'
+            }`}
+            onClick={() => setActiveTab('productos')}
+          >
+            <Package size={20} />
+            Productos
+          </button>
+        </Tooltip>
+        <Tooltip content="Organiza productos por categorías" position="bottom">
+          <button
+            type="button"
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+              activeTab === 'categorias'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-text-secondary hover:text-gray-700'
+            }`}
+            onClick={() => setActiveTab('categorias')}
+          >
+            <ListTree size={20} />
+            Categorías
+          </button>
+        </Tooltip>
+        <Tooltip content="Movimientos y ajustes de stock" position="bottom">
+          <button
+            type="button"
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+              activeTab === 'historial'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-text-secondary hover:text-gray-700'
+            }`}
+            onClick={() => setActiveTab('historial')}
+          >
+            <History size={20} />
+            Historial
+          </button>
+        </Tooltip>
       </div>
 
       <Card>
@@ -323,15 +329,13 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
               <div className="input-wrapper">
                 <label className="input-label">Cantidad</label>
-                <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} inputClassName="text-sm" />
+                <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} validation={{ required: true }} error={adjError} inputClassName="text-sm" />
               </div>
 
               <div className="input-wrapper">
                 <label className="input-label">Motivo (obligatorio)</label>
-                <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} inputClassName="text-sm" />
+                <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} validation={{ required: 'El motivo es obligatorio', maxLength: 50 }} error={adjError} inputClassName="text-sm" />
               </div>
-
-              {adjError && <p className="text-xs text-danger">{adjError}</p>}
             </div>
           </Modal>
         );

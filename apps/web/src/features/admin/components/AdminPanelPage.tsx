@@ -20,6 +20,7 @@ import {
   Select,
   Spinner,
   LogoutButton,
+  Tooltip,
 } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, RotateCcw, KeyRound, BarChart3, Tags, MoreVertical } from 'lucide-react';
@@ -282,8 +283,8 @@ export function AdminPanelPage() {
 
   const handleResetPasswordSubmit = async () => {
     if (!resetPassTarget) return;
-    if (!newPassword || newPassword.length < 6) {
-      setResetPassError('La contraseña debe tener al menos 6 caracteres.');
+    if (!newPassword || newPassword.length < 8) {
+      setResetPassError('La contraseña debe tener al menos 8 caracteres.');
       return;
     }
     setIsResetting(true);
@@ -342,17 +343,21 @@ export function AdminPanelPage() {
       className: 'overflow-visible px-1',
       render: (t) => (
         <div className="flex flex-row flex-wrap gap-1 items-center">
-          <Button variant="ghost" size="sm" onClick={() => handleNavigateTenant(t.slug)} title="Ver local">
-            <Eye size={16} />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)}>
-            <span className="hidden sm:inline">Editar</span>
-            <span className="sm:hidden">✎</span>
-          </Button>
-          <Dropdown
-            align="left"
-            trigger={<MoreVertical size={18} className="text-gray-500" />}
-            items={[
+          <Tooltip content="Ir al local" position="top">
+            <Button variant="ghost" size="sm" onClick={() => handleNavigateTenant(t.slug)}>
+              <Eye size={16} />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Editar local" position="top">
+            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)}>
+              <span className="hidden sm:inline">Editar</span>
+              <span className="sm:hidden">✎</span>
+            </Button>
+          </Tooltip>
+              <Dropdown
+                align="left"
+                trigger={<Tooltip content="Más opciones" position="left"><MoreVertical size={18} className="text-gray-500 cursor-pointer" /></Tooltip>}
+                items={[
               { label: 'Ver usuarios', icon: <UsersIcon size={16} />, onClick: () => handleSelectTenant(t) },
               { label: 'Analíticas', icon: <BarChart3 size={16} />, onClick: () => handleAnalytics(t) },
               ...(t.deletedAt
@@ -381,13 +386,17 @@ export function AdminPanelPage() {
       render: (u) => (
         <div className="flex gap-1 items-center">
           {u.role === 'owner' && <Badge variant="info">Propietario</Badge>}
-          <Button variant="ghost" size="sm" onClick={() => handleResetPass(u)} title="Restablecer contraseña">
-            <KeyRound size={16} />
-          </Button>
-          {u.role !== 'owner' && (
-            <Button variant="danger" size="sm" onClick={() => handleRemoveEmployee(u.id, u.name)}>
-              <Trash2 size={16} />
+          <Tooltip content="Restablecer contraseña" position="top">
+            <Button variant="ghost" size="sm" onClick={() => handleResetPass(u)}>
+              <KeyRound size={16} />
             </Button>
+          </Tooltip>
+          {u.role !== 'owner' && (
+            <Tooltip content="Eliminar empleado" position="top">
+              <Button variant="danger" size="sm" onClick={() => handleRemoveEmployee(u.id, u.name)}>
+                <Trash2 size={16} />
+              </Button>
+            </Tooltip>
           )}
         </div>
       ),
@@ -806,21 +815,25 @@ export function AdminPanelPage() {
               placeholder="Nombre"
               value={createForm.tenant.name}
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, name: e.target.value } }))}
+              validation={{ required: true, maxLength: 30 }}
             />
             <Input
               placeholder="RIF (J-123456789)"
               value={createForm.tenant.rif}
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value.toUpperCase() } }))}
+              validation={{ required: true, pattern: /^[VJEGP]\d{9}$/ }}
             />
             <Input
               placeholder="Teléfono (04121234567)"
               value={createForm.tenant.telefono}
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: e.target.value } }))}
+              validation={{ pattern: /^(\+58|0)\d{10}$/ }}
             />
             <Input
               placeholder="Dirección"
               value={createForm.tenant.direccion}
               onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, direccion: e.target.value } }))}
+              validation={{ maxLength: 30 }}
             />
           </div>
 
@@ -836,12 +849,14 @@ export function AdminPanelPage() {
               placeholder="Nombre del owner"
               value={createForm.owner.name}
               onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, name: e.target.value } }))}
+              validation={{ required: true, maxLength: 25 }}
             />
             <Input
               placeholder="Email del owner"
               type="email"
               value={createForm.owner.email}
               onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, email: e.target.value } }))}
+              validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }}
             />
             <Input
               placeholder="Contraseña"
@@ -849,6 +864,7 @@ export function AdminPanelPage() {
               showPassword
               value={createForm.owner.password}
               onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, password: e.target.value } }))}
+              validation={{ required: true, minLength: 8, maxLength: 14 }}
             />
           </div>
 
@@ -882,12 +898,14 @@ export function AdminPanelPage() {
                   placeholder="Nombre"
                   value={emp.name}
                   onChange={(e) => updateEmployeeRow(i, 'name', e.target.value)}
+                  validation={{ maxLength: 25 }}
                 />
                 <Input
                   placeholder="Email"
                   type="email"
                   value={emp.email}
                   onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
+                  validation={{ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }}
                 />
                 <Input
                   placeholder="Contraseña"
@@ -895,6 +913,7 @@ export function AdminPanelPage() {
                   showPassword
                   value={emp.password}
                   onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
+                  validation={{ minLength: 8, maxLength: 14 }}
                 />
               </div>
             ))}
@@ -928,21 +947,25 @@ export function AdminPanelPage() {
             placeholder="Nombre"
             value={editForm.name}
             onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+            validation={{ required: true, maxLength: 30 }}
           />
           <Input
             placeholder="RIF"
             value={editForm.rif}
             onChange={(e) => setEditForm((p) => ({ ...p, rif: e.target.value.toUpperCase() }))}
+            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/ }}
           />
           <Input
             placeholder="Teléfono (04121234567)"
             value={editForm.telefono}
             onChange={(e) => setEditForm((p) => ({ ...p, telefono: e.target.value }))}
+            validation={{ pattern: /^(\+58|0)\d{10}$/ }}
           />
           <Input
             placeholder="Dirección"
             value={editForm.direccion}
             onChange={(e) => setEditForm((p) => ({ ...p, direccion: e.target.value }))}
+            validation={{ maxLength: 30 }}
           />
           <div className="border-t border-gray-100 pt-3">
             <Button variant="secondary" fullWidth onClick={() => { setShowAddEmployeeModal(true); setShowEditModal(false); }}>
@@ -971,12 +994,14 @@ export function AdminPanelPage() {
             placeholder="Nombre"
             value={newEmployee.name}
             onChange={(e) => setNewEmployee((p) => ({ ...p, name: e.target.value }))}
+            validation={{ required: true, maxLength: 25 }}
           />
           <Input
             placeholder="Email"
             type="email"
             value={newEmployee.email}
             onChange={(e) => setNewEmployee((p) => ({ ...p, email: e.target.value }))}
+            validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }}
           />
           <Input
             placeholder="Contraseña"
@@ -984,6 +1009,7 @@ export function AdminPanelPage() {
             showPassword
             value={newEmployee.password}
             onChange={(e) => setNewEmployee((p) => ({ ...p, password: e.target.value }))}
+            validation={{ required: true, minLength: 8, maxLength: 14 }}
           />
           {createError && <p className="text-danger text-sm">{createError}</p>}
           <div className="flex gap-2">
@@ -1135,9 +1161,10 @@ export function AdminPanelPage() {
             label="Nueva contraseña"
             type="password"
             showPassword
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
+            validation={{ required: true, minLength: 8, maxLength: 14 }}
           />
         </div>
       </Modal>
@@ -1180,6 +1207,7 @@ export function AdminPanelPage() {
             value={globalCatNewName}
             onChange={(e) => { setGlobalCatNewName(e.target.value); setGlobalCatError(null); }}
             error={globalCatError ?? undefined}
+            validation={{ required: true, maxLength: 30 }}
           />
           {globalCatError && <p className="text-danger text-sm">{globalCatError}</p>}
           <div className="flex gap-2">
@@ -1216,6 +1244,7 @@ export function AdminPanelPage() {
             value={globalCatEditName}
             onChange={(e) => { setGlobalCatEditName(e.target.value); setGlobalCatError(null); }}
             error={globalCatError ?? undefined}
+            validation={{ required: true, maxLength: 30 }}
           />
           {globalCatError && <p className="text-danger text-sm">{globalCatError}</p>}
           <div className="flex gap-2">
