@@ -253,7 +253,7 @@ export const authService = {
     offlineGrace.clear();
     await destroyDb();
     TenantTranslator.clearCache();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     return success(undefined);
   },
 
