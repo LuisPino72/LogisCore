@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Result, AppError } from '@logiscore/core';
+import { EventBus } from '@logiscore/core';
 import { reportsService } from '../services/reportsService';
 import type {
   ReportFilters,
@@ -116,6 +117,16 @@ export function useReports(tenantId: string | null) {
     cacheOrder.current = [];
     loadTab(activeTab);
   }, [loadTab, activeTab]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const sub1 = EventBus.on('SYNC.REFRESH_TABLE', () => refetch());
+    const sub2 = EventBus.on('SALE.COMPLETED', () => refetch());
+    return () => {
+      EventBus.off(sub1);
+      EventBus.off(sub2);
+    };
+  }, [tenantId, refetch]);
 
   return { filters, setFilters, activeTab, setActiveTab, ...state, refetch };
 }

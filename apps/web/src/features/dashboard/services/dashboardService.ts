@@ -107,31 +107,71 @@ export const dashboardService = {
 
   async getTodayEarnings(tenantId: string): Promise<Result<number, AppError>> {
     try {
-      const db = getDb();
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
 
-      const sales = await db.sales
+      // Intentamos primero Dexie para rapidez offline
+      const db = getDb();
+      const localSales = await db.sales
         .where('[tenantId+createdAt]')
         .between([tenantId, startOfDay], [tenantId, endOfDay])
         .filter((s) => !s.deletedAt && s.status === 'completed' && !s.voidedAt)
         .toArray();
 
-      if (sales.length === 0) return success(0);
+      if (localSales.length > 0) {
+        const saleIds = new Set(localSales.map((s) => s.id));
+        const items = await db.saleItems.toArray();
+        const todayItems = items.filter((i) => saleIds.has(i.saleId));
 
-      const saleIds = new Set(sales.map((s) => s.id));
-      const items = await db.saleItems.toArray();
-      const todayItems = items.filter((i) => saleIds.has(i.saleId));
-
-      let totalEarnings = 0;
-      for (const item of todayItems) {
-        const revenue = item.totalPriceUsd;
-        const cost = calcItemCost(item.quantity, item.costUsdPerUnit);
-        totalEarnings += revenue - cost;
+        let totalEarnings = 0;
+        for (const item of todayItems) {
+          const revenue = item.totalPriceUsd;
+          const cost = calcItemCost(item.quantity, item.costUsdPerUnit);
+          totalEarnings += revenue - cost;
+        }
+        return success(preciseRound(totalEarnings, 2));
       }
 
-      return success(preciseRound(totalEarnings, 2));
+      // Fallback a Supabase si Dexie está vacío (recuperar datos de sesión anterior)
+      const { data: cloudSales, error: cloudError } = await supabase
+        .from('sales')
+        .select('id, total_bs, igtf_bs, exchange_rate, created_at')
+        .eq('tenant_id', tenantUuid)
+        .eq('status', 'completed')
+        .is('deleted_at', null)
+        .gte('created_at', startOfDay)
+        .lt('created_at', endOfDay);
+
+      if (cloudError || !cloudSales || cloudSales.length === 0) return success(0);
+
+      const saleIdsCloud = cloudSales.map((s) => s.id);
+      const { data: cloudItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('sale_id, quantity, unit_price_usd, cost_usd_per_unit')
+        .in('sale_id', saleIdsCloud);
+
+      if (itemsError || !cloudItems) return success(0);
+
+      const itemsMap = new Map<string, any[]>();
+      for (const item of cloudItems) {
+        const sId = item.sale_id;
+        if (!itemsMap.has(sId)) itemsMap.set(sId, []);
+        itemsMap.get(sId)!.push(item);
+      }
+
+      let totalEarningsCloud = 0;
+      for (const sale of cloudSales) {
+        const items = itemsMap.get(sale.id) ?? [];
+        for (const item of items) {
+          const revenue = item.unit_price_usd * item.quantity;
+          const cost = item.cost_usd_per_unit * item.quantity;
+          totalEarningsCloud += (revenue - cost);
+        }
+      }
+
+      return success(preciseRound(totalEarningsCloud, 2));
     } catch (err) {
       logger.error('Dashboard', 'Error en getTodayEarnings:', err);
       return failure(new AppError('DASHBOARD_TODAY_EARNINGS_FAILED', 'Error al calcular ganancias del día'));

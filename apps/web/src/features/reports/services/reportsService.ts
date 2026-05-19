@@ -1,6 +1,8 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
+import { supabase } from '../../../services/supabase/client';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import type {
   ReportFilters,
@@ -100,39 +102,90 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     .filter((s) => !s.deletedAt && s.status === 'completed')
     .toArray();
 
-  if (sales.length === 0) return [];
+  if (sales.length > 0) {
+    const saleIds = sales.map((s) => s.id);
+    const allItems = await db.saleItems
+      .where('saleId')
+      .anyOf(saleIds)
+      .toArray();
 
-  const saleIds = sales.map((s) => s.id);
-  const allItems = await db.saleItems
-    .where('saleId')
-    .anyOf(saleIds)
-    .toArray();
+    const itemsBySaleId = new Map<string, typeof allItems>();
+    for (const item of allItems) {
+      const group = itemsBySaleId.get(item.saleId);
+      if (group) group.push(item);
+      else itemsBySaleId.set(item.saleId, [item]);
+    }
 
-  const itemsBySaleId = new Map<string, typeof allItems>();
-  for (const item of allItems) {
-    const group = itemsBySaleId.get(item.saleId);
-    if (group) group.push(item);
-    else itemsBySaleId.set(item.saleId, [item]);
+    return sales.map((sale) => ({
+      sale: {
+        id: sale.id,
+        totalBs: sale.totalBs,
+        igtfBs: sale.igtfBs,
+        exchangeRate: sale.exchangeRate,
+        paymentMethod: sale.paymentMethod,
+        createdAt: sale.createdAt,
+      },
+      items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
+        productId: i.productId,
+        productName: i.productName,
+        productSku: i.productSku,
+        quantity: i.quantity,
+        unitPriceUsd: i.unitPriceUsd,
+        costUsdPerUnit: i.costUsdPerUnit,
+      })),
+    }));
   }
 
-  return sales.map((sale) => ({
-    sale: {
-      id: sale.id,
-      totalBs: sale.totalBs,
-      igtfBs: sale.igtfBs,
-      exchangeRate: sale.exchangeRate,
-      paymentMethod: sale.paymentMethod,
-      createdAt: sale.createdAt,
-    },
-    items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
-      productId: i.productId,
-      productName: i.productName,
-      productSku: i.productSku,
-      quantity: i.quantity,
-      unitPriceUsd: i.unitPriceUsd,
-      costUsdPerUnit: i.costUsdPerUnit,
-    })),
-  }));
+  // Fallback a Supabase si Dexie está vacío
+  try {
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+    const { data: cloudSales, error: salesError } = await supabase
+      .from('sales')
+      .select('id, total_bs, igtf_bs, exchange_rate, payment_method, created_at')
+      .eq('tenant_id', tenantUuid)
+      .eq('status', 'completed')
+      .is('deleted_at', null)
+      .gte('created_at', start)
+      .lt('created_at', end);
+
+    if (salesError || !cloudSales || cloudSales.length === 0) return [];
+
+    const saleIds = cloudSales.map((s) => s.id);
+    const { data: cloudItems, error: itemsError } = await supabase
+      .from('sale_items')
+      .select('sale_id, product_id, product_name, product_sku, quantity, unit_price_usd, cost_usd_per_unit')
+      .in('sale_id', saleIds);
+
+    if (itemsError || !cloudItems) return [];
+
+    const itemsBySaleId = new Map<string, typeof cloudItems>();
+    for (const item of cloudItems) {
+      const sId = item.sale_id;
+      if (!itemsBySaleId.has(sId)) itemsBySaleId.set(sId, []);
+      itemsBySaleId.get(sId)!.push(item);
+    }
+
+    return cloudSales.map((sale) => ({
+      sale: {
+        id: sale.id,
+        totalBs: Number(sale.total_bs) || 0,
+        igtfBs: Number(sale.igtf_bs) || 0,
+        exchangeRate: Number(sale.exchange_rate) || 1,
+        paymentMethod: sale.payment_method || 'efectivo_bs',
+        createdAt: sale.created_at,
+      },
+      items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
+        productId: i.product_id,
+        productName: i.product_name || '',
+        productSku: i.product_sku || '',
+        quantity: Number(i.quantity),
+        unitPriceUsd: Number(i.unit_price_usd) || 0,
+        costUsdPerUnit: i.cost_usd_per_unit ? Number(i.cost_usd_per_unit) : undefined,
+      })),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function calcItemCostBs(quantity: number, costUsdPerUnit: number | undefined, exchangeRate: number): number {
@@ -320,9 +373,34 @@ export const reportsService = {
         .filter((s) => !s.deletedAt && s.status === 'completed')
         .toArray();
 
+      let salesData = sales;
+
+      // Fallback a Supabase si Dexie está vacío
+      if (salesData.length === 0) {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data: cloudSales, error } = await supabase
+          .from('sales')
+          .select('total_bs, payment_method')
+          .eq('tenant_id', tenantUuid)
+          .eq('status', 'completed')
+          .is('deleted_at', null)
+          .gte('created_at', start)
+          .lt('created_at', end);
+
+        if (!error && cloudSales) {
+          salesData = cloudSales.map((s, i) => ({
+            id: `cloud-${i}`,
+            tenantId,
+            totalBs: Number(s.total_bs) || 0,
+            paymentMethod: s.payment_method || 'efectivo_bs',
+            createdAt: new Date().toISOString(),
+          } as any));
+        }
+      }
+
       const map = new Map<string, PaymentBreakdownData>();
       let grandTotal = 0;
-      for (const sale of sales) {
+      for (const sale of salesData) {
         grandTotal += sale.totalBs;
         const label = PAYMENT_LABELS[sale.paymentMethod] ?? sale.paymentMethod;
         const existing = map.get(sale.paymentMethod);

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Card } from '@/common/components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { TopProductData } from '@/features/reports/types';
@@ -12,6 +13,12 @@ const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1'];
 
 export function TopProductsChart({ data, loading }: TopProductsChartProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (loading) {
     return (
       <Card className="p-4">
@@ -43,6 +50,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Top Productos por Ganancia</h3>
 
       <div className="h-48 sm:h-64">
+        {mounted ? (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 5, left: 40, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
@@ -60,6 +68,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        ) : <div className="h-full flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}
       </div>
 
       <div className="mt-4 space-y-2">
