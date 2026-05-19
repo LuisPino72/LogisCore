@@ -6,7 +6,8 @@ import { EmptyState, Card, Badge } from '../../../common/components';
 import { Package, AlertTriangle, DollarSign, Calendar, TrendingUp } from 'lucide-react';
 import { dashboardService } from '../services/dashboardService';
 import { displayStock } from '../../inventory/types';
-import type { Product } from '../../../specs/inventory';
+import { useInventoryStore } from '../../inventory/stores/inventoryStore';
+import { EventBus } from '@logiscore/core';
 
 interface DashboardPageProps {
   tenantId?: string | null;
@@ -28,18 +29,26 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     error: dashboardError,
   } = useDashboard(tenantId);
 
-  const [lowStock, setLowStock] = useState<Product[]>([]);
+  const lowStock = useInventoryStore((s) => s.lowStockProducts);
+  const fetchLowStock = useInventoryStore((s) => s.fetchLowStock);
   const [topProducts, setTopProducts] = useState<{ productId: string; name: string; totalQty: number }[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
+    fetchLowStock(tenantId);
+    const sub1 = EventBus.on('SYNC.REFRESH_TABLE', () => fetchLowStock(tenantId));
+    const sub2 = EventBus.on('SALE.COMPLETED', () => fetchLowStock(tenantId));
+    return () => {
+      EventBus.off(sub1);
+      EventBus.off(sub2);
+    };
+  }, [tenantId, fetchLowStock]);
+
+  useEffect(() => {
+    if (!tenantId) return;
     setDataLoading(true);
-    Promise.all([
-      dashboardService.getLowStockProducts(tenantId),
-      dashboardService.getTopProducts(tenantId),
-    ]).then(([low, top]) => {
-      if (low.ok) setLowStock(low.data);
+    dashboardService.getTopProducts(tenantId).then((top) => {
       if (top.ok) setTopProducts(top.data);
       setDataLoading(false);
     });
