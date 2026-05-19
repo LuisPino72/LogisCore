@@ -221,7 +221,7 @@ export function DataTable<T>({
               <div className="card-body">
                 <div className="flex flex-col items-center gap-3">
                   {imageContent && (
-                    <div className="w-28 h-28 mx-auto rounded-lg overflow-hidden bg-gray-100 [&>*]:w-full [&>*]:h-full">
+                    <div className="w-28 h-28 mx-auto rounded-lg overflow-hidden bg-gray-100 *:w-full *:h-full">
                       {imageContent}
                     </div>
                   )}  

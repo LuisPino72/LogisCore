@@ -198,6 +198,7 @@ export function PosPage({ tenantId }: PosPageProps) {
           <Tooltip content="Escanear código de barras" position="bottom">
             <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-[44px] min-h-[44px]">
               <Scan size={18} />
+              <span className="text-xs">Escanear</span>
             </Button>
           </Tooltip>
           <div className="flex-1" />
