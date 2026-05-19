@@ -1,3 +1,4 @@
+import { useChartReady } from '@/hooks/useChartReady';
 import { Card } from '@/common/components';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -10,6 +11,8 @@ interface ProfitChartProps {
 }
 
 export function ProfitChart({ data, loading }: ProfitChartProps) {
+  const [ready, containerRef] = useChartReady();
+
   if (loading) {
     return (
       <Card className="p-4">
@@ -73,7 +76,8 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
         </div>
       )}
 
-      <div className="h-48 sm:h-64">
+      <div className="h-48 sm:h-64" ref={containerRef}>
+        {ready ? (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
             <defs>
@@ -103,6 +107,7 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
             <Area type="monotone" dataKey="profitBs" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
+        ) : <div className="h-full flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}
       </div>
     </Card>
   );

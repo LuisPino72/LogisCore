@@ -1,41 +1,131 @@
-/* Estilos para impresión/PDF de reportes */
+/* Oculto en pantalla, solo visible al imprimir */
+.print-all-report { display: none; }
+
 @media print {
-  /* Oculta elementos que no deben imprimirse */
-  nav, .sidebar, .bottom-nav, .app-shell aside,
-  button, .btn, .toast-container,
-  .app-topbar,
+  html, body {
+    background: white !important;
+    color: #000;
+    font-size: 10pt;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0;
+  }
+
+  .app-shell, .sidebar, .app-shell-main, .app-shell-content,
+  .app-topbar, .bottom-nav, .app-shell aside,
+  nav, aside,
+  button, .btn, .toast-container, .module-onboarding,
   [class*="sidebar"] {
     display: none !important;
   }
 
-  /* Ajusta layout para impresión */
-  .app-shell-main {
-    padding-left: 0 !important;
-    overflow: visible !important;
+  .print-all-report {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0;
+    background: white !important;
   }
 
-  body {
-    background: white !important;
-    font-size: 11pt;
+  .print-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #333;
+  }
+
+  .print-title {
+    font-size: 18pt;
+    font-weight: 700;
+    margin: 0;
     color: #000;
   }
 
-  /* Evita saltos de página en medio de cards */
-  .card {
+  .print-date {
+    font-size: 9pt;
+    color: #555;
+    margin: 4px 0 0;
+  }
+
+  .print-section-title {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 0 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #999;
+    color: #000;
+  }
+
+  .print-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .print-kpi {
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 4px;
+  }
+
+  .print-kpi-label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    color: #555;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+  }
+
+  .print-kpi-value {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #000;
+  }
+
+  .print-kpi-subtitle {
+    font-size: 7pt;
+    color: #777;
+    margin-top: 2px;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    margin-bottom: 0;
+  }
+
+  .print-table th {
+    background: #e5e7eb;
+    font-weight: 700;
+    text-align: left;
+    padding: 5px 6px;
+    border: 1px solid #ccc;
+  }
+
+  .print-table td {
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+  }
+
+  .print-table tr:nth-child(even) td {
+    background: #f9fafb;
+  }
+
+  .print-footer {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 7pt;
+    color: #999;
+    border-top: 1px solid #ddd;
+    padding-top: 8px;
+  }
+
+  .print-section {
     break-inside: avoid;
     page-break-inside: avoid;
-    border: 1px solid #ccc !important;
-    box-shadow: none !important;
-  }
-
-  /* Asegura que tablas se vean completas */
-  .data-table-row {
-    break-inside: avoid;
-  }
-
-  /* Oculta el botón de exportar de la impresión */
-  .export-button-group {
-    display: none !important;
   }
 
   @page {

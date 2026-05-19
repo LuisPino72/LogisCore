@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useChartReady } from '@/hooks/useChartReady';
 import { Card } from '@/common/components';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { PaymentBreakdownData } from '@/features/reports/types';
@@ -10,11 +10,7 @@ interface PaymentBreakdownProps {
 }
 
 export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [ready, containerRef] = useChartReady();
 
   if (loading) {
     return (
@@ -67,8 +63,8 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   return (
     <Card className="p-4">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Métodos de Pago</h3>
-      <div className="h-48">
-        {mounted ? (
+      <div className="h-48" ref={containerRef}>
+        {ready ? (
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -93,7 +89,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
             <CustomCenterLabel />
           </PieChart>
         </ResponsiveContainer>
-        ) : <div className="h-full flex items-center justify-center"><div className="skeleton h-40 w-40 rounded-full" /></div>}
+        ) : <div className="h-48 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded-full" /></div>}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">

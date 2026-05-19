@@ -1,10 +1,11 @@
-import { useState, Suspense, lazy } from 'react';
+import { useState, Suspense, lazy, useEffect, useCallback } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
+import { PrintView } from './PrintView';
 import type { ReportTimeRange, ReportTab } from '../types';
 import '../print.css';
 
@@ -85,6 +86,26 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     onClick: () => setActiveTab(tab.id),
   }));
 
+  const [printing, setPrinting] = useState(false);
+
+  const handlePrint = useCallback(() => {
+    setPrinting(true);
+  }, []);
+
+  useEffect(() => {
+    if (!printing) return;
+    const id = requestAnimationFrame(() => {
+      window.print();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [printing]);
+
+  useEffect(() => {
+    const handler = () => setPrinting(false);
+    window.addEventListener('afterprint', handler);
+    return () => window.removeEventListener('afterprint', handler);
+  }, []);
+
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-6">
       {/* Header */}
@@ -113,13 +134,13 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             </Select>
           </div>
           <ExportButton
-            activeTab={activeTab}
             summary={summary}
             profitOverTime={profitOverTime}
             topProducts={topProducts}
             paymentBreakdown={paymentBreakdown}
             cashAnalysis={cashAnalysis}
             loading={loading}
+            onPrint={handlePrint}
           />
         </div>
       </div>
@@ -193,18 +214,18 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       <div className="space-y-4 sm:space-y-6">
         <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
           {activeTab === 'summary' && (
-            <>
+            <div className="print-section">
               <ExecutiveSummary data={summary} loading={loading} />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <PaymentBreakdown data={paymentBreakdown} loading={loading} />
                 <TopProductsChart data={topProducts} loading={loading} />
               </div>
-            </>
+            </div>
           )}
-          {activeTab === 'profits' && <ProfitChart data={profitOverTime} loading={loading} />}
-          {activeTab === 'products' && <TopProductsChart data={topProducts} loading={loading} />}
-          {activeTab === 'payments' && <PaymentBreakdown data={paymentBreakdown} loading={loading} />}
-          {activeTab === 'cash' && <CashAnalysis data={cashAnalysis} loading={loading} />}
+          {activeTab === 'profits' && <div className="print-section"><ProfitChart data={profitOverTime} loading={loading} /></div>}
+          {activeTab === 'products' && <div className="print-section"><TopProductsChart data={topProducts} loading={loading} /></div>}
+          {activeTab === 'payments' && <div className="print-section"><PaymentBreakdown data={paymentBreakdown} loading={loading} /></div>}
+          {activeTab === 'cash' && <div className="print-section"><CashAnalysis data={cashAnalysis} loading={loading} /></div>}
         </Suspense>
       </div>
 
@@ -235,6 +256,16 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         ]}
         onComplete={() => {}}
       />
+
+      {printing && (
+        <PrintView
+          summary={summary}
+          profitOverTime={profitOverTime}
+          topProducts={topProducts}
+          paymentBreakdown={paymentBreakdown}
+          cashAnalysis={cashAnalysis}
+        />
+      )}
     </div>
   );
 }
