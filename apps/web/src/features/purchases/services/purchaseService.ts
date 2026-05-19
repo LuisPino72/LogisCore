@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
-import { getDb } from '../../../services/dexie/db';
+import { getDb, type DexiePurchaseOrderItem } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
@@ -499,6 +499,30 @@ export const purchaseService = {
             updatedAt: o.updated_at,
           });
         }
+
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('purchase_order_items')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .is('deleted_at', null);
+
+        if (!itemsError && itemsData && itemsData.length > 0) {
+          for (const item of itemsData) {
+            // Dexie acepta campos extra aunque no estén en la interfaz TS
+            await db.purchaseOrderItems.put({
+              id: item.id,
+              orderId: item.order_id,
+              productId: item.product_id,
+              productName: item.product_name,
+              quantity: item.quantity,
+              costUsdPerUnit: item.cost_usd_per_unit,
+              receivedQuantity: item.received_quantity,
+              totalUsd: item.total_usd,
+              createdAt: item.created_at,
+            } as unknown as DexiePurchaseOrderItem);
+          }
+        }
+
         rows = await db.purchaseOrders.where({ tenantId }).filter((o) => !o.deletedAt).toArray();
       }
     }

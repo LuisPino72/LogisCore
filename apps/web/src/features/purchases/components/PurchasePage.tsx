@@ -182,6 +182,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
                 <DatePicker
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
+                  formatHint="dd/mm/aaaa"
                 />
               </div>
               {dateFilter && (

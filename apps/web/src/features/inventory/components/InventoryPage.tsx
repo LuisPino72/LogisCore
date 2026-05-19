@@ -31,7 +31,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     search, refresh, userId, role,
   } = useInventory(tenantId);
 
-  const { totalLowStock } = useStockAlerts(tenantId);
+  const { totalLowStock, lowStockProducts } = useStockAlerts(tenantId);
   const { addToast } = useToastStore();
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -44,6 +44,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
   const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
 
   const isOwner = role === 'owner' || role === 'admin';
 
@@ -149,7 +150,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             {activeTab === 'categorias' ? <ListTree size={22} className="text-primary" /> : <Package size={22} className="text-primary" />}
@@ -161,10 +162,14 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <p className="text-xs text-text-secondary">
               {activeTab === 'categorias' ? 'Gestiona tus categorías' : activeTab === 'historial' ? 'Movimientos de stock' : 'Gestiona productos y stock'}
             </p>
+            {totalLowStock > 0 && activeTab === 'productos' && (
+              <div className="mt-1">
+                <LowStockBadge count={totalLowStock} onClick={() => setShowLowStockModal(true)} />
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {totalLowStock > 0 && activeTab === 'productos' && <LowStockBadge count={totalLowStock} />}
+        <div className="flex items-center gap-2 shrink-0">
           {isOwner && activeTab !== 'historial' && (
             <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct}>
               <Plus size={16} />
@@ -391,6 +396,38 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             productName={selectedKardexProduct.name}
             unit={products.find((p) => p.id === selectedKardexProduct.id)?.unit}
           />
+        </Modal>
+      )}
+
+      {showLowStockModal && (
+        <Modal
+          isOpen={showLowStockModal}
+          onClose={() => setShowLowStockModal(false)}
+          title="Productos con stock bajo"
+        >
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {lowStockProducts.map((product) => {
+              const displayStock = product.unit === 'kg' || product.unit === 'lt'
+                ? (product.stock / 1000).toFixed(2)
+                : product.stock.toString();
+              const displayMin = product.unit === 'kg' || product.unit === 'lt'
+                ? ((product.stockMin ?? 0) / 1000).toFixed(2)
+                : (product.stockMin ?? 0).toString();
+              const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : '';
+
+              return (
+                <div key={product.id} className="flex items-center justify-between bg-surface-alt rounded-lg p-3 border border-border">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{product.name}</p>
+                    <p className="text-xs text-text-secondary">
+                      Stock: {displayStock} {unitLabel} / Mín: {displayMin} {unitLabel}
+                    </p>
+                  </div>
+                  <AlertTriangle size={16} className="text-danger shrink-0 ml-2" />
+                </div>
+              );
+            })}
+          </div>
         </Modal>
       )}
 

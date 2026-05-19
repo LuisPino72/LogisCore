@@ -11,6 +11,7 @@ interface DatePickerProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
   _onValidate?: (_error: string | null) => void;
   minDate?: string;
   maxDate?: string;
+  formatHint?: string;
 }
 
 export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
@@ -23,6 +24,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
   minDate,
   maxDate,
   value,
+  formatHint,
   ...props
 }, ref) => {
   const displayError = externalError;
@@ -36,15 +38,23 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
           {label}
         </label>
       )}
-      <input
-        ref={ref}
-        type="date"
-        className={cn('input', displayError && 'input-error')}
-        min={minDate}
-        max={maxDate}
-        value={value}
-        {...props}
-      />
+      <div className="relative">
+        <input
+          ref={ref}
+          type="date"
+          className={cn('input pr-16', displayError && 'input-error', formatHint && !value && 'text-transparent')}
+          style={formatHint && !value ? { colorScheme: 'normal' } : undefined}
+          min={minDate}
+          max={maxDate}
+          value={value}
+          {...props}
+        />
+        {formatHint && !value && (
+          <span className="absolute inset-0 flex items-center px-3 text-xs text-text-secondary pointer-events-none">
+            {formatHint}
+          </span>
+        )}
+      </div>
       {displayError && <span className="input-error-text">{displayError}</span>}
       {!displayError && hint && <span className="input-hint">{hint}</span>}
     </div>
