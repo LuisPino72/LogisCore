@@ -250,7 +250,7 @@
   .app-shell-main--with-sidebar { padding-left: var(--sidebar-width-md); }
 }
 
-.sidebar-collapsed { width: 3.5rem; }
+.sidebar-collapsed { width: 2.5rem; }
 .sidebar-expanded { width: 12rem; }
 
 /* Smooth width transition for sidebar */
