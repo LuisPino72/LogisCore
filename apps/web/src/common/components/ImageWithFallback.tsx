@@ -90,7 +90,7 @@ export function ImageWithFallback({
   const showSkeleton = (loading || (src && !imgReady)) && !error;
 
   return (
-    <div className={cn('relative overflow-hidden', className)}>
+    <div className={cn('relative w-full h-full overflow-hidden', className)}>
       {showSkeleton && (
         <div
           className={cn(
@@ -104,7 +104,7 @@ export function ImageWithFallback({
           src={src}
           alt={alt}
           className={cn(
-            'w-full h-full object-cover transition-opacity duration-300',
+            'absolute inset-0 w-full h-full object-cover transition-opacity duration-300',
             imgReady ? 'opacity-100' : 'opacity-0'
           )}
           onLoad={handleLoad}

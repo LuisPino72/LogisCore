@@ -33,7 +33,8 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
       role="button"
       tabIndex={0}
       aria-label={`Agregar ${product.name} al carrito`}
-      className="relative flex flex-col gap-0 overflow-hidden p-0 active:scale-[0.97] transition-transform"
+      bodyClassName="p-0"
+      className="relative flex flex-col gap-0 overflow-hidden active:scale-[0.97] transition-transform"
     >
       <button
         type="button"
@@ -50,12 +51,12 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
         />
       </button>
 
-      <div className="relative aspect-4/3 overflow-hidden">
+      <div style={{ aspectRatio: '4/3' }} className="relative bg-surface-alt overflow-hidden">
         <ImageWithFallback
           productId={product.id}
           imageUrl={product.imageUrl}
           alt={product.name}
-          className="w-full h-full"
+          className="absolute inset-0"
           skeletonClassName="rounded-none"
         />
 

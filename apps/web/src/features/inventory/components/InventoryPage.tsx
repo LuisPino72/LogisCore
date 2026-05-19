@@ -329,7 +329,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
               <div className="input-wrapper">
                 <label className="input-label">Cantidad</label>
-                <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} validation={{ required: true }} error={adjError} inputClassName="text-sm" />
+                <Input type="number" step="0.01" placeholder="Ej: 10 suma, -10 resta" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} validation={{ required: true }} error={adjError} inputClassName="text-sm" />
               </div>
 
               <div className="input-wrapper">

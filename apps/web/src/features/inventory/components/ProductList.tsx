@@ -62,7 +62,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
             productId={product.id}
             imageUrl={product.imageUrl}
             alt={product.name}
-            className="w-20 h-20 shrink-0 rounded-lg object-cover"
+            className="shrink-0 rounded-lg object-cover w-full h-full"
             skeletonClassName="rounded-lg"
           />
         ),

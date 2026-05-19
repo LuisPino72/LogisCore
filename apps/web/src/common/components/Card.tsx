@@ -6,6 +6,7 @@ interface CardProps {
   header?: ReactNode;
   footer?: ReactNode;
   className?: string;
+  bodyClassName?: string;
   interactive?: boolean;
   onClick?: () => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
@@ -14,7 +15,7 @@ interface CardProps {
   'aria-label'?: string;
 }
 
-export const Card: FC<CardProps> = ({ children, header, footer, className, interactive, onClick, onKeyDown, role, tabIndex, 'aria-label': ariaLabel }) => {
+export const Card: FC<CardProps> = ({ children, header, footer, className, bodyClassName, interactive, onClick, onKeyDown, role, tabIndex, 'aria-label': ariaLabel }) => {
   return (
     <div 
       className={cn(
@@ -29,7 +30,7 @@ export const Card: FC<CardProps> = ({ children, header, footer, className, inter
       aria-label={ariaLabel}
     >
       {header && <div className="card-header">{header}</div>}
-      <div className="card-body">
+      <div className={cn('card-body', bodyClassName)}>
         {children}
       </div>
       {footer && <div className="card-footer">{footer}</div>}
