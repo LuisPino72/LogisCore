@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ShoppingCart, CheckCircle, Package, XCircle, Pencil, Trash2 } from 'lucide-react';
-import { Button, Badge, EmptyState } from '../../../common/components';
+import { ShoppingCart, CheckCircle, Package, XCircle, Pencil, Trash2, MoreVertical, Eye } from 'lucide-react';
+import { Button, Badge, EmptyState, Modal, Dropdown } from '../../../common/components';
 import type { PurchaseOrderWithItems, PurchaseOrderStatus, PurchaseOrderItem } from '../../../specs/purchases';
 import { OrderReceive } from './OrderReceive';
 
@@ -60,8 +60,80 @@ function getOrderProgress(order: PurchaseOrderWithItems): { received: number; to
   return { received, total, pct };
 }
 
+function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWithItems | null; isOpen: boolean; onClose: () => void }) {
+  if (!order) return null;
+  const progress = getOrderProgress(order);
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Orden #${order.id.slice(0, 8).toUpperCase()}`}>
+      <div className="space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-primary">{getInitials(order.supplierName || 'SP')}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-800">{order.supplierName || 'Sin proveedor'}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <StatusBadge status={order.status} />
+              <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-3">
+          <h4 className="text-sm font-semibold mb-2">Items</h4>
+          <div className="space-y-2">
+            {order.items.map((item: PurchaseOrderItem) => (
+              <div key={item.id} className="flex justify-between items-center text-sm bg-surface-alt rounded-lg p-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-gray-800 truncate">{item.productName || item.productId.slice(0, 8)}</p>
+                  <p className="text-xs text-text-secondary">x{item.quantity} — ${item.costUsdPerUnit.toFixed(2)} c/u</p>
+                </div>
+                <span className="font-semibold text-primary shrink-0 ml-2">${item.totalUsd.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {order.notes && (
+          <div className="border-t border-border pt-3">
+            <h4 className="text-sm font-semibold mb-1">Notas</h4>
+            <p className="text-sm text-gray-600 bg-surface-alt rounded-lg p-2">{order.notes}</p>
+          </div>
+        )}
+
+        {(order.status === 'confirmed' || order.status === 'partially_received') && (
+          <div className="border-t border-border pt-3 space-y-1">
+            <div className="flex justify-between text-xs text-text-secondary">
+              <span>Progreso de recepción</span>
+              <span>{progress.received}/{progress.total} ({progress.pct}%)</span>
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.min(progress.pct, 100)}%`,
+                  backgroundColor: progress.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-border pt-3">
+          <div className="flex justify-between items-center bg-primary/5 border border-primary/10 p-3 rounded-lg">
+            <span className="text-sm font-medium text-primary">Total:</span>
+            <span className="text-xl font-bold text-primary">$ {order.totalUsd.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCancel, onEdit, onDeleteOrder, tenantId }: OrderListProps) {
   const [receiveOrderId, setReceiveOrderId] = useState<string | null>(null);
+  const [detailOrder, setDetailOrder] = useState<PurchaseOrderWithItems | null>(null);
 
   if (loading && orders.length === 0) {
     return (
@@ -96,31 +168,36 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
     <div className="space-y-3">
       {orders.map((order) => {
         const progress = getOrderProgress(order);
-        const initials = getInitials(order.supplierName || 'SP');
         const isReceiving = order.status === 'confirmed' || order.status === 'partially_received';
 
         return (
           <div
             key={order.id}
-            className="rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md"
+            className="relative rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md"
           >
-            <div className="p-3 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-primary">{initials}</span>
+            <div className="p-3 pt-14 space-y-3">
+              <div className="absolute top-2 left-2 w-[44px] h-[44px] rounded-lg bg-primary/10 flex items-center justify-center">
+                <ShoppingCart size={18} className="text-primary" />
+              </div>
+              {isOwner && (
+                <div className="absolute top-2 right-2">
+                  <Dropdown
+                    align="right"
+                    trigger={<MoreVertical size={18} className="text-gray-500" />}
+                    items={[
+                      { label: 'Ver detalle', icon: <Eye size={16} />, onClick: () => setDetailOrder(order) },
+                    ]}
+                  />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <StatusBadge status={order.status} />
-                    <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
-                  </div>
-                  <p className="text-sm font-semibold text-gray-800 mt-1 truncate">
-                    {order.supplierName || 'Sin proveedor'}
-                  </p>
+              )}
+
+              <div className="text-center space-y-1">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <StatusBadge status={order.status} />
+                  <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-base font-bold text-primary">$ {order.totalUsd.toFixed(2)}</p>
-                </div>
+                <p className="text-sm font-semibold text-gray-800">{order.supplierName || 'Sin proveedor'}</p>
+                <p className="text-base font-bold text-primary">$ {order.totalUsd.toFixed(2)}</p>
               </div>
 
               {isReceiving && (
@@ -133,7 +210,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{
-                        width: `${progress.pct}%`,
+                        width: `${Math.min(progress.pct, 100)}%`,
                         backgroundColor: progress.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)',
                       }}
                     />
@@ -153,40 +230,38 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                 )}
               </div>
 
-              {isOwner && order.status !== 'received' && (
-                <div className="flex gap-2 pt-1">
-                  {order.status === 'draft' && (
-                    <>
-                      <Button variant="primary" size="sm" fullWidth onClick={() => onConfirm(order.id, tenantId)}>
-                        <CheckCircle size={14} />
-                        <span className="ml-1">Confirmar</span>
+              {isOwner && (
+                <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+                    {order.status === 'draft' && (
+                      <>
+                        <Button variant="primary" size="sm" onClick={() => onConfirm(order.id, tenantId)}>
+                          <CheckCircle size={14} />
+                          <span className="ml-1">Confirmar</span>
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0">
+                          <Pencil size={14} />
+                        </Button>
+                      </>
+                    )}
+                    {(order.status === 'confirmed' || order.status === 'partially_received') && (
+                      <Button variant="primary" size="sm" onClick={() => setReceiveOrderId(order.id)}>
+                        <Package size={14} />
+                        <span className="ml-1">Recibir</span>
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0">
-                        <Pencil size={14} />
+                    )}
+                    {(order.status === 'draft' || order.status === 'confirmed') && (
+                      <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger">
+                        <XCircle size={14} />
                       </Button>
-                    </>
-                  )}
-                  {(order.status === 'confirmed' || order.status === 'partially_received') && (
-                    <Button variant="primary" size="sm" fullWidth onClick={() => setReceiveOrderId(order.id)}>
-                      <Package size={14} />
-                      <span className="ml-1">Recibir</span>
-                    </Button>
-                  )}
-                  {(order.status === 'draft' || order.status === 'confirmed') && (
-                    <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger">
-                      <XCircle size={14} />
-                    </Button>
-                  )}
-                </div>
-              )}
-              {isOwner && order.status === 'cancelled' && (
-                <div className="flex pt-1">
-                  <Button variant="ghost" size="sm" fullWidth onClick={() => onDeleteOrder(order.id, order.supplierName ?? '')} className="text-danger">
-                    <Trash2 size={14} />
-                    <span className="ml-1">Eliminar</span>
-                  </Button>
-                </div>
-              )}
+                    )}
+                    {order.status === 'cancelled' && (
+                      <Button variant="ghost" size="sm" onClick={() => onDeleteOrder(order.id, order.supplierName ?? '')} className="text-danger">
+                        <Trash2 size={14} />
+                        <span className="ml-1">Eliminar</span>
+                      </Button>
+                    )}
+                  </div>
+                )}
             </div>
           </div>
         );
@@ -200,6 +275,8 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
           order={receivingOrder}
         />
       )}
+
+      <OrderDetailModal order={detailOrder} isOpen={!!detailOrder} onClose={() => setDetailOrder(null)} />
     </div>
   );
 }

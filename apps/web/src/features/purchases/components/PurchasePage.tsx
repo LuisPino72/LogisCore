@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ShoppingCart, Truck, AlertTriangle, Plus, ClipboardCheck } from 'lucide-react';
-import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal, ModuleOnboarding } from '../../../common/components';
+import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal, ModuleOnboarding, DatePicker } from '../../../common/components';
 import { cn } from '../../../lib/utils';
 import { usePurchases } from '../hooks/usePurchases';
 import { SupplierList } from './SupplierList';
@@ -34,6 +34,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const [confirmCancelOrder, setConfirmCancelOrder] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeleteOrder, setConfirmDeleteOrder] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
 
   const isOwner = role === 'owner' || role === 'admin';
 
@@ -168,17 +169,39 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
       <Card>
         {activeTab === 'ordenes' && (
           <div className="p-4 space-y-4">
-            <SearchInput
-              placeholder="Buscar orden..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onClear={() => setSearch('')}
-            />
-            <OrderList
-              orders={orders.filter((o) =>
-                o.supplierName?.toLowerCase().includes(search.toLowerCase()) ||
-                o.id.toLowerCase().includes(search.toLowerCase())
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1">
+                <SearchInput
+                  placeholder="Buscar orden..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onClear={() => setSearch('')}
+                />
+              </div>
+              <div className="w-full sm:w-48">
+                <DatePicker
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+              </div>
+              {dateFilter && (
+                <button
+                  type="button"
+                  onClick={() => setDateFilter('')}
+                  className="text-xs text-primary font-medium px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors shrink-0"
+                >
+                  Limpiar
+                </button>
               )}
+            </div>
+            <OrderList
+              orders={orders.filter((o) => {
+                const matchSearch = o.supplierName?.toLowerCase().includes(search.toLowerCase()) ||
+                  o.id.toLowerCase().includes(search.toLowerCase());
+                if (!dateFilter) return matchSearch;
+                const orderDate = o.createdAt.slice(0, 10);
+                return matchSearch && orderDate === dateFilter;
+              })}
               loading={loading}
               isOwner={isOwner}
               onConfirm={confirmOrder}

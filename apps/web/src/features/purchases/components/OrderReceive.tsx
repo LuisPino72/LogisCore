@@ -23,7 +23,9 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
   const [submitting, setSubmitting] = useState(false);
 
   const handleQtyChange = (itemId: string, val: number) => {
-    setQuantities({ ...quantities, [itemId]: Math.max(0, val) });
+    const item = order.items.find((i) => i.id === itemId);
+    const pending = item ? item.quantity - item.receivedQuantity : 0;
+    setQuantities({ ...quantities, [itemId]: Math.max(0, Math.min(val, pending)) });
   };
 
   const receiveAll = () => {
