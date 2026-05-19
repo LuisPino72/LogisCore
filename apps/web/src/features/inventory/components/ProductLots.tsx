@@ -3,17 +3,31 @@ import { Package, DollarSign, Calendar, Layers } from 'lucide-react';
 import { Card, Badge, Spinner, EmptyState } from '@/common/components';
 import { inventoryService } from '../services/inventoryService';
 import type { ActiveLot } from '../types';
+import { gramsToKg, mlToLt } from '../types';
 
 interface ProductLotsProps {
   productId: string;
   tenantId: string;
+  unit?: string;
 }
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
-export function ProductLots({ productId, tenantId: _tenantId }: ProductLotsProps) {
+function displayQty(value: number, unit?: string): string {
+  if (unit === 'kg') return gramsToKg(value).toFixed(2);
+  if (unit === 'lt') return mlToLt(value).toFixed(2);
+  return value.toString();
+}
+
+function unitLabel(unit?: string): string {
+  if (unit === 'kg') return 'Kg';
+  if (unit === 'lt') return 'Lt';
+  return '';
+}
+
+export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLotsProps) {
   const [lots, setLots] = useState<ActiveLot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +78,7 @@ export function ProductLots({ productId, tenantId: _tenantId }: ProductLotsProps
         const consumed = lot.quantityAdded - lot.remainingQuantity;
         const pct = lot.quantityAdded > 0 ? Math.round((consumed / lot.quantityAdded) * 100) : 0;
         const isFirst = index === 0;
+        const label = unitLabel(unit);
 
         return (
           <Card key={lot.id} className={`p-4 transition-shadow hover:shadow-md ${isFirst ? 'border-l-4 border-l-accent' : ''}`}>
@@ -78,7 +93,7 @@ export function ProductLots({ productId, tenantId: _tenantId }: ProductLotsProps
                 </div>
               </div>
               <Badge variant={lot.remainingQuantity > 0 ? 'success' : 'neutral'}>
-                {lot.remainingQuantity} restantes
+                {displayQty(lot.remainingQuantity, unit)} {label} restantes
               </Badge>
             </div>
 
@@ -86,7 +101,7 @@ export function ProductLots({ productId, tenantId: _tenantId }: ProductLotsProps
               <div className="space-y-1 mb-3">
                 <div className="flex justify-between text-xs text-text-secondary">
                   <span>Consumo</span>
-                  <span>{consumed}/{lot.quantityAdded} ({pct}%)</span>
+                  <span>{displayQty(consumed, unit)}/{displayQty(lot.quantityAdded, unit)} ({pct}%)</span>
                 </div>
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div

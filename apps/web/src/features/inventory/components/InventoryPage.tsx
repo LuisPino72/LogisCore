@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Package, ListTree, History, AlertTriangle, Plus, Settings } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, BottomNav, SearchInput, ModuleOnboarding } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
@@ -36,7 +36,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showAdjustment, setShowAdjustment] = useState(false);
-  const [, setSelectedProductId] = useState<string | null>(null);
   const [adjProductId, setAdjProductId] = useState<string>('');
   const [adjQuantity, setAdjQuantity] = useState('');
   const [adjReason, setAdjReason] = useState('');
@@ -45,7 +44,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
   const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
-  const [adjProductSearch, setAdjProductSearch] = useState('');
 
   const isOwner = role === 'owner' || role === 'admin';
 
@@ -110,7 +108,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   };
 
   const handleSubmitAdjustment = async () => {
-    if (!adjProductId) { setAdjError('Selecciona un producto'); return; }
     const qty = parseFloat(adjQuantity);
     if (isNaN(qty) || qty === 0) { setAdjError('Ingresa una cantidad válida (positiva o negativa)'); return; }
     if (!adjReason.trim()) { setAdjError('El motivo es obligatorio'); return; }
@@ -123,7 +120,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (ok) {
       setAdjQuantity('');
       setAdjReason('');
-      setSelectedProductId(null);
+      setAdjProductId('');
       setShowAdjustment(false);
     } else {
       setAdjError('Error al ajustar stock. Verifica el stock disponible.');
@@ -227,7 +224,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             onNewProduct={openNewProduct}
             onEditProduct={openEditProduct}
             onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
-            onAdjust={(id) => { setSelectedProductId(id); setShowAdjustment(true); }}
+            onAdjust={(id) => { setAdjProductId(id); setShowAdjustment(true); }}
             onViewLots={(id) => setSelectedProductLotsId(id)}
             onViewKardex={(id) => {
               const product = products.find((p) => p.id === id);
@@ -288,82 +285,52 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         />
       )}
 
-      {showAdjustment && (
-        <Modal
-          isOpen={showAdjustment}
-          onClose={() => { setShowAdjustment(false); setSelectedProductId(null); setAdjProductSearch(''); }}
-          title="Ajuste de stock"
-          footer={
-            <div className="flex gap-3 w-full">
-              <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setSelectedProductId(null); }}>Cancelar</Button>
-              <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
-            </div>
-          }
-        >
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="input-label">Producto</label>
-              <SearchInput
-                placeholder="Buscar por nombre o SKU..."
-                value={adjProductSearch}
-                onChange={(e) => setAdjProductSearch(e.target.value)}
-                onClear={() => setAdjProductSearch('')}
-              />
-              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-                {products
-                  .filter((p) =>
-                    p.name.toLowerCase().includes(adjProductSearch.toLowerCase()) ||
-                    p.sku.toLowerCase().includes(adjProductSearch.toLowerCase())
-                  )
-                  .map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 text-sm transition-colors min-h-[44px] ${
-                        adjProductId === p.id
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => {
-                        setAdjProductId(p.id);
-                        setAdjProductSearch('');
-                      }}
-                    >
-                      <span className="font-medium">{p.name}</span>
-                      <span className="text-gray-400 ml-2">({p.sku})</span>
-                    </button>
-                  ))}
-                {products.filter((p) =>
-                  p.name.toLowerCase().includes(adjProductSearch.toLowerCase()) ||
-                  p.sku.toLowerCase().includes(adjProductSearch.toLowerCase())
-                ).length === 0 && (
-                  <div className="px-3 py-4 text-sm text-gray-400 text-center">
-                    No se encontraron productos
-                  </div>
-                )}
+      {showAdjustment && (() => {
+        const product = products.find((p) => p.id === adjProductId);
+        const displayStockValue = product ? (() => {
+          if (product.unit === 'kg') return (product.stock / 1000).toFixed(2);
+          if (product.unit === 'lt') return (product.stock / 1000).toFixed(2);
+          return product.stock.toString();
+        })() : '';
+        const unitLabel = product?.unit === 'kg' ? 'Kg' : product?.unit === 'lt' ? 'Lt' : '';
+
+        return (
+          <Modal
+            isOpen={showAdjustment}
+            onClose={() => { setShowAdjustment(false); setAdjProductId(''); }}
+            title="Ajuste de stock"
+            footer={
+              <div className="flex gap-3 w-full">
+                <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setAdjProductId(''); }}>Cancelar</Button>
+                <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
               </div>
-            </div>
+            }
+          >
+            <div className="space-y-4">
+              {product && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm font-semibold text-gray-900">{product.name}</p>
+                  <p className="text-xs text-text-secondary">
+                    Stock actual: <strong>{displayStockValue} {unitLabel}</strong>
+                  </p>
+                </div>
+              )}
 
-            {products.find((p) => p.id === adjProductId) && (
-              <div className="text-xs text-text-secondary bg-gray-50 p-2 rounded">
-                Stock actual: <strong>{products.find((p) => p.id === adjProductId)?.stock}</strong>
+              <div className="input-wrapper">
+                <label className="input-label">Cantidad</label>
+                <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} inputClassName="text-sm" />
               </div>
-            )}
 
-            <div className="input-wrapper">
-              <label className="input-label">Cantidad</label>
-              <Input type="number" step="0.01" placeholder="Ej: 10 o -5" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} inputClassName="text-sm" />
+              <div className="input-wrapper">
+                <label className="input-label">Motivo (obligatorio)</label>
+                <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} inputClassName="text-sm" />
+              </div>
+
+              {adjError && <p className="text-xs text-danger">{adjError}</p>}
             </div>
-
-            <div className="input-wrapper">
-              <label className="input-label">Motivo (obligatorio)</label>
-              <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} inputClassName="text-sm" />
-            </div>
-
-            {adjError && <p className="text-xs text-danger">{adjError}</p>}
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
 
       {confirmDelete && (
         <Modal
@@ -405,7 +372,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           onClose={() => setSelectedProductLotsId(null)}
           title="Lotes del producto"
         >
-          <ProductLots productId={selectedProductLotsId} tenantId={tenantId} />
+          <ProductLots
+            productId={selectedProductLotsId}
+            tenantId={tenantId}
+            unit={products.find((p) => p.id === selectedProductLotsId)?.unit}
+          />
         </Modal>
       )}
 
@@ -415,7 +386,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           onClose={() => setSelectedKardexProduct(null)}
           title={`Kardex - ${selectedKardexProduct.name}`}
         >
-          <KardexView productId={selectedKardexProduct.id} productName={selectedKardexProduct.name} />
+          <KardexView
+            productId={selectedKardexProduct.id}
+            productName={selectedKardexProduct.name}
+            unit={products.find((p) => p.id === selectedKardexProduct.id)?.unit}
+          />
         </Modal>
       )}
 

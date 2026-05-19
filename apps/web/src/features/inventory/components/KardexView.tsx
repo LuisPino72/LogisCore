@@ -4,10 +4,12 @@ import { Card, Badge, EmptyState, DataTable } from '@/common/components';
 import type { Column } from '@/common/components';
 import { inventoryService } from '../services/inventoryService';
 import type { MovementRow } from '../types';
+import { gramsToKg, mlToLt } from '../types';
 
 interface KardexViewProps {
   productId: string;
   productName: string;
+  unit?: string;
 }
 
 function formatDate(iso: string): string {
@@ -40,7 +42,19 @@ function getTypeIcon(type: MovementRow['type']) {
   }
 }
 
-export function KardexView({ productId, productName }: KardexViewProps) {
+function displayQty(value: number, unit?: string): string {
+  if (unit === 'kg') return gramsToKg(value).toFixed(2);
+  if (unit === 'lt') return mlToLt(value).toFixed(2);
+  return value.toFixed(2);
+}
+
+function unitLabel(unit?: string): string {
+  if (unit === 'kg') return 'Kg';
+  if (unit === 'lt') return 'Lt';
+  return '';
+}
+
+export function KardexView({ productId, productName, unit }: KardexViewProps) {
   const [movements, setMovements] = useState<MovementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +110,7 @@ export function KardexView({ productId, productName }: KardexViewProps) {
   const totalEntries = movements.reduce((s, m) => s + m.entry, 0);
   const totalExits = movements.reduce((s, m) => s + m.exit, 0);
   const currentBalance = movements.length > 0 ? movements[movements.length - 1].balance : 0;
+  const label = unitLabel(unit);
 
   const columns: Column<MovementRow>[] = [
     {
@@ -119,21 +134,21 @@ export function KardexView({ productId, productName }: KardexViewProps) {
       key: 'entry',
       header: 'Entrada',
       render: (row) => (
-        <span className="text-xs font-semibold text-success">{row.entry > 0 ? row.entry.toFixed(2) : '-'}</span>
+        <span className="text-xs font-semibold text-success">{row.entry > 0 ? `${displayQty(row.entry, unit)} ${label}` : '-'}</span>
       ),
     },
     {
       key: 'exit',
       header: 'Salida',
       render: (row) => (
-        <span className="text-xs font-semibold text-danger">{row.exit > 0 ? row.exit.toFixed(2) : '-'}</span>
+        <span className="text-xs font-semibold text-danger">{row.exit > 0 ? `${displayQty(row.exit, unit)} ${label}` : '-'}</span>
       ),
     },
     {
       key: 'balance',
       header: 'Saldo',
       render: (row) => (
-        <span className="text-xs font-bold text-gray-900">{row.balance.toFixed(2)}</span>
+        <span className="text-xs font-bold text-gray-900">{displayQty(row.balance, unit)} {label}</span>
       ),
     },
     {
@@ -152,15 +167,15 @@ export function KardexView({ productId, productName }: KardexViewProps) {
       <div className="grid grid-cols-3 gap-3">
         <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200/60 text-center">
           <p className="text-[10px] text-text-secondary uppercase tracking-wide">Entradas</p>
-          <p className="text-base font-bold text-emerald-700">{totalEntries.toFixed(2)}</p>
+          <p className="text-base font-bold text-emerald-700">{displayQty(totalEntries, unit)} {label}</p>
         </div>
         <div className="p-3 rounded-lg bg-red-50 border border-red-200/60 text-center">
           <p className="text-[10px] text-text-secondary uppercase tracking-wide">Salidas</p>
-          <p className="text-base font-bold text-red-700">{totalExits.toFixed(2)}</p>
+          <p className="text-base font-bold text-red-700">{displayQty(totalExits, unit)} {label}</p>
         </div>
         <div className="p-3 rounded-lg bg-blue-50 border border-blue-200/60 text-center">
           <p className="text-[10px] text-text-secondary uppercase tracking-wide">Saldo</p>
-          <p className="text-base font-bold text-blue-700">{currentBalance.toFixed(2)}</p>
+          <p className="text-base font-bold text-blue-700">{displayQty(currentBalance, unit)} {label}</p>
         </div>
       </div>
 
