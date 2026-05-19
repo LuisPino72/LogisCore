@@ -41,7 +41,6 @@ export function ExportButton({
           ['Margen %', `${summary.profitMarginPercent}%`],
           ['Transacciones', summary.totalTransactions],
           ['Ticket Promedio Bs', formatBs(summary.averageTicketBs)],
-          ['IGTF Total Bs', formatBs(summary.totalIgtfBs)],
           ['Top Producto', summary.topProductName ?? 'N/A'],
           ...(summary.salesVsYesterdayPercent !== undefined
             ? [['Vs Ayer %', `${summary.salesVsYesterdayPercent}%`]]

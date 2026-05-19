@@ -1,4 +1,4 @@
-import { preciseRound } from '@logiscore/shared';
+import { preciseRound, IGTF_RATE } from '@logiscore/shared';
 import { Button, Badge } from '../../../common/components';
 import { ShoppingCart, Pause } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
@@ -31,8 +31,8 @@ export function CartSummary({
   );
   const subtotalBs = exchangeRateBs > 0 ? subtotalUsd * exchangeRateBs : 0;
 
-  const igtfBs = paymentMethod === 'efectivo_usd' ? preciseRound(subtotalBs * 0.03, 2) : 0;
-  const igtfUsd = paymentMethod === 'efectivo_usd' && exchangeRateBs > 0 ? preciseRound(igtfBs / exchangeRateBs, 2) : 0;
+  const igtfBs = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 ? preciseRound(subtotalBs * IGTF_RATE, 2) : 0;
+  const igtfUsd = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && exchangeRateBs > 0 ? preciseRound(igtfBs / exchangeRateBs, 2) : 0;
 
   const subtotalTaxableBs = items.reduce((sum, item) => {
     if (item.isTaxable === false) return sum;
@@ -53,7 +53,7 @@ export function CartSummary({
         <span>$ {fmt(subtotalUsd)} / Bs {fmt(subtotalBs)}</span>
       </div>
 
-      {paymentMethod === 'efectivo_usd' && (
+      {paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
           <span>IGTF (3%)</span>
           <span>Bs {fmt(igtfBs)} / $ {fmt(igtfUsd)}</span>

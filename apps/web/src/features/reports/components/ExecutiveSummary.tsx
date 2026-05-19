@@ -1,5 +1,5 @@
 import { Card, Badge } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, CreditCard, Package, ArrowUpRight, Receipt } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, Package, ArrowUpRight, Receipt } from 'lucide-react';
 import type { ExecutiveSummaryData } from '@/features/reports/types';
 import { formatBs } from '@/lib/formatBs';
 
@@ -121,12 +121,6 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
           value={formatBs(data.averageTicketBs)}
           icon={<DollarSign size={18} />}
           gradient="amber"
-        />
-        <KpiCard
-          label="IGTF Total"
-          value={formatBs(data.totalIgtfBs)}
-          icon={<CreditCard size={18} />}
-          gradient="red"
         />
         <KpiCard
           label="Gastos de Consumo"

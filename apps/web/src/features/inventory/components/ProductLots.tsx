@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, DollarSign, Calendar, Layers } from 'lucide-react';
+import { DollarSign, Calendar, Layers } from 'lucide-react';
 import { Card, Badge, Spinner, EmptyState } from '@/common/components';
 import { inventoryService } from '../services/inventoryService';
 import type { ActiveLot } from '../types';
@@ -87,10 +87,6 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
                 {isFirst && (
                   <Badge variant="warning" className="text-[10px]">FIFO — Activo</Badge>
                 )}
-                <div className="flex items-center gap-1.5">
-                  <Package size={14} className="text-primary" />
-                  <span className="text-xs font-mono text-text-secondary">#{lot.id.slice(0, 8)}</span>
-                </div>
               </div>
               <Badge variant={lot.remainingQuantity > 0 ? 'success' : 'neutral'}>
                 {displayQty(lot.remainingQuantity, unit)} {label} restantes

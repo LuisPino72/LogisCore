@@ -153,7 +153,6 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
 
               <div className="flex items-center gap-4 text-xs text-text-secondary pt-1 border-t border-gray-100">
                 <span>{reg.totalSalesCount} transacciones</span>
-                <span>IGTF {formatBs(reg.totalIgtfBs)}</span>
               </div>
             </div>
           </Card>
