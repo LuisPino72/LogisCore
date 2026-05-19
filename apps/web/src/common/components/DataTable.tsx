@@ -11,6 +11,7 @@ export interface Column<T> {
   render?: (item: T) => ReactNode;
   sortable?: boolean;
   hideOnMobile?: boolean;
+  hideLabelOnMobile?: boolean;
   className?: string;
 }
 
@@ -211,25 +212,34 @@ export function DataTable<T>({
       {renderCardOnMobile && (
         <div className="sm:hidden pb-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
         {paged.map((item) => {
-          const primary = columns[0];
-          const primaryContent = primary.render ? primary.render(item) : String((item as Record<string, unknown>)[primary.key] ?? '');
+          const imageCol = columns.find(col => col.key === 'image');
+          const nameCol = columns.find(col => col.key === 'name');
+          const imageContent = imageCol?.render ? imageCol.render(item) : null;
+          const nameContent = nameCol?.render ? nameCol.render(item) : String((item as Record<string, unknown>)[nameCol?.key ?? ''] ?? '');
           return (
             <Card key={keyExtractor(item)} className="mb-3">
               <div className="card-body">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-900 truncate">{primaryContent}</div>
+                <div className="flex flex-col items-center gap-3">
+                  {imageContent && (
+                    <div className="w-full max-w-[120px] aspect-4/3 rounded-lg overflow-hidden bg-gray-100">
+                      {imageContent}
+                    </div>
+                  )}
+                  <div className="text-sm font-semibold text-gray-900 text-center w-full truncate">{nameContent}</div>
                 </div>
-                <div className="mt-2 text-xs text-gray-600 space-y-1">
-                  {columns.slice(1).map((col) => {
-                    if (col.hideOnMobile) return null;
+                <div className="mt-2 text-xs text-gray-600 space-y-1 flex flex-col items-center">
+                  {columns.map((col) => {
+                    if (col.hideOnMobile || col.key === 'image' || col.key === 'name') return null;
                     const content = col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? '');
                     if (col.key === 'actions') {
-                      return <div key={col.key} className="mt-2 flex items-center gap-0.5 flex-wrap">{content}</div>;
+                      return <div key={col.key} className="mt-2 flex items-center justify-center gap-0.5">{content}</div>;
                     }
                     return (
-                      <div key={col.key} className="flex items-start gap-2">
-                        <div className="text-gray-500 w-16 sm:w-24 text-xs">{col.header}</div>
-                        <div className="text-gray-800 truncate text-sm">{content}</div>
+                      <div key={col.key} className="flex items-center justify-center gap-2">
+                        {!col.hideLabelOnMobile && (
+                          <div className="text-gray-500 text-xs">{col.header}</div>
+                        )}
+                        <div className={cn('text-gray-800 truncate text-sm', col.hideLabelOnMobile && 'w-full text-center')}>{content}</div>
                       </div>
                     );
                   })}

@@ -1,4 +1,5 @@
 import { useState, useRef, type ReactNode, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import { useClickOutside } from '../hooks/useClickOutside';
 
@@ -13,7 +14,7 @@ export interface DropdownItem {
 interface DropdownProps {
   trigger: ReactNode;
   items: DropdownItem[];
-  align?: 'left' | 'right';
+  align?: 'left' | 'center' | 'right';
   className?: string;
 }
 
@@ -23,7 +24,7 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(ref, () => setOpen(false));
+  useClickOutside([ref, menuRef], () => setOpen(false));
 
   const closeAndReset = useCallback(() => {
     setOpen(false);
@@ -72,7 +73,7 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
     <div ref={ref} className={cn('relative inline-block', className)} onKeyDown={handleKeyDown}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center min-h-[44px] min-w-[44px]"
+        className="flex items-center"
         aria-haspopup="true"
         aria-expanded={open}
         aria-label="Abrir menú"
@@ -80,14 +81,18 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
         {trigger}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
           ref={menuRef}
           className={cn(
-            'absolute z-40 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1',
-            align === 'right' ? 'right-0' : 'left-0',
+            'fixed z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1',
+            align === 'right' ? 'right-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0',
           )}
           role="menu"
+          style={{
+            top: ref.current ? ref.current.getBoundingClientRect().bottom + 4 : 0,
+            left: align === 'right' ? (ref.current ? ref.current.getBoundingClientRect().right - 160 : 0) : align === 'center' ? (ref.current ? ref.current.getBoundingClientRect().left + ref.current.getBoundingClientRect().width / 2 - 80 : 0) : (ref.current ? ref.current.getBoundingClientRect().left : 0),
+          }}
         >
           {items.map((item, i) => (
             <button
@@ -107,7 +112,8 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

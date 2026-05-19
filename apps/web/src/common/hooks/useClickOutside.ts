@@ -1,12 +1,14 @@
 import { type RefObject, useEffect } from 'react';
 
 export function useClickOutside<T extends HTMLElement>(
-  ref: RefObject<T | null>,
+  refs: RefObject<T | null> | RefObject<T | null>[],
   handler: () => void,
 ): void {
   useEffect(() => {
     const listener = (e: MouseEvent | TouchEvent) => {
-      if (!ref.current || ref.current.contains(e.target as Node)) return;
+      const refsArray = Array.isArray(refs) ? refs : [refs];
+      const isInside = refsArray.some(ref => ref.current?.contains(e.target as Node));
+      if (isInside) return;
       handler();
     };
 
@@ -17,5 +19,5 @@ export function useClickOutside<T extends HTMLElement>(
       document.removeEventListener('mousedown', listener);
       document.removeEventListener('touchstart', listener);
     };
-  }, [ref, handler]);
+  }, [refs, handler]);
 }

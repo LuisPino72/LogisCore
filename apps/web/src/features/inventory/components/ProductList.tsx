@@ -54,68 +54,32 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [
       {
-        key: 'name',
-        header: 'Producto',
+        key: 'image',
+        header: '',
+        hideOnMobile: true,
         render: (product) => (
-          <div className="flex flex-col items-center text-center gap-2">
-          <div className="relative w-full">
-            <div className="relative w-full aspect-4/3 rounded-lg overflow-hidden bg-gray-100">
-              <ImageWithFallback
-                productId={product.id}
-                imageUrl={product.imageUrl}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                skeletonClassName="rounded-lg"
-              />
-            </div>
-            {isOwner && (
-              <div className="absolute bottom-9 left-18 sm:top-1 sm:right-1 z-20">
-                <Dropdown
-                  align="right"
-                  trigger={
-                    <div className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors">
-                      <MoreVertical size={18} className="text-gray-600" />
-                    </div>
-                  }
-                  items={[
-                    { label: 'Lotes', icon: <Layers size={16} />, onClick: () => onViewLots(product.id) },
-                    { label: 'Kardex', icon: <ClipboardList size={16} />, onClick: () => onViewKardex(product.id) },
-                    { label: 'Ajustar', icon: <Plus size={16} />, onClick: () => onAdjust(product.id) },
-                  ]}
-                />
-              </div>
-            )}
-          </div>
-            <div className="sm:hidden w-full space-y-1">
-              <div className="font-medium text-sm">{product.name}</div>
-              <span className="text-[12px] text-gray-500">{product.sku}</span>
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant={getStockVariant(product)}>
-                    {getStockBadgeContent(product)}
-                  </Badge>
-                  {product.stockMin && product.stock <= product.stockMin && (
-                    <AlertTriangle size={12} className="text-danger shrink-0" />
-                  )}
-                </div>
-              </div>
-            </div>
+          <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+            <ImageWithFallback
+              productId={product.id}
+              imageUrl={product.imageUrl}
+              alt={product.name}
+              className="w-full h-full object-cover"
+              skeletonClassName="rounded-lg"
+            />
           </div>
         ),
       },
       {
-        key: 'sku',
-        header: 'SKU',
-        hideOnMobile: true,
+        key: 'name',
+        header: 'Producto',
         render: (product) => (
-          <span className="text-[12px] text-gray-500 font-mono">{product.sku}</span>
+          <div className="font-medium">{product.name}</div>
         ),
       },
       {
         key: 'price',
         header: 'Precio',
-        hideOnMobile: true,
+        hideLabelOnMobile: true,
         render: (product) => (
           <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
         ),
@@ -123,7 +87,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
       {
         key: 'stock',
         header: 'Total',
-        hideOnMobile: true,
+        hideLabelOnMobile: true,
         render: (product) => (
           <div className="flex items-center gap-2">
             <Badge variant={getStockVariant(product)}>
@@ -149,17 +113,29 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
     if (isOwner) {
       cols.push({
         key: 'actions',
-        header: '',
-        hideOnMobile: true,
+        header: 'Acciones',
         className: 'text-right',
         render: (product) => (
-          <div className="flex items-center gap-0.5 justify-end flex-wrap">
-            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1" title="Editar">
-              <Edit3 size={16} />
+          <div className="flex items-center justify-end gap-0.5">
+            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar">
+              <Edit3 size={15} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1" title="Eliminar">
-              <Trash2 size={16} className="text-danger" />
+            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar">
+              <Trash2 size={15} className="text-danger" />
             </Button>
+            <Dropdown
+              align="right"
+              trigger={
+                <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                  <MoreVertical size={15} className="text-gray-600" />
+                </div>
+              }
+              items={[
+                { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
+                { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
+              ]}
+            />
           </div>
         ),
       });
