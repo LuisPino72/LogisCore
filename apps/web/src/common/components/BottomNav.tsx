@@ -1,4 +1,5 @@
-import { type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 
 export interface BottomNavItem {
@@ -18,15 +19,26 @@ interface BottomNavProps {
 const NAV_ICON_CLASS = 'flex h-4 w-4 shrink-0 items-center justify-center [&_svg]:!h-4 [&_svg]:!w-4';
 
 export function BottomNav({ items, activeId, className }: BottomNavProps) {
+  const [mounted, setMounted] = useState(false);
   const compact = items.length >= 5;
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <nav
       className={cn(
-        'sm:hidden fixed bottom-0 right-0 z-30 border-t border-gray-200 bg-white',
+        'sm:hidden fixed right-0 z-50 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]',
         className,
       )}
-      style={{ left: 'var(--sidebar-actual, 0px)' }}
+      style={{
+        left: 'var(--sidebar-actual, 0px)',
+        bottom: 0,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
       aria-label="Navegación del módulo"
     >
       <div className="flex h-14 items-center px-0.5">
@@ -72,6 +84,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
           );
         })}
       </div>
-    </nav>
+    </nav>,
+    document.body,
   );
 }

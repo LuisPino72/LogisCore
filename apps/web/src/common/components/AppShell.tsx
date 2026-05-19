@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import { memo, useEffect, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 interface AppShellProps {
@@ -16,6 +16,19 @@ export const AppShell = memo(function AppShell({ children, topBar, bottomNav, si
   const sidebarWidth = sidebar && sidebarOpen ? collapsedWidth : '0px';
   const sidebarWidthMd = sidebar && sidebarOpen ? (sidebarExpanded ? '12rem' : collapsedWidth) : '0px';
   const sidebarActual = sidebar && sidebarOpen ? collapsedWidth : '0px';
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--sidebar-width', sidebarWidth);
+    root.style.setProperty('--sidebar-width-md', sidebarWidthMd);
+    root.style.setProperty('--sidebar-actual', sidebarActual);
+    return () => {
+      root.style.removeProperty('--sidebar-width');
+      root.style.removeProperty('--sidebar-width-md');
+      root.style.removeProperty('--sidebar-actual');
+    };
+  }, [sidebarWidth, sidebarWidthMd, sidebarActual]);
+
   return (
     <div className={cn('app-shell', className)} style={{ '--sidebar-width': sidebarWidth, '--sidebar-width-md': sidebarWidthMd, '--sidebar-actual': sidebarActual } as React.CSSProperties}>
       {sidebar}
