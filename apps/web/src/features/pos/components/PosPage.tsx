@@ -3,6 +3,7 @@ import { Alert, Badge, Button, BottomNav, ModuleOnboarding } from '../../../comm
 import { useToastStore } from '../../../stores/toastStore';
 import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
+import { usePosStore } from '../stores/posStore';
 import { useCashRegister } from '../hooks/useCashRegister';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
@@ -90,13 +91,22 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handlePay = useCallback(async () => {
     if (!tenantId || !userId || !paymentMethod) return;
     setProcessing(true);
-    const ok = await completeSale(tenantId, paymentMethod, userId);
-    setProcessing(false);
-    if (ok) {
-      setPaymentMethod(null);
-      clearCart();
-      setMobileCartOpen(false);
-      addToast({ type: 'success', message: 'Venta completada exitosamente.', duration: 4000 });
+    try {
+      const ok = await completeSale(tenantId, paymentMethod, userId);
+      if (ok) {
+        setPaymentMethod(null);
+        clearCart();
+        setMobileCartOpen(false);
+        addToast({ type: 'success', message: 'Venta completada exitosamente.', duration: 4000 });
+      } else {
+        const store = usePosStore.getState();
+        addToast({ type: 'error', message: store.error || 'Error al completar la venta.', duration: 5000 });
+      }
+    } catch (err) {
+      console.error('[handlePay] Unexpected error:', err);
+      addToast({ type: 'error', message: 'Error inesperado al procesar el pago.', duration: 5000 });
+    } finally {
+      setProcessing(false);
     }
   }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast]);
 

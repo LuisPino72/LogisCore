@@ -118,6 +118,8 @@ export const usePosStore = create<PosStore>((set, get) => ({
       get().fetchParkedCarts(tenantId);
       return true;
     }
+    console.error('[completeSale] Error:', result.error);
+    set({ loading: false, error: result.error.message });
     return false;
   },
 

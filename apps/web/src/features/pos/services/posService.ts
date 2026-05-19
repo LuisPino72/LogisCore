@@ -228,6 +228,20 @@ export const posService = {
           createdAt: now,
         });
 
+        await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake({
+          id: saleId,
+          tenant_id: tenantUuid,
+          user_id: userId,
+          payment_method: paymentMethod,
+          subtotal_bs: subtotalBs,
+          igtf_bs: igtfBs,
+          iva_bs: ivaBs,
+          total_bs: totalBs,
+          exchange_rate: rawExchangeRate,
+          status: 'completed',
+          created_at: now,
+        } as unknown as Record<string, unknown>), tenantId);
+
         for (const cartItem of items) {
           const product = await db.products.get(cartItem.productId);
           if (!product || product.deletedAt) {
@@ -244,10 +258,26 @@ export const posService = {
 
           let toConsume = storageQuantity;
           let totalCostUsd = 0;
-          const lots = await db.inventoryLots
+          let lots = await db.inventoryLots
             .where({ productId: cartItem.productId })
             .filter((l) => l.remainingQuantity > 0)
             .sortBy('createdAt');
+
+          if (lots.length === 0 && product.stock >= storageQuantity) {
+            const implicitLot = {
+              id: generateId(),
+              tenantId,
+              productId: cartItem.productId,
+              quantityAdded: product.stock,
+              remainingQuantity: product.stock,
+              costUsdPerUnit: product.priceUsd,
+              createdAt: now,
+              updatedAt: now,
+            };
+            await db.inventoryLots.add(implicitLot);
+            await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
+            lots = [implicitLot];
+          }
 
           for (const lot of lots) {
             if (toConsume <= 0) break;
@@ -319,6 +349,8 @@ export const posService = {
             tenant_id: tenantUuid,
             sale_id: saleId,
             product_id: cartItem.productId,
+            product_name: cartItem.name,
+            product_sku: cartItem.sku,
             quantity: cartItem.quantity,
             unit_price_usd: cartItem.unitPriceUsd,
             total_price_usd: cartItem.totalPriceUsd,
@@ -354,20 +386,6 @@ export const posService = {
           total_igtf_bs: updatedCashReg.totalIgtfBs,
           is_open: true,
           updated_at: now,
-        } as unknown as Record<string, unknown>), tenantId);
-
-        await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake({
-          id: saleId,
-          tenant_id: tenantUuid,
-          user_id: userId,
-          payment_method: paymentMethod,
-          subtotal_bs: subtotalBs,
-          igtf_bs: igtfBs,
-          iva_bs: ivaBs,
-          total_bs: totalBs,
-          exchange_rate: rawExchangeRate,
-          status: 'completed',
-          created_at: now,
         } as unknown as Record<string, unknown>), tenantId);
 
         // Encolar en outbox DENTRO de la transacción (Regla #17)
@@ -456,7 +474,7 @@ export const posService = {
       await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
         await db.cashRegisters.add(register);
 
-        await syncQueue.enqueue('cash_registers', 'UPDATE', id, toSnake({
+        await syncQueue.enqueue('cash_registers', 'CREATE', id, toSnake({
           id,
           tenant_id: tenantUuid,
           is_open: true,
