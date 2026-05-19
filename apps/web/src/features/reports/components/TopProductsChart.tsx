@@ -45,17 +45,17 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
     <Card className="p-4">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Top Productos por Ganancia</h3>
 
-      <div className="h-48 sm:h-64" ref={containerRef}>
+      <div className="-mx-4 sm:mx-0 h-48 sm:h-64" ref={containerRef}>
         {ready ? (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 5, left: 40, bottom: 0 }}>
+          <BarChart data={data.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v) => formatBs(v)} />
-            <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} stroke="#9ca3af" width={100} />
+            <XAxis type="number" tick={{ fontSize: 9 }} stroke="#9ca3af" tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}K` : `${v}`} />
+            <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} stroke="#9ca3af" width={45} />
             <Tooltip
               formatter={(value) => [formatBs(Number(value)), 'Ganancia']}
-              labelStyle={{ fontSize: 12 }}
-              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+              labelStyle={{ fontSize: 11 }}
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 11 }}
             />
             <Bar dataKey="profitBs" radius={[0, 4, 4, 0]}>
               {data.slice(0, 10).map((_, index) => (
@@ -67,36 +67,36 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
         ) : <div className="h-48 sm:h-64 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
         {data.map((p, index) => {
           const pct = topProfit > 0 ? Math.round((p.profitBs / topProfit) * 100) : 0;
           const isTop3 = index < 3;
 
           return (
             <div key={p.productId} className="group">
-              <div className="flex items-center justify-between text-xs mb-1">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex items-center justify-between text-[10px] sm:text-xs mb-0.5 sm:mb-1">
+                <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
                   {isTop3 && (
                     <span
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                      className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-white shrink-0"
                       style={{ backgroundColor: RANK_COLORS[index] }}
                     >
                       {index + 1}
                     </span>
                   )}
                   <span className="font-medium text-gray-700 truncate">{p.name}</span>
-                  <span className="text-text-secondary shrink-0 text-[11px]">
+                  <span className="text-text-secondary shrink-0 text-[9px] sm:text-[11px]">
                     {p.quantitySold.toFixed(p.quantitySold % 1 !== 0 ? 2 : 0)} u
                   </span>
                 </div>
-                <div className="flex items-center gap-3 shrink-0 ml-2">
-                  <span className="text-text-secondary">{formatBs(p.revenueBs)}</span>
-                  <span className={`font-semibold ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
+                <div className="flex items-center gap-1 sm:gap-3 shrink-0 ml-1 sm:ml-2">
+                  <span className="text-text-secondary text-[9px] sm:text-xs">{formatBs(p.revenueBs)}</span>
+                  <span className={`font-semibold text-[10px] sm:text-xs ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
                     {formatBs(p.profitBs)}
                   </span>
                 </div>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+              <div className="h-1 sm:h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1 sm:mb-2">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{

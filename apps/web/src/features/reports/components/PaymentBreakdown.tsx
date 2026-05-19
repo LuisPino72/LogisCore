@@ -62,7 +62,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
 
   return (
     <Card className="p-4">
-      <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Métodos de Pago</h3>
+      <h3 className="text-sm font-title font-bold text-gray-900 mb-4">M&eacute;todos de Pago</h3>
       <div className="h-48" ref={containerRef}>
         {ready ? (
         <ResponsiveContainer width="100%" height="100%">
@@ -73,8 +73,8 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
               nameKey="label"
               cx="50%"
               cy="50%"
-              outerRadius={70}
-              innerRadius={40}
+              outerRadius={65}
+              innerRadius={38}
               stroke="#fff"
               strokeWidth={2}
             >
@@ -84,7 +84,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
             </Pie>
             <Tooltip
               formatter={(value, name) => [formatBs(Number(value)), name]}
-              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 11 }}
             />
             <CustomCenterLabel />
           </PieChart>
@@ -92,18 +92,18 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
         ) : <div className="h-48 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded-full" /></div>}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-1.5 sm:gap-2">
         {data.map((d) => (
-          <div key={d.method} className="flex items-center gap-2 text-xs p-2 rounded-lg bg-gray-50">
+          <div key={d.method} className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs p-1.5 sm:p-2 rounded-lg bg-gray-50">
             <span
-              className="w-3 h-3 rounded-full shrink-0"
+              className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0"
               style={{ backgroundColor: colors[d.method] ?? '#9ca3af' }}
             />
             <div className="min-w-0 flex-1">
               <p className="text-gray-600 truncate">{d.label}</p>
-              <p className="text-[11px] text-text-secondary">{formatBs(d.totalBs)}</p>
+              <p className="text-[9px] sm:text-[11px] text-text-secondary">{formatBs(d.totalBs)}</p>
             </div>
-            <span className="font-semibold text-gray-900 shrink-0">{d.percentage}%</span>
+            <span className="font-semibold text-gray-900 shrink-0 text-[10px] sm:text-xs">{d.percentage}%</span>
           </div>
         ))}
       </div>

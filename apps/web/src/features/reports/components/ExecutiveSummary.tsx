@@ -38,17 +38,17 @@ function KpiCard({
   };
 
   return (
-    <Card className={`relative p-4 border bg-linear-to-br ${gradients[gradient]} transition-shadow hover:shadow-md`}>
-      <div className={`absolute top-2 right-2 p-1.5 rounded-lg ${iconBgs[gradient]}`}>
+    <Card className={`relative p-3 sm:p-4 border bg-linear-to-br ${gradients[gradient]} transition-shadow hover:shadow-md`}>
+      <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1 sm:p-1.5 rounded-lg ${iconBgs[gradient]}`}>
         {icon}
       </div>
-      <div className="space-y-1.5 pr-10">
-        <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
-        <p className="text-xl font-bold text-gray-900 truncate">{value}</p>
-        {subtitle && <p className="text-xs text-text-secondary truncate">{subtitle}</p>}
+      <div className="space-y-1 pr-8 sm:pr-10">
+        <p className="text-[10px] sm:text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
+        <p className="text-sm sm:text-xl font-bold text-gray-900 truncate">{value}</p>
+        {subtitle && <p className="text-[10px] sm:text-xs text-text-secondary truncate">{subtitle}</p>}
         {trend && (
-          <div className={`flex items-center gap-1 text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
-            {trend.positive ? <ArrowUpRight size={12} /> : <TrendingDown size={12} />}
+          <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
+            {trend.positive ? <ArrowUpRight size={10} className="sm:w-3 sm:h-3" /> : <TrendingDown size={10} className="sm:w-3 sm:h-3" />}
             <span>{Math.abs(trend.value)}%</span>
           </div>
         )}
@@ -132,13 +132,13 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
       </div>
 
       {data.topProductName && (
-        <Card className="p-3 flex items-center gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20 transition-shadow hover:shadow-sm">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Package size={18} className="text-primary" />
+        <Card className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20 transition-shadow hover:shadow-sm">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Package size={14} className="sm:w-[18px] sm:h-[18px] text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-text-secondary">Producto más rentable</p>
-            <p className="text-sm font-semibold text-gray-900 truncate">{data.topProductName}</p>
+            <p className="text-[10px] sm:text-xs text-text-secondary">Producto m&aacute;s rentable</p>
+            <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{data.topProductName}</p>
           </div>
           <Badge variant="info" className="shrink-0">
             #1
