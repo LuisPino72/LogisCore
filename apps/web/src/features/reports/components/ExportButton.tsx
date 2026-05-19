@@ -1,6 +1,7 @@
 import { Download, Printer } from 'lucide-react';
 import { Button } from '@/common/components';
 import { useExport } from '../hooks/useExport';
+import { formatBs } from '@/lib/formatBs';
 import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
@@ -17,10 +18,6 @@ interface ExportButtonProps {
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
   loading: boolean;
-}
-
-function formatBs(n: number): string {
-  return n.toFixed(2);
 }
 
 export function ExportButton({

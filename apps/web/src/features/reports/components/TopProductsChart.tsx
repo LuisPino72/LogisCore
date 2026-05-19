@@ -1,6 +1,7 @@
 import { Card } from '@/common/components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { TopProductData } from '@/features/reports/types';
+import { formatBs } from '@/lib/formatBs';
 
 interface TopProductsChartProps {
   data: TopProductData[];
@@ -34,9 +35,6 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
       </Card>
     );
   }
-
-  const formatBs = (v: number) =>
-    new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', maximumFractionDigits: 0 }).format(v);
 
   const topProfit = data[0]?.profitBs ?? 1;
 

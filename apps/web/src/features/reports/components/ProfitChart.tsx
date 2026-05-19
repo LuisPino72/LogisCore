@@ -2,6 +2,7 @@ import { Card } from '@/common/components';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { DailyProfitPoint } from '@/features/reports/types';
+import { formatBs } from '@/lib/formatBs';
 
 interface ProfitChartProps {
   data: DailyProfitPoint[];
@@ -28,9 +29,6 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
       </Card>
     );
   }
-
-  const formatBs = (v: number) =>
-    new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES', maximumFractionDigits: 0 }).format(v);
 
   const totalProfit = data.reduce((s, p) => s + p.profitBs, 0);
   const totalSales = data.reduce((s, p) => s + p.salesBs, 0);
