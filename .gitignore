@@ -33,6 +33,7 @@ logs/
 # Coverage
 coverage/
 .vercel/
+.cursor/
 
 # Supabase (track migrations + schema, ignore temp + local config)
 supabase/.branches/
