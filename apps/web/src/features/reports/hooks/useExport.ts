@@ -33,6 +33,19 @@ function downloadFile(filename: string, content: string, mime: string): void {
   URL.revokeObjectURL(url);
 }
 
+function applyCenterAlignment(ws: XLSX.WorkSheet, startRow = 1): void {
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  for (let row = startRow; row <= range.e.r; row++) {
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+      const cell = ws[cellRef];
+      if (cell) {
+        cell.s = { alignment: { horizontal: 'center' } };
+      }
+    }
+  }
+}
+
 interface ExportAllData {
   summary: ExecutiveSummaryData | null;
   profitOverTime: DailyProfitPoint[];
@@ -61,6 +74,7 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): XLSX.WorkSheet
   }
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 24 }, { wch: 28 }];
+  applyCenterAlignment(ws);
   return ws;
 }
 
@@ -83,6 +97,7 @@ function buildProfitSheet(profitOverTime: DailyProfitPoint[]): XLSX.WorkSheet {
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }];
+  applyCenterAlignment(ws);
   return ws;
 }
 
@@ -105,6 +120,7 @@ function buildProductsSheet(topProducts: TopProductData[]): XLSX.WorkSheet {
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
+  applyCenterAlignment(ws);
   return ws;
 }
 
@@ -117,6 +133,7 @@ function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): XLSX.Work
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 8 }];
+  applyCenterAlignment(ws);
   return ws;
 }
 
@@ -142,6 +159,7 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): XLSX.WorkSheet
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
+  applyCenterAlignment(ws);
   return ws;
 }
 
@@ -160,7 +178,7 @@ export function useExport() {
     XLSX.utils.book_append_sheet(wb, buildPaymentsSheet(paymentBreakdown), 'Pagos');
     XLSX.utils.book_append_sheet(wb, buildCashSheet(cashAnalysis), 'Caja');
 
-    XLSX.writeFile(wb, `reporte-logiscore-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `reporte-logiscore-${new Date().toISOString().slice(0, 10)}.xlsx`, { cellStyles: true });
   }, []);
 
   return { exportCsv, exportExcelAll };
