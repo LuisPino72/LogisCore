@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
+import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
@@ -48,6 +48,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
+  const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'sell' | 'history'>('sell');
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
@@ -180,6 +181,18 @@ export function PosPage({ tenantId }: PosPageProps) {
     [tenantId, addToCart, addToast],
   );
 
+  const handleConfirmVoid = useCallback(async () => {
+    if (!voidConfirmId || !tenantId || !userId) return;
+    const result = await posService.voidSale(voidConfirmId, tenantId, userId);
+    setVoidConfirmId(null);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Venta anulada. Stock restaurado.', duration: 4000 });
+      fetchSalesHistory(tenantId);
+    } else {
+      addToast({ type: 'error', message: result.error?.message ?? 'Error al anular la venta.', duration: 4000 });
+    }
+  }, [voidConfirmId, tenantId, userId, addToast, fetchSalesHistory]);
+
   if (!tenantId) {
     return (
       <div className="p-4 flex items-center justify-center h-full">
@@ -280,17 +293,9 @@ export function PosPage({ tenantId }: PosPageProps) {
             <SalesHistory
               tenantId={tenantId ?? ''}
               sales={salesHistory}
-              onVoid={async (saleId) => {
-                if (!tenantId || !userId) return;
-                const result = await posService.voidSale(saleId, tenantId, userId);
-                if (result.ok) {
-                  addToast({ type: 'success', message: 'Venta anulada. Stock restaurado.', duration: 4000 });
-                  fetchSalesHistory(tenantId);
-                } else {
-                  addToast({ type: 'error', message: result.error?.message ?? 'Error al anular la venta.', duration: 4000 });
-                }
-              }}
+              onVoid={(saleId) => setVoidConfirmId(saleId)}
               loading={loading}
+              canVoid={role === 'owner' || role === 'admin'}
             />
           </div>
         )}
@@ -353,6 +358,23 @@ export function PosPage({ tenantId }: PosPageProps) {
         onConfirm={handleParkConfirm}
         loading={processing}
       />
+
+      <Modal
+        isOpen={!!voidConfirmId}
+        onClose={() => setVoidConfirmId(null)}
+        title="¿Anular venta?"
+        size="sm"
+        footer={
+          <div className="flex gap-2 w-full">
+            <Button variant="ghost" className="flex-1" onClick={() => setVoidConfirmId(null)}>Cancelar</Button>
+            <Button variant="danger" className="flex-1" onClick={handleConfirmVoid}>Sí, anular</Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          Se restaurará el stock de todos los productos de esta venta. Esta acción no se puede deshacer.
+        </p>
+      </Modal>
 
       <BarcodeScannerModal
         isOpen={showBarcodeScanner}

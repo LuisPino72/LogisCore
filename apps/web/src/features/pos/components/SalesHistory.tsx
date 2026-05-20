@@ -14,9 +14,10 @@ interface SalesHistoryProps {
   sales: Sale[];
   onVoid: (saleId: string) => void;
   loading: boolean;
+  canVoid: boolean;
 }
 
-export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading }: SalesHistoryProps) {
+export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canVoid }: SalesHistoryProps) {
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const visibleSales = sales.slice(0, displayCount);
   const hasMore = visibleSales.length < sales.length;
@@ -83,9 +84,11 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading }: Sa
           <Button variant="ghost" size="sm" onClick={() => handleView(sale)} className="p-1.5" title="Ver detalle">
             <Eye size={16} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => onVoid(sale.id)} className="p-1.5" title="Anular venta">
-            <Ban size={16} className="text-danger" />
-          </Button>
+          {canVoid && (
+            <Button variant="ghost" size="sm" onClick={() => onVoid(sale.id)} className="p-1.5" title="Anular venta">
+              <Ban size={16} className="text-danger" />
+            </Button>
+          )}
         </div>
       ),
     },

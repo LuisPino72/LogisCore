@@ -44,7 +44,7 @@ const ALL_MODULES: SidebarModule[] = [
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
 ];
 
-const EMPLOYEE_ALLOWED = new Set(['pos', 'inventory']);
+const EMPLOYEE_ALLOWED = new Set(['pos']);
 
 const MODULE_ROUTE_MAP: Record<string, string> = {
   dashboard: '/dashboard',
@@ -175,7 +175,7 @@ function DashboardLayout() {
 
 function RoleRedirect() {
   const role = useAuthStore((s) => s.session?.role);
-  return <Navigate to={role === 'employee' ? '/inventory' : '/dashboard'} replace />;
+  return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -210,7 +210,7 @@ function AuthRedirect() {
   const role = useAuthStore((s) => s.session?.role);
 
   if (isAuthenticated) {
-    return <Navigate to={role === 'admin' ? '/admin' : role === 'employee' ? '/inventory' : '/dashboard'} replace />;
+    return <Navigate to={role === 'admin' ? '/admin' : role === 'employee' ? '/pos' : '/dashboard'} replace />;
   }
 
   return <LoginPage />;
