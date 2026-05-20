@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
@@ -33,19 +33,6 @@ function downloadFile(filename: string, content: string, mime: string): void {
   URL.revokeObjectURL(url);
 }
 
-function applyCenterAlignment(ws: XLSX.WorkSheet, startRow = 1): void {
-  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-  for (let row = startRow; row <= range.e.r; row++) {
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-      const cell = ws[cellRef];
-      if (cell) {
-        cell.s = { alignment: { horizontal: 'center' } };
-      }
-    }
-  }
-}
-
 interface ExportAllData {
   summary: ExecutiveSummaryData | null;
   profitOverTime: DailyProfitPoint[];
@@ -54,8 +41,47 @@ interface ExportAllData {
   cashAnalysis: CashRegisterSummaryData[];
 }
 
-function buildSummarySheet(summary: ExecutiveSummaryData | null): XLSX.WorkSheet {
-  const rows: (string | number | undefined)[][] = [['Métrica', 'Valor']];
+interface SheetConfig {
+  name: string;
+  headers: string[];
+  rows: (string | number | undefined | null)[][];
+  colWidths: number[];
+}
+
+function addSheet(wb: ExcelJS.Workbook, { name, headers, rows, colWidths }: SheetConfig): void {
+  const ws = wb.addWorksheet(name);
+
+  ws.columns = headers.map((h, i) => ({
+    header: h,
+    key: String(i),
+    width: colWidths[i] || 12,
+  }));
+
+  rows.forEach((rowData) => {
+    ws.addRow(rowData.map((v) => v ?? ''));
+  });
+
+  ws.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.alignment = { horizontal: 'center' };
+    });
+  });
+}
+
+function buildSheets(data: ExportAllData): SheetConfig[] {
+  const sheets: SheetConfig[] = [];
+
+  sheets.push(buildSummarySheet(data.summary));
+  sheets.push(buildProfitSheet(data.profitOverTime));
+  sheets.push(buildProductsSheet(data.topProducts));
+  sheets.push(buildPaymentsSheet(data.paymentBreakdown));
+  sheets.push(buildCashSheet(data.cashAnalysis));
+
+  return sheets;
+}
+
+function buildSummarySheet(summary: ExecutiveSummaryData | null): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
   if (summary) {
     rows.push(
       ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / ${formatUsd(summary.totalSalesUsd)}`],
@@ -72,16 +98,11 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): XLSX.WorkSheet
       rows.push(['Vs Ayer %', `${summary.salesVsYesterdayPercent}%`]);
     }
   }
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 24 }, { wch: 28 }];
-  applyCenterAlignment(ws);
-  return ws;
+  return { name: 'Resumen', headers: ['Métrica', 'Valor'], rows, colWidths: [24, 28] };
 }
 
-function buildProfitSheet(profitOverTime: DailyProfitPoint[]): XLSX.WorkSheet {
-  const rows: (string | number | undefined | null)[][] = [
-    ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'],
-  ];
+function buildProfitSheet(profitOverTime: DailyProfitPoint[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
   profitOverTime.forEach((p) => {
     rows.push([
       p.label,
@@ -95,16 +116,11 @@ function buildProfitSheet(profitOverTime: DailyProfitPoint[]): XLSX.WorkSheet {
       p.transactions,
     ]);
   });
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }];
-  applyCenterAlignment(ws);
-  return ws;
+  return { name: 'Ganancias', headers: ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'], rows, colWidths: [16, 10, 14, 10, 14, 10, 14, 10, 14] };
 }
 
-function buildProductsSheet(topProducts: TopProductData[]): XLSX.WorkSheet {
-  const rows: (string | number | undefined | null)[][] = [
-    ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Margen %'],
-  ];
+function buildProductsSheet(topProducts: TopProductData[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
   topProducts.forEach((p) => {
     rows.push([
       p.name,
@@ -118,29 +134,19 @@ function buildProductsSheet(topProducts: TopProductData[]): XLSX.WorkSheet {
       `${p.marginPercent}%`,
     ]);
   });
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
-  applyCenterAlignment(ws);
-  return ws;
+  return { name: 'Productos', headers: ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [30, 10, 14, 10, 14, 10, 14, 10, 10] };
 }
 
-function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): XLSX.WorkSheet {
-  const rows: (string | number | undefined | null)[][] = [
-    ['Método', 'Transacciones', 'Total Bs', 'Total $', '%'],
-  ];
+function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
   paymentBreakdown.forEach((p) => {
     rows.push([p.label, p.count, formatBs(p.totalBs), formatUsd(p.totalUsd), `${p.percentage}%`]);
   });
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 8 }];
-  applyCenterAlignment(ws);
-  return ws;
+  return { name: 'Pagos', headers: ['Método', 'Transacciones', 'Total Bs', 'Total $', '%'], rows, colWidths: [20, 14, 14, 10, 8] };
 }
 
-function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): XLSX.WorkSheet {
-  const rows: (string | number | undefined | null)[][] = [
-    ['Caja', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'],
-  ];
+function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
   cashAnalysis.forEach((r) => {
     rows.push([
       new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -157,10 +163,7 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): XLSX.WorkSheet
       r.status === 'open' ? 'Abierta' : 'Cerrada',
     ]);
   });
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
-  applyCenterAlignment(ws);
-  return ws;
+  return { name: 'Caja', headers: ['Caja', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'], rows, colWidths: [12, 14, 10, 14, 10, 14, 10, 14, 10, 14, 10, 10] };
 }
 
 export function useExport() {
@@ -169,16 +172,24 @@ export function useExport() {
     downloadFile(filename.endsWith('.csv') ? filename : `${filename}.csv`, csv, 'text/csv');
   }, []);
 
-  const exportExcelAll = useCallback(({ summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis }: ExportAllData) => {
-    const wb = XLSX.utils.book_new();
+  const exportExcelAll = useCallback(async (data: ExportAllData) => {
+    const wb = new ExcelJS.Workbook();
+    const sheets = buildSheets(data);
 
-    XLSX.utils.book_append_sheet(wb, buildSummarySheet(summary), 'Resumen');
-    XLSX.utils.book_append_sheet(wb, buildProfitSheet(profitOverTime), 'Ganancias');
-    XLSX.utils.book_append_sheet(wb, buildProductsSheet(topProducts), 'Productos');
-    XLSX.utils.book_append_sheet(wb, buildPaymentsSheet(paymentBreakdown), 'Pagos');
-    XLSX.utils.book_append_sheet(wb, buildCashSheet(cashAnalysis), 'Caja');
+    for (const sheet of sheets) {
+      addSheet(wb, sheet);
+    }
 
-    XLSX.writeFile(wb, `reporte-logiscore-${new Date().toISOString().slice(0, 10)}.xlsx`, { cellStyles: true });
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-logiscore-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }, []);
 
   return { exportCsv, exportExcelAll };

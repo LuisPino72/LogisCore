@@ -119,7 +119,8 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       container.style.zIndex = '9999';
       container.style.pointerEvents = 'none';
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       const element = printRef.current;
       const fileName = `LogisCore-Reporte-${new Date().toISOString().slice(0, 10)}.pdf`;

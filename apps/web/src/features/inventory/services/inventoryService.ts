@@ -707,10 +707,42 @@ export const inventoryService = {
 
   async getLowStockProducts(tenantId: string): Promise<Result<Product[], AppError>> {
     const db = getDb();
-    const rows = await db.products
+    let rows = await db.products
       .where({ tenantId })
       .filter((p) => !p.deletedAt && p.stockMin !== undefined && p.stockMin > 0)
       .toArray();
+
+    if (rows.length === 0) {
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', tenantUuid)
+        .is('deleted_at', null);
+
+      if (!error && data && data.length > 0) {
+        for (const prod of data) {
+          await db.products.put({
+            id: prod.id, tenantId,
+            name: prod.name, sku: prod.sku,
+            priceUsd: prod.price_usd,
+            categoryId: prod.category_id,
+            isWeighted: prod.is_weighted,
+            isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
+            isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
+            unit: prod.unit,
+            stock: prod.stock,
+            stockMin: prod.stock_min,
+          });
+        }
+
+        rows = await db.products
+          .where({ tenantId })
+          .filter((p) => !p.deletedAt && p.stockMin !== undefined && p.stockMin > 0)
+          .toArray();
+      }
+    }
+
     const lowStock = rows.filter((p) => {
       const displayStock = p.isWeighted
         ? (p.unit === 'kg' || p.unit === 'lt' ? p.stock / 1000 : p.stock)

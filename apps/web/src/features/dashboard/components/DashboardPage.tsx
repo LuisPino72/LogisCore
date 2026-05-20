@@ -49,11 +49,13 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   const fetchLowStock = useInventoryStore((s) => s.fetchLowStock);
   const [topProducts, setTopProducts] = useState<{ productId: string; name: string; totalQty: number }[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [lowStockLoading, setLowStockLoading] = useState(true);
   const [showAllLowStock, setShowAllLowStock] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
-    fetchLowStock(tenantId);
+    setLowStockLoading(true);
+    fetchLowStock(tenantId).finally(() => setLowStockLoading(false));
     const sub1 = EventBus.on('SYNC.REFRESH_TABLE', () => fetchLowStock(tenantId));
     const sub2 = EventBus.on('SALE.COMPLETED', () => fetchLowStock(tenantId));
     return () => {
@@ -251,7 +253,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
             )}
           </div>
 
-          {dataLoading ? (
+          {lowStockLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Download, Printer, Loader2 } from 'lucide-react';
 import { Button } from '@/common/components';
 import { useExport } from '../hooks/useExport';
@@ -24,12 +25,22 @@ export function ExportButton({
   summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis, loading, onPrint, isGeneratingPdf = false,
 }: ExportButtonProps) {
   const { exportExcelAll } = useExport();
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+
+  const handleExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      await exportExcelAll({ summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis });
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="ghost" size="sm" onClick={() => exportExcelAll({ summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis })} disabled={loading}>
-        <Download size={16} />
-        <span className="hidden sm:inline">Excel</span>
+      <Button variant="ghost" size="sm" onClick={handleExcel} disabled={loading || isExportingExcel}>
+        {isExportingExcel ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+        <span className="hidden sm:inline">{isExportingExcel ? 'Exportando...' : 'Excel'}</span>
       </Button>
       <Button variant="ghost" size="sm" onClick={onPrint} disabled={loading || isGeneratingPdf}>
         {isGeneratingPdf ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
