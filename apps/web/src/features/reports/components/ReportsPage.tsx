@@ -270,23 +270,29 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         ))}
       </div>
 
-      {/* Content */}
+      {/* Content — KeepAlive: todos los panels en DOM, solo cambia visibilidad */}
       <div className="space-y-4 sm:space-y-6">
-        <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-          {activeTab === 'summary' && (
-            <div className="print-section">
-              <ExecutiveSummary data={summary} loading={loading} />
-            </div>
-          )}
-          {activeTab === 'profits' && <div className="print-section"><ProfitChart data={profitOverTime} loading={loading} /></div>}
-          {activeTab === 'products' && (
-            <div className="print-section space-y-4 sm:space-y-6">
-              <TopProductsChart data={topProducts} loading={loading} />
-              <PaymentBreakdown data={paymentBreakdown} loading={loading} />
-            </div>
-          )}
-          {activeTab === 'cash' && <div className="print-section"><CashAnalysis data={cashAnalysis} loading={loading} /></div>}
-        </Suspense>
+        <div className={`print-section ${activeTab !== 'summary' ? 'hidden' : ''}`}>
+          <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+            <ExecutiveSummary data={summary} loading={loading} />
+          </Suspense>
+        </div>
+        <div className={`print-section ${activeTab !== 'profits' ? 'hidden' : ''}`}>
+          <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+            <ProfitChart data={profitOverTime} loading={loading} />
+          </Suspense>
+        </div>
+        <div className={`print-section space-y-4 sm:space-y-6 ${activeTab !== 'products' ? 'hidden' : ''}`}>
+          <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+            <TopProductsChart data={topProducts} loading={loading} />
+            <PaymentBreakdown data={paymentBreakdown} loading={loading} />
+          </Suspense>
+        </div>
+        <div className={`print-section ${activeTab !== 'cash' ? 'hidden' : ''}`}>
+          <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+            <CashAnalysis data={cashAnalysis} loading={loading} />
+          </Suspense>
+        </div>
       </div>
 
       {/* Mobile Bottom Nav */}

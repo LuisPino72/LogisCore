@@ -43,6 +43,53 @@ export function useReports(tenantId: string | null) {
     }
   };
 
+  const preloadTabData = useCallback(async (tab: ReportTab) => {
+    if (!tenantId) return;
+    const cacheKey = `${tenantId}-${tab}-${filters.timeRange}-${filters.startDate ?? ''}-${filters.endDate ?? ''}`;
+    if (dataCache.current.has(cacheKey)) return;
+
+    try {
+      let updates: Partial<ReportsState>;
+      if (tab === 'summary') {
+        const [s, p, tp, pm, c] = await Promise.all([
+          reportsService.getExecutiveSummary(tenantId, filters),
+          reportsService.getProfitOverTime(tenantId, filters),
+          reportsService.getTopProducts(tenantId, filters),
+          reportsService.getPaymentBreakdown(tenantId, filters),
+          reportsService.getCashAnalysis(tenantId, filters),
+        ]);
+        updates = {
+          summary: s.ok ? s.data : null,
+          profitOverTime: p.ok ? p.data : [],
+          topProducts: tp.ok ? tp.data : [],
+          paymentBreakdown: pm.ok ? pm.data : [],
+          cashAnalysis: c.ok ? c.data : [],
+        };
+      } else if (tab === 'profits') {
+        const res = await reportsService.getProfitOverTime(tenantId, filters);
+        updates = { profitOverTime: res.ok ? res.data : [] };
+      } else if (tab === 'products') {
+        const [tp, pm] = await Promise.all([
+          reportsService.getTopProducts(tenantId, filters),
+          reportsService.getPaymentBreakdown(tenantId, filters),
+        ]);
+        updates = {
+          topProducts: tp.ok ? tp.data : [],
+          paymentBreakdown: pm.ok ? pm.data : [],
+        };
+      } else {
+        const res = await reportsService.getCashAnalysis(tenantId, filters);
+        updates = { cashAnalysis: res.ok ? res.data : [] };
+      }
+
+      dataCache.current.set(cacheKey, updates);
+      cacheOrder.current.push(cacheKey);
+      pruneCache();
+    } catch {
+      // Silent fail for pre-loading
+    }
+  }, [tenantId, filters]);
+
   const loadTab = useCallback(async (tab: ReportTab) => {
     if (!tenantId) return;
     const cacheKey = `${tenantId}-${tab}-${filters.timeRange}-${filters.startDate ?? ''}-${filters.endDate ?? ''}`;
@@ -81,6 +128,7 @@ export function useReports(tenantId: string | null) {
           paymentBreakdown: pm.ok ? pm.data : [],
           cashAnalysis: c.ok ? c.data : [],
         }, errs.length ? errs.join('. ') : null);
+        preloadAdjacent(tab);
         return;
       }
 
@@ -99,10 +147,18 @@ export function useReports(tenantId: string | null) {
       } else {
         apply({}, res.error.message);
       }
+      preloadAdjacent(tab);
     } catch (err) {
       setState((prev) => ({ ...prev, loading: false, error: err instanceof Error ? err.message : 'Error al cargar reportes' }));
     }
   }, [tenantId, filters]);
+
+  const preloadAdjacent = useCallback((currentTab: ReportTab) => {
+    const tabs: ReportTab[] = ['summary', 'profits', 'products', 'cash'];
+    const idx = tabs.indexOf(currentTab);
+    if (idx > 0) preloadTabData(tabs[idx - 1]);
+    if (idx < tabs.length - 1) preloadTabData(tabs[idx + 1]);
+  }, [preloadTabData]);
 
   useEffect(() => {
     if (!tenantId) return;

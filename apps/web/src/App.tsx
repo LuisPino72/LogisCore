@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthStore } from './features/auth/stores/authStore';
@@ -13,6 +13,7 @@ import {
   Button,
   Card,
   Spinner,
+  ModuleSkeleton,
   ToastContainer,
   Sidebar,
   ErrorBoundary,
@@ -29,12 +30,13 @@ import {
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
-import { DashboardPage } from './features/dashboard/components/DashboardPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
-import { InventoryPage } from './features/inventory';
-import { PosPage } from './features/pos';
-import { PurchasePage } from './features/purchases';
-import { ReportsPage } from './features/reports';
+
+const DashboardPage = lazy(() => import('./features/dashboard').then((m) => ({ default: m.DashboardPage })));
+const InventoryPage = lazy(() => import('./features/inventory').then((m) => ({ default: m.InventoryPage })));
+const PosPage = lazy(() => import('./features/pos').then((m) => ({ default: m.PosPage })));
+const PurchasePage = lazy(() => import('./features/purchases').then((m) => ({ default: m.PurchasePage })));
+const ReportsPage = lazy(() => import('./features/reports').then((m) => ({ default: m.ReportsPage })));
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
@@ -90,6 +92,7 @@ function DashboardLayout() {
   const session = useAuthStore((s) => s.session);
   const selectedTenantSlug = useAuthStore((s) => s.selectedTenantSlug);
   const navigate = useNavigate();
+  const location = useLocation();
   const activeModule = useSyncModuleFromRoute();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarExpanded, setSidebarExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
@@ -97,6 +100,14 @@ function DashboardLayout() {
   const isAdmin = session?.role === 'admin';
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
   const role = session?.role ?? null;
+
+  const knownModulePaths = ['/dashboard', '/inventory', '/purchases', '/pos', '/reports'];
+  const isKnownModulePath = knownModulePaths.some(
+    (p) => location.pathname === p || location.pathname.startsWith(p + '/')
+  );
+  if (!isKnownModulePath) {
+    return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
+  }
 
   const sidebarModules = role === 'employee'
     ? ALL_MODULES.filter((m) => EMPLOYEE_ALLOWED.has(m.id))
@@ -160,22 +171,35 @@ function DashboardLayout() {
       sidebarExpanded={sidebarExpanded}
     >
       <ErrorBoundary moduleName="Dashboard">
-        <Routes>
-          <Route path="/dashboard" element={<DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />} />
-          <Route path="/inventory" element={<InventoryPage tenantId={effectiveTenantId} />} />
-          <Route path="/purchases" element={<PurchasePage tenantId={effectiveTenantId} />} />
-          <Route path="/pos" element={<PosPage tenantId={effectiveTenantId} />} />
-          <Route path="/reports" element={<ReportsPage tenantId={effectiveTenantId} />} />
-          <Route path="*" element={<RoleRedirect />} />
-        </Routes>
+        {/* KeepAlive: todos los módulos siempre en DOM, solo cambia visibilidad */}
+        <div className={`${activeModule !== 'dashboard' ? 'hidden' : ''} animate-fade-in`}>
+          <Suspense fallback={<ModuleSkeleton />}>
+            <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />
+          </Suspense>
+        </div>
+        <div className={`${activeModule !== 'inventory' ? 'hidden' : ''} animate-fade-in`}>
+          <Suspense fallback={<ModuleSkeleton />}>
+            <InventoryPage tenantId={effectiveTenantId} />
+          </Suspense>
+        </div>
+        <div className={`${activeModule !== 'purchases' ? 'hidden' : ''} animate-fade-in`}>
+          <Suspense fallback={<ModuleSkeleton />}>
+            <PurchasePage tenantId={effectiveTenantId} />
+          </Suspense>
+        </div>
+        <div className={`${activeModule !== 'pos' ? 'hidden' : ''} animate-fade-in`}>
+          <Suspense fallback={<ModuleSkeleton />}>
+            <PosPage tenantId={effectiveTenantId} />
+          </Suspense>
+        </div>
+        <div className={`${activeModule !== 'reports' ? 'hidden' : ''} animate-fade-in`}>
+          <Suspense fallback={<ModuleSkeleton />}>
+            <ReportsPage tenantId={effectiveTenantId} />
+          </Suspense>
+        </div>
       </ErrorBoundary>
     </AppShell>
   );
-}
-
-function RoleRedirect() {
-  const role = useAuthStore((s) => s.session?.role);
-  return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

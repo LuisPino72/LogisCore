@@ -30,6 +30,7 @@ export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
 export { Toggle } from './Toggle';
 export { LogoutButton } from './LogoutButton';
+export { ModuleSkeleton } from './ModuleSkeleton';
 export { Sidebar } from './Sidebar';
 export type { SidebarModule } from './Sidebar';
 export { Pagination } from './Pagination';
