@@ -209,7 +209,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
           <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} />
           <Tooltip content="Escanear código de barras" position="bottom">
-            <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-[44px] min-h-[44px]">
+            <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-11 min-h-11">
               <Scan size={18} />
               <span className="text-xs">Escanear</span>
             </Button>

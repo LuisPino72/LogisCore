@@ -11,7 +11,6 @@ interface ImageWithFallbackProps {
   skeletonClassName?: string;
 }
 
-// Cache para sobrevivir a remounts y cambios temporales en el store
 const globalImageUrlCache = new Map<string, string>();
 
 export function ImageWithFallback({
@@ -21,20 +20,26 @@ export function ImageWithFallback({
   className,
   skeletonClassName,
 }: ImageWithFallbackProps) {
-  const [src, setSrc] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  if (imageUrl) {
+    globalImageUrlCache.set(productId, imageUrl);
+  }
+  const effectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
+
+  const cachedResolved = effectiveImageUrl ? imageCacheService.getResolvedUrl(effectiveImageUrl) : null;
+
+  const [src, setSrc] = useState<string | null>(cachedResolved || null);
+  const [loading, setLoading] = useState(!cachedResolved);
   const [error, setError] = useState(false);
-  const [imgReady, setImgReady] = useState(false);
+  const [imgReady, setImgReady] = useState(!!cachedResolved);
   const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Si el store temporalmente pierde imageUrl, usamos el último conocido
     if (imageUrl) {
       globalImageUrlCache.set(productId, imageUrl);
     }
-    const effectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
+    const currentEffectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
 
-    if (!effectiveImageUrl) {
+    if (!currentEffectiveImageUrl) {
       setLoading(false);
       setError(true);
       setSrc(null);
@@ -42,10 +47,18 @@ export function ImageWithFallback({
       return;
     }
 
+    const alreadyResolved = imageCacheService.getResolvedUrl(currentEffectiveImageUrl);
+    if (alreadyResolved) {
+      setSrc(alreadyResolved);
+      setLoading(false);
+      setImgReady(true);
+      return;
+    }
+
     let isActive = true;
 
     (async () => {
-      const result = await imageCacheService.acquireImageUrl(productId, effectiveImageUrl);
+      const result = await imageCacheService.acquireImageUrl(productId, currentEffectiveImageUrl);
       if (!isActive) return;
       if (result.startsWith('blob:')) {
         if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
@@ -61,7 +74,6 @@ export function ImageWithFallback({
     };
   }, [productId, imageUrl]);
 
-  // Cleanup: revocar solo la URL que fue efectivamente seteada en este componente
   useEffect(() => {
     return () => {
       if (objectUrlRef.current) {

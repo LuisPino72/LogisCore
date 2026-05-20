@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, MoreVertical } from 'lucide-react';
 import { Button, Badge, DataTable, Dropdown, EmptyState, Select, ImageWithFallback } from '../../../common/components';
 import type { Column } from '../../../common/components';
@@ -40,6 +40,11 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
 export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filterCategory]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -186,6 +191,9 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         keyExtractor={(p: Product) => p.id}
         emptyMessage="No se encontraron productos"
         renderCardOnMobile
+        page={page}
+        onPageChange={setPage}
+        total={products.length}
       />
     </div>
   );

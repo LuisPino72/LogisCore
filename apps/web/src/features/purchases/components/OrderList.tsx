@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, CheckCircle, Package, XCircle, Pencil, Trash2, MoreVertical, Eye } from 'lucide-react';
-import { Button, Badge, EmptyState, Modal, Dropdown } from '../../../common/components';
+import { Button, Badge, EmptyState, Modal, Dropdown, Pagination } from '../../../common/components';
 import type { PurchaseOrderWithItems, PurchaseOrderStatus, PurchaseOrderItem } from '../../../specs/purchases';
 import { OrderReceive } from './OrderReceive';
 
@@ -131,9 +131,19 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
   );
 }
 
+const ORDERS_PAGE_SIZE = 20;
+
 export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCancel, onEdit, onDeleteOrder, tenantId }: OrderListProps) {
   const [receiveOrderId, setReceiveOrderId] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<PurchaseOrderWithItems | null>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [orders.length]);
+
+  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PAGE_SIZE));
+  const pagedOrders = orders.slice((page - 1) * ORDERS_PAGE_SIZE, page * ORDERS_PAGE_SIZE);
 
   if (loading && orders.length === 0) {
     return (
@@ -166,7 +176,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
 
   return (
     <div className="space-y-3">
-      {orders.map((order) => {
+      {pagedOrders.map((order) => {
         const progress = getOrderProgress(order);
         const isReceiving = order.status === 'confirmed' || order.status === 'partially_received';
 
@@ -277,6 +287,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
       )}
 
       <OrderDetailModal order={detailOrder} isOpen={!!detailOrder} onClose={() => setDetailOrder(null)} />
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

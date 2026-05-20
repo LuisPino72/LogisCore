@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { SearchInput, EmptyState, Skeleton, Badge, Modal, Button } from '../../../common/components';
+import { useState, useEffect } from 'react';
+import { SearchInput, EmptyState, Skeleton, Badge, Modal, Button, Pagination } from '../../../common/components';
 import { Package, ListTree } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import type { Product } from '../../../specs/inventory';
@@ -21,6 +21,8 @@ interface ProductGridProps {
   exchangeRateBs: number;
 }
 
+const PAGE_SIZE = 20;
+
 export function ProductGrid({
   products,
   categories,
@@ -36,6 +38,11 @@ export function ProductGrid({
 }: ProductGridProps) {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedCategory]);
 
   let filtered = searchQuery
     ? products.filter(
@@ -48,6 +55,9 @@ export function ProductGrid({
   if (selectedCategory) {
     filtered = filtered.filter((p) => p.categoryId === selectedCategory);
   }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pagedProducts = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const visibleCategories = categories.slice(0, VISIBLE_CATEGORIES);
   const hasMoreCategories = categories.length > VISIBLE_CATEGORIES;
@@ -146,18 +156,23 @@ export function ProductGrid({
           ) : undefined}
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto flex-1 pb-16 md:pb-4">
-          {filtered.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAdd={onAddToCart}
-              onToggleFavorite={onToggleFavorite}
-              isFavorite={favoriteIds.has(product.id)}
-              exchangeRateBs={exchangeRateBs}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto flex-1 pb-16 md:pb-4">
+            {pagedProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAdd={onAddToCart}
+                onToggleFavorite={onToggleFavorite}
+                isFavorite={favoriteIds.has(product.id)}
+                exchangeRateBs={exchangeRateBs}
+              />
+            ))}
+          </div>
+          <div className="pb-16 md:pb-0 pr-14 md:pr-0">
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
+        </>
       )}
     </div>
   );

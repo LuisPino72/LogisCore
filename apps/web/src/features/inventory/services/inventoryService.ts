@@ -9,6 +9,7 @@ import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import imageCompression from 'browser-image-compression';
+import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, MovementRow } from '../types';
 import { convertToStorage } from '../types';
 
@@ -584,6 +585,10 @@ export const inventoryService = {
 
     try {
       const db = getDb();
+      const oldProduct = await db.products.get(productId);
+      if (oldProduct?.imageUrl) {
+        await imageCacheService.invalidate(oldProduct.imageUrl);
+      }
       await db.products.update(productId, { imageUrl: publicUrl });
 
       const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/products?id=eq.${productId}`;

@@ -1,13 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { History, TrendingUp, TrendingDown, Package, ChevronDown } from 'lucide-react';
-import { Badge, DataTable, Button, Card, SearchInput } from '../../../common/components';
+import { History, TrendingUp, TrendingDown, Package } from 'lucide-react';
+import { Badge, DataTable, Card, SearchInput, Pagination } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import type { Product } from '../types';
 import { displayStock } from '../types';
 import { inventoryService } from '../services/inventoryService';
 import type { InventoryMovement } from '../../../specs/inventory';
-
-const PAGE_SIZE = 20;
 
 interface MovementHistoryProps {
   products: Product[];
@@ -41,14 +39,20 @@ function getTypeBadge(type: string): 'success' | 'warning' | 'danger' | 'info' {
   }
 }
 
+const MOVEMENTS_PAGE_SIZE = 20;
+
 export function MovementHistory({ products }: MovementHistoryProps) {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
-  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPage(1);
+  }, [movements.length]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -70,7 +74,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
 
   const handleProductChange = async (productId: string) => {
     setSelectedProductId(productId);
-    setDisplayCount(PAGE_SIZE);
+    setPage(1);
     setShowDropdown(false);
     setProductSearch('');
     if (!productId) { setMovements([]); return; }
@@ -80,8 +84,8 @@ export function MovementHistory({ products }: MovementHistoryProps) {
     setLoading(false);
   };
 
-  const visibleMovements = movements.slice(0, displayCount);
-  const hasMoreMovements = visibleMovements.length < movements.length;
+  const totalPages = Math.max(1, Math.ceil(movements.length / MOVEMENTS_PAGE_SIZE));
+  const visibleMovements = movements.slice((page - 1) * MOVEMENTS_PAGE_SIZE, page * MOVEMENTS_PAGE_SIZE);
 
   const columns = useMemo((): Column<InventoryMovement>[] => [
     {
@@ -235,13 +239,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
             emptyIcon={<History size={32} />}
             renderCardOnMobile
           />
-          {hasMoreMovements && (
-            <div className="flex justify-center pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setDisplayCount((c) => c + PAGE_SIZE)}>
-                <ChevronDown size={16} /> Cargar más ({movements.length - visibleMovements.length} restantes)
-              </Button>
-            </div>
-          )}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
     </div>

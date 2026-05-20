@@ -32,3 +32,4 @@ export { Toggle } from './Toggle';
 export { LogoutButton } from './LogoutButton';
 export { Sidebar } from './Sidebar';
 export type { SidebarModule } from './Sidebar';
+export { Pagination } from './Pagination';

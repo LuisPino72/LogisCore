@@ -4,6 +4,7 @@ import { Skeleton } from './Loading';
 import { EmptyState } from './EmptyState';
 import { Package, ChevronUp, ChevronDown } from 'lucide-react';
 import { Card } from './Card';
+import { Pagination } from './Pagination';
 
 export interface Column<T> {
   key: string;
@@ -38,46 +39,6 @@ interface DataTableProps<T> {
 }
 
 const PAGE_SIZE_DEFAULT = 20;
-
-function Paginator({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
-  return (
-    <div className="flex items-center justify-between px-2 py-3 text-sm text-gray-600">
-      <span className="truncate">Pág. {page}/{totalPages}</span>
-      <div className="flex items-center gap-1">
-        <button
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-          className="btn btn-sm btn-secondary disabled:opacity-30"
-          aria-label="Página anterior"
-        >
-          ‹
-        </button>
-        {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
-          const start = Math.max(1, Math.min(page - 1, totalPages - 3));
-          const p = start + i;
-          if (p > totalPages) return null;
-          return (
-            <button
-              key={p}
-              onClick={() => onPageChange(p)}
-              className={cn('btn btn-sm hidden sm:inline-flex', p === page ? 'btn-primary' : 'btn-ghost')}
-            >
-              {p}
-            </button>
-          );
-        })}
-        <button
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-          className="btn btn-sm btn-secondary disabled:opacity-30"
-          aria-label="Página siguiente"
-        >
-          ›
-        </button>
-      </div>
-    </div>
-  );
-}
 
 interface DataRowProps<T> {
   item: T;
@@ -253,7 +214,7 @@ export function DataTable<T>({
 
       {/* Pagination */}
       {totalPages > 1 && onPageChange && (
-        <Paginator page={page} totalPages={totalPages} onPageChange={onPageChange} />
+        <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
       )}
     </div>
   );

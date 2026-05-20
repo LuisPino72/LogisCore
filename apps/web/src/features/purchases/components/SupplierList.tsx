@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Truck, Trash2, Phone, Pencil, ShoppingCart } from 'lucide-react';
-import { Button, Badge, EmptyState } from '../../../common/components';
+import { Button, Badge, EmptyState, Pagination } from '../../../common/components';
 import type { Supplier } from '../../../specs/purchases';
 
 interface SupplierListProps {
@@ -11,7 +12,18 @@ interface SupplierListProps {
   onDelete: (id: string, name: string) => void;
 }
 
+const SUPPLIERS_PAGE_SIZE = 20;
+
 export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySupplier, onEdit, onDelete }: SupplierListProps) {
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [suppliers.length]);
+
+  const totalPages = Math.max(1, Math.ceil(suppliers.length / SUPPLIERS_PAGE_SIZE));
+  const pagedSuppliers = suppliers.slice((page - 1) * SUPPLIERS_PAGE_SIZE, page * SUPPLIERS_PAGE_SIZE);
+
   if (loading && suppliers.length === 0) {
     return (
       <div className="space-y-3">
@@ -34,7 +46,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
 
   return (
     <div className="space-y-2">
-      {suppliers.map((s) => {
+      {pagedSuppliers.map((s) => {
         const activeOrders = activeOrdersBySupplier?.[s.id] ?? 0;
 
         return (
@@ -75,6 +87,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
           </div>
         );
       })}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
