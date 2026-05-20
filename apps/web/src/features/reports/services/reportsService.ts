@@ -519,14 +519,22 @@ export const reportsService = {
       const data = await fetchSalesWithItems(tenantId, start, end);
       const db = getDb();
 
-      const map = new Map<string, CategoryProfitData>();
-      for (const { sale } of data) {
-        const items = await db.saleItems.where({ saleId: sale.id }).toArray();
-        for (const item of items) {
-          const product = await db.products.get(item.productId);
-          const categoryId = product?.categoryId;
-          const categoryName = 'Sin categoría';
+      const allProductIds = new Set<string>();
+      for (const { items } of data) {
+        for (const item of items) allProductIds.add(item.productId);
+      }
 
+      const productMap = new Map<string, { categoryId?: string }>();
+      if (allProductIds.size > 0) {
+        const products = await db.products.where('id').anyOf([...allProductIds]).toArray();
+        for (const p of products) productMap.set(p.id, { categoryId: p.categoryId });
+      }
+
+      const map = new Map<string, CategoryProfitData>();
+      for (const { sale, items } of data) {
+        for (const item of items) {
+          const product = productMap.get(item.productId);
+          const categoryId = product?.categoryId;
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
           const profitBs = preciseRound(revenueBs - costBs, 2);
@@ -540,7 +548,7 @@ export const reportsService = {
           } else {
             map.set(key, {
               categoryId,
-              categoryName,
+              categoryName: 'Sin categoría',
               revenueBs,
               costBs,
               profitBs,
@@ -550,12 +558,16 @@ export const reportsService = {
         }
       }
 
-      // Resolve category names
-      for (const [, val] of map) {
-        if (val.categoryId) {
-          const cat = await db.categories.get(val.categoryId);
-          if (cat) val.categoryName = cat.name;
+      const categoryIds = [...map.keys()].filter((k) => k !== '__none__');
+      if (categoryIds.length > 0) {
+        const categories = await db.categories.where('id').anyOf(categoryIds).toArray();
+        const categoryNameMap = new Map(categories.map((c) => [c.id, c.name]));
+        for (const [key, val] of map) {
+          if (key !== '__none__') val.categoryName = categoryNameMap.get(key) ?? 'Sin categoría';
         }
+      }
+
+      for (const [, val] of map) {
         val.marginPercent = val.revenueBs > 0 ? preciseRound((val.profitBs / val.revenueBs) * 100, 2) : 0;
       }
 

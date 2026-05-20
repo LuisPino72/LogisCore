@@ -31,7 +31,7 @@ export function useReports(tenantId: string | null) {
   const [filters, setFilters] = useState<ReportFilters>({ timeRange: 'today' });
   const [state, setState] = useState<ReportsState>(initialState);
   const [activeTab, setActiveTab] = useState<ReportTab>('summary');
-  const MAX_CACHE_SIZE = 50;
+  const MAX_CACHE_SIZE = 200;
   const prevKey = useRef('');
   const dataCache = useRef<Map<string, Partial<ReportsState>>>(new Map());
   const cacheOrder = useRef<string[]>([]);
@@ -118,11 +118,9 @@ export function useReports(tenantId: string | null) {
 
   useEffect(() => {
     if (!tenantId) return;
-    const sub1 = EventBus.on('SYNC.REFRESH_TABLE', () => refetch());
-    const sub2 = EventBus.on('SALE.COMPLETED', () => refetch());
+    const sub = EventBus.on('SALE.COMPLETED', () => refetch());
     return () => {
-      EventBus.off(sub1);
-      EventBus.off(sub2);
+      EventBus.off(sub);
     };
   }, [tenantId, refetch]);
 

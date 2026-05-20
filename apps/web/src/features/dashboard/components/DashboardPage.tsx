@@ -56,7 +56,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     if (!tenantId) return;
     setLowStockLoading(true);
     fetchLowStock(tenantId).finally(() => setLowStockLoading(false));
-    const sub1 = EventBus.on('SYNC.REFRESH_TABLE', () => fetchLowStock(tenantId));
+    const sub1 = EventBus.on('SYNC.REFRESH_PRODUCTS', () => fetchLowStock(tenantId));
     const sub2 = EventBus.on('SALE.COMPLETED', () => fetchLowStock(tenantId));
     return () => {
       EventBus.off(sub1);

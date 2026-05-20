@@ -232,7 +232,8 @@ export class SyncEngine {
         }
 
         await db.syncMeta.put({ table: tableName, lastPullAt: Date.now() });
-        emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
+        const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
+        emitEngineEvent(eventName, { table: tableName });
       } catch (err) {
         if (err instanceof AppError) {
           result.errors.push(err);
