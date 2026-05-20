@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import ExcelJS from 'exceljs';
+import type { Workbook } from 'exceljs';
 import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
@@ -48,7 +48,7 @@ interface SheetConfig {
   colWidths: number[];
 }
 
-function addSheet(wb: ExcelJS.Workbook, { name, headers, rows, colWidths }: SheetConfig): void {
+function addSheet(wb: Workbook, { name, headers, rows, colWidths }: SheetConfig): void {
   const ws = wb.addWorksheet(name);
 
   ws.columns = headers.map((h, i) => ({
@@ -173,6 +173,7 @@ export function useExport() {
   }, []);
 
   const exportExcelAll = useCallback(async (data: ExportAllData) => {
+    const { default: ExcelJS } = await import('exceljs');
     const wb = new ExcelJS.Workbook();
     const sheets = buildSheets(data);
 

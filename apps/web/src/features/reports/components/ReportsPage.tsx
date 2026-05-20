@@ -1,7 +1,6 @@
 import { useState, Suspense, lazy, useRef, useCallback } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { useToastStore } from '../../../stores/toastStore';
@@ -123,6 +122,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const element = printRef.current;
+      const html2pdf = (await import('html2pdf.js')).default;
       const fileName = `LogisCore-Reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
       
       const opt = {
