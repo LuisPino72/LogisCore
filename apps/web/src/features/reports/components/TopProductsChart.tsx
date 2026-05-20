@@ -16,10 +16,6 @@ function formatUsd(value: number): string {
   return `$ ${value.toFixed(2)}`;
 }
 
-function formatDual(bs: number, usd: number): string {
-  return `${formatBs(bs)} / ${formatUsd(usd)}`;
-}
-
 export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   const [ready, containerRef] = useChartReady();
 
@@ -53,9 +49,9 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
     <Card className="p-4">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Top Productos por Ganancia</h3>
 
-      <div className="-mx-4 sm:mx-0 h-48 sm:h-64" ref={containerRef}>
+      <div className="hidden sm:block -mx-4 sm:mx-0 h-48 sm:h-64" ref={containerRef}>
         {ready ? (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} key="chart-ready">
           <BarChart data={data.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 9 }} stroke="#9ca3af" tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}K` : `${v}`} />
@@ -75,38 +71,50 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
         ) : <div className="h-48 sm:h-64 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}
       </div>
 
-      <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
+      <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-2">
         {data.map((p, index) => {
           const pct = topProfit > 0 ? Math.round((p.profitBs / topProfit) * 100) : 0;
           const isTop3 = index < 3;
 
           return (
             <div key={p.productId} className="group">
-              <div className="flex items-center justify-between text-[10px] sm:text-xs mb-0.5 sm:mb-1">
-                <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
-                  {isTop3 && (
-                    <span
-                      className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold text-white shrink-0"
-                      style={{ backgroundColor: RANK_COLORS[index] }}
-                    >
-                      {index + 1}
-                    </span>
-                  )}
-                  <span className="font-medium text-gray-700 truncate">{p.name}</span>
-                  <span className="text-text-secondary shrink-0 text-[9px] sm:text-[11px]">
+              <div className="flex items-start gap-2 sm:gap-3 mb-1 sm:mb-0.5">
+                {isTop3 && (
+                  <span
+                    className="w-5 h-5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white shrink-0 mt-0.5 sm:mt-0"
+                    style={{ backgroundColor: RANK_COLORS[index] }}
+                  >
+                    {index + 1}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-gray-700 truncate text-xs sm:text-sm">{p.name}</p>
+                  <p className="text-[10px] sm:text-[11px] text-text-secondary">
                     {p.quantitySold.toFixed(p.quantitySold % 1 !== 0 ? 2 : 0)} u
-                  </span>
-                </div>
-                <div className="flex flex-col items-end shrink-0 ml-1 sm:ml-2">
-                  <span className={`font-semibold text-[10px] sm:text-xs ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
-                    {formatDual(p.profitBs, p.profitUsd)}
-                  </span>
-                  <span className="text-text-secondary text-[9px] sm:text-[11px]">
-                    Ingreso {formatDual(p.revenueBs, p.revenueUsd)}
-                  </span>
+                  </p>
                 </div>
               </div>
-              <div className="h-1 sm:h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1 sm:mb-2">
+              <div className="flex gap-3 sm:gap-4 mb-1 sm:mb-0.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] sm:text-[10px] text-text-secondary uppercase tracking-wide">Ingreso</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 truncate">
+                    {formatBs(p.revenueBs)}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] text-text-secondary">
+                    {formatUsd(p.revenueUsd)}
+                  </p>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] sm:text-[10px] text-text-secondary uppercase tracking-wide">Ganancia Bruta</p>
+                  <p className={`text-xs sm:text-sm font-semibold truncate ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
+                    {formatBs(p.profitBs)}
+                  </p>
+                  <p className={`text-[10px] sm:text-[11px] ${p.profitBs >= 0 ? 'text-success/70' : 'text-danger/70'}`}>
+                    {formatUsd(p.profitUsd)}
+                  </p>
+                </div>
+              </div>
+              <div className="h-1.5 sm:h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2 sm:mb-2">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{

@@ -69,7 +69,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">M&eacute;todos de Pago</h3>
       <div className="h-48 overflow-hidden" ref={containerRef}>
         {ready ? (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} key="chart-ready">
           <PieChart>
             <Pie
               data={data}
