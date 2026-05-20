@@ -27,6 +27,8 @@ export const posService = {
         .first();
 
       if (!row) {
+        if (!navigator.onLine) return success(null);
+
         const uuid = await TenantTranslator.slugToUuid(tenantId);
         const { data } = await supabase
           .from('cash_registers')
@@ -96,6 +98,8 @@ export const posService = {
         .toArray();
 
       if (rows.length === 0) {
+        if (!navigator.onLine) return success([]);
+
         const uuid = await TenantTranslator.slugToUuid(tenantId);
         const { data } = await supabase
           .from('products')

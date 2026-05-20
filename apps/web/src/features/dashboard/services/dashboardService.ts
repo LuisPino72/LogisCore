@@ -126,6 +126,7 @@ export const dashboardService = {
   },
 
   async getTopProducts(tenantId: string, limit = 5): Promise<Result<{ productId: string; name: string; totalQty: number }[], AppError>> {
+    if (!navigator.onLine) return success([]);
     try {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 

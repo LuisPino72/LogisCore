@@ -1,5 +1,6 @@
 import { AppError, failure, success, type Result } from '@logiscore/core';
 import { emitEngineEvent } from '../audit/emitWithAudit';
+import { flushPendingAudits } from '../audit/auditService';
 import { supabase } from '../supabase/client';
 import { TenantTranslator } from '../tenantTranslator';
 import { getDb } from '../dexie/db';
@@ -47,6 +48,7 @@ export class SyncEngine {
 
   async push(batchSize = DEFAULT_BATCH_SIZE): Promise<Result<SyncBatchResult, AppError>> {
     if (this.isSyncing) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
+    if (!navigator.onLine) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
     this.isSyncing = true;
 
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
@@ -163,6 +165,7 @@ export class SyncEngine {
   }
 
   async pull(tables?: string[]): Promise<Result<SyncBatchResult, AppError>> {
+    if (!navigator.onLine) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
     const db = getDb();
 
@@ -229,6 +232,7 @@ export class SyncEngine {
         }
 
         await db.syncMeta.put({ table: tableName, lastPullAt: Date.now() });
+        emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
       } catch (err) {
         if (err instanceof AppError) {
           result.errors.push(err);
@@ -278,6 +282,10 @@ export class SyncEngine {
       const pushResult = await this.push();
       if (pushResult.ok) {
         await this.pull();
+      }
+
+      if (navigator.onLine) {
+        await flushPendingAudits();
       }
 
       this.scheduleNext();

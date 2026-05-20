@@ -144,6 +144,21 @@ export interface DexieExchangeRate {
   createdAt: string;
 }
 
+export interface DexieAuditEntry {
+  id?: number;
+  eventName: string;
+  module: string;
+  userId?: string;
+  tenantId?: string;
+  tenantUuid?: string | null;
+  payload: string;
+  severity: string;
+  createdAt: string;
+  status: 'pending' | 'synced';
+  retryCount: number;
+  error?: string;
+}
+
 export interface DexieSupplier {
   id: string;
   tenantId: string;
@@ -197,10 +212,11 @@ export class LogisCoreDB extends Dexie {
   purchaseOrders!: Table<DexiePurchaseOrder, string>;
   purchaseOrderItems!: Table<DexiePurchaseOrderItem, string>;
   exchangeRates!: Table<DexieExchangeRate, string>;
+  auditEntries!: Table<DexieAuditEntry, number>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(11).stores({
+    this.version(12).stores({
       exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
@@ -219,6 +235,7 @@ export class LogisCoreDB extends Dexie {
       suppliers: 'id, tenantId, [tenantId+deletedAt]',
       purchaseOrders: 'id, tenantId, supplierId, status, [tenantId+status], [tenantId+deletedAt]',
       purchaseOrderItems: 'id, orderId, productId, [orderId]',
+      auditEntries: '++id, eventName, status, createdAt, [status+createdAt]',
     });
   }
 }
