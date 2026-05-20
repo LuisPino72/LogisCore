@@ -166,11 +166,16 @@ function DashboardLayout() {
           <Route path="/purchases" element={<PurchasePage tenantId={effectiveTenantId} />} />
           <Route path="/pos" element={<PosPage tenantId={effectiveTenantId} />} />
           <Route path="/reports" element={<ReportsPage tenantId={effectiveTenantId} />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<RoleRedirect />} />
         </Routes>
       </ErrorBoundary>
     </AppShell>
   );
+}
+
+function RoleRedirect() {
+  const role = useAuthStore((s) => s.session?.role);
+  return <Navigate to={role === 'employee' ? '/inventory' : '/dashboard'} replace />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -195,7 +200,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (role !== 'admin') return <Navigate to={role === 'employee' ? '/inventory' : '/dashboard'} replace />;
 
   return <>{children}</>;
 }
@@ -205,7 +210,7 @@ function AuthRedirect() {
   const role = useAuthStore((s) => s.session?.role);
 
   if (isAuthenticated) {
-    return <Navigate to={role === 'admin' ? '/admin' : '/dashboard'} replace />;
+    return <Navigate to={role === 'admin' ? '/admin' : role === 'employee' ? '/inventory' : '/dashboard'} replace />;
   }
 
   return <LoginPage />;
