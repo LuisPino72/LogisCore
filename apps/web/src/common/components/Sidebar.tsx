@@ -82,29 +82,42 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
 
         <div className="flex-1 overflow-y-auto min-h-0">
           <nav className="py-2 flex flex-col items-stretch">
-            {modules.map((mod) => (
-              <Button
-                key={mod.id}
-                variant="ghost"
-                className={`flex items-center ${expanded ? 'w-full rounded-none px-3 py-2 text-sm justify-start gap-2 font-normal' : 'w-full p-1 justify-center md:w-full md:rounded-none md:px-3 md:py-2 md:text-sm md:justify-start md:gap-2 md:font-normal'} ${
-                  activeModule === mod.id
-                    ? 'bg-primary/10 text-primary font-medium border-l-2 border-l-primary'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-                onClick={() => {
-                  onNavigate(mod.id);
-                  if (window.innerWidth < 768) {
-                    onToggleExpanded?.(false);
-                  }
-                }}
-                title={!expanded ? mod.label : undefined}
-              >
-                <span className="w-5 inline-flex justify-center shrink-0">
-                  {mod.icon}
-                </span>
-                <span className={!expanded ? 'hidden md:inline' : ''}>{mod.label}</span>
-              </Button>
-            ))}
+            {modules.map((mod) => {
+              const isActive = activeModule === mod.id;
+              return (
+                <Button
+                  key={mod.id}
+                  variant="ghost"
+                  className={`relative flex items-center ${
+                    expanded
+                      ? 'w-full rounded-none px-3 py-2 text-sm justify-start gap-2 font-normal'
+                      : 'w-full p-1 justify-center md:w-full md:rounded-none md:px-3 md:py-2 md:text-sm md:justify-start md:gap-2 md:font-normal'
+                  } ${
+                    isActive
+                      ? expanded
+                        ? 'bg-primary/20 text-primary font-semibold rounded-lg ring-1 ring-primary/30'
+                        : 'text-primary md:bg-primary/25 md:rounded-lg md:font-semibold md:ring-2 md:ring-primary/40'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                  onClick={() => {
+                    onNavigate(mod.id);
+                    if (window.innerWidth < 768) {
+                      onToggleExpanded?.(false);
+                    }
+                  }}
+                  title={!expanded ? mod.label : undefined}
+                >
+                  {isActive && (
+                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-7 w-[3px] rounded-full bg-primary ${expanded ? '' : 'hidden md:block'}`} aria-hidden />
+                  )}
+
+                  <span className={`w-5 inline-flex justify-center items-center shrink-0 ${isActive && !expanded ? 'h-5 rounded-full bg-primary/30 ring-2 ring-primary/40' : ''}`}>
+                    {mod.icon}
+                  </span>
+                  <span className={!expanded ? 'hidden md:inline' : ''}>{mod.label}</span>
+                </Button>
+              );
+            })}
           </nav>
           {footerSlot && (
             <div className={`px-3 py-3 border-t border-gray-100 bg-white ${expanded ? '' : 'hidden md:block'}`}>
