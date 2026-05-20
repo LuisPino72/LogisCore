@@ -198,7 +198,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
               <button
                 key={p.id}
                 type="button"
-                className={`w-full text-left px-3 py-2 text-sm transition-colors min-h-[44px] ${
+                className={`w-full text-left px-3 py-2 text-sm transition-colors min-h-11 ${
                   selectedProductId === p.id
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-gray-700 hover:bg-gray-50'

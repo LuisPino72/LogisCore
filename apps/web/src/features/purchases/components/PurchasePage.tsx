@@ -7,7 +7,7 @@ import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
-import type { CreateSupplierInput, CreatePurchaseOrderInput, Supplier, PurchaseOrderWithItems } from '../../../specs/purchases';
+import type { CreateSupplierInput, CreatePurchaseOrderInput, Supplier, PurchaseOrderWithItems, PurchaseOrderStatus } from '../../../specs/purchases';
 
 interface ConfirmDeleteSupplier {
   id: string;
@@ -35,6 +35,16 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const [confirmDeleteOrder, setConfirmDeleteOrder] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<PurchaseOrderStatus | 'all'>('all');
+
+  const statusOptions: { value: PurchaseOrderStatus | 'all'; label: string; variant: 'neutral' | 'warning' | 'info' | 'success' | 'danger' }[] = [
+    { value: 'all', label: 'Todas', variant: 'neutral' },
+    { value: 'received', label: 'Recibida', variant: 'success' },
+    { value: 'confirmed', label: 'Confirmada', variant: 'info' },
+    { value: 'partially_received', label: 'Parcial', variant: 'warning' },
+    { value: 'draft', label: 'Borrador', variant: 'warning' },
+    { value: 'cancelled', label: 'Cancelada', variant: 'danger' },
+  ];
 
   const isOwner = role === 'owner' || role === 'admin';
 
@@ -169,6 +179,23 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
       <Card>
         {activeTab === 'ordenes' && (
           <div className="p-4 space-y-4">
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {statusOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setStatusFilter(opt.value)}
+                  className={cn(
+                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap',
+                    statusFilter === opt.value
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
                 <SearchInput
@@ -199,9 +226,10 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               orders={orders.filter((o) => {
                 const matchSearch = o.supplierName?.toLowerCase().includes(search.toLowerCase()) ||
                   o.id.toLowerCase().includes(search.toLowerCase());
-                if (!dateFilter) return matchSearch;
+                const matchStatus = statusFilter === 'all' || o.status === statusFilter;
+                if (!dateFilter) return matchSearch && matchStatus;
                 const orderDate = o.createdAt.slice(0, 10);
-                return matchSearch && orderDate === dateFilter;
+                return matchSearch && matchStatus && orderDate === dateFilter;
               })}
               loading={loading}
               isOwner={isOwner}

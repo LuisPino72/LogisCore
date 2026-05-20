@@ -115,8 +115,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="input-wrapper">
-            <label className="input-label text-center">SKU</label>
-            <div className="flex gap-1">
+            <label className="input-label text-center">Código de barra (sku)</label>
+            <div className="flex items-center gap-1">
               <Input
                 placeholder="Ej: HP-001"
                 value={formData.sku}
@@ -125,8 +125,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 validation={{ required: true, maxLength: 50 }}
                 inputClassName="text-sm px-2 py-2 flex-1"
               />
-              <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-2 shrink-0" title="Escanear código de barras">
-                <Scan size={16} />
+              <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="flex flex-col items-center justify-center shrink-0 p-1.5 min-w-13 h-auto" title="Escanear código de barras">
+                <span className="text-[9px] leading-none text-text-secondary mb-0.5">Escanear</span>
+                <Scan size={20} />
               </Button>
             </div>
           </div>

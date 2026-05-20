@@ -50,7 +50,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
                 size="sm"
                 icon={<Trash2 size={16} />}
                 onClick={() => setDeleteTarget(cart)}
-                className="min-w-[44px] min-h-[44px]"
+                className="min-w-11 min-h-11"
               />
             </div>
           );

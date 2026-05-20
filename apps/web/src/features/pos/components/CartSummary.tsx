@@ -80,7 +80,7 @@ export function CartSummary({
               key={m}
               type="button"
               onClick={() => onPaymentMethodChange(m)}
-              className="cursor-pointer min-h-[44px] flex items-center px-1"
+              className="cursor-pointer min-h-11 flex items-center px-1"
             >
               <Badge variant={paymentMethod === m ? 'info' : 'neutral'} className="text-xs px-2 py-1">
                 {meta.label}
@@ -93,7 +93,7 @@ export function CartSummary({
       <div className="flex gap-2">
         <Button
           variant="secondary"
-          className="flex-1 min-h-[44px]"
+          className="flex-1 min-h-11"
           disabled={items.length === 0}
           onClick={onPark}
         >
@@ -102,7 +102,7 @@ export function CartSummary({
         </Button>
         <Button
           variant="primary"
-          className="flex-2 min-h-[44px]"
+          className="flex-2 min-h-11"
           disabled={!isOpen || items.length === 0 || !paymentMethod || exchangeRateBs <= 0}
           loading={loading}
           onClick={onPay}

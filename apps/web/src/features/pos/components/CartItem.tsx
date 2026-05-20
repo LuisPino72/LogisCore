@@ -43,7 +43,7 @@ export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowPro
           <button
             type="button"
             onClick={() => handleStep(-step)}
-            className="w-[40px] h-[40px] flex items-center justify-center rounded-lg bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors"
             aria-label="Reducir cantidad"
           >
             <Minus size={14} />
@@ -61,7 +61,7 @@ export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowPro
           <button
             type="button"
             onClick={() => handleStep(step)}
-            className="w-[40px] h-[40px] flex items-center justify-center rounded-lg bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors"
             aria-label="Aumentar cantidad"
           >
             <Plus size={14} />
@@ -70,7 +70,7 @@ export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowPro
             variant="ghost"
             size="sm"
             onClick={() => onRemove(item.productId)}
-            className="p-2 min-w-[40px] min-h-[40px] ml-1"
+            className="p-2 min-w-10 min-h-10 ml-1"
           >
             <Trash2 size={14} className="text-danger" />
           </Button>

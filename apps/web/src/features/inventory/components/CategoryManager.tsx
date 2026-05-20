@@ -114,10 +114,10 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
               </div>
               {isOwner && (
                 <div className="flex gap-0.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-[32px] min-h-[32px]">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-8 min-h-8">
                     <Edit3 size={14} />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-[32px] min-h-[32px]">
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-8 min-h-8">
                     <Trash2 size={14} className="text-danger" />
                   </Button>
                 </div>
