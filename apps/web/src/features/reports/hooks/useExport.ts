@@ -45,13 +45,12 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): XLSX.WorkSheet
   const rows: (string | number | undefined)[][] = [['Métrica', 'Valor']];
   if (summary) {
     rows.push(
-      ['Ventas Totales Bs', formatBs(summary.totalSalesBs)],
-      ['Costo Total Bs', formatBs(summary.totalCostBs)],
-      ['Ganancia Bruta Bs', formatBs(summary.grossProfitBs)],
+      ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / $ ${summary.totalSalesUsd.toFixed(2)}`],
+      ['Costo Total', `${formatBs(summary.totalCostBs)} / $ ${summary.totalCostUsd.toFixed(2)}`],
+      ['Ganancia Bruta', `${formatBs(summary.grossProfitBs)} / $ ${summary.grossProfitUsd.toFixed(2)}`],
       ['Margen %', `${summary.profitMarginPercent}%`],
       ['Transacciones', summary.totalTransactions],
-      ['Ticket Promedio Bs', formatBs(summary.averageTicketBs)],
-      ['IGTF Total Bs', formatBs(summary.totalIgtfBs)],
+      ['Ticket Promedio', `${formatBs(summary.averageTicketBs)} / $ ${summary.averageTicketUsd.toFixed(2)}`],
       ['Gastos de Consumo Bs', formatBs(summary.nonSellableExpensesBs)],
       ['Gastos de Consumo USD', summary.nonSellableExpensesUsd.toFixed(2)],
       ['Top Producto', summary.topProductName ?? 'N/A'],
@@ -61,64 +60,88 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): XLSX.WorkSheet
     }
   }
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 24 }, { wch: 18 }];
+  ws['!cols'] = [{ wch: 24 }, { wch: 28 }];
   return ws;
 }
 
 function buildProfitSheet(profitOverTime: DailyProfitPoint[]): XLSX.WorkSheet {
   const rows: (string | number | undefined | null)[][] = [
-    ['Fecha', 'Ventas Bs', 'Costo Bs', 'Ganancia Bs', 'Transacciones'],
+    ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'],
   ];
   profitOverTime.forEach((p) => {
-    rows.push([p.label, formatBs(p.salesBs), formatBs(p.costBs), formatBs(p.profitBs), p.transactions]);
+    rows.push([
+      p.label,
+      p.lastRate.toFixed(4),
+      formatBs(p.salesBs),
+      `$ ${p.salesUsd.toFixed(2)}`,
+      formatBs(p.costBs),
+      `$ ${p.costUsd.toFixed(2)}`,
+      formatBs(p.profitBs),
+      `$ ${p.profitUsd.toFixed(2)}`,
+      p.transactions,
+    ]);
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+  ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }];
   return ws;
 }
 
 function buildProductsSheet(topProducts: TopProductData[]): XLSX.WorkSheet {
   const rows: (string | number | undefined | null)[][] = [
-    ['Producto', 'SKU', 'Vendidos', 'Ingreso Bs', 'Costo Bs', 'Ganancia Bs', 'Margen %'],
+    ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Margen %'],
   ];
   topProducts.forEach((p) => {
-    rows.push([p.name, p.sku, p.quantitySold, formatBs(p.revenueBs), formatBs(p.costBs), formatBs(p.profitBs), `${p.marginPercent}%`]);
+    rows.push([
+      p.name,
+      p.quantitySold,
+      formatBs(p.revenueBs),
+      `$ ${p.revenueUsd.toFixed(2)}`,
+      formatBs(p.costBs),
+      `$ ${p.costUsd.toFixed(2)}`,
+      formatBs(p.profitBs),
+      `$ ${p.profitUsd.toFixed(2)}`,
+      `${p.marginPercent}%`,
+    ]);
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 10 }];
+  ws['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
   return ws;
 }
 
 function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): XLSX.WorkSheet {
   const rows: (string | number | undefined | null)[][] = [
-    ['Método', 'Transacciones', 'Total Bs', '%'],
+    ['Método', 'Transacciones', 'Total Bs', 'Total $', '%'],
   ];
   paymentBreakdown.forEach((p) => {
-    rows.push([p.label, p.count, formatBs(p.totalBs), `${p.percentage}%`]);
+    rows.push([p.label, p.count, formatBs(p.totalBs), `$ ${p.totalUsd.toFixed(2)}`, `${p.percentage}%`]);
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 8 }];
+  ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 8 }];
   return ws;
 }
 
 function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): XLSX.WorkSheet {
   const rows: (string | number | undefined | null)[][] = [
-    ['Caja', 'Apertura Bs', 'Ventas Bs', 'IGTF Bs', 'Esperado Bs', 'Cierre Bs', 'Diferencia Bs', 'Estado'],
+    ['Caja', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'],
   ];
   cashAnalysis.forEach((r) => {
     rows.push([
       new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
       formatBs(r.openingBalanceBs),
+      `$ ${r.openingBalanceUsd.toFixed(2)}`,
       formatBs(r.totalSalesBs),
-      formatBs(r.totalIgtfBs),
+      `$ ${r.totalSalesUsd.toFixed(2)}`,
       r.expectedClosingBs !== undefined ? formatBs(r.expectedClosingBs) : '',
+      r.expectedClosingUsd !== undefined ? `$ ${r.expectedClosingUsd.toFixed(2)}` : '',
       r.closingBalanceBs !== undefined ? formatBs(r.closingBalanceBs) : '',
+      r.closingBalanceUsd !== undefined ? `$ ${r.closingBalanceUsd.toFixed(2)}` : '',
       r.differenceBs !== undefined ? formatBs(r.differenceBs) : '',
+      r.differenceUsd !== undefined ? `$ ${r.differenceUsd.toFixed(2)}` : '',
       r.status === 'open' ? 'Abierta' : 'Cerrada',
     ]);
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 10 }];
+  ws['!cols'] = [{ wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
   return ws;
 }
 

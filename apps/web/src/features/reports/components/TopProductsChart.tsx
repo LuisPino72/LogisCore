@@ -12,6 +12,14 @@ interface TopProductsChartProps {
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1'];
 
+function formatUsd(value: number): string {
+  return `$ ${value.toFixed(2)}`;
+}
+
+function formatDual(bs: number, usd: number): string {
+  return `${formatBs(bs)} / ${formatUsd(usd)}`;
+}
+
 export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   const [ready, containerRef] = useChartReady();
 
@@ -89,10 +97,12 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
                     {p.quantitySold.toFixed(p.quantitySold % 1 !== 0 ? 2 : 0)} u
                   </span>
                 </div>
-                <div className="flex items-center gap-1 sm:gap-3 shrink-0 ml-1 sm:ml-2">
-                  <span className="text-text-secondary text-[9px] sm:text-xs">{formatBs(p.revenueBs)}</span>
+                <div className="flex flex-col items-end shrink-0 ml-1 sm:ml-2">
                   <span className={`font-semibold text-[10px] sm:text-xs ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
-                    {formatBs(p.profitBs)}
+                    {formatDual(p.profitBs, p.profitUsd)}
+                  </span>
+                  <span className="text-text-secondary text-[9px] sm:text-[11px]">
+                    Ingreso {formatDual(p.revenueBs, p.revenueUsd)}
                   </span>
                 </div>
               </div>

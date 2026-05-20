@@ -28,7 +28,6 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'summary', label: 'Resumen', icon: <FileText size={20} /> },
   { id: 'profits', label: 'Ganancias', icon: <BarChart3 size={20} /> },
   { id: 'products', label: 'Productos', icon: <ShoppingBag size={20} /> },
-  { id: 'payments', label: 'Pagos', icon: <PieChart size={20} /> },
   { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
 ];
 
@@ -209,15 +208,15 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           {activeTab === 'summary' && (
             <div className="print-section">
               <ExecutiveSummary data={summary} loading={loading} />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <PaymentBreakdown data={paymentBreakdown} loading={loading} />
-                <TopProductsChart data={topProducts} loading={loading} />
-              </div>
             </div>
           )}
           {activeTab === 'profits' && <div className="print-section"><ProfitChart data={profitOverTime} loading={loading} /></div>}
-          {activeTab === 'products' && <div className="print-section"><TopProductsChart data={topProducts} loading={loading} /></div>}
-          {activeTab === 'payments' && <div className="print-section"><PaymentBreakdown data={paymentBreakdown} loading={loading} /></div>}
+          {activeTab === 'products' && (
+            <div className="print-section space-y-4 sm:space-y-6">
+              <TopProductsChart data={topProducts} loading={loading} />
+              <PaymentBreakdown data={paymentBreakdown} loading={loading} />
+            </div>
+          )}
           {activeTab === 'cash' && <div className="print-section"><CashAnalysis data={cashAnalysis} loading={loading} /></div>}
         </Suspense>
       </div>

@@ -1,11 +1,19 @@
 import { Card, Badge } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, Package, ArrowUpRight, Receipt } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight } from 'lucide-react';
 import type { ExecutiveSummaryData } from '@/features/reports/types';
 import { formatBs } from '@/lib/formatBs';
 
 interface ExecutiveSummaryProps {
   data: ExecutiveSummaryData | null;
   loading: boolean;
+}
+
+function formatUsd(value: number): string {
+  return `$ ${value.toFixed(2)}`;
+}
+
+function formatDual(bs: number, usd: number): string {
+  return `${formatBs(bs)} / ${formatUsd(usd)}`;
 }
 
 function KpiCard({
@@ -44,7 +52,7 @@ function KpiCard({
       </div>
       <div className="space-y-1 pr-8 sm:pr-10">
         <p className="text-[10px] sm:text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
-        <p className="text-sm sm:text-xl font-bold text-gray-900 truncate">{value}</p>
+        <p className="text-xs sm:text-lg font-bold text-gray-900 truncate">{value}</p>
         {subtitle && <p className="text-[10px] sm:text-xs text-text-secondary truncate">{subtitle}</p>}
         {trend && (
           <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
@@ -103,7 +111,7 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
           label="Ventas Totales"
-          value={formatBs(data.totalSalesBs)}
+          value={formatDual(data.totalSalesBs, data.totalSalesUsd)}
           subtitle={`${data.totalTransactions} transacciones`}
           icon={<ShoppingCart size={18} />}
           gradient="blue"
@@ -111,22 +119,21 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
         />
         <KpiCard
           label="Ganancia Bruta"
-          value={formatBs(data.grossProfitBs)}
+          value={formatDual(data.grossProfitBs, data.grossProfitUsd)}
           subtitle={`Margen ${data.profitMarginPercent}%`}
           icon={<TrendingUp size={18} />}
           gradient={data.grossProfitBs >= 0 ? 'green' : 'red'}
         />
         <KpiCard
-          label="Ticket Promedio"
-          value={formatBs(data.averageTicketBs)}
+          label="Costo Total"
+          value={formatDual(data.totalCostBs, data.totalCostUsd)}
           icon={<DollarSign size={18} />}
           gradient="amber"
         />
         <KpiCard
-          label="Gastos de Consumo"
-          value={formatBs(data.nonSellableExpensesBs)}
-          subtitle={`USD ${data.nonSellableExpensesUsd.toFixed(2)}`}
-          icon={<Receipt size={18} />}
+          label="Ticket Promedio"
+          value={formatDual(data.averageTicketBs, data.averageTicketUsd)}
+          icon={<DollarSign size={18} />}
           gradient="amber"
         />
       </div>
@@ -134,7 +141,7 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
       {data.topProductName && (
         <Card className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20 transition-shadow hover:shadow-sm">
           <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Package size={14} className="sm:w-[18px] sm:h-[18px] text-primary" />
+            <ShoppingCart size={14} className="sm:w-4.5 sm:h-4.5 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] sm:text-xs text-text-secondary">Producto m&aacute;s rentable</p>

@@ -9,6 +9,10 @@ interface PaymentBreakdownProps {
   loading: boolean;
 }
 
+function formatUsd(value: number): string {
+  return `$ ${value.toFixed(2)}`;
+}
+
 export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   const [ready, containerRef] = useChartReady();
 
@@ -18,9 +22,9 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
         <div className="space-y-3">
           <div className="skeleton h-5 w-40 rounded" />
           <div className="skeleton h-48 rounded-lg" />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="skeleton h-6 rounded" />
+              <div key={i} className="skeleton h-14 sm:h-6 rounded" />
             ))}
           </div>
         </div>
@@ -53,7 +57,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
       dominantBaseline="central"
     >
       <tspan x="50%" dy="-0.4em" className="fill-gray-400" style={{ fontSize: 11 }}>Total</tspan>
-      <tspan x="50%" dy="1.3em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 700 }}>
+      <tspan x="50%" dy="1.3em" className="fill-gray-900" style={{ fontSize: 12, fontWeight: 700 }}>
         {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
       </tspan>
       <tspan x="50%" dy="1.2em" className="fill-gray-400" style={{ fontSize: 9 }}>Bs</tspan>
@@ -92,18 +96,22 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
         ) : <div className="h-48 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded-full" /></div>}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-1.5 sm:gap-2">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
         {data.map((d) => (
-          <div key={d.method} className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs p-1.5 sm:p-2 rounded-lg bg-gray-50">
+          <div key={d.method} className="flex items-center gap-2 text-xs p-2.5 rounded-lg bg-gray-50">
             <span
-              className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0"
+              className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: colors[d.method] ?? '#9ca3af' }}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-gray-600 truncate">{d.label}</p>
-              <p className="text-[9px] sm:text-[11px] text-text-secondary">{formatBs(d.totalBs)}</p>
+              <p className="font-medium text-gray-700 truncate">{d.label}</p>
+              <p className="text-[11px] text-text-secondary">{formatBs(d.totalBs)}</p>
+              <p className="text-[11px] text-text-secondary">{formatUsd(d.totalUsd)}</p>
             </div>
-            <span className="font-semibold text-gray-900 shrink-0 text-[10px] sm:text-xs">{d.percentage}%</span>
+            <div className="flex flex-col items-end shrink-0">
+              <span className="font-semibold text-gray-900">{d.percentage}%</span>
+              <span className="text-[10px] text-text-secondary">{d.count} trans.</span>
+            </div>
           </div>
         ))}
       </div>

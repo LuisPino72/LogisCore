@@ -8,12 +8,15 @@ export interface ReportFilters {
 
 export interface ExecutiveSummaryData {
   totalSalesBs: number;
+  totalSalesUsd: number;
   totalCostBs: number;
+  totalCostUsd: number;
   grossProfitBs: number;
+  grossProfitUsd: number;
   profitMarginPercent: number;
   totalTransactions: number;
   averageTicketBs: number;
-  totalIgtfBs: number;
+  averageTicketUsd: number;
   topProductName?: string;
   salesVsYesterdayPercent?: number;
   nonSellableExpensesUsd: number;
@@ -24,9 +27,13 @@ export interface DailyProfitPoint {
   date: string;
   label: string;
   salesBs: number;
+  salesUsd: number;
   costBs: number;
+  costUsd: number;
   profitBs: number;
+  profitUsd: number;
   transactions: number;
+  lastRate: number;
 }
 
 export interface TopProductData {
@@ -35,8 +42,11 @@ export interface TopProductData {
   sku: string;
   quantitySold: number;
   revenueBs: number;
+  revenueUsd: number;
   costBs: number;
+  costUsd: number;
   profitBs: number;
+  profitUsd: number;
   marginPercent: number;
 }
 
@@ -45,6 +55,7 @@ export interface PaymentBreakdownData {
   label: string;
   count: number;
   totalBs: number;
+  totalUsd: number;
   percentage: number;
 }
 
@@ -53,12 +64,16 @@ export interface CashRegisterSummaryData {
   openedAt: string;
   closedAt?: string;
   openingBalanceBs: number;
+  openingBalanceUsd: number;
   closingBalanceBs?: number;
+  closingBalanceUsd?: number;
   expectedClosingBs?: number;
+  expectedClosingUsd?: number;
   differenceBs?: number;
+  differenceUsd?: number;
   totalSalesCount: number;
   totalSalesBs: number;
-  totalIgtfBs: number;
+  totalSalesUsd: number;
   status: 'open' | 'closed';
 }
 
@@ -71,4 +86,4 @@ export interface CategoryProfitData {
   marginPercent: number;
 }
 
-export type ReportTab = 'summary' | 'profits' | 'products' | 'payments' | 'cash';
+export type ReportTab = 'summary' | 'profits' | 'products' | 'cash';

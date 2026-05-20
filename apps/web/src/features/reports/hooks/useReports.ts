@@ -87,7 +87,6 @@ export function useReports(tenantId: string | null) {
       let res: Result<unknown, AppError>;
       if (tab === 'profits') res = await reportsService.getProfitOverTime(tenantId, filters);
       else if (tab === 'products') res = await reportsService.getTopProducts(tenantId, filters);
-      else if (tab === 'payments') res = await reportsService.getPaymentBreakdown(tenantId, filters);
       else if (tab === 'cash') res = await reportsService.getCashAnalysis(tenantId, filters);
       else return;
 
@@ -95,7 +94,6 @@ export function useReports(tenantId: string | null) {
         const updates: Partial<ReportsState> = {};
         if (tab === 'profits') updates.profitOverTime = res.data as DailyProfitPoint[];
         else if (tab === 'products') updates.topProducts = res.data as TopProductData[];
-        else if (tab === 'payments') updates.paymentBreakdown = res.data as PaymentBreakdownData[];
         else if (tab === 'cash') updates.cashAnalysis = res.data as CashRegisterSummaryData[];
         apply(updates, null);
       } else {

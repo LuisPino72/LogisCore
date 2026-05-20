@@ -16,6 +16,14 @@ interface PrintViewProps {
   cashAnalysis: CashRegisterSummaryData[];
 }
 
+function formatUsd(value: number): string {
+  return `$ ${value.toFixed(2)}`;
+}
+
+function formatDual(bs: number, usd: number): string {
+  return `${formatBs(bs)} / ${formatUsd(usd)}`;
+}
+
 const printStyles = `
   @page { margin: 20mm 15mm; size: A4 portrait; }
 
@@ -94,7 +102,7 @@ const printStyles = `
   }
 
   .print-kpi-value {
-    font-size: 11pt;
+    font-size: 9pt;
     font-weight: 700;
     color: #111;
   }
@@ -113,7 +121,7 @@ const printStyles = `
   .print-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 8pt;
+    font-size: 7.5pt;
   }
 
   .print-table th {
@@ -123,7 +131,7 @@ const printStyles = `
     text-align: left;
     padding: 6px 8px;
     border: 1px solid #1d4ed8;
-    font-size: 7.5pt;
+    font-size: 7pt;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -183,12 +191,10 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
         <h2 className="print-section-title">Resumen Ejecutivo</h2>
         {summary ? (
           <div className="print-kpi-grid">
-            <KpiCard label="Ventas Totales" value={formatBs(summary.totalSalesBs)} subtitle={`${summary.totalTransactions} transacciones`} />
-            <KpiCard label="Ganancia Bruta" value={formatBs(summary.grossProfitBs)} subtitle={`Margen ${summary.profitMarginPercent}%`} />
-            <KpiCard label="Costo Total" value={formatBs(summary.totalCostBs)} />
-            <KpiCard label="Ticket Promedio" value={formatBs(summary.averageTicketBs)} />
-            <KpiCard label="IGTF Total" value={formatBs(summary.totalIgtfBs)} />
-            <KpiCard label="Gastos de Consumo" value={`${formatBs(summary.nonSellableExpensesBs)} / USD ${summary.nonSellableExpensesUsd.toFixed(2)}`} />
+            <KpiCard label="Ventas Totales" value={formatDual(summary.totalSalesBs, summary.totalSalesUsd)} subtitle={`${summary.totalTransactions} transacciones`} />
+            <KpiCard label="Ganancia Bruta" value={formatDual(summary.grossProfitBs, summary.grossProfitUsd)} subtitle={`Margen ${summary.profitMarginPercent}%`} />
+            <KpiCard label="Costo Total" value={formatDual(summary.totalCostBs, summary.totalCostUsd)} />
+            <KpiCard label="Ticket Promedio" value={formatDual(summary.averageTicketBs, summary.averageTicketUsd)} />
             {summary.topProductName && <KpiCard label="Top Producto" value={summary.topProductName} />}
             {summary.salesVsYesterdayPercent !== undefined && (
               <KpiCard label="Vs Ayer" value={`${summary.salesVsYesterdayPercent}%`} />
@@ -208,9 +214,13 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <thead>
                 <tr>
                   <th>Fecha</th>
+                  <th>Tasa</th>
                   <th>Ventas Bs</th>
+                  <th>Ventas $</th>
                   <th>Costo Bs</th>
+                  <th>Costo $</th>
                   <th>Ganancia Bs</th>
+                  <th>Ganancia $</th>
                   <th>Transacciones</th>
                 </tr>
               </thead>
@@ -218,9 +228,13 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                 {profitOverTime.map((p, i) => (
                   <tr key={i}>
                     <td>{p.label}</td>
+                    <td>{p.lastRate.toFixed(4)}</td>
                     <td>{formatBs(p.salesBs)}</td>
+                    <td>{formatUsd(p.salesUsd)}</td>
                     <td>{formatBs(p.costBs)}</td>
+                    <td>{formatUsd(p.costUsd)}</td>
                     <td>{formatBs(p.profitBs)}</td>
+                    <td>{formatUsd(p.profitUsd)}</td>
                     <td>{p.transactions}</td>
                   </tr>
                 ))}
@@ -239,11 +253,13 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <thead>
                 <tr>
                   <th>Producto</th>
-                  <th>SKU</th>
                   <th>Vendidos</th>
                   <th>Ingreso Bs</th>
+                  <th>Ingreso $</th>
                   <th>Costo Bs</th>
+                  <th>Costo $</th>
                   <th>Ganancia Bs</th>
+                  <th>Ganancia $</th>
                   <th>Margen</th>
                 </tr>
               </thead>
@@ -251,11 +267,13 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                 {topProducts.map((p, i) => (
                   <tr key={i}>
                     <td>{p.name}</td>
-                    <td>{p.sku}</td>
                     <td>{p.quantitySold}</td>
                     <td>{formatBs(p.revenueBs)}</td>
+                    <td>{formatUsd(p.revenueUsd)}</td>
                     <td>{formatBs(p.costBs)}</td>
+                    <td>{formatUsd(p.costUsd)}</td>
                     <td>{formatBs(p.profitBs)}</td>
+                    <td>{formatUsd(p.profitUsd)}</td>
                     <td>{p.marginPercent}%</td>
                   </tr>
                 ))}
@@ -276,6 +294,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                   <th>M&eacute;todo</th>
                   <th>Transacciones</th>
                   <th>Total Bs</th>
+                  <th>Total $</th>
                   <th>%</th>
                 </tr>
               </thead>
@@ -285,6 +304,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                     <td>{p.label}</td>
                     <td>{p.count}</td>
                     <td>{formatBs(p.totalBs)}</td>
+                    <td>{formatUsd(p.totalUsd)}</td>
                     <td>{p.percentage}%</td>
                   </tr>
                 ))}
@@ -304,11 +324,15 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                 <tr>
                   <th>Caja</th>
                   <th>Apertura Bs</th>
+                  <th>Apertura $</th>
                   <th>Ventas Bs</th>
-                  <th>IGTF Bs</th>
+                  <th>Ventas $</th>
                   <th>Esperado Bs</th>
+                  <th>Esperado $</th>
                   <th>Cierre Bs</th>
+                  <th>Cierre $</th>
                   <th>Diferencia Bs</th>
+                  <th>Diferencia $</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -317,11 +341,15 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                   <tr key={i}>
                     <td>{new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
                     <td>{formatBs(r.openingBalanceBs)}</td>
+                    <td>{formatUsd(r.openingBalanceUsd)}</td>
                     <td>{formatBs(r.totalSalesBs)}</td>
-                    <td>{formatBs(r.totalIgtfBs)}</td>
+                    <td>{formatUsd(r.totalSalesUsd)}</td>
                     <td>{r.expectedClosingBs !== undefined ? formatBs(r.expectedClosingBs) : '-'}</td>
+                    <td>{r.expectedClosingUsd !== undefined ? formatUsd(r.expectedClosingUsd) : '-'}</td>
                     <td>{r.closingBalanceBs !== undefined ? formatBs(r.closingBalanceBs) : '-'}</td>
+                    <td>{r.closingBalanceUsd !== undefined ? formatUsd(r.closingBalanceUsd) : '-'}</td>
                     <td>{r.differenceBs !== undefined ? formatBs(r.differenceBs) : '-'}</td>
+                    <td>{r.differenceUsd !== undefined ? formatUsd(r.differenceUsd) : '-'}</td>
                     <td>{r.status === 'open' ? 'Abierta' : 'Cerrada'}</td>
                   </tr>
                 ))}

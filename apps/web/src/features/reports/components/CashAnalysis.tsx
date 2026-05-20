@@ -8,7 +8,15 @@ interface CashAnalysisProps {
   loading: boolean;
 }
 
-function DiffIndicator({ differenceBs }: { differenceBs: number | null | undefined }) {
+function formatUsd(value: number): string {
+  return `$ ${value.toFixed(2)}`;
+}
+
+function formatDual(bs: number, usd: number): string {
+  return `${formatBs(bs)} / ${formatUsd(usd)}`;
+}
+
+function DiffIndicator({ differenceBs, differenceUsd }: { differenceBs: number | null | undefined; differenceUsd: number | null | undefined }) {
   if (differenceBs === undefined || differenceBs === null) {
     return (
       <div className="flex items-center gap-1.5 p-2 rounded-lg bg-gray-50">
@@ -29,9 +37,16 @@ function DiffIndicator({ differenceBs }: { differenceBs: number | null | undefin
   return (
     <div className={`flex items-center gap-1.5 p-2 rounded-lg border ${bgClass} ${borderClass}`}>
       <span className={textClass}>{icon}</span>
-      <span className={`text-sm font-semibold ${textClass}`}>
-        {isZero ? 'Cuadrado' : (isPositive ? '+' : '-')}{formatBs(Math.abs(differenceBs))}
-      </span>
+      <div className="flex flex-col">
+        <span className={`text-sm font-semibold ${textClass}`}>
+          {isZero ? 'Cuadrado' : (isPositive ? '+' : '-')}{formatBs(Math.abs(differenceBs))}
+        </span>
+        {differenceUsd !== undefined && differenceUsd !== null && (
+          <span className={`text-[10px] ${textClass}`}>
+            {isZero ? '' : (isPositive ? '+' : '-')}{formatUsd(Math.abs(differenceUsd))}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -81,7 +96,9 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
     <div className="space-y-3">
       {data.map((reg) => {
         const expected = reg.expectedClosingBs ?? 0;
+        const expectedUsd = reg.expectedClosingUsd ?? 0;
         const opening = reg.openingBalanceBs;
+        const openingUsd = reg.openingBalanceUsd;
         const sales = reg.totalSalesBs;
         const maxVal = Math.max(opening + sales, expected, 1);
         const openingPct = Math.round((opening / maxVal) * 100);
@@ -89,9 +106,10 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
 
         return (
           <Card key={reg.registerId} className="overflow-hidden transition-shadow hover:shadow-md">
-            <div className="p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
+            <div className="p-3 sm:p-4 space-y-3">
+              {/* Header: stacks on mobile, row on desktop */}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="text-sm font-bold text-gray-900">
                       <DollarSign size={14} className="inline -mt-0.5 text-primary" />
@@ -107,9 +125,9 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                     </p>
                   )}
                 </div>
-                <div className="text-right shrink-0 ml-3">
+                <div className="text-right sm:text-right shrink-0 sm:ml-3">
                   <p className="text-xs text-text-secondary">Ventas</p>
-                  <p className="text-base font-bold text-gray-900">{formatBs(reg.totalSalesBs)}</p>
+                  <p className="text-sm font-bold text-gray-900">{formatDual(reg.totalSalesBs, reg.totalSalesUsd)}</p>
                 </div>
               </div>
 
@@ -129,26 +147,26 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                       style={{ width: `${salesPct}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[11px] text-text-secondary">
-                    <span>Apertura: {formatBs(opening)}</span>
-                    <span>Esperado: {formatBs(expected)}</span>
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-[11px] text-text-secondary">
+                    <span>Apertura: {formatDual(opening, openingUsd)}</span>
+                    <span>Esperado: {formatDual(expected, expectedUsd)}</span>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div className="p-2 rounded-lg bg-blue-50">
                   <p className="text-text-secondary">Apertura</p>
-                  <p className="font-semibold text-blue-700">{formatBs(reg.openingBalanceBs)}</p>
+                  <p className="font-semibold text-blue-700">{formatDual(reg.openingBalanceBs, reg.openingBalanceUsd)}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-emerald-50">
                   <p className="text-text-secondary">Esperado</p>
                   <p className="font-semibold text-emerald-700">
-                    {reg.expectedClosingBs !== undefined ? formatBs(reg.expectedClosingBs) : '-'}
+                    {reg.expectedClosingBs !== undefined ? formatDual(reg.expectedClosingBs, reg.expectedClosingUsd ?? 0) : '-'}
                   </p>
                 </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <DiffIndicator differenceBs={reg.differenceBs} />
+                <div>
+                  <DiffIndicator differenceBs={reg.differenceBs} differenceUsd={reg.differenceUsd} />
                 </div>
               </div>
 
