@@ -5,6 +5,7 @@ import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import type { Product, Category } from '../types';
 import { displayStock } from '../types';
+import { formatUsd } from '@/lib/formatBs';
 
 interface ProductListProps {
   products: Product[];
@@ -84,7 +85,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         header: 'Precio',
         hideLabelOnMobile: true,
         render: (product) => (
-          <span className="text-xs font-semibold">${product.priceUsd.toFixed(2)}</span>
+          <span className="text-xs font-semibold">{formatUsd(product.priceUsd)}</span>
         ),
       },
       {
@@ -172,7 +173,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         <div className="flex-1">
           <ProductSearchInput value={searchQuery} onChange={handleSearch} />
         </div>
-        <div className="w-full sm:max-w-[180px]">
+        <div className="w-full sm:max-w-45">
           <Select
             value={filterCategory}
             onChange={(e) => handleCategoryFilter(e.target.value)}

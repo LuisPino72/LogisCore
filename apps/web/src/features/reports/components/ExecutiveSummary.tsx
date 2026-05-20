@@ -1,15 +1,11 @@
 import { Card, Badge } from '@/common/components';
 import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight } from 'lucide-react';
 import type { ExecutiveSummaryData } from '@/features/reports/types';
-import { formatBs } from '@/lib/formatBs';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface ExecutiveSummaryProps {
   data: ExecutiveSummaryData | null;
   loading: boolean;
-}
-
-function formatUsd(value: number): string {
-  return `$ ${value.toFixed(2)}`;
 }
 
 function formatDual(bs: number, usd: number): string {

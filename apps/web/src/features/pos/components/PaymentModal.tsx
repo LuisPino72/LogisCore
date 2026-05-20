@@ -1,6 +1,7 @@
 import { Modal, Input, Button } from '../../../common/components';
 import { useState } from 'react';
 import type { Product } from '../../../specs/inventory';
+import { formatUsd } from '@/lib/formatBs';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export function PaymentModal({
 
         {quantity && parseFloat(quantity) > 0 && (
           <div className="text-sm text-gray-600 bg-surface-alt rounded-lg p-2">
-            Total: $ {(parseFloat(quantity) * product.priceUsd).toFixed(2)}
+            Total: {formatUsd(parseFloat(quantity) * product.priceUsd)}
           </div>
         )}
 

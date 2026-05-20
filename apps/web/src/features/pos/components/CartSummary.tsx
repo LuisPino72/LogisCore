@@ -3,6 +3,7 @@ import { Button, Badge } from '../../../common/components';
 import { ShoppingCart, Pause } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS } from '../../../specs/sales';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface CartSummaryProps {
   items: CartItem[];
@@ -44,32 +45,30 @@ export function CartSummary({
   const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs, 2);
   const totalUsd = exchangeRateBs > 0 ? preciseRound(totalBs / exchangeRateBs, 2) : subtotalUsd;
 
-  const fmt = (n: number) => n.toFixed(2);
-
   return (
     <div className="border-t border-border pt-3 space-y-2">
       <div className="flex justify-between text-sm text-gray-600">
         <span>Subtotal</span>
-        <span>$ {fmt(subtotalUsd)} / Bs {fmt(subtotalBs)}</span>
+        <span>{formatUsd(subtotalUsd)} / {formatBs(subtotalBs)}</span>
       </div>
 
       {paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
           <span>IGTF (3%)</span>
-          <span>Bs {fmt(igtfBs)} / $ {fmt(igtfUsd)}</span>
+          <span>{formatBs(igtfBs)} / {formatUsd(igtfUsd)}</span>
         </div>
       )}
 
       {subtotalTaxableBs > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
           <span>IVA (16%)</span>
-          <span>Bs {fmt(ivaBs)} / $ {fmt(ivaUsd)}</span>
+          <span>{formatBs(ivaBs)} / {formatUsd(ivaUsd)}</span>
         </div>
       )}
 
       <div className="flex justify-between text-base font-bold text-gray-900">
         <span>Total</span>
-        <span>Bs {fmt(totalBs)} / $ {fmt(totalUsd)}</span>
+        <span>{formatBs(totalBs)} / {formatUsd(totalUsd)}</span>
       </div>
 
       <div className="flex gap-0.5 flex-wrap">

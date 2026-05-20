@@ -3,6 +3,7 @@ import { ShoppingCart, CheckCircle, Package, XCircle, Pencil, Trash2, MoreVertic
 import { Button, Badge, EmptyState, Modal, Dropdown, Pagination } from '../../../common/components';
 import type { PurchaseOrderWithItems, PurchaseOrderStatus, PurchaseOrderItem } from '../../../specs/purchases';
 import { OrderReceive } from './OrderReceive';
+import { formatUsd } from '@/lib/formatBs';
 
 interface OrderListProps {
   orders: PurchaseOrderWithItems[];
@@ -87,9 +88,9 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
               <div key={item.id} className="flex justify-between items-center text-sm bg-surface-alt rounded-lg p-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-800 truncate">{item.productName || item.productId.slice(0, 8)}</p>
-                  <p className="text-xs text-text-secondary">x{item.quantity} — ${item.costUsdPerUnit.toFixed(2)} c/u</p>
+                  <p className="text-xs text-text-secondary">x{item.quantity} — {formatUsd(item.costUsdPerUnit)} c/u</p>
                 </div>
-                <span className="font-semibold text-primary shrink-0 ml-2">${item.totalUsd.toFixed(2)}</span>
+                <span className="font-semibold text-primary shrink-0 ml-2">{formatUsd(item.totalUsd)}</span>
               </div>
             ))}
           </div>
@@ -123,7 +124,7 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
         <div className="border-t border-border pt-3">
           <div className="flex justify-between items-center bg-primary/5 border border-primary/10 p-3 rounded-lg">
             <span className="text-sm font-medium text-primary">Total:</span>
-            <span className="text-xl font-bold text-primary">$ {order.totalUsd.toFixed(2)}</span>
+            <span className="text-xl font-bold text-primary">{formatUsd(order.totalUsd)}</span>
           </div>
         </div>
       </div>
@@ -186,7 +187,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
             className="relative rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md"
           >
             <div className="p-3 pt-14 space-y-3">
-              <div className="absolute top-2 left-2 w-[44px] h-[44px] rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="absolute top-2 left-2 w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center">
                 <ShoppingCart size={18} className="text-primary" />
               </div>
               {isOwner && (
@@ -207,7 +208,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                   <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
                 </div>
                 <p className="text-sm font-semibold text-gray-800">{order.supplierName || 'Sin proveedor'}</p>
-                <p className="text-base font-bold text-primary">$ {order.totalUsd.toFixed(2)}</p>
+                <p className="text-base font-bold text-primary">{formatUsd(order.totalUsd)}</p>
               </div>
 
               {isReceiving && (
@@ -232,7 +233,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                 {order.items.slice(0, 3).map((item: PurchaseOrderItem) => (
                   <div key={item.id} className="flex justify-between text-xs text-gray-600">
                     <span className="truncate flex-1 mr-2">{item.productName || item.productId.slice(0, 8)}</span>
-                    <span className="shrink-0">x{item.quantity} — $ {item.totalUsd.toFixed(2)}</span>
+                    <span className="shrink-0">x{item.quantity} — {formatUsd(item.totalUsd)}</span>
                   </div>
                 ))}
                 {order.items.length > 3 && (

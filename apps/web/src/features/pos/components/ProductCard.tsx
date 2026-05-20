@@ -2,6 +2,7 @@ import { Star } from 'lucide-react';
 import { Card, Badge, ImageWithFallback } from '../../../common/components';
 import type { Product } from '../../../specs/inventory';
 import { displayStock } from '../../inventory/types';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface ProductCardProps {
   product: Product;
@@ -13,7 +14,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs }: ProductCardProps) {
   const priceBs = exchangeRateBs > 0
-    ? (product.priceUsd * exchangeRateBs).toFixed(2)
+    ? formatBs(product.priceUsd * exchangeRateBs)
     : null;
 
   const displayQuantity = product.isWeighted
@@ -80,10 +81,10 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
 
         <div className="flex flex-col gap-0.5">
           <p className="text-sm font-bold text-primary">
-            $ {product.priceUsd.toFixed(2)}
+            {formatUsd(product.priceUsd)}
           </p>
           {priceBs && (
-            <p className="text-xs text-gray-500 leading-none">Bs {priceBs}</p>
+            <p className="text-xs text-gray-500 leading-none">{priceBs}</p>
           )}
         </div>
 

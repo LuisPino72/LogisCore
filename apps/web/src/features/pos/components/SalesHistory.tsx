@@ -6,6 +6,7 @@ import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
 import { posService } from '../services/posService';
 import { METADATA_PAGOS } from '../../../specs/sales';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface SalesHistoryProps {
   tenantId: string;
@@ -59,8 +60,8 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
         const totalUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
         return (
           <div className="text-right">
-            <p className="text-sm font-bold">Bs {sale.totalBs.toFixed(2)}</p>
-            <p className="text-[10px] text-gray-400">$ {totalUsd.toFixed(2)}</p>
+            <p className="text-sm font-bold">{formatBs(sale.totalBs)}</p>
+            <p className="text-[10px] text-gray-400">{formatUsd(totalUsd)}</p>
           </div>
         );
       },
@@ -137,7 +138,7 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
                   {saleItems.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span>{item.productName} x {item.quantity}</span>
-                      <span className="font-medium">$ {item.totalPriceUsd.toFixed(2)}</span>
+                      <span className="font-medium">{formatUsd(item.totalPriceUsd)}</span>
                     </div>
                   ))}
                 </div>
@@ -147,21 +148,21 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
             <div className="border-t border-border pt-2 space-y-1">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Subtotal</span>
-                <span>$ {(selectedSale.exchangeRate > 0 ? selectedSale.subtotalBs / selectedSale.exchangeRate : 0).toFixed(2)} / Bs {selectedSale.subtotalBs.toFixed(2)}</span>
+                <span>{formatUsd(selectedSale.exchangeRate > 0 ? selectedSale.subtotalBs / selectedSale.exchangeRate : 0)} / {formatBs(selectedSale.subtotalBs)}</span>
               </div>
               {selectedSale.igtfBs > 0 && (
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>IGTF (3%)</span>
-                  <span>Bs {selectedSale.igtfBs.toFixed(2)}</span>
+                  <span>{formatBs(selectedSale.igtfBs)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm text-gray-600">
                 <span>IVA (16%)</span>
-                <span>Bs {(selectedSale.ivaBs !== undefined ? selectedSale.ivaBs : 0).toFixed(2)}</span>
+                <span>{formatBs(selectedSale.ivaBs ?? 0)}</span>
               </div>
               <div className="flex justify-between text-base font-bold">
                 <span>Total</span>
-                <span>Bs {selectedSale.totalBs.toFixed(2)} / $ {(selectedSale.exchangeRate > 0 ? selectedSale.totalBs / selectedSale.exchangeRate : 0).toFixed(2)}</span>
+                <span>{formatBs(selectedSale.totalBs)} / {formatUsd(selectedSale.exchangeRate > 0 ? selectedSale.totalBs / selectedSale.exchangeRate : 0)}</span>
               </div>
             </div>
           </div>

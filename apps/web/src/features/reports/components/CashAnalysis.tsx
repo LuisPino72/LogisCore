@@ -1,15 +1,11 @@
 import { Card, Badge } from '@/common/components';
 import { TrendingUp, TrendingDown, Minus, DollarSign } from 'lucide-react';
 import type { CashRegisterSummaryData } from '@/features/reports/types';
-import { formatBs } from '@/lib/formatBs';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface CashAnalysisProps {
   data: CashRegisterSummaryData[];
   loading: boolean;
-}
-
-function formatUsd(value: number): string {
-  return `$ ${value.toFixed(2)}`;
 }
 
 function formatDual(bs: number, usd: number): string {

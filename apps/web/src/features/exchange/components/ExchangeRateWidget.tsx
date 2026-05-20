@@ -2,6 +2,7 @@ import { FC, useState } from 'react';
 import { DollarSign, RefreshCw, AlertCircle, Settings } from 'lucide-react';
 import { Button, Input, Modal, Spinner } from '../../../common/components';
 import { useExchangeRate } from '../hooks/useExchangeRate';
+import { formatBs } from '@/lib/formatBs';
 
 interface ExchangeRateWidgetProps {
   tenantId: string | null;
@@ -37,7 +38,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
 
   const formatRate = (val: number | null) => {
     if (val === null) return '-';
-    return `Bs ${val.toFixed(2)}`;
+    return formatBs(val);
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -82,7 +83,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               size="sm"
               onClick={handleUpdate}
               disabled={isUpdating || !tenantId}
-              className="min-h-[36px] px-2 w-full"
+              className="min-h-9 px-2 w-full"
             >
               {isUpdating ? (
                 <Spinner size="sm" />
@@ -96,7 +97,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               size="sm"
               onClick={() => setShowModal(true)}
               disabled={isUpdating || !tenantId}
-              className="min-h-[36px] px-2 w-full"
+              className="min-h-9 px-2 w-full"
             >
               <Settings size={14} />
               Manual

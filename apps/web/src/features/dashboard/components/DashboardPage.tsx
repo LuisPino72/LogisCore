@@ -8,6 +8,7 @@ import { dashboardService } from '../services/dashboardService';
 import { displayStock } from '../../inventory/types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { EventBus } from '@logiscore/core';
+import { formatUsd } from '@/lib/formatBs';
 
 interface DashboardPageProps {
   tenantId?: string | null;
@@ -48,6 +49,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   const fetchLowStock = useInventoryStore((s) => s.fetchLowStock);
   const [topProducts, setTopProducts] = useState<{ productId: string; name: string; totalQty: number }[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [showAllLowStock, setShowAllLowStock] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -122,7 +124,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                 <div className="skeleton h-6 w-16 rounded mt-1" />
               ) : (
                 <p className="text-xl font-title font-bold text-emerald-700">
-                  ${todayEarnings.toFixed(2)}
+                  {formatUsd(todayEarnings)}
                 </p>
               )}
             </div>
@@ -260,7 +262,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
             </div>
           ) : lowStock.length > 0 ? (
             <div className="space-y-3">
-              {lowStock.map((p) => {
+              {(showAllLowStock ? lowStock : lowStock.slice(0, 5)).map((p) => {
                 const isZero = p.stock <= 0;
                 const stockMin = p.stockMin ?? 1;
                 const pct = stockMin > 0 ? Math.min((p.stock / stockMin) * 100, 100) : 0;
@@ -288,6 +290,15 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                   </div>
                 );
               })}
+              {lowStock.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllLowStock(!showAllLowStock)}
+                  className="w-full text-center text-xs font-medium text-primary hover:text-primary/80 py-2 rounded-lg hover:bg-primary/5 transition-colors"
+                >
+                  {showAllLowStock ? 'Mostrar menos ↑' : `Ver ${lowStock.length - 5} más →`}
+                </button>
+              )}
             </div>
           ) : (
             <EmptyState

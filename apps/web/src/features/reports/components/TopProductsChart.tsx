@@ -2,7 +2,7 @@ import { useChartReady } from '@/hooks/useChartReady';
 import { Card } from '@/common/components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { TopProductData } from '@/features/reports/types';
-import { formatBs } from '@/lib/formatBs';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface TopProductsChartProps {
   data: TopProductData[];
@@ -11,10 +11,6 @@ interface TopProductsChartProps {
 
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1'];
-
-function formatUsd(value: number): string {
-  return `$ ${value.toFixed(2)}`;
-}
 
 export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   const [ready, containerRef] = useChartReady();

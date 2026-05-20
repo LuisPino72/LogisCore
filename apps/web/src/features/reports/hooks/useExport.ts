@@ -7,7 +7,7 @@ import type {
   PaymentBreakdownData,
   CashRegisterSummaryData,
 } from '../types';
-import { formatBs } from '@/lib/formatBs';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 function escCsv(s: string | number | undefined | null): string {
   if (s === undefined || s === null) return '""';
@@ -45,14 +45,14 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): XLSX.WorkSheet
   const rows: (string | number | undefined)[][] = [['Métrica', 'Valor']];
   if (summary) {
     rows.push(
-      ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / $ ${summary.totalSalesUsd.toFixed(2)}`],
-      ['Costo Total', `${formatBs(summary.totalCostBs)} / $ ${summary.totalCostUsd.toFixed(2)}`],
-      ['Ganancia Bruta', `${formatBs(summary.grossProfitBs)} / $ ${summary.grossProfitUsd.toFixed(2)}`],
+      ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / ${formatUsd(summary.totalSalesUsd)}`],
+      ['Costo Total', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
+      ['Ganancia Bruta', `${formatBs(summary.grossProfitBs)} / ${formatUsd(summary.grossProfitUsd)}`],
       ['Margen %', `${summary.profitMarginPercent}%`],
       ['Transacciones', summary.totalTransactions],
-      ['Ticket Promedio', `${formatBs(summary.averageTicketBs)} / $ ${summary.averageTicketUsd.toFixed(2)}`],
+      ['Ticket Promedio', `${formatBs(summary.averageTicketBs)} / ${formatUsd(summary.averageTicketUsd)}`],
       ['Gastos de Consumo Bs', formatBs(summary.nonSellableExpensesBs)],
-      ['Gastos de Consumo USD', summary.nonSellableExpensesUsd.toFixed(2)],
+      ['Gastos de Consumo USD', formatUsd(summary.nonSellableExpensesUsd)],
       ['Top Producto', summary.topProductName ?? 'N/A'],
     );
     if (summary.salesVsYesterdayPercent !== undefined) {
@@ -73,11 +73,11 @@ function buildProfitSheet(profitOverTime: DailyProfitPoint[]): XLSX.WorkSheet {
       p.label,
       p.lastRate.toFixed(4),
       formatBs(p.salesBs),
-      `$ ${p.salesUsd.toFixed(2)}`,
+      formatUsd(p.salesUsd),
       formatBs(p.costBs),
-      `$ ${p.costUsd.toFixed(2)}`,
+      formatUsd(p.costUsd),
       formatBs(p.profitBs),
-      `$ ${p.profitUsd.toFixed(2)}`,
+      formatUsd(p.profitUsd),
       p.transactions,
     ]);
   });
@@ -95,11 +95,11 @@ function buildProductsSheet(topProducts: TopProductData[]): XLSX.WorkSheet {
       p.name,
       p.quantitySold,
       formatBs(p.revenueBs),
-      `$ ${p.revenueUsd.toFixed(2)}`,
+      formatUsd(p.revenueUsd),
       formatBs(p.costBs),
-      `$ ${p.costUsd.toFixed(2)}`,
+      formatUsd(p.costUsd),
       formatBs(p.profitBs),
-      `$ ${p.profitUsd.toFixed(2)}`,
+      formatUsd(p.profitUsd),
       `${p.marginPercent}%`,
     ]);
   });
@@ -113,7 +113,7 @@ function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): XLSX.Work
     ['Método', 'Transacciones', 'Total Bs', 'Total $', '%'],
   ];
   paymentBreakdown.forEach((p) => {
-    rows.push([p.label, p.count, formatBs(p.totalBs), `$ ${p.totalUsd.toFixed(2)}`, `${p.percentage}%`]);
+    rows.push([p.label, p.count, formatBs(p.totalBs), formatUsd(p.totalUsd), `${p.percentage}%`]);
   });
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 8 }];
@@ -128,15 +128,15 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): XLSX.WorkSheet
     rows.push([
       new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
       formatBs(r.openingBalanceBs),
-      `$ ${r.openingBalanceUsd.toFixed(2)}`,
+      formatUsd(r.openingBalanceUsd),
       formatBs(r.totalSalesBs),
-      `$ ${r.totalSalesUsd.toFixed(2)}`,
+      formatUsd(r.totalSalesUsd),
       r.expectedClosingBs !== undefined ? formatBs(r.expectedClosingBs) : '',
-      r.expectedClosingUsd !== undefined ? `$ ${r.expectedClosingUsd.toFixed(2)}` : '',
+      r.expectedClosingUsd !== undefined ? formatUsd(r.expectedClosingUsd) : '',
       r.closingBalanceBs !== undefined ? formatBs(r.closingBalanceBs) : '',
-      r.closingBalanceUsd !== undefined ? `$ ${r.closingBalanceUsd.toFixed(2)}` : '',
+      r.closingBalanceUsd !== undefined ? formatUsd(r.closingBalanceUsd) : '',
       r.differenceBs !== undefined ? formatBs(r.differenceBs) : '',
-      r.differenceUsd !== undefined ? `$ ${r.differenceUsd.toFixed(2)}` : '',
+      r.differenceUsd !== undefined ? formatUsd(r.differenceUsd) : '',
       r.status === 'open' ? 'Abierta' : 'Cerrada',
     ]);
   });

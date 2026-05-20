@@ -2,15 +2,11 @@ import { useChartReady } from '@/hooks/useChartReady';
 import { Card } from '@/common/components';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { PaymentBreakdownData } from '@/features/reports/types';
-import { formatBs } from '@/lib/formatBs';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface PaymentBreakdownProps {
   data: PaymentBreakdownData[];
   loading: boolean;
-}
-
-function formatUsd(value: number): string {
-  return `$ ${value.toFixed(2)}`;
 }
 
 export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {

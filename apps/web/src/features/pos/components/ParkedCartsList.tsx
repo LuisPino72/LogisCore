@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Badge, Modal } from '../../../common/components';
 import { ShoppingBag, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import type { ParkedCart } from '../types';
+import { formatUsd } from '@/lib/formatBs';
 
 interface ParkedCartsListProps {
   carts: ParkedCart[];
@@ -38,7 +39,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onLoad(cart)}>
                 <p className="text-sm font-medium text-gray-800 truncate">{cart.name}</p>
                 <p className="text-xs text-gray-500">
-                  {totalItems} items · $ {totalUsd.toFixed(2)} ·{' '}
+                  {totalItems} items · {formatUsd(totalUsd)} ·{' '}
                   <span className="inline-flex items-center gap-0.5">
                     <Clock size={10} />
                     {fmtTime(cart.createdAt)}

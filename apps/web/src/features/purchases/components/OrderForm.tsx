@@ -4,6 +4,7 @@ import { Button, Input, Modal, Select } from '../../../common/components';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import type { Product } from '../../../specs/inventory';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
+import { formatUsd } from '@/lib/formatBs';
 
 interface OrderFormProps {
   isOpen: boolean;
@@ -232,7 +233,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
 
         <div className="flex justify-between items-center bg-primary/5 border border-primary/10 p-3 rounded-lg">
           <span className="text-sm font-medium text-primary">Total:</span>
-          <span className="text-xl font-bold text-primary">$ {totalUsd.toFixed(2)}</span>
+          <span className="text-xl font-bold text-primary">{formatUsd(totalUsd)}</span>
         </div>
 
         {error && <p className="text-xs text-danger">{error}</p>}

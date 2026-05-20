@@ -3,15 +3,17 @@ import { Card } from '@/common/components';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { DailyProfitPoint } from '@/features/reports/types';
-import { formatBs } from '@/lib/formatBs';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface ProfitChartProps {
   data: DailyProfitPoint[];
   loading: boolean;
 }
 
-function formatUsd(value: number): string {
-  return `$ ${value.toFixed(2)}`;
+function smartAxisFormat(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value >= 100 ? Math.round(value).toString() : value.toFixed(2);
 }
 
 function formatDual(bs: number, usd: number): string {
@@ -95,7 +97,7 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
       <div className="h-48 sm:h-64" ref={containerRef}>
         {ready ? (
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
             <defs>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -108,7 +110,7 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
             <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="#9ca3af" interval="preserveStartEnd" angle={-15} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => formatBs(v)} width={50} />
+            <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={smartAxisFormat} width={60} tickCount={6} />
             <Tooltip
               formatter={(value, name) => [formatBs(Number(value)), name === 'profitBs' ? 'Ganancia' : name === 'salesBs' ? 'Ventas' : 'Costo']}
               labelStyle={{ fontSize: 11 }}

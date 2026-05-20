@@ -6,7 +6,11 @@ import type {
   PaymentBreakdownData,
   CashRegisterSummaryData,
 } from '../types';
-import { formatBs } from '@/lib/formatBs';
+import { formatBs, formatUsd } from '@/lib/formatBs';
+
+function formatDual(bs: number, usd: number): string {
+  return `${formatBs(bs)} / ${formatUsd(usd)}`;
+}
 
 interface PrintViewProps {
   summary: ExecutiveSummaryData | null;
@@ -14,14 +18,6 @@ interface PrintViewProps {
   topProducts: TopProductData[];
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
-}
-
-function formatUsd(value: number): string {
-  return `$ ${value.toFixed(2)}`;
-}
-
-function formatDual(bs: number, usd: number): string {
-  return `${formatBs(bs)} / ${formatUsd(usd)}`;
 }
 
 const printStyles = `

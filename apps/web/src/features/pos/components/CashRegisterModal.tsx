@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Modal, Input, Button } from '../../../common/components';
+import { formatBs } from '@/lib/formatBs';
 
 type CashMode = 'open' | 'close';
 
@@ -75,15 +76,15 @@ export function CashRegisterModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Total vendido</span>
-                <span className="font-medium">Bs {currentSalesBs.toFixed(2)}</span>
+                <span className="font-medium">{formatBs(currentSalesBs)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">IGTF recaudado</span>
-                <span className="font-medium">Bs {currentIgtfBs.toFixed(2)}</span>
+                <span className="font-medium">{formatBs(currentIgtfBs)}</span>
               </div>
               <div className="flex justify-between border-t border-border pt-1 mt-1">
                 <span className="text-gray-700 font-medium">Cierre esperado</span>
-                <span className="font-bold">Bs {expectedClosing.toFixed(2)}</span>
+                <span className="font-bold">{formatBs(expectedClosing)}</span>
               </div>
             </div>
             <Input

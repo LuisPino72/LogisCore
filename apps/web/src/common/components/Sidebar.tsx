@@ -108,7 +108,7 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
                   title={!expanded ? mod.label : undefined}
                 >
                   {isActive && (
-                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-7 w-[3px] rounded-full bg-primary ${expanded ? '' : 'hidden md:block'}`} aria-hidden />
+                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-7 w-0.75 rounded-full bg-primary ${expanded ? '' : 'hidden md:block'}`} aria-hidden />
                   )}
 
                   <span className={`w-5 inline-flex justify-center items-center shrink-0 ${isActive && !expanded ? 'h-5 rounded-full bg-primary/30 ring-2 ring-primary/40' : ''}`}>
@@ -138,7 +138,7 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
             </span>
           </div>
           <button
-            className="w-full flex items-center gap-2 px-3 py-2 min-h-[44px] md:min-h-0 text-xs text-gray-500 hover:text-danger hover:bg-red-50 transition-colors group"
+            className="w-full flex items-center gap-2 px-3 py-2 min-h-11 md:min-h-0 text-xs text-gray-500 hover:text-danger hover:bg-red-50 transition-colors group"
             onClick={onLogout}
             title={!expanded ? 'Cerrar sesión' : undefined}
           >

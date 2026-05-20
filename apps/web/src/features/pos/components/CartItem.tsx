@@ -1,6 +1,7 @@
 import { Button, Input } from '../../../common/components';
 import { Trash2, Minus, Plus } from 'lucide-react';
 import type { CartItem } from '../types';
+import { formatUsd } from '@/lib/formatBs';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -33,11 +34,11 @@ export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowPro
     <div className="py-2.5 border-b border-border last:border-0">
       <div className="flex items-start justify-between gap-2 mb-2">
         <p className="text-sm font-medium text-gray-800 truncate flex-1">{item.name}</p>
-        <p className="text-sm font-semibold text-gray-900 shrink-0">$ {item.totalPriceUsd.toFixed(2)}</p>
+        <p className="text-sm font-semibold text-gray-900 shrink-0">{formatUsd(item.totalPriceUsd)}</p>
       </div>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-500">
-          {item.isWeighted ? item.unit : 'u'} x $ {item.unitPriceUsd.toFixed(2)}
+          {item.isWeighted ? item.unit : 'u'} x {formatUsd(item.unitPriceUsd)}
         </p>
         <div className="flex items-center gap-1">
           <button
