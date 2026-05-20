@@ -3,7 +3,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { EmptyState, Card, Badge } from '../../../common/components';
-import { Package, AlertTriangle, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { Package, AlertTriangle, DollarSign, Calendar, TrendingUp, ShieldBan } from 'lucide-react';
 import { dashboardService } from '../services/dashboardService';
 import { displayStock } from '../../inventory/types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
@@ -18,8 +18,23 @@ const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
 
 export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, userEmail }) => {
   const session = useAuthStore((s) => s.session);
+  const role = session?.role;
   const tenantId = propTenantId ?? session?.tenantId ?? null;
   const email = userEmail ?? session?.email ?? 'Usuario';
+
+  if (role === 'employee') {
+    return (
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        <Card>
+          <EmptyState
+            icon={<ShieldBan size={48} />}
+            title="Acceso restringido"
+            description="Solo el propietario del local puede acceder al Dashboard."
+          />
+        </Card>
+      </div>
+    );
+  }
 
   const {
     tenantInfo,

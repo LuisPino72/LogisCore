@@ -44,7 +44,7 @@ const ALL_MODULES: SidebarModule[] = [
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
 ];
 
-const EMPLOYEE_ALLOWED = new Set(['dashboard', 'pos', 'inventory']);
+const EMPLOYEE_ALLOWED = new Set(['pos', 'inventory']);
 
 const MODULE_ROUTE_MAP: Record<string, string> = {
   dashboard: '/dashboard',
