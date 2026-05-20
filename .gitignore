@@ -47,9 +47,13 @@ supabase/.branches
 opencode.json
 skills-lock.json
 supabase/migrations/
+supabase/seed.sql
+supabase/seed_masivo.py
 
 # graphify
 .opencode
 graphify-out
 AGENTS.md
 .vercel
+supabase/seed.sql
+supabase/seed.sql
