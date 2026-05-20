@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { imageCacheService } from '../../services/imageCache/imageCacheService';
@@ -31,7 +31,6 @@ export function ImageWithFallback({
   const [loading, setLoading] = useState(!cachedResolved);
   const [error, setError] = useState(false);
   const [imgReady, setImgReady] = useState(!!cachedResolved);
-  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (imageUrl) {
@@ -60,10 +59,6 @@ export function ImageWithFallback({
     (async () => {
       const result = await imageCacheService.acquireImageUrl(productId, currentEffectiveImageUrl);
       if (!isActive) return;
-      if (result.startsWith('blob:')) {
-        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = result;
-      }
       setSrc(result);
       setLoading(false);
       setImgReady(false);
@@ -73,15 +68,6 @@ export function ImageWithFallback({
       isActive = false;
     };
   }, [productId, imageUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
-      }
-    };
-  }, []);
 
   const handleLoad = () => {
     setImgReady(true);

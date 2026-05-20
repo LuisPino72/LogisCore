@@ -301,21 +301,23 @@ export function PosPage({ tenantId }: PosPageProps) {
         )}
       </div>
 
-      <CartPanel
-        cart={cart}
-        exchangeRateBs={exchangeRateBs}
-        paymentMethod={paymentMethod}
-        onPaymentMethodChange={setPaymentMethod}
-        onRemoveFromCart={removeFromCart}
-        onUpdateQuantity={updateCartItemQuantity}
-        onPay={handlePay}
-        onPark={handlePark}
-        isOpen={isOpen}
-        loading={processing}
-        isMobileOpen={mobileCartOpen}
-        itemCount={cartItemCount}
-        onMobileToggle={() => setMobileCartOpen((v) => !v)}
-      />
+      {activeTab === 'sell' && (
+        <CartPanel
+          cart={cart}
+          exchangeRateBs={exchangeRateBs}
+          paymentMethod={paymentMethod}
+          onPaymentMethodChange={setPaymentMethod}
+          onRemoveFromCart={removeFromCart}
+          onUpdateQuantity={updateCartItemQuantity}
+          onPay={handlePay}
+          onPark={handlePark}
+          isOpen={isOpen}
+          loading={processing}
+          isMobileOpen={mobileCartOpen}
+          itemCount={cartItemCount}
+          onMobileToggle={() => setMobileCartOpen((v) => !v)}
+        />
+      )}
 
       {/* Mobile Bottom Nav */}
       <BottomNav

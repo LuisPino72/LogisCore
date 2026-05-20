@@ -169,7 +169,7 @@ export function ProductGrid({
               />
             ))}
           </div>
-          <div className="pb-16 md:pb-0 pr-14 md:pr-0">
+          <div className="pb-24 md:pb-0 pr-16 md:pr-0">
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
         </>

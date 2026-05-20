@@ -16,7 +16,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
         <button
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          className="btn btn-sm btn-secondary disabled:opacity-30 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="btn btn-sm btn-secondary disabled:opacity-30 min-w-11 min-h-11 flex items-center justify-center"
           aria-label="Página anterior"
         >
           ‹
@@ -30,7 +30,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
               key={p}
               onClick={() => onPageChange(p)}
               className={cn(
-                'btn btn-sm min-w-[44px] min-h-[44px] hidden sm:inline-flex items-center justify-center',
+                'btn btn-sm min-w-1144px] inline-flex items-center justify-center',
                 p === page ? 'btn-primary' : 'btn-ghost',
               )}
             >
@@ -41,7 +41,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
         <button
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          className="btn btn-sm btn-secondary disabled:opacity-30 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="btn btn-sm btn-secondary disabled:opacity-30 min-w-11 min-h-11 flex items-center justify-center"
           aria-label="Página siguiente"
         >
           ›
