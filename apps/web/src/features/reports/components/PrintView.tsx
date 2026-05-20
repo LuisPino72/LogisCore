@@ -21,16 +21,15 @@ interface PrintViewProps {
 }
 
 const printStyles = `
-  @page { margin: 20mm 15mm; size: A4 portrait; }
-
   .print-all-report {
     font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
     font-size: 10pt;
     line-height: 1.5;
     color: #1a1a1a;
     background: white;
-    padding: 0;
+    padding: 10mm;
     max-width: 100%;
+    box-sizing: border-box;
   }
 
   .print-header {

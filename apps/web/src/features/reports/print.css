@@ -1,12 +1,12 @@
-/* PrintView se renderiza off-screen para que react-to-print lo clone */
+/* PrintView para html2pdf - visible pero fuera del flujo normal */
 .print-container {
-  position: fixed;
-  top: -9999px;
-  left: -9999px;
+  position: absolute;
+  left: -10000px;
+  top: 0;
   width: 210mm;
   background: white;
-  z-index: -1;
-  opacity: 0.01;
+  visibility: visible;
+  opacity: 1;
   pointer-events: none;
 }
 

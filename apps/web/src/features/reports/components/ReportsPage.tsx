@@ -1,7 +1,7 @@
-import { useState, Suspense, lazy, useRef } from 'react';
+import { useState, Suspense, lazy, useRef, useCallback } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
-import { useReactToPrint } from 'react-to-print';
+import html2pdf from 'html2pdf.js';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { ExportButton } from './ExportButton';
@@ -87,11 +87,42 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
   }));
 
   const printRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: () => `LogisCore-Reporte-${new Date().toISOString().slice(0, 10)}`,
-  });
+  const handlePrint = useCallback(async () => {
+    if (!printRef.current) return;
+    
+    setIsGeneratingPdf(true);
+    
+    const element = printRef.current;
+    const fileName = `LogisCore-Reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
+    
+    const opt = {
+      margin: [10, 10, 10, 10] as [number, number, number, number],
+      filename: fileName,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+      },
+      jsPDF: { 
+        unit: 'mm' as const, 
+        format: 'a4' as const, 
+        orientation: 'portrait' as const,
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, []);
 
   return (
     <div
@@ -131,6 +162,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               cashAnalysis={cashAnalysis}
               loading={loading}
               onPrint={handlePrint}
+              isGeneratingPdf={isGeneratingPdf}
             />
           </Tooltip>
         </div>

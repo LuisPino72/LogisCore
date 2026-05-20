@@ -1,4 +1,4 @@
-import { Download, Printer } from 'lucide-react';
+import { Download, Printer, Loader2 } from 'lucide-react';
 import { Button } from '@/common/components';
 import { useExport } from '../hooks/useExport';
 import type {
@@ -17,10 +17,11 @@ interface ExportButtonProps {
   cashAnalysis: CashRegisterSummaryData[];
   loading: boolean;
   onPrint: () => void;
+  isGeneratingPdf?: boolean;
 }
 
 export function ExportButton({
-  summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis, loading, onPrint,
+  summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis, loading, onPrint, isGeneratingPdf = false,
 }: ExportButtonProps) {
   const { exportExcelAll } = useExport();
 
@@ -30,9 +31,9 @@ export function ExportButton({
         <Download size={16} />
         <span className="hidden sm:inline">Excel</span>
       </Button>
-      <Button variant="ghost" size="sm" onClick={onPrint} disabled={loading}>
-        <Printer size={16} />
-        <span className="hidden sm:inline">PDF</span>
+      <Button variant="ghost" size="sm" onClick={onPrint} disabled={loading || isGeneratingPdf}>
+        {isGeneratingPdf ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+        <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'PDF'}</span>
       </Button>
     </div>
   );
