@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button, Badge, Modal, DataTable, EmptyState, Skeleton } from '../../../common/components';
-import { Eye, Ban, ShoppingCart, Calendar } from 'lucide-react';
+import { Eye, Ban, Calendar } from 'lucide-react';
 import type { Column } from '../../../common/components';
 import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
@@ -34,16 +34,6 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
   };
 
   const columns: Column<Sale>[] = [
-    {
-      key: 'id',
-      header: 'Venta',
-      render: (sale) => (
-        <div className="flex items-center gap-2">
-          <ShoppingCart size={14} className="text-primary" />
-          <span className="text-sm font-medium">#{sale.id.slice(0, 8).toUpperCase()}</span>
-        </div>
-      ),
-    },
     {
       key: 'date',
       header: 'Fecha',
@@ -128,7 +118,7 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
       <Modal
         isOpen={!!selectedSale}
         onClose={() => { setSelectedSale(null); setSaleItems([]); }}
-        title={`Venta #${selectedSale?.id.slice(0, 8).toUpperCase() ?? ''}`}
+        title="Detalle de venta"
       >
         {selectedSale && (
           <div className="flex flex-col gap-3">
