@@ -10,7 +10,7 @@ interface TopProductsChartProps {
 }
 
 const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1'];
+const CHART_COLORS = ['#0D9488', '#14B8A6', '#F59E0B', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1'];
 
 export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   const [ready, containerRef] = useChartReady();

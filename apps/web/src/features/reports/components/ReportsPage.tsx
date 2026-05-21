@@ -167,8 +167,8 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-            <BarChart3 size={22} className="text-accent" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <BarChart3 size={22} className="text-primary" />
           </div>
           <div>
             <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Reportes</h1>
@@ -252,15 +252,15 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       )}
 
       {/* Tabs Desktop */}
-      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200">
+      <div className="hidden sm:flex items-center gap-1 bg-surface-alt/80 rounded-xl p-1 shadow-sm">
         {TABS.map((tab) => (
           <Tooltip key={tab.id} content={`Ver ${tab.label.toLowerCase()}`} position="bottom">
             <button
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition-all ${
                 activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-text-secondary hover:text-gray-700'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-text-secondary hover:text-gray-700'
               }`}
             >
               {tab.icon}

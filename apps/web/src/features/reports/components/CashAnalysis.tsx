@@ -135,11 +135,11 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
                     <div
-                      className="h-full bg-blue-400 transition-all duration-500"
+                      className="h-full bg-primary transition-all duration-500"
                       style={{ width: `${openingPct}%` }}
                     />
                     <div
-                      className="h-full bg-emerald-400 transition-all duration-500"
+                      className="h-full bg-primary-light transition-all duration-500"
                       style={{ width: `${salesPct}%` }}
                     />
                   </div>
@@ -151,13 +151,13 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <div className="p-2 rounded-lg bg-blue-50">
+                <div className="p-2 rounded-lg bg-primary/5">
                   <p className="text-text-secondary">Apertura</p>
-                  <p className="font-semibold text-blue-700">{formatDual(reg.openingBalanceBs, reg.openingBalanceUsd)}</p>
+                  <p className="font-semibold text-primary">{formatDual(reg.openingBalanceBs, reg.openingBalanceUsd)}</p>
                 </div>
-                <div className="p-2 rounded-lg bg-emerald-50">
+                <div className="p-2 rounded-lg bg-primary/10">
                   <p className="text-text-secondary">Esperado</p>
-                  <p className="font-semibold text-emerald-700">
+                  <p className="font-semibold text-primary-dark">
                     {reg.expectedClosingBs !== undefined ? formatDual(reg.expectedClosingBs, reg.expectedClosingUsd ?? 0) : '-'}
                   </p>
                 </div>

@@ -67,21 +67,21 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
       <h3 className="text-sm font-title font-bold text-gray-900 mb-3">Ganancias en el Tiempo</h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
-        <div className="p-2 sm:p-3 rounded-lg bg-emerald-50 border border-emerald-200/60">
+        <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
           <p className="text-[10px] sm:text-xs text-text-secondary">Ganancia Total</p>
-          <p className="text-[10px] sm:text-sm font-bold text-emerald-700 truncate">{formatDual(totalProfit, totalProfitUsd)}</p>
+          <p className="text-[10px] sm:text-sm font-bold text-primary truncate">{formatDual(totalProfit, totalProfitUsd)}</p>
         </div>
-        <div className="p-2 sm:p-3 rounded-lg bg-blue-50 border border-blue-200/60">
+        <div className="p-2 sm:p-3 rounded-lg bg-primary/[0.03] border border-primary/10">
           <p className="text-[10px] sm:text-xs text-text-secondary">Ventas Totales</p>
-          <p className="text-[10px] sm:text-sm font-bold text-blue-700 truncate">{formatDual(totalSales, totalSalesUsd)}</p>
+          <p className="text-[10px] sm:text-sm font-bold text-primary-dark truncate">{formatDual(totalSales, totalSalesUsd)}</p>
         </div>
-        <div className="p-2 sm:p-3 rounded-lg bg-red-50 border border-red-200/60">
+        <div className="p-2 sm:p-3 rounded-lg bg-danger/5 border border-danger/20">
           <p className="text-[10px] sm:text-xs text-text-secondary">Costo Total</p>
-          <p className="text-[10px] sm:text-sm font-bold text-red-700 truncate">{formatDual(totalCost, totalCostUsd)}</p>
+          <p className="text-[10px] sm:text-sm font-bold text-danger truncate">{formatDual(totalCost, totalCostUsd)}</p>
         </div>
-        <div className="p-2 sm:p-3 rounded-lg bg-amber-50 border border-amber-200/60">
+        <div className="p-2 sm:p-3 rounded-lg bg-accent/5 border border-accent/20">
           <p className="text-[10px] sm:text-xs text-text-secondary">Transacciones</p>
-          <p className="text-xs sm:text-base font-bold text-amber-700 truncate">{totalTransactions}</p>
+          <p className="text-xs sm:text-base font-bold text-accent-dark truncate">{totalTransactions}</p>
         </div>
       </div>
 
@@ -100,12 +100,12 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
           <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
             <defs>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                <stop offset="5%" stopColor="#0D9488" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#0D9488" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#14B8A6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -120,9 +120,9 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
               wrapperStyle={{ fontSize: 10 }}
               formatter={(value) => (value === 'profitBs' ? 'Ganancia Bruta' : value === 'salesBs' ? 'Ventas' : 'Costo')}
             />
-            <Area type="monotone" dataKey="salesBs" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSales)" strokeWidth={2} />
+            <Area type="monotone" dataKey="salesBs" stroke="#14B8A6" fillOpacity={1} fill="url(#colorSales)" strokeWidth={2} />
             <Area type="monotone" dataKey="costBs" stroke="#ef4444" fillOpacity={1} fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
-            <Area type="monotone" dataKey="profitBs" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+            <Area type="monotone" dataKey="profitBs" stroke="#0D9488" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
         ) : <div className="h-full flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}

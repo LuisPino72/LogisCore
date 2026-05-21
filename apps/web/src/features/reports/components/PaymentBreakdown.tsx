@@ -37,10 +37,10 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   }
 
   const colors: Record<string, string> = {
-    efectivo_bs: '#10b981',
+    efectivo_bs: '#0D9488',
     pago_movil: '#3b82f6',
     tarjeta_bs: '#8b5cf6',
-    efectivo_usd: '#f59e0b',
+    efectivo_usd: '#F59E0B',
   };
 
   const totalBs = data.reduce((s, d) => s + d.totalBs, 0);
@@ -52,11 +52,11 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
       textAnchor="middle"
       dominantBaseline="central"
     >
-      <tspan x="50%" dy="-0.4em" className="fill-gray-400" style={{ fontSize: 11 }}>Total</tspan>
-      <tspan x="50%" dy="1.3em" className="fill-gray-900" style={{ fontSize: 12, fontWeight: 700 }}>
+      <tspan x="50%" dy="-0.4em" className="fill-gray-500" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
+      <tspan x="50%" dy="1.4em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 800 }}>
         {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
       </tspan>
-      <tspan x="50%" dy="1.2em" className="fill-gray-400" style={{ fontSize: 9 }}>Bs</tspan>
+      <tspan x="50%" dy="1.3em" className="fill-gray-500" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
     </text>
   );
 

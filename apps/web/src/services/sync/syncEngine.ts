@@ -7,6 +7,7 @@ import { getDb } from '../dexie/db';
 import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
 import { networkAware } from '../network/networkAwareService';
+import { logger } from '../../lib/logger';
 import type {
   SyncQueueItem,
   SyncBatchResult,
@@ -78,7 +79,7 @@ export class SyncEngine {
             result.pushed++;
           } catch (err) {
             const errorMessage = err instanceof AppError ? err.message : 'Error de sincronización';
-            console.error(`[SyncEngine] Error pushing ${item.table}/${item.operation}: ${errorMessage}`, err);
+            logger.error('Sync', `Error pushing ${item.table}/${item.operation}`, errorMessage, err);
             await syncQueue.markFailed(item.id!, errorMessage);
             result.failed++;
 

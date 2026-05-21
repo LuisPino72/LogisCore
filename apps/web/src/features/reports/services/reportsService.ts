@@ -4,6 +4,7 @@ import { getDb, type DexieSale } from '../../../services/dexie/db';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
+import { logger } from '../../../lib/logger';
 import type {
   ReportFilters,
   ExecutiveSummaryData,
@@ -11,7 +12,6 @@ import type {
   TopProductData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
-  CategoryProfitData,
 } from '../types';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -513,70 +513,7 @@ export const reportsService = {
     }
   },
 
-  async getCategoryProfit(tenantId: string, filters: ReportFilters): Promise<Result<CategoryProfitData[], AppError>> {
-    try {
-      const { start, end } = getDateRange(filters);
-      const data = await fetchSalesWithItems(tenantId, start, end);
-      const db = getDb();
-
-      const allProductIds = new Set<string>();
-      for (const { items } of data) {
-        for (const item of items) allProductIds.add(item.productId);
-      }
-
-      const productMap = new Map<string, { categoryId?: string }>();
-      if (allProductIds.size > 0) {
-        const products = await db.products.where('id').anyOf([...allProductIds]).toArray();
-        for (const p of products) productMap.set(p.id, { categoryId: p.categoryId });
-      }
-
-      const map = new Map<string, CategoryProfitData>();
-      for (const { sale, items } of data) {
-        for (const item of items) {
-          const product = productMap.get(item.productId);
-          const categoryId = product?.categoryId;
-          const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
-          const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
-          const profitBs = preciseRound(revenueBs - costBs, 2);
-
-          const key = categoryId ?? '__none__';
-          const existing = map.get(key);
-          if (existing) {
-            existing.revenueBs = preciseRound(existing.revenueBs + revenueBs, 2);
-            existing.costBs = preciseRound(existing.costBs + costBs, 2);
-            existing.profitBs = preciseRound(existing.profitBs + profitBs, 2);
-          } else {
-            map.set(key, {
-              categoryId,
-              categoryName: 'Sin categoría',
-              revenueBs,
-              costBs,
-              profitBs,
-              marginPercent: revenueBs > 0 ? preciseRound((profitBs / revenueBs) * 100, 2) : 0,
-            });
-          }
-        }
-      }
-
-      const categoryIds = [...map.keys()].filter((k) => k !== '__none__');
-      if (categoryIds.length > 0) {
-        const categories = await db.categories.where('id').anyOf(categoryIds).toArray();
-        const categoryNameMap = new Map(categories.map((c) => [c.id, c.name]));
-        for (const [key, val] of map) {
-          if (key !== '__none__') val.categoryName = categoryNameMap.get(key) ?? 'Sin categoría';
-        }
-      }
-
-      for (const [, val] of map) {
-        val.marginPercent = val.revenueBs > 0 ? preciseRound((val.profitBs / val.revenueBs) * 100, 2) : 0;
-      }
-
-      return success(Array.from(map.values()).sort((a, b) => b.profitBs - a.profitBs));
-    } catch (err) {
-      console.error('[reportsService.getCategoryProfit]', err);
-      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al generar ganancia por categoria.'));
-    }
-  },
+  
 
   async getNonSellableExpenses(tenantId: string, start: string, end: string): Promise<Result<{ totalUsd: number; totalBs: number }, AppError>> {
     try {
@@ -619,8 +556,8 @@ export const reportsService = {
 
       return success({ totalUsd, totalBs });
     } catch (err) {
-      console.error('[reportsService.getNonSellableExpenses]', err);
-      return success({ totalUsd: 0, totalBs: 0 });
+      logger.error('Reports', 'Error al obtener gastos no vendibles', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener gastos no vendibles.'));
     }
   },
 };

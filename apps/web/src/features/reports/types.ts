@@ -77,13 +77,6 @@ export interface CashRegisterSummaryData {
   status: 'open' | 'closed';
 }
 
-export interface CategoryProfitData {
-  categoryId?: string;
-  categoryName: string;
-  revenueBs: number;
-  costBs: number;
-  profitBs: number;
-  marginPercent: number;
-}
+
 
 export type ReportTab = 'summary' | 'profits' | 'products' | 'cash';

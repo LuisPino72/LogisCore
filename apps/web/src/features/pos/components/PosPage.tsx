@@ -18,6 +18,7 @@ import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../inventory/services/inventoryService';
+import { logger } from '../../../lib/logger';
 
 interface PosPageProps {
   tenantId: string | null;
@@ -104,7 +105,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         addToast({ type: 'error', message: store.error || 'Error al completar la venta.', duration: 5000 });
       }
     } catch (err) {
-      console.error('[handlePay] Unexpected error:', err);
+      logger.error('POS', 'Error inesperado al procesar el pago', err);
       addToast({ type: 'error', message: 'Error inesperado al procesar el pago.', duration: 5000 });
     } finally {
       setProcessing(false);

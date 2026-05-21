@@ -7,6 +7,7 @@ import { sessionGuard } from './features/auth/services/sessionGuardService';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { initDb, destroyDb } from './services/dexie/db';
 import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
+import { logger } from './lib/logger';
 import {
   AppShell,
   Badge,
@@ -123,7 +124,7 @@ function DashboardLayout() {
   const handleLogout = useCallback(async () => {
     const result = await authService.signOut();
     if (!result.ok) {
-      console.error('[App] Error al cerrar sesión:', result.error.message);
+      logger.error('Auth', 'Error al cerrar sesión', result.error.message);
     }
   }, []);
 

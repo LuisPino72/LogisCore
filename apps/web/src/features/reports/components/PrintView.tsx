@@ -36,7 +36,7 @@ const printStyles = `
     text-align: center;
     margin-bottom: 24px;
     padding-bottom: 16px;
-    border-bottom: 3px solid #2563eb;
+    border-bottom: 3px solid #0D9488;
   }
 
   .print-title {
@@ -70,7 +70,7 @@ const printStyles = `
     font-weight: 700;
     margin: 0 0 10px;
     padding-bottom: 6px;
-    border-bottom: 2px solid #2563eb;
+    border-bottom: 2px solid #0D9488;
     color: #111;
   }
 
@@ -120,12 +120,12 @@ const printStyles = `
   }
 
   .print-table th {
-    background: #2563eb;
+    background: #0D9488;
     color: white;
     font-weight: 600;
     text-align: left;
     padding: 6px 8px;
-    border: 1px solid #1d4ed8;
+    border: 1px solid #0F766E;
     font-size: 7pt;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -141,7 +141,7 @@ const printStyles = `
   }
 
   .print-table tr:last-child td {
-    border-bottom: 2px solid #2563eb;
+    border-bottom: 2px solid #0D9488;
   }
 
   .print-empty {

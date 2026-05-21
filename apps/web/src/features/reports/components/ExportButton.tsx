@@ -38,11 +38,11 @@ export function ExportButton({
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="ghost" size="sm" onClick={handleExcel} disabled={loading || isExportingExcel}>
+      <Button variant="outline" size="sm" onClick={handleExcel} disabled={loading || isExportingExcel}>
         {isExportingExcel ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
         <span className="hidden sm:inline">{isExportingExcel ? 'Exportando...' : 'Excel'}</span>
       </Button>
-      <Button variant="ghost" size="sm" onClick={onPrint} disabled={loading || isGeneratingPdf}>
+      <Button variant="primary" size="sm" onClick={onPrint} disabled={loading || isGeneratingPdf}>
         {isGeneratingPdf ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
         <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'PDF'}</span>
       </Button>

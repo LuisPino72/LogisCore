@@ -28,17 +28,17 @@ function KpiCard({
   trend?: { value: number; positive: boolean };
 }) {
   const gradients = {
-    blue: 'from-blue-50 to-blue-100/50 border-blue-200/60',
-    green: 'from-emerald-50 to-emerald-100/50 border-emerald-200/60',
-    amber: 'from-amber-50 to-amber-100/50 border-amber-200/60',
-    red: 'from-red-50 to-red-100/50 border-red-200/60',
+    blue: 'from-primary/5 to-primary/[0.02] border-primary/20',
+    green: 'from-success/5 to-success/[0.02] border-success/20',
+    amber: 'from-accent/5 to-accent/[0.02] border-accent/20',
+    red: 'from-danger/5 to-danger/[0.02] border-danger/20',
   };
 
   const iconBgs = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-emerald-100 text-emerald-600',
-    amber: 'bg-amber-100 text-amber-600',
-    red: 'bg-red-100 text-red-600',
+    blue: 'bg-primary/15 text-primary',
+    green: 'bg-success/15 text-success',
+    amber: 'bg-accent/15 text-accent',
+    red: 'bg-danger/15 text-danger',
   };
 
   return (
