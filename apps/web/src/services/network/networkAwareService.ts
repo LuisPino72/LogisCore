@@ -113,6 +113,7 @@ class NetworkAwareService {
   private async checkHealth(): Promise<void> {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       if (!supabaseUrl) return;
 
       const controller = new AbortController();
@@ -120,6 +121,7 @@ class NetworkAwareService {
 
       const res = await fetch(`${supabaseUrl}/rest/v1/`, {
         method: 'HEAD',
+        headers: supabaseKey ? { apikey: supabaseKey } : undefined,
         signal: controller.signal,
       });
 
