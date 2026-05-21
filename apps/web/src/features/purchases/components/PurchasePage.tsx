@@ -7,6 +7,7 @@ import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
+import type { TabKey } from '../types';
 import type { CreateSupplierInput, CreatePurchaseOrderInput, Supplier, PurchaseOrderWithItems, PurchaseOrderStatus } from '../../../specs/purchases';
 
 interface ConfirmDeleteSupplier {
@@ -23,8 +24,10 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     suppliers, orders, loading, activeTab, setActiveTab,
     createSupplier, updateSupplier, deleteSupplier, createOrder, updateOrder, softDeleteOrder,
     confirmOrder, receiveOrder, cancelOrder,
-    refresh, userId, role,
+    refresh, userId, role, tabStates, saveTabState,
   } = usePurchases(tenantId);
+
+  const tabState = tabStates[activeTab];
 
   const [showSupplierForm, setShowSupplierForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
@@ -33,9 +36,6 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const [confirmDeleteSupplier, setConfirmDeleteSupplier] = useState<ConfirmDeleteSupplier | null>(null);
   const [confirmCancelOrder, setConfirmCancelOrder] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeleteOrder, setConfirmDeleteOrder] = useState<{ id: string; name: string } | null>(null);
-  const [search, setSearch] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PurchaseOrderStatus | 'all'>('all');
 
   const statusOptions: { value: PurchaseOrderStatus | 'all'; label: string; variant: 'neutral' | 'warning' | 'info' | 'success' | 'danger' }[] = [
     { value: 'all', label: 'Todas', variant: 'neutral' },
@@ -107,11 +107,8 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     setShowSupplierForm(true);
   };
 
-  const handleTabChange = (tab: 'ordenes' | 'proveedores') => {
+  const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
-    setSearch('');
-    setStatusFilter('all');
-    setDateFilter('');
   };
 
   const bottomNavItems: BottomNavItem[] = useMemo(() => [
@@ -191,10 +188,10 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => setStatusFilter(opt.value)}
+                  onClick={() => saveTabState(activeTab, { statusFilter: opt.value })}
                   className={cn(
                     'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap',
-                    statusFilter === opt.value
+                    tabState.statusFilter === opt.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
                   )}
@@ -207,22 +204,22 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               <div className="flex-1">
                 <SearchInput
                   placeholder="Buscar orden..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onClear={() => setSearch('')}
+                  value={tabState.searchQuery}
+                  onChange={(e) => saveTabState(activeTab, { searchQuery: e.target.value })}
+                  onClear={() => saveTabState(activeTab, { searchQuery: '' })}
                 />
               </div>
               <div className="w-full sm:w-48">
                 <DatePicker
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  value={tabState.dateFilter}
+                  onChange={(e) => saveTabState(activeTab, { dateFilter: e.target.value })}
                   formatHint="dd/mm/aaaa"
                 />
               </div>
-              {dateFilter && (
+              {tabState.dateFilter && (
                 <button
                   type="button"
-                  onClick={() => setDateFilter('')}
+                  onClick={() => saveTabState(activeTab, { dateFilter: '' })}
                   className="text-xs text-primary font-medium px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors shrink-0"
                 >
                   Limpiar
@@ -231,12 +228,12 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
             </div>
             <OrderList
               orders={orders.filter((o) => {
-                const matchSearch = o.supplierName?.toLowerCase().includes(search.toLowerCase()) ||
-                  o.id.toLowerCase().includes(search.toLowerCase());
-                const matchStatus = statusFilter === 'all' || o.status === statusFilter;
-                if (!dateFilter) return matchSearch && matchStatus;
+                const matchSearch = o.supplierName?.toLowerCase().includes(tabState.searchQuery.toLowerCase()) ||
+                  o.id.toLowerCase().includes(tabState.searchQuery.toLowerCase());
+                const matchStatus = tabState.statusFilter === 'all' || o.status === tabState.statusFilter;
+                if (!tabState.dateFilter) return matchSearch && matchStatus;
                 const orderDate = o.createdAt.slice(0, 10);
-                return matchSearch && matchStatus && orderDate === dateFilter;
+                return matchSearch && matchStatus && orderDate === tabState.dateFilter;
               })}
               loading={loading}
               isOwner={isOwner}
@@ -261,13 +258,13 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
           <div className="p-4 space-y-4">
             <SearchInput
               placeholder="Buscar proveedor..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onClear={() => setSearch('')}
+              value={tabState.searchQuery}
+              onChange={(e) => saveTabState(activeTab, { searchQuery: e.target.value })}
+              onClear={() => saveTabState(activeTab, { searchQuery: '' })}
             />
             <SupplierList
               suppliers={suppliers.filter((s) =>
-                s.name.toLowerCase().includes(search.toLowerCase())
+                s.name.toLowerCase().includes(tabState.searchQuery.toLowerCase())
               )}
               loading={loading}
               isOwner={isOwner}

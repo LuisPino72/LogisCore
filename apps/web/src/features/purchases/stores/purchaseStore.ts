@@ -1,14 +1,19 @@
 import { create } from 'zustand';
 import type { Supplier, PurchaseOrderWithItems, CreateSupplierInput, CreatePurchaseOrderInput, ReceivePurchaseOrderInput, PurchaseOrderStatus } from '../../../specs/purchases';
 import { purchaseService } from '../services/purchaseService';
+import type { TabKey, TabState } from '../types';
+
+const DEFAULT_TAB_STATE: TabState = { searchQuery: '', statusFilter: 'all', dateFilter: '' };
 
 interface PurchaseStore {
   suppliers: Supplier[];
   orders: PurchaseOrderWithItems[];
   loading: boolean;
   error: string | null;
-  activeTab: 'ordenes' | 'proveedores';
-  setActiveTab: (tab: PurchaseStore['activeTab']) => void;
+  activeTab: TabKey;
+  tabStates: Record<TabKey, TabState>;
+  setActiveTab: (tab: TabKey) => void;
+  saveTabState: (tab: TabKey, state: Partial<TabState>) => void;
   fetchSuppliers: (tenantId: string) => Promise<void>;
   fetchOrders: (tenantId: string, status?: PurchaseOrderStatus) => Promise<void>;
   createSupplier: (tenantId: string, userId: string, input: CreateSupplierInput) => Promise<boolean>;
@@ -28,13 +33,25 @@ const initialState = {
   orders: [],
   loading: false,
   error: null,
-  activeTab: 'ordenes' as const,
+  activeTab: 'ordenes' as TabKey,
+  tabStates: {
+    ordenes: { ...DEFAULT_TAB_STATE },
+    proveedores: { ...DEFAULT_TAB_STATE },
+  },
 };
 
 export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
   ...initialState,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
+  saveTabState: (tab, state) => {
+    set({
+      tabStates: {
+        ...get().tabStates,
+        [tab]: { ...get().tabStates[tab], ...state },
+      },
+    });
+  },
 
   fetchSuppliers: async (tenantId) => {
     set({ loading: true, error: null });
