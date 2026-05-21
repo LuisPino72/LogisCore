@@ -64,15 +64,15 @@ export function LoginPage() {
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid rgba(255, 255, 255, 0.3)',
-          borderRadius: '1.5rem',
-          padding: '2rem',
+          borderRadius: '1.25rem',
+          padding: '1.5rem',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1)',
         }}
       >
         {/* Logo + Title */}
-        <div className="flex flex-col items-center gap-4 mb-8">
+        <div className="flex flex-col items-center gap-3 mb-5">
           <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center"
+            className="w-16 h-16 rounded-xl flex items-center justify-center"
             style={{
               background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
               border: '1px solid rgba(13, 148, 136, 0.15)',
@@ -80,24 +80,24 @@ export function LoginPage() {
             }}
           >
             {logoError ? (
-              <Shield size={36} className="text-primary" />
+              <Shield size={28} className="text-primary" />
             ) : (
               <img
                 src="/Sasa con fondo.png"
                 alt="Sasa"
-                className="w-14 h-14"
+                className="w-12 h-12"
                 onError={() => setLogoError(true)}
               />
             )}
           </div>
           <div className="text-center">
-            <h1 className="text-3xl font-title font-bold text-gray-900 tracking-tight">Sasa</h1>
-            <p className="text-sm text-gray-500 mt-1.5 font-sans">Tu negocio, siempre bajo control</p>
+            <h1 className="text-2xl font-title font-bold text-gray-900 tracking-tight">Sasa</h1>
+            <p className="text-xs text-gray-500 mt-1 font-sans">Tu negocio, siempre bajo control</p>
           </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <Input
             label="Email"
             type="email"
@@ -146,7 +146,7 @@ export function LoginPage() {
             variant="primary"
             fullWidth
             loading={isLoggingIn}
-            className="py-3 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+            className="py-2.5 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
             style={{
               background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)',
             }}

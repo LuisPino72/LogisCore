@@ -113,21 +113,19 @@ class NetworkAwareService {
   private async checkHealth(): Promise<void> {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       if (!supabaseUrl) return;
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
 
-      const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+      const res = await fetch(`${supabaseUrl}/`, {
         method: 'HEAD',
-        headers: supabaseKey ? { apikey: supabaseKey } : undefined,
         signal: controller.signal,
       });
 
       clearTimeout(timeout);
 
-      if (res.ok || res.status === 401) {
+      if (res.ok) {
         const wasOffline = this.healthCheckFails >= 2;
         this.healthCheckFails = 0;
         if (wasOffline) {
