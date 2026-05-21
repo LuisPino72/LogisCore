@@ -11,6 +11,7 @@ interface ModalProps {
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'full';
   className?: string;
+  overlayClassName?: string;
   closeOnOverlay?: boolean;
   closeOnEsc?: boolean;
   initialFocusRef?: React.RefObject<HTMLElement>;
@@ -26,6 +27,7 @@ export function Modal({
   footer, 
   size = 'md',
   className,
+  overlayClassName,
   closeOnOverlay = true,
   closeOnEsc = true,
   initialFocusRef,
@@ -98,7 +100,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="modal-overlay"
+      className={cn('modal-overlay', overlayClassName)}
       onClick={closeOnOverlay ? onClose : undefined}
       role="dialog"
       aria-modal="true"

@@ -52,4 +52,4 @@ export interface SyncBatchResult {
 export const DEFAULT_BATCH_SIZE = 10;
 export const MAX_RETRIES = 5;
 export const BASE_BACKOFF_MS = 1000;
-export const SYNC_INTERVAL_MS = 30000;
+export const SYNC_INTERVAL_MS = 5000;

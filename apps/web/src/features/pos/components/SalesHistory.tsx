@@ -1,30 +1,50 @@
-import { useState, useEffect } from 'react';
-import { Button, Badge, Modal, DataTable, EmptyState, Skeleton } from '../../../common/components';
+import { useState, useEffect, useCallback } from 'react';
+import { Button, Badge, Modal, DataTable, EmptyState, Skeleton, Input } from '../../../common/components';
 import { Eye, Ban, Calendar } from 'lucide-react';
 import type { Column } from '../../../common/components';
 import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
 import { posService } from '../services/posService';
+import { usePosStore } from '../stores/posStore';
 import { METADATA_PAGOS } from '../../../specs/sales';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+
+const PAGE_SIZE = 20;
 
 interface SalesHistoryProps {
   tenantId: string;
   sales: Sale[];
+  total: number;
   onVoid: (saleId: string) => void;
   loading: boolean;
   canVoid: boolean;
 }
 
-export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canVoid }: SalesHistoryProps) {
+export function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid }: SalesHistoryProps) {
   const [page, setPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<string>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const fetchSalesHistory = usePosStore((s) => s.fetchSalesHistory);
+
+  const handleSort = useCallback((key: string) => {
+    setSortDirection((prev) => (sortKey === key ? (prev === 'asc' ? 'desc' : 'asc') : 'desc'));
+    setSortKey(key);
+  }, [sortKey]);
 
   useEffect(() => {
     setPage(1);
-  }, [sales.length]);
-  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
-  const [itemsLoading, setItemsLoading] = useState(false);
+  }, [startDate, endDate, tenantId]);
+
+  useEffect(() => {
+    const offset = (page - 1) * PAGE_SIZE;
+    fetchSalesHistory(tenantId, offset, PAGE_SIZE, startDate || undefined, endDate || undefined);
+  }, [page, tenantId, fetchSalesHistory, startDate, endDate]);
 
   const handleView = async (sale: Sale) => {
     setSelectedSale(sale);
@@ -36,8 +56,9 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
 
   const columns: Column<Sale>[] = [
     {
-      key: 'date',
+      key: 'createdAt',
       header: 'Fecha',
+      sortable: true,
       render: (sale) => (
         <span className="text-xs text-gray-500">
           {new Date(sale.createdAt).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
@@ -45,7 +66,7 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
       ),
     },
     {
-      key: 'method',
+      key: 'paymentMethod',
       header: 'Método',
       render: (sale) => {
         const meta = METADATA_PAGOS[sale.paymentMethod as PaymentMethod];
@@ -53,8 +74,9 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
       },
     },
     {
-      key: 'total',
+      key: 'totalBs',
       header: 'Total',
+      sortable: true,
       className: 'text-right',
       render: (sale) => {
         const totalUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
@@ -85,8 +107,42 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
     },
   ];
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   return (
     <div className="flex flex-col h-full p-3">
+      <div className="flex flex-col sm:flex-row gap-2 mb-3 shrink-0">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Calendar size={16} />
+          <span>Desde:</span>
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-36 text-xs"
+          />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>Hasta:</span>
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-36 text-xs"
+          />
+        </div>
+        {(startDate || endDate) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setStartDate(''); setEndDate(''); }}
+            className="text-xs"
+          >
+            Limpiar
+          </Button>
+        )}
+      </div>
+
       {loading ? (
         <div className="flex-1 space-y-3 py-4">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -98,7 +154,7 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
           <EmptyState
             icon={<Calendar size={40} />}
             title="Sin ventas"
-            description="Aún no hay ventas registradas."
+            description={startDate || endDate ? 'No hay ventas en este rango de fechas.' : 'Aún no hay ventas registradas.'}
           />
         </div>
       ) : (
@@ -111,8 +167,27 @@ export function SalesHistory({ tenantId: _tenantId, sales, onVoid, loading, canV
             renderCardOnMobile
             page={page}
             onPageChange={setPage}
-            total={sales.length}
+            total={total}
+            pageSize={PAGE_SIZE}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={handleSort}
           />
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2 shrink-0 text-xs text-gray-500">
+          <span>{total} ventas en total</span>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              Anterior
+            </Button>
+            <span className="px-2">{page} / {totalPages}</span>
+            <Button variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              Siguiente
+            </Button>
+          </div>
         </div>
       )}
 

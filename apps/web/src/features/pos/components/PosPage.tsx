@@ -26,7 +26,7 @@ interface PosPageProps {
 
 export function PosPage({ tenantId }: PosPageProps) {
   const {
-    products, cart, cashRegister, loading, error, searchQuery, parkedCarts, favoriteProductIds, salesHistory,
+    products, cart, cashRegister, loading, error, searchQuery, parkedCarts, favoriteProductIds, salesHistory, salesHistoryTotal, salesHistoryLoading,
     addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     completeSale, openCashRegister, closeCashRegister, parkCart, loadParkedCart, deleteParkedCart,
     toggleFavorite, fetchSalesHistory, search, userId, role, exchangeRate,
@@ -293,8 +293,9 @@ export function PosPage({ tenantId }: PosPageProps) {
             <SalesHistory
               tenantId={tenantId ?? ''}
               sales={salesHistory}
+              total={salesHistoryTotal}
               onVoid={(saleId) => setVoidConfirmId(saleId)}
-              loading={loading}
+              loading={salesHistoryLoading}
               canVoid={role === 'owner' || role === 'admin'}
             />
           </div>

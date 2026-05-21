@@ -80,9 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         loginAttempts: 0,
         loginCooldownUntil: 0,
       });
-      if (result.data.tenantId) {
-        authService.startSync();
-      }
+      authService.startSync();
     } else {
       const attempts = get().loginAttempts + 1;
       const delay = Math.min(attempts * 2000, 30000);

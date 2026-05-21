@@ -345,8 +345,12 @@ export const inventoryService = {
     }
 
     const deletedAt = new Date().toISOString();
-    await db.categories.update(id, { deletedAt });
-    await syncQueue.enqueue('categories', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+    await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
+      await db.categories.update(id, { deletedAt });
+      await syncQueue.enqueue('categories', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+      await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { categoryId: id });
+    });
+    await emitWithAudit('INVENTORY.DELETED', INVENTORY_MODULE, { categoryId: id }, { tenantId });
     return success(undefined);
   },
 

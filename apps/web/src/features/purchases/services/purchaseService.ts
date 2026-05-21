@@ -541,6 +541,7 @@ export const purchaseService = {
       });
     }
 
+    result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return success(result);
   },
 

@@ -20,6 +20,8 @@ export interface PosState {
   parkedCarts: ParkedCart[];
   favoriteProductIds: Set<string>;
   salesHistory: Sale[];
+  salesHistoryTotal: number;
+  salesHistoryLoading: boolean;
   activeParkedCartId: string | null;
   loading: boolean;
   error: string | null;

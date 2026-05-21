@@ -15,7 +15,7 @@ interface PosStore extends PosState {
   fetchCashRegister: (tenantId: string) => Promise<void>;
   fetchExchangeRate: (tenantId: string) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
-  fetchSalesHistory: (tenantId: string) => Promise<void>;
+  fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
   addToCart: (product: Product, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   updateCartItemQuantity: (productId: string, quantity: number) => void;
@@ -39,6 +39,8 @@ const initialState: PosState = {
   parkedCarts: [],
   favoriteProductIds: new Set<string>(),
   salesHistory: [],
+  salesHistoryTotal: 0,
+  salesHistoryLoading: false,
   activeParkedCartId: null,
   loading: false,
   error: null,
@@ -92,13 +94,13 @@ export const usePosStore = create<PosStore>((set, get) => ({
     }
   },
 
-  fetchSalesHistory: async (tenantId) => {
-    set({ loading: true, error: null });
-    const result = await posService.getSalesHistory(tenantId);
+  fetchSalesHistory: async (tenantId, offset = 0, limit = 50, startDate, endDate) => {
+    set({ salesHistoryLoading: true, error: null });
+    const result = await posService.getSalesHistory(tenantId, offset, limit, startDate, endDate);
     if (result.ok) {
-      set({ salesHistory: result.data, loading: false });
+      set({ salesHistory: result.data.sales, salesHistoryTotal: result.data.total, salesHistoryLoading: false });
     } else {
-      set({ loading: false, error: result.error.message });
+      set({ salesHistoryLoading: false, error: result.error.message });
     }
   },
 

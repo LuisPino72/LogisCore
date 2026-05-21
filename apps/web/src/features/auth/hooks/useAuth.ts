@@ -22,9 +22,7 @@ export function useAuth(): {
         if (result.ok) {
           if (result.data) {
             setSession(result.data);
-            if (result.data.tenantId) {
-              authService.startSync();
-            }
+            authService.startSync();
           } else {
             clearSession();
           }

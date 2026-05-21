@@ -23,8 +23,16 @@ export const posService = {
 
       let row = await db.cashRegisters
         .where({ tenantId })
-        .filter((r) => !r.deletedAt)
+        .filter((r) => !r.deletedAt && r.isOpen)
         .first();
+
+      if (!row) {
+        row = await db.cashRegisters
+          .where({ tenantId })
+          .filter((r) => !r.deletedAt)
+          .reverse()
+          .first();
+      }
 
       if (!row) {
         if (!navigator.onLine) return success(null);
@@ -518,17 +526,24 @@ export const posService = {
     }
   },
 
-  async getSalesHistory(tenantId: string, offset = 0, limit = 50): Promise<Result<Sale[], AppError>> {
+  async getSalesHistory(
+    tenantId: string,
+    offset = 0,
+    limit = 50,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<Result<{ sales: Sale[]; total: number }, AppError>> {
     try {
       const db = getDb();
 
-      const count = await db.sales
-        .where('[tenantId+deletedAt]')
-        .between([tenantId, '\uffff'], [tenantId, '\uffff'])
+      const localSales = await db.sales
+        .where({ tenantId })
         .filter((r) => !r.deletedAt && r.status === 'completed')
-        .count();
+        .toArray();
 
-      if (count === 0) {
+      const total = localSales.length;
+
+      if (total === 0) {
         const uuid = await TenantTranslator.slugToUuid(tenantId);
         const { data } = await supabase
           .from('sales')
@@ -560,30 +575,39 @@ export const posService = {
         }
       }
 
-      const rows = await db.sales
-        .where('[tenantId+createdAt]')
-        .between([tenantId, ''], [tenantId, '\uffff'])
-        .filter((r) => !r.deletedAt && r.status === 'completed')
-        .reverse()
-        .offset(offset)
-        .limit(limit)
-        .toArray();
+      let filtered = localSales;
+      if (startDate) {
+        const start = new Date(startDate);
+        filtered = filtered.filter((r) => new Date(r.createdAt) >= start);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filtered = filtered.filter((r) => new Date(r.createdAt) <= end);
+      }
 
-      return success(rows.map((r) => ({
-        id: r.id,
-        tenantId: r.tenantId,
-        userId: r.userId,
-        paymentMethod: r.paymentMethod as PaymentMethod,
-        subtotalBs: r.subtotalBs,
-        igtfBs: r.igtfBs,
-        ivaBs: r.ivaBs !== undefined ? r.ivaBs : 0,
-        totalBs: r.totalBs,
-        exchangeRate: r.exchangeRate,
-        status: r.status as 'completed' | 'voided',
-        voidedAt: r.voidedAt ?? undefined,
-        createdAt: r.createdAt,
-        deletedAt: r.deletedAt ?? undefined,
-      })));
+      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const paged = filtered.slice(offset, offset + limit);
+
+      return success({
+        total: filtered.length,
+        sales: paged.map((r) => ({
+          id: r.id,
+          tenantId: r.tenantId,
+          userId: r.userId,
+          paymentMethod: r.paymentMethod as PaymentMethod,
+          subtotalBs: r.subtotalBs,
+          igtfBs: r.igtfBs,
+          ivaBs: r.ivaBs !== undefined ? r.ivaBs : 0,
+          totalBs: r.totalBs,
+          exchangeRate: r.exchangeRate,
+          status: r.status as 'completed' | 'voided',
+          voidedAt: r.voidedAt ?? undefined,
+          createdAt: r.createdAt,
+          deletedAt: r.deletedAt ?? undefined,
+        })),
+      });
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getSalesHistory:', err);
       return failure(new AppError('SALES_HISTORY_FETCH_FAILED', 'Error al cargar historial de ventas.'));
