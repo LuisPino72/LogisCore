@@ -73,7 +73,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   const topQty = topProducts.length > 0 ? topProducts[0].totalQty : 1;
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl mx-auto pb-20 sm:pb-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl mx-auto">
       <WelcomeBanner
         userName={email}
         tenantName={tenantInfo?.name ?? null}

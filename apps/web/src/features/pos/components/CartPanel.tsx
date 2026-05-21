@@ -86,7 +86,7 @@ export const CartPanel = memo(function CartPanel({
   return (
     <>
       {/* Desktop: fixed sidebar */}
-      <div className="hidden md:flex w-96 shrink-0 h-full border-l border-border bg-white flex-col overflow-hidden">
+      <div className="hidden md:flex w-80 xl:w-96 shrink-0 h-full border-l border-border bg-white flex-col overflow-hidden">
         {renderContent()}
       </div>
 

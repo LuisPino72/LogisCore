@@ -135,7 +135,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6 pb-20 sm:pb-6">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">

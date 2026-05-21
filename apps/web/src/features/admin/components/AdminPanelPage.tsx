@@ -512,7 +512,7 @@ export function AdminPanelPage() {
         </button>
       </div>
 
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {activeSheet === 'tenants' && (
           <Card>
             <div className="p-4 pb-0">
@@ -529,12 +529,12 @@ export function AdminPanelPage() {
                 <SearchInput
                   placeholder="Buscar local..."
                   onChange={(e) => setSearch(e.target.value)}
-                  className="flex-1 min-w-[200px]"
+                  className="flex-1 min-w-50"
                 />
                 <Select
                   value=""
                   onChange={(e) => setStatus(e.target.value as 'all' | 'active' | 'inactive')}
-                  className="w-[130px]"
+                  className="w-32.5"
                 >
                   <option value="all">Todos</option>
                   <option value="active">Activos</option>
@@ -543,7 +543,7 @@ export function AdminPanelPage() {
                 <Select
                   value=""
                   onChange={(e) => setPlan(e.target.value)}
-                  className="w-[130px]"
+                  className="w-32.5"
                 >
                   <option value="all">Todos</option>
                   <option value="basico">Básico</option>
@@ -664,7 +664,7 @@ export function AdminPanelPage() {
                       const date = new Date(s.expiresAt).toLocaleDateString('es-ES');
                       const { pct, color } = getSubscriptionProgress(s.daysRemaining);
                       return (
-                        <div className="space-y-1 min-w-[100px]">
+                        <div className="space-y-1 min-w-25">
                           <span className={`text-xs ${s.daysRemaining <= 0 ? 'text-danger font-bold' : s.daysRemaining <= 3 ? 'text-warning font-bold' : s.daysRemaining <= 7 ? 'text-orange-600' : 'text-gray-700'}`}>
                             {date} {s.daysRemaining <= 0 ? '(Vencido)' : `(${s.daysRemaining}d)`}
                           </span>

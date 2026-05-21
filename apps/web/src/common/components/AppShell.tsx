@@ -36,7 +36,7 @@ export const AppShell = memo(function AppShell({ children, topBar, bottomNav, si
         <header className="app-topbar">
           {topBar}
         </header>
-        <main className="app-shell-content">
+        <main className={cn('app-shell-content', bottomNav && 'app-shell-content--with-bottom-nav')}>
           {children}
         </main>
         {bottomNav && <footer>{bottomNav}</footer>}

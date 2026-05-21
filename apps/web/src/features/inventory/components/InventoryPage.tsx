@@ -148,7 +148,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6 pb-20 sm:pb-0">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
