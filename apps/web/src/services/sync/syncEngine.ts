@@ -21,6 +21,7 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'inventory_lots', timeCol: 'updated_at' },
   { name: 'suppliers', timeCol: 'updated_at' },
   { name: 'purchase_orders', timeCol: 'updated_at' },
+  { name: 'cash_registers', timeCol: 'updated_at' },
 ];
 
 export class SyncEngine {
@@ -235,6 +236,7 @@ export class SyncEngine {
         await db.syncMeta.put({ table: tableName, lastPullAt: Date.now() });
         const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
         emitEngineEvent(eventName, { table: tableName });
+        emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
       } catch (err) {
         if (err instanceof AppError) {
           result.errors.push(err);
