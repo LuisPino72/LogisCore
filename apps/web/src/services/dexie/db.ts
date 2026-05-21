@@ -45,6 +45,7 @@ export interface DexieInventoryMovement {
   newStock: number;
   reason?: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 export interface DexieInventoryLot {
@@ -58,6 +59,7 @@ export interface DexieInventoryLot {
   createdAt: string;
   updatedAt: string;
   version?: number;
+  deletedAt?: string;
 }
 
 export interface DexieSale {
@@ -90,6 +92,7 @@ export interface DexieSaleItem {
   isWeighted: boolean;
   unit: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 export interface DexieCashRegister {
@@ -185,12 +188,15 @@ export interface DexiePurchaseOrder {
 export interface DexiePurchaseOrderItem {
   id: string;
   orderId: string;
+  tenantId: string;
   productId: string;
+  productName?: string;
   quantity: number;
   costUsdPerUnit: number;
   receivedQuantity: number;
   totalUsd: number;
   createdAt: string;
+  deletedAt?: string;
 }
 
 export class LogisCoreDB extends Dexie {
