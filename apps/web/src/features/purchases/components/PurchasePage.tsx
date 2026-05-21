@@ -107,19 +107,26 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     setShowSupplierForm(true);
   };
 
+  const handleTabChange = (tab: 'ordenes' | 'proveedores') => {
+    setActiveTab(tab);
+    setSearch('');
+    setStatusFilter('all');
+    setDateFilter('');
+  };
+
   const bottomNavItems: BottomNavItem[] = useMemo(() => [
     {
       id: 'ordenes',
       label: 'Órdenes',
       icon: <ShoppingCart size={20} />,
       badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined,
-      onClick: () => setActiveTab('ordenes'),
+      onClick: () => handleTabChange('ordenes'),
     },
     {
       id: 'proveedores',
       label: 'Proveedores',
       icon: <Truck size={20} />,
-      onClick: () => setActiveTab('proveedores'),
+      onClick: () => handleTabChange('proveedores'),
     },
   ], [pendingOrdersCount, setActiveTab]);
 
@@ -128,15 +135,15 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <ShoppingCart size={22} className="text-primary" />
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6 pb-20 sm:pb-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <ShoppingCart size={18} className="text-primary" />
           </div>
-          <div>
-            <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Compras</h1>
-            <p className="text-xs text-text-secondary">Gestiona órdenes y proveedores</p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>Compras</h1>
+            <p className="text-[11px] text-text-secondary hidden sm:block">Gestiona órdenes y proveedores</p>
           </div>
         </div>
         {isOwner && (
@@ -147,31 +154,31 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
         )}
       </div>
 
-      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 pb-0">
+      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-14 z-10 shadow-sm">
         <button
           type="button"
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
+            'flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200',
             activeTab === 'ordenes'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-text-secondary hover:text-gray-700'
+              ? 'bg-primary text-white shadow-sm'
+              : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
           )}
-          onClick={() => setActiveTab('ordenes')}
+          onClick={() => handleTabChange('ordenes')}
         >
-          <ShoppingCart size={16} className="inline mr-1.5 -mt-0.5" />
+          <ShoppingCart size={18} />
           Órdenes
         </button>
         <button
           type="button"
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
+            'flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200',
             activeTab === 'proveedores'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-text-secondary hover:text-gray-700'
+              ? 'bg-primary text-white shadow-sm'
+              : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
           )}
-          onClick={() => setActiveTab('proveedores')}
+          onClick={() => handleTabChange('proveedores')}
         >
-          <Truck size={16} className="inline mr-1.5 -mt-0.5" />
+          <Truck size={18} />
           Proveedores
         </button>
       </div>

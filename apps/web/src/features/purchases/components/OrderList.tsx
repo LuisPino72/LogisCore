@@ -184,33 +184,34 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
         return (
           <div
             key={order.id}
-            className="relative rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md"
+            className="rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md"
           >
-            <div className="p-3 pt-14 space-y-3">
-              <div className="absolute top-2 left-2 w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center">
-                <ShoppingCart size={18} className="text-primary" />
-              </div>
-              {isOwner && (
-                <div className="absolute top-2 right-2">
+            <div className="p-3 space-y-3">
+              {/* Header: icon + info + actions */}
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <ShoppingCart size={18} className="text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <StatusBadge status={order.status} />
+                    <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{order.supplierName || 'Sin proveedor'}</p>
+                  <p className="text-base font-bold text-primary">{formatUsd(order.totalUsd)}</p>
+                </div>
+                {isOwner && (
                   <Dropdown
                     align="right"
-                    trigger={<MoreVertical size={18} className="text-gray-500" />}
+                    trigger={<MoreVertical size={18} className="text-gray-500 shrink-0" />}
                     items={[
                       { label: 'Ver detalle', icon: <Eye size={16} />, onClick: () => setDetailOrder(order) },
                     ]}
                   />
-                </div>
-              )}
-
-              <div className="text-center space-y-1">
-                <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <StatusBadge status={order.status} />
-                  <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-800">{order.supplierName || 'Sin proveedor'}</p>
-                <p className="text-base font-bold text-primary">{formatUsd(order.totalUsd)}</p>
+                )}
               </div>
 
+              {/* Progress bar */}
               {isReceiving && (
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-text-secondary">
@@ -229,6 +230,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                 </div>
               )}
 
+              {/* Items preview */}
               <div className="space-y-1 bg-gray-50 rounded-lg p-2">
                 {order.items.slice(0, 3).map((item: PurchaseOrderItem) => (
                   <div key={item.id} className="flex justify-between text-xs text-gray-600">
@@ -241,6 +243,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                 )}
               </div>
 
+              {/* Action buttons */}
               {isOwner && (
                 <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
                     {order.status === 'draft' && (

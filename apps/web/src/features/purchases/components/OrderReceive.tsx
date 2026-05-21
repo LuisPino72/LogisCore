@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { CheckCircle, Package } from 'lucide-react';
+import { CheckCircle, Package, Truck } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
 import type { PurchaseOrderWithItems } from '../../../specs/purchases';
+import { formatUsd } from '@/lib/formatBs';
 
 interface OrderReceiveProps {
   isOpen: boolean;
@@ -91,11 +92,22 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
       }
     >
       <div className="space-y-4">
-        <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/10">
-          <Package size={18} className="text-primary shrink-0" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-primary truncate">{order.supplierName || 'Sin proveedor'}</p>
-            <p className="text-xs text-text-secondary">{receivedItems} de {totalItems} items completados</p>
+        {/* Header con gradiente */}
+        <div className="rounded-lg overflow-hidden border border-primary/20">
+          <div className="bg-linear-to-br from-primary/10 to-accent/5 p-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                <Truck size={18} className="text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-gray-900 truncate">{order.supplierName || 'Sin proveedor'}</p>
+                <p className="text-xs text-text-secondary">{receivedItems} de {totalItems} items completados</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-primary">{formatUsd(order.totalUsd)}</p>
+                <p className="text-[10px] text-text-secondary">Total orden</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -164,11 +176,16 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
             onClick={receiveAll}
             className="w-full text-sm text-primary font-medium py-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors min-h-[44px]"
           >
+            <Package size={14} className="inline mr-1.5 -mt-0.5" />
             Recibir todo lo pendiente
           </button>
         )}
 
-        {error && <p className="text-xs text-danger">{error}</p>}
+        {error && (
+          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
+            {error}
+          </div>
+        )}
       </div>
     </Modal>
   );

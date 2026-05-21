@@ -1,5 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 export interface BottomNavItem {
@@ -19,24 +18,16 @@ interface BottomNavProps {
 const NAV_ICON_CLASS = 'flex h-4 w-4 shrink-0 items-center justify-center [&_svg]:!h-4 [&_svg]:!w-4';
 
 export function BottomNav({ items, activeId, className }: BottomNavProps) {
-  const [mounted, setMounted] = useState(false);
   const compact = items.length >= 5;
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  return createPortal(
+  return (
     <nav
       className={cn(
-        'sm:hidden fixed right-0 z-50 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]',
+        'sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]',
         className,
       )}
       style={{
         left: 'var(--sidebar-actual, 0px)',
-        bottom: 0,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
       aria-label="Navegación del módulo"
@@ -66,7 +57,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
               <span className={cn('relative flex items-center justify-center', NAV_ICON_CLASS)}>
                 {item.icon}
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-1.5 min-w-[12px] rounded-full bg-danger px-0.5 py-0.5 text-center text-[8px] leading-none font-bold text-white">
+                  <span className="absolute -top-1 -right-1.5 min-w-3 rounded-full bg-danger px-0.5 py-0.5 text-center text-[8px] leading-none font-bold text-white">
                     {item.badge}
                   </span>
                 )}
@@ -74,7 +65,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
               <span
                 className={cn(
                   'w-full truncate text-center leading-tight',
-                  compact ? 'max-w-[52px] text-[9px]' : 'max-w-[64px] text-[10px]',
+                  compact ? 'max-w-13 text-[9px]' : 'max-w-16 text-[10px]',
                   isActive ? 'font-semibold' : 'font-medium',
                 )}
               >
@@ -84,7 +75,6 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
           );
         })}
       </div>
-    </nav>,
-    document.body,
+    </nav>
   );
 }

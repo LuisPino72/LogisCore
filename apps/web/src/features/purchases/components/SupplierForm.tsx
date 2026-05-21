@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Truck, Phone, Building2 } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
 import type { CreateSupplierInput, Supplier } from '../../../specs/purchases';
 
@@ -58,29 +59,60 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
       }
     >
       <div className="space-y-4">
-        <div className="input-wrapper">
-          <label className="input-label">Nombre</label>
-          <Input
-            placeholder="Ej: Distribuidora XYZ"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            error={error && !name.trim() ? error : undefined}
-            validation={{ required: true, maxLength: 25 }}
-            inputClassName="text-sm px-2 py-2"
-          />
+        {/* Header visual */}
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Truck size={20} className="text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-primary">
+              {isEditing ? 'Editando proveedor' : 'Registrar proveedor'}
+            </p>
+            <p className="text-xs text-text-secondary">
+              {isEditing ? 'Actualiza los datos del proveedor' : 'Agrega un nuevo proveedor a tu lista'}
+            </p>
+          </div>
         </div>
+
         <div className="input-wrapper">
-          <label className="input-label">Teléfono</label>
-          <Input
-            placeholder="Ej: 0412-1234567"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            validation={{ pattern: /^(\+58|0)\d{10}$/ }}
-            hint="Formato: 04121234567 o +584121234567"
-            inputClassName="text-sm px-2 py-2"
-          />
+          <label className="input-label">Nombre del proveedor</label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <Building2 size={16} />
+            </div>
+            <Input
+              placeholder="Ej: Distribuidora XYZ"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              error={error && !name.trim() ? error : undefined}
+              validation={{ required: true, maxLength: 50 }}
+              inputClassName="text-sm pl-10"
+            />
+          </div>
         </div>
-        {error && name.trim() && <p className="text-xs text-danger">{error}</p>}
+
+        <div className="input-wrapper">
+          <label className="input-label">Teléfono <span className="text-text-muted font-normal">(opcional)</span></label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <Phone size={16} />
+            </div>
+            <Input
+              placeholder="Ej: 0412-1234567"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              validation={{ pattern: /^(\+58|0)\d{10}$/ }}
+              hint="Formato: 04121234567 o +584121234567"
+              inputClassName="text-sm pl-10"
+            />
+          </div>
+        </div>
+
+        {error && name.trim() && (
+          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
+            {error}
+          </div>
+        )}
       </div>
     </Modal>
   );

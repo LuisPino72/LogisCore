@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Truck, Package, FileText, DollarSign } from 'lucide-react';
 import { Button, Input, Modal, Select } from '../../../common/components';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import type { Product } from '../../../specs/inventory';
@@ -20,6 +20,16 @@ interface OrderItemInput {
   quantity: number;
   totalCostUsd: number;
 }
+
+const SectionDivider = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+  <div className="flex items-center gap-2 pt-2">
+    <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+      {icon}
+    </div>
+    <h3 className="text-xs font-title font-semibold text-gray-700 uppercase tracking-wide">{title}</h3>
+    <div className="flex-1 h-px bg-gray-100" />
+  </div>
+);
 
 function getProductUnit(products: Product[], productId: string): string {
   const p = products.find((pr) => pr.id === productId);
@@ -130,20 +140,24 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
       }
     >
       <div className="space-y-4">
+        {/* Section: Proveedor */}
+        <SectionDivider icon={<Truck size={14} className="text-primary" />} title="Proveedor" />
+
         <Select
-          label="Proveedor"
           value={supplierId}
           onChange={(e) => setSupplierId(e.target.value)}
           validation={{ required: true }}
         >
-          <option value="">Seleccionar...</option>
+          <option value="">Seleccionar proveedor...</option>
           {suppliers.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </Select>
 
+        {/* Section: Items */}
+        <SectionDivider icon={<Package size={14} className="text-primary" />} title={`Items (${items.length})`} />
+
         <div className="space-y-2">
-          <label className="input-label">Items</label>
           {items.map((item, idx) => {
             const unit = getProductUnit(products, item.productId);
             const sku = getProductSku(products, item.productId);
@@ -204,7 +218,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       type="number"
                       step="0.01"
                       min="0.01"
-                      placeholder="Costo total $"
+                      placeholder="Costo del item ($)"
                       value={item.totalCostUsd || ''}
                       onChange={(e) => updateItem(idx, 'totalCostUsd', parseFloat(e.target.value) || 0)}
                       inputClassName="text-sm"
@@ -214,29 +228,36 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
               </div>
             );
           })}
-          <Button variant="ghost" size="sm" onClick={addItem} className="w-full">
+          <Button variant="outline" size="sm" onClick={addItem} className="w-full border-dashed">
             <Plus size={16} />
             <span className="ml-1">Agregar item</span>
           </Button>
         </div>
 
-        <div className="input-wrapper">
-          <label className="input-label">Notas (opcional)</label>
-          <Input
-            placeholder="Ej: Entrega en 3 días"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            validation={{ maxLength: 25 }}
-            inputClassName="text-sm"
-          />
-        </div>
+        {/* Section: Notas */}
+        <SectionDivider icon={<FileText size={14} className="text-primary" />} title="Notas" />
+
+        <Input
+          placeholder="Ej: Entrega en 3 días, incluir factura..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          validation={{ maxLength: 250 }}
+          inputClassName="text-sm"
+        />
+
+        {/* Total */}
+        <SectionDivider icon={<DollarSign size={14} className="text-primary" />} title="Total" />
+
+        {error && (
+          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
+            {error}
+          </div>
+        )}
 
         <div className="flex justify-between items-center bg-primary/5 border border-primary/10 p-3 rounded-lg">
-          <span className="text-sm font-medium text-primary">Total:</span>
+          <span className="text-sm font-medium text-primary">Total de la orden:</span>
           <span className="text-xl font-bold text-primary">{formatUsd(totalUsd)}</span>
         </div>
-
-        {error && <p className="text-xs text-danger">{error}</p>}
       </div>
     </Modal>
   );

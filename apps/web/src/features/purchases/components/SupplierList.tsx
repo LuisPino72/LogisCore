@@ -12,6 +12,17 @@ interface SupplierListProps {
   onDelete: (id: string, name: string) => void;
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 const SUPPLIERS_PAGE_SIZE = 20;
 
 export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySupplier, onEdit, onDelete }: SupplierListProps) {
@@ -48,16 +59,17 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
     <div className="space-y-2">
       {pagedSuppliers.map((s) => {
         const activeOrders = activeOrdersBySupplier?.[s.id] ?? 0;
+        const initials = getInitials(s.name);
 
         return (
           <div
             key={s.id}
-            className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 pt-8 rounded-xl border border-border bg-white transition-shadow hover:shadow-sm"
+            className="flex items-center gap-3 p-3 rounded-xl border border-border bg-white transition-all hover:shadow-sm hover:border-primary/20 group"
           >
-            <div className="absolute top-1.5 left-2 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
-              <Truck size={14} className="text-primary" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <span className="text-xs font-bold text-primary">{initials}</span>
             </div>
-            <div className="min-w-0 w-full">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
               <div className="flex items-center gap-2">
                 {s.phone && (
@@ -75,12 +87,12 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
               </div>
             </div>
             {isOwner && (
-              <div className="flex items-center gap-1 shrink-0 w-full sm:w-auto justify-center sm:justify-end">
-                <Button variant="ghost" size="sm" onClick={() => onEdit(s)}>
-                  <Pencil size={16} />
+              <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8" title="Editar">
+                  <Pencil size={14} />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => onDelete(s.id, s.name)} className="text-danger">
-                  <Trash2 size={16} />
+                <Button variant="ghost" size="sm" onClick={() => onDelete(s.id, s.name)} className="p-1.5 min-w-8 min-h-8 text-danger" title="Eliminar">
+                  <Trash2 size={14} />
                 </Button>
               </div>
             )}
