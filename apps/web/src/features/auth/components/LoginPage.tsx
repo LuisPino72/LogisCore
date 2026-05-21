@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, Shield } from 'lucide-react';
-import { Button, Input, Alert, Card, Checkbox } from '../../../common/components';
+import { Button, Input, Alert, Checkbox } from '../../../common/components';
 import { useAuthStore } from '../stores/authStore';
 
 const REMEMBERED_EMAIL_KEY = 'logiscore-remembered-email';
@@ -33,45 +33,71 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-primary via-primary-dark to-primary flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-accent rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-light rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-150 border border-white/20 rounded-full" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-100 h-100 border border-white/10 rounded-full" />
-      </div>
-
-      {/* Grid pattern overlay */}
+    <div className="min-h-screen bg-linear-to-br from-primary via-primary-dark to-[#064E4B] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Geometric pattern overlay */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.04]"
         style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-          backgroundSize: '32px 32px',
+          backgroundImage: `
+            linear-gradient(30deg, rgba(255,255,255,0.12) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.12) 87.5%, rgba(255,255,255,0.12)),
+            linear-gradient(150deg, rgba(255,255,255,0.12) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.12) 87.5%, rgba(255,255,255,0.12)),
+            linear-gradient(30deg, rgba(255,255,255,0.12) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.12) 87.5%, rgba(255,255,255,0.12)),
+            linear-gradient(150deg, rgba(255,255,255,0.12) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.12) 87.5%, rgba(255,255,255,0.12)),
+            linear-gradient(60deg, rgba(245,158,11,0.1) 25%, transparent 25.5%, transparent 75%, rgba(245,158,11,0.1) 75%, rgba(245,158,11,0.1)),
+            linear-gradient(60deg, rgba(245,158,11,0.1) 25%, transparent 25.5%, transparent 75%, rgba(245,158,11,0.1) 75%, rgba(245,158,11,0.1))
+          `,
+          backgroundSize: '80px 140px',
+          backgroundPosition: '0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px',
         }}
       />
 
-      <Card className="max-w-md w-full animate-slide-up shadow-2xl border-white/10 p-6 sm:p-8 relative z-10">
-        <div className="flex flex-col items-center gap-3 mb-6">
-          {logoError ? (
-            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
-              <Shield size={32} className="text-white" />
-            </div>
-          ) : (
-            <img
-              src="/Sasa con fondo.png"
-              alt="Sasa"
-              className="w-16 h-16"
-              onError={() => setLogoError(true)}
-            />
-          )}
+      {/* Floating accent orbs */}
+      <div className="absolute top-1/4 -left-20 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-primary-light/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-125 h-125 border border-white/5 rounded-full" />
+
+      {/* Glassmorphism Card */}
+      <div
+        className="max-w-md w-full animate-slide-up relative z-10"
+        style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          borderRadius: '1.5rem',
+          padding: '2rem',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+        }}
+      >
+        {/* Logo + Title */}
+        <div className="flex flex-col items-center gap-4 mb-8">
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)',
+              border: '1px solid rgba(13, 148, 136, 0.15)',
+              animation: 'logoFloat 3s ease-in-out infinite',
+            }}
+          >
+            {logoError ? (
+              <Shield size={36} className="text-primary" />
+            ) : (
+              <img
+                src="/Sasa con fondo.png"
+                alt="Sasa"
+                className="w-14 h-14"
+                onError={() => setLogoError(true)}
+              />
+            )}
+          </div>
           <div className="text-center">
-            <h1 className="text-2xl font-title font-bold text-white">Sasa</h1>
-            <p className="text-sm text-white/70 mt-1">Inicia sesión para continuar</p>
+            <h1 className="text-3xl font-title font-bold text-gray-900 tracking-tight">Sasa</h1>
+            <p className="text-sm text-gray-500 mt-1.5 font-sans">Tu negocio, siempre bajo control</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           <Input
             label="Email"
             type="email"
@@ -96,7 +122,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -115,11 +141,20 @@ export function LoginPage() {
 
           {loginError && <Alert variant="error">{loginError}</Alert>}
 
-          <Button type="submit" variant="primary" fullWidth loading={isLoggingIn}>
+          <Button
+            type="submit"
+            variant="primary"
+            fullWidth
+            loading={isLoggingIn}
+            className="py-3 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+            style={{
+              background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)',
+            }}
+          >
             Iniciar Sesión
           </Button>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }
