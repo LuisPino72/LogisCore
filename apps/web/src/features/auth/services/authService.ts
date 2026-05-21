@@ -1,7 +1,7 @@
 import { type UserSession, AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
-import { initDb, destroyDb } from '../../../services/dexie/db';
+import { initDb, destroyDb, setDbClosing } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
@@ -238,7 +238,10 @@ export const authService = {
       await sessionGuard.release();
     }
 
-    // 5. Flush de sync antes de destruir DB local
+    // 5. Señalizar que la DB se cerrará para que servicios dejen de escribir
+    setDbClosing(true);
+
+    // 6. Flush de sync antes de destruir DB local
     this.stopSync();
     try {
       const pendingCount = await syncQueue.getPendingCount();
@@ -249,7 +252,10 @@ export const authService = {
       // Si el flush falla, continuar con logout de todos modos
     }
 
-    // 6. Limpieza de infraestructura
+    // 7. Pequeña pausa para que operaciones en vuelo terminen
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // 8. Limpieza de infraestructura
     offlineGrace.clear();
     await destroyDb();
     TenantTranslator.clearCache();

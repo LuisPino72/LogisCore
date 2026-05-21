@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId } from '@logiscore/shared';
-import { getDb } from '../../../services/dexie/db';
+import { getDb, isDbClosing } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
@@ -201,45 +201,57 @@ export const inventoryService = {
         .toArray();
 
       if (rows.length === 0) {
+        if (isDbClosing()) return success([]);
+
         const { data, error } = await supabase
           .from('products')
           .select('*')
           .is('deleted_at', null);
 
         if (!error && data && data.length > 0) {
-          for (const prod of data) {
-            await db.products.put({
-              id: prod.id, tenantId,
-              name: prod.name, sku: prod.sku,
-              priceUsd: prod.price_usd,
-              categoryId: prod.category_id,
-              isWeighted: prod.is_weighted,
-              isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
-              isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
-              unit: prod.unit,
-              stock: prod.stock,
-              stockMin: prod.stock_min,
+          // Wrap bulk seed en transacción para evitar estado parcial si la DB se cierra
+          try {
+            await db.transaction('rw', [db.products, db.inventoryLots], async () => {
+              for (const prod of data) {
+                await db.products.put({
+                  id: prod.id, tenantId,
+                  name: prod.name, sku: prod.sku,
+                  priceUsd: prod.price_usd,
+                  categoryId: prod.category_id,
+                  isWeighted: prod.is_weighted,
+                  isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
+                  isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
+                  unit: prod.unit,
+                  stock: prod.stock,
+                  stockMin: prod.stock_min,
+                });
+              }
+
+              if (isDbClosing()) return;
+
+              const { data: lots } = await supabase
+                .from('inventory_lots')
+                .select('*')
+                .in('product_id', data.map((p: Record<string, unknown>) => p.id));
+
+              if (lots && lots.length > 0) {
+                for (const lot of lots) {
+                  if (isDbClosing()) return;
+                  await db.inventoryLots.put({
+                    id: lot.id, tenantId,
+                    productId: lot.product_id,
+                    quantityAdded: lot.quantity_added,
+                    remainingQuantity: lot.remaining_quantity,
+                    sourceMovementId: lot.source_movement_id,
+                    createdAt: lot.created_at,
+                    updatedAt: lot.updated_at ?? lot.created_at,
+                  });
+                }
+              }
             });
-          }
-
-          // Also pull inventory_lots so FIFO consumption works
-          const { data: lots } = await supabase
-            .from('inventory_lots')
-            .select('*')
-            .in('product_id', data.map((p: Record<string, unknown>) => p.id));
-
-          if (lots && lots.length > 0) {
-            for (const lot of lots) {
-              await db.inventoryLots.put({
-                id: lot.id, tenantId,
-                productId: lot.product_id,
-                quantityAdded: lot.quantity_added,
-                remainingQuantity: lot.remaining_quantity,
-                sourceMovementId: lot.source_movement_id,
-                createdAt: lot.created_at,
-                updatedAt: lot.updated_at ?? lot.created_at,
-              });
-            }
+          } catch {
+            // Si la transacción falla (ej. DB cerrada), simplemente retornamos vacío
+            return success([]);
           }
 
           // re-query Dexie after population
@@ -724,20 +736,25 @@ export const inventoryService = {
         .eq('tenant_id', tenantUuid)
         .is('deleted_at', null);
 
-      if (!error && data && data.length > 0) {
-        for (const prod of data) {
-          await db.products.put({
-            id: prod.id, tenantId,
-            name: prod.name, sku: prod.sku,
-            priceUsd: prod.price_usd,
-            categoryId: prod.category_id,
-            isWeighted: prod.is_weighted,
-            isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
-            isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
-            unit: prod.unit,
-            stock: prod.stock,
-            stockMin: prod.stock_min,
-          });
+      if (!error && data && data.length > 0 && !isDbClosing()) {
+        try {
+          for (const prod of data) {
+            if (isDbClosing()) break;
+            await db.products.put({
+              id: prod.id, tenantId,
+              name: prod.name, sku: prod.sku,
+              priceUsd: prod.price_usd,
+              categoryId: prod.category_id,
+              isWeighted: prod.is_weighted,
+              isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
+              isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
+              unit: prod.unit,
+              stock: prod.stock,
+              stockMin: prod.stock_min,
+            });
+          }
+        } catch {
+          // DB cerrada durante shutdown, ignorar
         }
 
         rows = await db.products

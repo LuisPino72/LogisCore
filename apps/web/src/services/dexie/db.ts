@@ -247,6 +247,7 @@ export class LogisCoreDB extends Dexie {
 }
 
 let dbInstance: LogisCoreDB | null = null;
+let _dbClosing = false;
 
 export function getDb(): LogisCoreDB {
   if (!dbInstance) {
@@ -256,7 +257,15 @@ export function getDb(): LogisCoreDB {
 }
 
 export function isDbReady(): boolean {
-  return dbInstance !== null;
+  return dbInstance !== null && !_dbClosing;
+}
+
+export function isDbClosing(): boolean {
+  return _dbClosing;
+}
+
+export function setDbClosing(closing: boolean): void {
+  _dbClosing = closing;
 }
 
 export function initDb(tenantSlug: string): LogisCoreDB {
@@ -266,15 +275,28 @@ export function initDb(tenantSlug: string): LogisCoreDB {
   if (dbInstance) {
     dbInstance.close();
   }
+  _dbClosing = false;
   dbInstance = new LogisCoreDB(tenantSlug);
   return dbInstance;
 }
 
 export async function destroyDb(): Promise<void> {
   if (dbInstance) {
+    _dbClosing = true;
     const dbName = dbInstance.name;
     dbInstance.close();
     dbInstance = null;
-    await Dexie.delete(dbName);
+
+    try {
+      await Dexie.delete(dbName);
+    } catch {
+      // Si falla el delete (blocked), reintentar después de un segundo
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        await Dexie.delete(dbName);
+      } catch {
+        // Si sigue bloqueado, el SW cerrará la conexión eventualmente
+      }
+    }
   }
 }

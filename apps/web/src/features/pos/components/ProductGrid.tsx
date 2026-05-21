@@ -4,6 +4,7 @@ import { Package, ListTree } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import type { Product } from '../../../specs/inventory';
 import type { Category } from '../../../specs/inventory';
+import type { UserRole } from '@logiscore/core';
 
 const VISIBLE_CATEGORIES = 6;
 
@@ -19,6 +20,7 @@ interface ProductGridProps {
   onToggleFavorite: (productId: string) => void;
   favoriteIds: Set<string>;
   exchangeRateBs: number;
+  role?: UserRole | null;
 }
 
 const PAGE_SIZE = 20;
@@ -35,6 +37,7 @@ export const ProductGrid = memo(function ProductGrid({
   onToggleFavorite,
   favoriteIds,
   exchangeRateBs,
+  role,
 }: ProductGridProps) {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
@@ -178,8 +181,8 @@ export const ProductGrid = memo(function ProductGrid({
         <EmptyState
           icon={<Package size={40} />}
           title="Sin productos"
-          description={searchQuery || selectedCategory ? 'No se encontraron resultados.' : 'Agrega productos desde el módulo de Inventario.'}
-          action={!searchQuery && !selectedCategory ? (
+          description={searchQuery || selectedCategory ? 'No se encontraron resultados.' : role === 'employee' ? 'No hay productos disponibles.' : 'Agrega productos desde el módulo de Inventario.'}
+          action={!searchQuery && !selectedCategory && role !== 'employee' ? (
             <Button variant="primary" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { module: 'inventory' } }))}>
               Ir a Inventario
             </Button>

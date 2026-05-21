@@ -3,7 +3,7 @@ import { emitEngineEvent } from '../audit/emitWithAudit';
 import { flushPendingAudits } from '../audit/auditService';
 import { supabase } from '../supabase/client';
 import { TenantTranslator } from '../tenantTranslator';
-import { getDb } from '../dexie/db';
+import { getDb, isDbClosing } from '../dexie/db';
 import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
 import { networkAware } from '../network/networkAwareService';
@@ -59,6 +59,7 @@ export class SyncEngine {
   async push(batchSize = DEFAULT_BATCH_SIZE): Promise<Result<SyncBatchResult, AppError>> {
     if (this.isSyncing) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
     if (!navigator.onLine) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
+    if (isDbClosing()) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
     this.isSyncing = true;
 
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
@@ -185,6 +186,8 @@ export class SyncEngine {
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
     const db = getDb();
 
+    if (isDbClosing()) return success(result);
+
     // En datos móviles, solo sincronizamos tablas transaccionales (no catálogo)
     // así protegemos los megas del plan del bodeguero
     let tablesToSync = tables ?? PULL_TABLES.map((t) => t.name);
@@ -193,11 +196,14 @@ export class SyncEngine {
     }
 
     for (const tableName of tablesToSync) {
+      if (isDbClosing()) break;
+
       try {
         const tableCfg = PULL_TABLES.find((t) => t.name === tableName);
         const timeCol = tableCfg?.timeCol ?? 'updated_at';
 
         const meta = await db.syncMeta.get(tableName);
+        if (isDbClosing()) break;
         const lastPullAt = meta?.lastPullAt ?? 0;
 
         const since = new Date(lastPullAt).toISOString();
@@ -208,8 +214,9 @@ export class SyncEngine {
 
         const { data, error } = await query;
 
+        if (isDbClosing()) break;
+
         if (error) {
-          // Si no soporta OR (ej. columna deleted_at no existe), intentar solo timeCol
           if (error.message?.includes('deleted_at')) {
             const simpleQuery = supabase
               .from(tableName)
@@ -227,6 +234,7 @@ export class SyncEngine {
                 const fbData = fbResult.data;
                 if (fbData && fbData.length > 0) {
                   for (const record of fbData) {
+                    if (isDbClosing()) break;
                     await this.upsertLocalRecord(tableName, record);
                     result.pushed++;
                   }
@@ -236,6 +244,7 @@ export class SyncEngine {
             }
             if (simpleResult.data && simpleResult.data.length > 0) {
               for (const record of simpleResult.data) {
+                if (isDbClosing()) break;
                 await this.upsertLocalRecord(tableName, record);
                 result.pushed++;
               }
@@ -246,11 +255,14 @@ export class SyncEngine {
         } else {
           if (data && data.length > 0) {
             for (const record of data) {
+              if (isDbClosing()) break;
               await this.upsertLocalRecord(tableName, record);
               result.pushed++;
             }
           }
         }
+
+        if (isDbClosing()) break;
 
         await db.syncMeta.put({ table: tableName, lastPullAt: Date.now() });
         const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
@@ -268,13 +280,13 @@ export class SyncEngine {
   }
 
   private async upsertLocalRecord(tableName: string, record: Record<string, unknown>): Promise<void> {
+    if (isDbClosing()) return;
     const db = getDb();
     const local: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(record)) {
       const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
       local[camel] = val;
     }
-    // Asegurar tenantId en todas las tablas multi-tenant
     if (local.tenantId || record.tenant_id) {
       local.tenantId ??= record.tenant_id;
     }
@@ -316,7 +328,7 @@ export class SyncEngine {
     const interval = networkAware.getSyncInterval();
 
     this.syncTimer = setTimeout(async () => {
-      if (!this.running) return;
+      if (!this.running || isDbClosing()) return;
 
       const pushResult = await this.push();
       if (pushResult.ok) {

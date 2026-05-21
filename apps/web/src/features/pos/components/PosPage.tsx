@@ -286,6 +286,7 @@ export function PosPage({ tenantId }: PosPageProps) {
                 onToggleFavorite={(id) => { if (tenantId) toggleFavorite(tenantId, id); }}
                 favoriteIds={favoriteProductIds}
                 exchangeRateBs={exchangeRateBs}
+                role={role}
               />
             </div>
           </>

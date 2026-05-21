@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { preciseRound, toSnake, generateId, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
-import { getDb } from '../../../services/dexie/db';
+import { getDb, isDbClosing } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -118,24 +118,29 @@ export const posService = {
           .gt('stock', 0)
           .eq('is_sellable', true);
 
-        if (data) {
-          for (const prod of data) {
-            const local = {
-              id: prod.id as string,
-              tenantId,
-              name: prod.name as string,
-              sku: prod.sku as string,
-              priceUsd: prod.price_usd as number,
-              categoryId: prod.category_id as string | undefined,
-              isWeighted: prod.is_weighted as boolean,
-              isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
-              isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
-              unit: prod.unit as Product['unit'],
-              stock: prod.stock as number,
-              stockMin: prod.stock_min as number | undefined,
-              imageUrl: prod.image_url as string | undefined,
-            };
-            await db.products.put(local);
+        if (data && !isDbClosing()) {
+          try {
+            for (const prod of data) {
+              if (isDbClosing()) break;
+              const local = {
+                id: prod.id as string,
+                tenantId,
+                name: prod.name as string,
+                sku: prod.sku as string,
+                priceUsd: prod.price_usd as number,
+                categoryId: prod.category_id as string | undefined,
+                isWeighted: prod.is_weighted as boolean,
+                isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
+                isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
+                unit: prod.unit as Product['unit'],
+                stock: prod.stock as number,
+                stockMin: prod.stock_min as number | undefined,
+                imageUrl: prod.image_url as string | undefined,
+              };
+              await db.products.put(local);
+            }
+          } catch {
+            // DB cerrada durante shutdown, ignorar
           }
           rows = await db.products
             .where({ tenantId })
@@ -461,6 +466,45 @@ export const posService = {
 
     if (existing) {
       return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta para este local.'));
+    }
+
+    // Si no hay caja local pero estamos online, verificar Supabase para evitar 409 en sync
+    if (navigator.onLine) {
+      try {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data: remoteRegister } = await supabase
+          .from('cash_registers')
+          .select('*')
+          .eq('tenant_id', tenantUuid)
+          .is('deleted_at', null)
+          .eq('is_open', true)
+          .maybeSingle();
+
+        if (remoteRegister) {
+          await db.cashRegisters.put({
+            id: remoteRegister.id as string,
+            tenantId,
+            isOpen: remoteRegister.is_open as boolean,
+            openedBy: remoteRegister.opened_by as string | null,
+            openedAt: remoteRegister.opened_at as string | null,
+            openingBalanceBs: remoteRegister.opening_balance_bs as number | null,
+            closedBy: remoteRegister.closed_by as string | null,
+            closedAt: remoteRegister.closed_at as string | null,
+            closingBalanceBs: remoteRegister.closing_balance_bs as number | null,
+            expectedClosingBs: remoteRegister.expected_closing_bs as number | null,
+            differenceBs: remoteRegister.difference_bs as number | null,
+            totalSalesCount: remoteRegister.total_sales_count as number,
+            totalSalesBs: remoteRegister.total_sales_bs as number,
+            totalIgtfBs: remoteRegister.total_igtf_bs as number,
+            createdAt: remoteRegister.created_at as string,
+            updatedAt: remoteRegister.updated_at as string,
+          });
+          return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta en el servidor.'));
+        }
+      } catch {
+        // Si falla la verificación remota, continuar con creación local
+        // El sync fallará con 409 si hay conflicto, lo cual es recuperable
+      }
     }
 
     const id = generateId();
