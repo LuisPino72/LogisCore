@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { imageCacheService } from '../../services/imageCache/imageCacheService';
@@ -25,9 +25,8 @@ export function ImageWithFallback({
   }
   const effectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
 
-  // Sincronización de estado síncrona ante cambios de props para evitar mostrar imágenes de productos anteriores (flicker)
-  const [prevProductId, setPrevProductId] = useState<string | null>(null);
-  const [prevImageUrl, setPrevImageUrl] = useState<string | null>(null);
+  const prevProductIdRef = useRef<string | null>(null);
+  const prevImageUrlRef = useRef<string | null>(null);
 
   const cachedResolved = effectiveImageUrl ? imageCacheService.getResolvedUrl(effectiveImageUrl) : null;
 
@@ -35,15 +34,6 @@ export function ImageWithFallback({
   const [loading, setLoading] = useState(!cachedResolved);
   const [error, setError] = useState(false);
   const [imgReady, setImgReady] = useState(!!cachedResolved);
-
-  if (productId !== prevProductId || imageUrl !== prevImageUrl) {
-    setPrevProductId(productId);
-    setPrevImageUrl(imageUrl || null);
-    setSrc(cachedResolved || null);
-    setLoading(!cachedResolved);
-    setError(false);
-    setImgReady(!!cachedResolved);
-  }
 
   useEffect(() => {
     if (imageUrl) {
@@ -80,6 +70,17 @@ export function ImageWithFallback({
       isActive = false;
     };
   }, [productId, imageUrl]);
+
+  useEffect(() => {
+    if (prevProductIdRef.current !== productId || prevImageUrlRef.current !== (imageUrl || null)) {
+      prevProductIdRef.current = productId;
+      prevImageUrlRef.current = imageUrl || null;
+      setSrc(cachedResolved || null);
+      setLoading(!cachedResolved);
+      setError(false);
+      setImgReady(!!cachedResolved);
+    }
+  }, [productId, imageUrl, cachedResolved]);
 
   const handleLoad = () => {
     setImgReady(true);

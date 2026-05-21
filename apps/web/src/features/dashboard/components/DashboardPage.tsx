@@ -15,7 +15,7 @@ interface DashboardPageProps {
   userEmail?: string;
 }
 
-const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
+const RANK_COLORS = ['#F59E0B', '#94a3b8', '#cd7f32'];
 
 export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, userEmail }) => {
   const session = useAuthStore((s) => s.session);
@@ -91,13 +91,13 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
       ? 'from-amber-50 to-amber-100/50 border-amber-200/60'
       : expiryUrgency === 'warning'
         ? 'from-orange-50 to-orange-100/50 border-orange-200/60'
-        : 'from-blue-50 to-blue-100/50 border-blue-200/60';
+        : 'from-teal-50 to-teal-100/50 border-teal-200/60';
 
   const expiryIconBg = expiryUrgency === 'expired'
     ? 'bg-red-100 text-danger'
     : expiryUrgency === 'critical' || expiryUrgency === 'warning'
       ? 'bg-amber-100 text-warning'
-      : 'bg-blue-100 text-primary';
+      : 'bg-teal-100 text-primary';
 
   const topQty = topProducts.length > 0 ? topProducts[0].totalQty : 1;
 
@@ -118,19 +118,19 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
       {/* Stats: Ganancias de hoy + Suscripción */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Ganancias de hoy */}
-        <Card className="p-4 border bg-linear-to-br from-emerald-50 to-emerald-100/50 border-emerald-200/60 transition-shadow hover:shadow-md">
+        <Card className="p-4 border bg-linear-to-br from-teal-50 to-teal-100/50 border-teal-200/60 transition-shadow hover:shadow-md">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5 min-w-0 flex-1">
               <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">Ganancias de hoy</p>
               {dashboardLoading ? (
                 <div className="skeleton h-6 w-16 rounded mt-1" />
               ) : (
-                <p className="text-xl font-title font-bold text-emerald-700">
+                <p className="text-xl font-title font-bold text-teal-700">
                   {formatUsd(todayEarnings)}
                 </p>
               )}
             </div>
-            <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-600 shrink-0 ml-3">
+            <div className="p-2.5 rounded-xl bg-teal-100 text-teal-600 shrink-0 ml-3">
               <DollarSign size={18} />
             </div>
           </div>
