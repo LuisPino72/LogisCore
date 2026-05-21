@@ -25,12 +25,25 @@ export function ImageWithFallback({
   }
   const effectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
 
+  // Sincronización de estado síncrona ante cambios de props para evitar mostrar imágenes de productos anteriores (flicker)
+  const [prevProductId, setPrevProductId] = useState<string | null>(null);
+  const [prevImageUrl, setPrevImageUrl] = useState<string | null>(null);
+
   const cachedResolved = effectiveImageUrl ? imageCacheService.getResolvedUrl(effectiveImageUrl) : null;
 
   const [src, setSrc] = useState<string | null>(cachedResolved || null);
   const [loading, setLoading] = useState(!cachedResolved);
   const [error, setError] = useState(false);
   const [imgReady, setImgReady] = useState(!!cachedResolved);
+
+  if (productId !== prevProductId || imageUrl !== prevImageUrl) {
+    setPrevProductId(productId);
+    setPrevImageUrl(imageUrl || null);
+    setSrc(cachedResolved || null);
+    setLoading(!cachedResolved);
+    setError(false);
+    setImgReady(!!cachedResolved);
+  }
 
   useEffect(() => {
     if (imageUrl) {
@@ -61,7 +74,6 @@ export function ImageWithFallback({
       if (!isActive) return;
       setSrc(result);
       setLoading(false);
-      setImgReady(false);
     })();
 
     return () => {
@@ -92,7 +104,7 @@ export function ImageWithFallback({
       {showSkeleton && (
         <div
           className={cn(
-            'absolute inset-0 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer',
+            'absolute inset-0 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer z-10',
             skeletonClassName,
           )}
         />
