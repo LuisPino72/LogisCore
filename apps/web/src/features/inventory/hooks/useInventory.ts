@@ -4,6 +4,12 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 import type { ProductFilters } from '../types';
 
+function buildFilters(store: ReturnType<typeof useInventoryStore.getState>, filters?: ProductFilters): ProductFilters | undefined {
+  if (filters) return filters;
+  const q = store.searchQuery;
+  return q ? { query: q } : undefined;
+}
+
 const DEBOUNCE_MS = 300;
 
 export function useInventory(tenantId: string | null) {
@@ -14,8 +20,9 @@ export function useInventory(tenantId: string | null) {
 
   const doFetch = useCallback(async (filters?: ProductFilters) => {
     if (!tenantId) return;
+    const effectiveFilters = buildFilters(useInventoryStore.getState(), filters);
     await Promise.all([
-      store.fetchProducts(tenantId, filters),
+      store.fetchProducts(tenantId, effectiveFilters),
       store.fetchCategories(tenantId),
       store.fetchLowStock(tenantId),
     ]);
