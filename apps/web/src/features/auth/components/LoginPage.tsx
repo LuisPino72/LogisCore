@@ -38,8 +38,8 @@ export function LoginPage() {
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-accent rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-light rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/20 rounded-full" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/10 rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-150 border border-white/20 rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-100 h-100 border border-white/10 rounded-full" />
       </div>
 
       {/* Grid pattern overlay */}
@@ -59,7 +59,7 @@ export function LoginPage() {
             </div>
           ) : (
             <img
-              src="/Sasa con fondo.png"
+              src="/Sasa.png"
               alt="Sasa"
               className="w-16 h-16"
               onError={() => setLogoError(true)}
