@@ -78,23 +78,12 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
 
   const content = (
     <div className="space-y-3">
-      {isOwner && (
-        <SearchInput
-          placeholder="Buscar categoría..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onClear={() => setSearch('')}
-        />
-      )}
-
-      {!isOwner && (
-        <SearchInput
-          placeholder="Buscar categoría..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onClear={() => setSearch('')}
-        />
-      )}
+      <SearchInput
+        placeholder="Buscar categoría..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        onClear={() => setSearch('')}
+      />
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -103,21 +92,20 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
           description={search ? 'No se encontraron categorías con ese nombre' : 'Crea tu primera categoría'}
         />
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {filtered.map((cat) => (
-            <div key={cat.id} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="hidden sm:flex w-8 h-8 rounded-lg bg-primary/10 items-center justify-center shrink-0">
-                  <ListTree size={14} className="text-primary" />
-                </div>
-                <span className="text-sm font-medium truncate">{cat.name}</span>
+            <div key={cat.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-primary/5 transition-colors group border border-transparent hover:border-primary/10">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+                <ListTree size={14} className="text-primary" />
               </div>
+              <span className="text-sm font-medium text-gray-800 truncate flex-1">{cat.name}</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-primary/30 shrink-0" />
               {isOwner && (
-                <div className="flex gap-0.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-8 min-h-8">
+                <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-8 min-h-8" title="Editar">
                     <Edit3 size={14} />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-8 min-h-8">
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-8 min-h-8" title="Eliminar">
                     <Trash2 size={14} className="text-danger" />
                   </Button>
                 </div>

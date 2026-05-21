@@ -10,13 +10,13 @@ interface EmptyStateProps {
 
 export const EmptyState: FC<EmptyStateProps> = ({ icon, title, description, action, className }) => {
   return (
-    <div className={`empty-state ${className}`}>
+    <div className={`empty-state animate-slide-up ${className}`}>
       <div className="empty-state-icon">
         {icon}
       </div>
       <h3 className="empty-state-title">{title}</h3>
       <p className="empty-state-desc">{description}</p>
-      {action && <div>{action}</div>}
+      {action && <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>{action}</div>}
     </div>
   );
 };

@@ -12,6 +12,7 @@ interface ProductListProps {
   categories: Category[];
   onSearch: (query: string, categoryId?: string) => void;
   isOwner: boolean;
+  totalLowStock?: number;
   onNewProduct: () => void;
   onEditProduct: (product: Product) => void;
   onRequestDelete: (id: string, name: string) => void;
@@ -38,7 +39,7 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, isOwner, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
+export function ProductList({ products, categories, onSearch, isOwner, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [page, setPage] = useState(1);
@@ -77,7 +78,10 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
         key: 'name',
         header: 'Producto',
         render: (product) => (
-          <div className="font-medium">{product.name}</div>
+          <div>
+            <div className="font-medium text-gray-900">{product.name}</div>
+            <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
+          </div>
         ),
       },
       {
@@ -168,7 +172,7 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
   }
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-3 p-3 sm:p-4">
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
           <ProductSearchInput value={searchQuery} onChange={handleSearch} />
@@ -185,6 +189,17 @@ export function ProductList({ products, categories, onSearch, isOwner, onNewProd
           </Select>
         </div>
       </div>
+
+      {products.length > 0 && (
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-text-secondary">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
+          {totalLowStock > 0 && (
+            <span className="text-[10px] font-medium text-danger bg-danger/10 px-2 py-0.5 rounded-full">
+              {totalLowStock} con stock bajo
+            </span>
+          )}
+        </div>
+      )}
 
       <DataTable
         columns={columns}

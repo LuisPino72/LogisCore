@@ -3,12 +3,11 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { EmptyState, Card, Badge } from '../../../common/components';
-import { Package, AlertTriangle, DollarSign, Calendar, TrendingUp, ShieldBan } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, ShieldBan } from 'lucide-react';
 import { dashboardService } from '../services/dashboardService';
 import { displayStock } from '../../inventory/types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { EventBus } from '@logiscore/core';
-import { formatUsd } from '@/lib/formatBs';
 
 interface DashboardPageProps {
   tenantId?: string | null;
@@ -40,8 +39,6 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   const {
     tenantInfo,
     subscription,
-    todayEarnings,
-    loading: dashboardLoading,
     error: dashboardError,
   } = useDashboard(tenantId);
 
@@ -73,32 +70,6 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     });
   }, [tenantId]);
 
-  const daysRemaining = subscription?.expires_at
-    ? Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / 86400000)
-    : null;
-
-  const expiryUrgency = daysRemaining !== null && daysRemaining <= 0
-    ? 'expired'
-    : daysRemaining !== null && daysRemaining <= 3
-      ? 'critical'
-      : daysRemaining !== null && daysRemaining <= 7
-        ? 'warning'
-        : 'ok';
-
-  const expiryGradient = expiryUrgency === 'expired'
-    ? 'from-red-50 to-red-100/50 border-red-200/60'
-    : expiryUrgency === 'critical'
-      ? 'from-amber-50 to-amber-100/50 border-amber-200/60'
-      : expiryUrgency === 'warning'
-        ? 'from-orange-50 to-orange-100/50 border-orange-200/60'
-        : 'from-teal-50 to-teal-100/50 border-teal-200/60';
-
-  const expiryIconBg = expiryUrgency === 'expired'
-    ? 'bg-red-100 text-danger'
-    : expiryUrgency === 'critical' || expiryUrgency === 'warning'
-      ? 'bg-amber-100 text-warning'
-      : 'bg-teal-100 text-primary';
-
   const topQty = topProducts.length > 0 ? topProducts[0].totalQty : 1;
 
   return (
@@ -106,6 +77,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
       <WelcomeBanner
         userName={email}
         tenantName={tenantInfo?.name ?? null}
+        subscription={subscription}
       />
 
       {dashboardError && (
@@ -114,66 +86,6 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
           <span className="text-sm">{dashboardError}</span>
         </div>
       )}
-
-      {/* Stats: Ganancias de hoy + Suscripción */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Ganancias de hoy */}
-        <Card className="p-4 border bg-linear-to-br from-teal-50 to-teal-100/50 border-teal-200/60 transition-shadow hover:shadow-md">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1.5 min-w-0 flex-1">
-              <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">Ganancias de hoy</p>
-              {dashboardLoading ? (
-                <div className="skeleton h-6 w-16 rounded mt-1" />
-              ) : (
-                <p className="text-xl font-title font-bold text-teal-700">
-                  {formatUsd(todayEarnings)}
-                </p>
-              )}
-            </div>
-            <div className="p-2.5 rounded-xl bg-teal-100 text-teal-600 shrink-0 ml-3">
-              <DollarSign size={18} />
-            </div>
-          </div>
-        </Card>
-
-        {/* Suscripción */}
-        <Card className={`p-4 border bg-linear-to-br ${expiryGradient} transition-shadow hover:shadow-md`}>
-          <div className="flex items-start justify-between">
-            <div className="space-y-1.5 min-w-0 flex-1">
-              <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">Suscripción</p>
-              {dashboardLoading ? (
-                <div className="skeleton h-6 w-20 rounded mt-1" />
-              ) : daysRemaining === null ? (
-                <p className="text-sm font-semibold text-gray-900">-</p>
-              ) : daysRemaining <= 0 ? (
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold text-danger">VENCIDA</p>
-                  <p className="text-[11px] text-danger leading-tight">
-                    Contacta al <strong>04145180265</strong>
-                  </p>
-                </div>
-              ) : daysRemaining <= 3 ? (
-                <div className="space-y-0.5">
-                  <Badge variant="warning">Vence en {daysRemaining}d</Badge>
-                  <p className="text-[11px] text-warning leading-tight">
-                    Contacta al <strong>04145180265</strong>
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {subscription?.expires_at ? new Date(subscription.expires_at).toLocaleDateString('es-ES') : '-'}
-                  </p>
-                  <p className="text-[11px] text-text-secondary">{daysRemaining} días restantes</p>
-                </div>
-              )}
-            </div>
-            <div className={`p-2.5 rounded-xl shrink-0 ml-3 ${expiryIconBg}`}>
-              <Calendar size={18} />
-            </div>
-          </div>
-        </Card>
-      </div>
 
       {/* Productos más vendidos */}
       <Card>

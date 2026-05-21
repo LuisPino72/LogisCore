@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Input, Modal, Checkbox, Select } from '../../../common/components';
-import { ImagePlus, X, Scan } from 'lucide-react';
+import { ImagePlus, X, Scan, Package, DollarSign, Layers, Settings } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Category, CreateProductInput, Product } from '../types';
@@ -12,6 +12,16 @@ interface ProductFormProps {
   categories: Category[];
   editProduct?: Product | null;
 }
+
+const SectionDivider = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+  <div className="flex items-center gap-2 pt-2">
+    <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+      {icon}
+    </div>
+    <h3 className="text-xs font-title font-semibold text-gray-700 uppercase tracking-wide">{title}</h3>
+    <div className="flex-1 h-px bg-gray-100" />
+  </div>
+);
 
 export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct }: ProductFormProps) {
   const isEditing = !!editProduct;
@@ -76,46 +86,46 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       }
     >
       <div className="space-y-4">
-        <div className="input-wrapper text-center">
-          <label className="input-label text-center">Nombre del producto</label>
-          <Input
-            placeholder="Ej: Harina PAN"
-            value={formData.name}
-            onChange={(e) => setField('name', e.target.value)}
-            error={errors.name}
-            validation={{ required: true, maxLength: 50 }}
-            inputClassName="text-sm px-2 py-2"
-          />
-        </div>
+        {/* Section: Identidad */}
+        <SectionDivider icon={<Package size={14} className="text-primary" />} title="Identidad" />
 
-        {/* Image upload */}
-        <div className="input-wrapper">
-          <label className="input-label">Foto del producto</label>
-          <div className="flex items-center gap-3">
-            {imagePreview ? (
-              <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200">
-                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-0 right-0 w-5 h-5 bg-gray-900/60 text-white rounded-bl-lg flex items-center justify-center"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ) : (
-              <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors shrink-0">
-                <ImagePlus size={20} className="text-gray-400" />
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
-              </label>
-            )}
-            <p className="text-[10px] text-gray-400">JPG, PNG o WebP. Se comprime automáticamente.</p>
+        <div className="flex items-center gap-3">
+          {imagePreview ? (
+            <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 border-primary/20 shadow-sm">
+              <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={removeImage}
+                className="absolute top-0 right-0 w-5 h-5 bg-gray-900/60 text-white rounded-bl-lg flex items-center justify-center hover:bg-danger transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ) : (
+            <label className="w-14 h-14 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all shrink-0">
+              <ImagePlus size={18} className="text-gray-400" />
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
+            </label>
+          )}
+          <div className="flex-1 min-w-0">
+            <Input
+              placeholder="Nombre del producto"
+              value={formData.name}
+              onChange={(e) => setField('name', e.target.value)}
+              error={errors.name}
+              validation={{ required: true, maxLength: 50 }}
+              inputClassName="text-sm"
+            />
           </div>
         </div>
+        <p className="text-[10px] text-gray-400 -mt-2">JPG, PNG o WebP. Se comprime automáticamente.</p>
+
+        {/* Section: Precio y Código */}
+        <SectionDivider icon={<DollarSign size={14} className="text-primary" />} title="Precio y código" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="input-wrapper">
-            <label className="input-label text-center">Código de barra (sku)</label>
+            <label className="input-label">Código de barras (SKU)</label>
             <div className="flex items-center gap-1">
               <Input
                 placeholder="Ej: HP-001"
@@ -123,16 +133,15 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 onChange={(e) => setField('sku', e.target.value)}
                 error={errors.sku}
                 validation={{ required: true, maxLength: 50 }}
-                inputClassName="text-sm px-2 py-2 flex-1"
+                inputClassName="text-sm"
               />
-              <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="flex flex-col items-center justify-center shrink-0 p-1.5 min-w-13 h-auto" title="Escanear código de barras">
-                <span className="text-[9px] leading-none text-text-secondary mb-0.5">Escanear</span>
-                <Scan size={20} />
+              <Button variant="outline" size="sm" onClick={() => setShowBarcodeScanner(true)} className="shrink-0 px-2" title="Escanear código de barras">
+                <Scan size={16} />
               </Button>
             </div>
           </div>
           <div className="input-wrapper">
-            <label className="input-label text-center">Precio USD</label>
+            <label className="input-label">Precio USD</label>
             <Input
               type="number"
               step="0.01"
@@ -142,10 +151,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               onChange={(e) => setField('priceUsd', parseFloat(e.target.value) || 0)}
               error={errors.priceUsd}
               validation={{ required: true, min: 0.01, max: 9999 }}
-              inputClassName="text-sm px-2 py-2"
+              inputClassName="text-sm"
             />
           </div>
         </div>
+
+        {/* Section: Stock y Categoría */}
+        <SectionDivider icon={<Layers size={14} className="text-primary" />} title="Stock y categoría" />
 
         <div className="input-wrapper">
           <label className="input-label">Tipo de producto</label>
@@ -209,36 +221,38 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           </Select>
         </div>
 
-          {Object.keys(errors).length > 0 && (
-            <div className="text-xs text-danger space-y-1">
-              {Object.entries(errors).map(([key, msg]) => (
-                <p key={key}>{msg}</p>
-              ))}
-            </div>
-          )}
+        {/* Section: Configuración */}
+        <SectionDivider icon={<Settings size={14} className="text-primary" />} title="Configuración" />
 
-          <div className="input-wrapper">
-            <Checkbox
-              label="Producto gravado con IVA"
-              checked={formData.isTaxable}
-              onChange={(e) => setField('isTaxable', e.target.checked)}
-            />
-            <p className="text-[10px] text-gray-400 mt-0.5">
-              Desmarca esta casilla si el producto está exento de IVA (ej: alimentos de la cesta básica).
-            </p>
+        {Object.keys(errors).length > 0 && (
+          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger space-y-0.5">
+            {Object.entries(errors).map(([key, msg]) => (
+              <p key={key}><strong>{key}:</strong> {msg}</p>
+            ))}
           </div>
+        )}
 
-          <div className="input-wrapper">
-            <Checkbox
-              label="Disponible para venta"
-              checked={formData.isSellable}
-              onChange={(e) => setField('isSellable', e.target.checked)}
-            />
-            <p className="text-[10px] text-gray-400 mt-0.5">
-              Desmarca si este producto es para consumo propio y no debe aparecer en el POS.
-            </p>
-          </div>
+        <div className="input-wrapper">
+          <Checkbox
+            label="Producto gravado con IVA"
+            checked={formData.isTaxable}
+            onChange={(e) => setField('isTaxable', e.target.checked)}
+          />
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            Desmarca si el producto está exento de IVA (ej: alimentos de la cesta básica).
+          </p>
+        </div>
 
+        <div className="input-wrapper">
+          <Checkbox
+            label="Disponible para venta"
+            checked={formData.isSellable}
+            onChange={(e) => setField('isSellable', e.target.checked)}
+          />
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            Desmarca si este producto es para consumo propio y no debe aparecer en el POS.
+          </p>
+        </div>
       </div>
 
       <BarcodeScannerModal

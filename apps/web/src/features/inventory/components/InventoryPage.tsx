@@ -134,9 +134,9 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
   if (loading && products.length === 0) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Inventario</h1>
+          <h1 className="text-lg font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Inventario</h1>
         </div>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -148,22 +148,22 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6 pb-20 sm:pb-0">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            {activeTab === 'categorias' ? <ListTree size={22} className="text-primary" /> : <Package size={22} className="text-primary" />}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            {activeTab === 'categorias' ? <ListTree size={18} className="text-primary" /> : <Package size={18} className="text-primary" />}
           </div>
-          <div>
-            <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>
               {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
             </h1>
-            <p className="text-xs text-text-secondary">
+            <p className="text-[11px] text-text-secondary hidden sm:block">
               {activeTab === 'categorias' ? 'Gestiona tus categorías' : activeTab === 'historial' ? 'Movimientos de stock' : 'Gestiona productos y stock'}
             </p>
             {totalLowStock > 0 && activeTab === 'productos' && (
-              <div className="mt-1">
+              <div className="mt-0.5">
                 <LowStockBadge count={totalLowStock} onClick={() => setShowLowStockModal(true)} />
               </div>
             )}
@@ -180,46 +180,46 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       </div>
 
       {/* Desktop tabs */}
-      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-14 z-10">
+      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-14 z-10 shadow-sm">
         <Tooltip content="Gestiona productos y stock" position="bottom">
           <button
             type="button"
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200 ${
               activeTab === 'productos'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-text-secondary hover:text-gray-700'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
             }`}
             onClick={() => setActiveTab('productos')}
           >
-            <Package size={20} />
+            <Package size={18} />
             Productos
           </button>
         </Tooltip>
         <Tooltip content="Organiza productos por categorías" position="bottom">
           <button
             type="button"
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200 ${
               activeTab === 'categorias'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-text-secondary hover:text-gray-700'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
             }`}
             onClick={() => setActiveTab('categorias')}
           >
-            <ListTree size={20} />
+            <ListTree size={18} />
             Categorías
           </button>
         </Tooltip>
         <Tooltip content="Movimientos y ajustes de stock" position="bottom">
           <button
             type="button"
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200 ${
               activeTab === 'historial'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-text-secondary hover:text-gray-700'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
             }`}
             onClick={() => setActiveTab('historial')}
           >
-            <History size={20} />
+            <History size={18} />
             Historial
           </button>
         </Tooltip>
@@ -232,6 +232,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             categories={categories}
             onSearch={search}
             isOwner={isOwner}
+            totalLowStock={totalLowStock}
             onNewProduct={openNewProduct}
             onEditProduct={openEditProduct}
             onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}

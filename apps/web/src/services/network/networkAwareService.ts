@@ -24,25 +24,21 @@ export interface NetworkState {
 class NetworkAwareService {
   private state: NetworkState;
   private listeners = new Set<(state: NetworkState) => void>();
-  private healthCheckTimer: ReturnType<typeof setInterval> | null = null;
-  private healthCheckFails = 0;
 
   private readonly WIFI_INTERVAL = 5000;
   private readonly CELLULAR_4G_INTERVAL = 15000;
   private readonly CELLULAR_3G_INTERVAL = 30000;
   private readonly CELLULAR_2G_INTERVAL = 60000;
-  private readonly OFFLINE_CHECK_INTERVAL = 30000;
 
   constructor() {
     this.state = this.detectNetwork();
     this.setupListeners();
-    this.startHealthCheck();
     logger.info('[NetworkAware]', `Inicializado: ${this.state.connectionType}, ${this.state.effectiveType}, perfil: ${this.state.syncProfile}`);
   }
 
   private detectNetwork(): NetworkState {
     const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
-    const online = navigator.onLine && this.healthCheckFails < 2;
+    const online = navigator.onLine;
 
     let connectionType: ConnectionType = 'unknown';
     let effectiveType: EffectiveType = 'unknown';
@@ -89,7 +85,6 @@ class NetworkAwareService {
   private setupListeners(): void {
     window.addEventListener('online', () => {
       logger.info('[NetworkAware]', 'Evento online detectado');
-      this.healthCheckFails = 0;
       this.emitChange();
     });
     window.addEventListener('offline', () => {
@@ -103,48 +98,6 @@ class NetworkAwareService {
         logger.info('[NetworkAware]', 'Cambio en Connection API');
         this.emitChange();
       });
-    }
-  }
-
-  private startHealthCheck(): void {
-    this.healthCheckTimer = setInterval(() => this.checkHealth(), this.OFFLINE_CHECK_INTERVAL);
-  }
-
-  private async checkHealth(): Promise<void> {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) return;
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-
-      const res = await fetch(`${supabaseUrl}/`, {
-        method: 'HEAD',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (res.ok) {
-        const wasOffline = this.healthCheckFails >= 2;
-        this.healthCheckFails = 0;
-        if (wasOffline) {
-          logger.info('[NetworkAware]', 'Health check recuperado');
-          this.emitChange();
-        }
-      } else {
-        this.healthCheckFails++;
-        if (this.healthCheckFails === 2) {
-          logger.warn('[NetworkAware]', 'Health check: 2 fallos consecutivos, modo offline forzado');
-          this.emitChange();
-        }
-      }
-    } catch {
-      this.healthCheckFails++;
-      if (this.healthCheckFails === 2) {
-        logger.warn('[NetworkAware]', 'Health check: 2 fallos consecutivos (error), modo offline forzado');
-        this.emitChange();
-      }
     }
   }
 
@@ -192,7 +145,6 @@ class NetworkAwareService {
   }
 
   destroy(): void {
-    if (this.healthCheckTimer) clearInterval(this.healthCheckTimer);
     this.listeners.clear();
   }
 }

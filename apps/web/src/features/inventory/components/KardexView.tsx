@@ -165,17 +165,17 @@ export function KardexView({ productId, productName, unit }: KardexViewProps) {
     <div className="space-y-4">
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200/60 text-center">
+        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-center">
           <p className="text-[10px] text-text-secondary uppercase tracking-wide">Entradas</p>
-          <p className="text-base font-bold text-emerald-700">{displayQty(totalEntries, unit)} {label}</p>
+          <p className="text-base font-bold text-primary">{displayQty(totalEntries, unit)} {label}</p>
         </div>
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200/60 text-center">
+        <div className="p-3 rounded-lg bg-danger/5 border border-danger/20 text-center">
           <p className="text-[10px] text-text-secondary uppercase tracking-wide">Salidas</p>
-          <p className="text-base font-bold text-red-700">{displayQty(totalExits, unit)} {label}</p>
+          <p className="text-base font-bold text-danger">{displayQty(totalExits, unit)} {label}</p>
         </div>
-        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200/60 text-center">
+        <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 text-center">
           <p className="text-[10px] text-text-secondary uppercase tracking-wide">Saldo</p>
-          <p className="text-base font-bold text-blue-700">{displayQty(currentBalance, unit)} {label}</p>
+          <p className="text-base font-bold text-accent-dark">{displayQty(currentBalance, unit)} {label}</p>
         </div>
       </div>
 

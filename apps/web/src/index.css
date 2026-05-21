@@ -279,6 +279,12 @@ aside img[alt="Emblema"] { width: 20px; height: 20px; }
 .search-input:focus { @apply border-primary ring-4 ring-primary/15; }
 .search-input-clear { @apply absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors; }
 
+/* ───────────────────── TAB BAR ───────────────────── */
+.tab-bar { @apply flex overflow-x-auto gap-1 border-b border-gray-200; }
+.tab-item { @apply flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors min-h-11; }
+.tab-item-active { @apply border-primary text-primary; }
+.tab-item-inactive { @apply border-transparent text-gray-500 hover:text-gray-700; }
+
 /* ───────────────────── CHECKBOX / RADIO ───────────────────── */
 .checkbox-wrapper { @apply flex items-center gap-2 cursor-pointer select-none; }
 .checkbox { @apply h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30 accent-primary transition-all duration-150; }

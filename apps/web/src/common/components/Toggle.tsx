@@ -13,7 +13,7 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
   ...props
 }, ref) => {
   return (
-    <label className={cn('flex items-center gap-3 cursor-pointer select-none min-h-[44px]', className)}>
+    <label className={cn('flex items-center gap-3 cursor-pointer select-none min-h-11', className)}>
       <div className="relative flex items-center">
         <input
           ref={ref}
@@ -22,7 +22,7 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
           {...props}
         />
         <div className={cn(
-          'rounded-full bg-gray-300 peer-checked:bg-primary transition-colors',
+          'rounded-full bg-border peer-checked:bg-primary transition-colors',
           size === 'sm' ? 'w-9 h-5' : 'w-11 h-6',
         )}>
           <div className={cn(
@@ -31,7 +31,7 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
           )} />
         </div>
       </div>
-      {label && <span className="text-sm text-gray-700">{label}</span>}
+      {label && <span className="text-sm text-text">{label}</span>}
     </label>
   );
 });
