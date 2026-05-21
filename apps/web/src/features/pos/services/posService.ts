@@ -2,6 +2,7 @@ import { type Result, success, failure, AppError } from '@logiscore/core';
 import { preciseRound, toSnake, generateId, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
+import { syncEngine } from '../../../services/sync/syncEngine';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
@@ -421,6 +422,9 @@ export const posService = {
         tenantId,
         tenantUuid,
       });
+
+      // Push inmediato para que la venta llegue a la nube sin esperar el timer
+      syncEngine.pushNow().catch(() => {});
 
       return success({
         id: saleId,

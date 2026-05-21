@@ -6,12 +6,13 @@ import { TenantTranslator } from '../tenantTranslator';
 import { getDb } from '../dexie/db';
 import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
+import { networkAware } from '../network/networkAwareService';
 import type {
   SyncQueueItem,
   SyncBatchResult,
   SyncTableConfig,
 } from './types';
-import { DEFAULT_BATCH_SIZE, SYNC_INTERVAL_MS } from './types';
+import { DEFAULT_BATCH_SIZE } from './types';
 
 // Tablas que se sincronizan bidireccionalmente (pull + push)
 // Cada entrada define qué columna usar para incremental fetch
@@ -27,11 +28,15 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'purchase_order_items', timeCol: 'updated_at' },
 ];
 
+// Tablas de catálogo que se omiten en pull cuando estamos en datos móviles
+const CATALOG_TABLES = new Set(['products', 'categories', 'suppliers', 'purchase_orders', 'purchase_order_items']);
+
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();
   private isSyncing = false;
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
+  private unsubscribeNetwork: (() => void) | null = null;
 
   registerTable(config: SyncTableConfig): void {
     this.configs.set(config.name, config);
@@ -169,12 +174,22 @@ export class SyncEngine {
     }
   }
 
+  /** Push inmediato (bajo demanda) — para operaciones críticas como completar una venta */
+  async pushNow(batchSize = DEFAULT_BATCH_SIZE): Promise<Result<SyncBatchResult, AppError>> {
+    return this.push(batchSize);
+  }
+
   async pull(tables?: string[]): Promise<Result<SyncBatchResult, AppError>> {
-    if (!navigator.onLine) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
+    if (!networkAware.isOnline()) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
     const db = getDb();
 
-    const tablesToSync = tables ?? PULL_TABLES.map((t) => t.name);
+    // En datos móviles, solo sincronizamos tablas transaccionales (no catálogo)
+    // así protegemos los megas del plan del bodeguero
+    let tablesToSync = tables ?? PULL_TABLES.map((t) => t.name);
+    if (networkAware.isMobileData()) {
+      tablesToSync = tablesToSync.filter((t) => !CATALOG_TABLES.has(t));
+    }
 
     for (const tableName of tablesToSync) {
       try {
@@ -269,6 +284,16 @@ export class SyncEngine {
     if (this.running) return;
     this.running = true;
     this.pull().catch(() => {});
+
+    // Reaccionar a cambios de red para re-sincronizar al recuperar WiFi
+    this.unsubscribeNetwork = networkAware.onChange((state) => {
+      if (state.online && !networkAware.isMobileData()) {
+        // Al volver a WiFi, hacemos un pull completo para ponernos al día
+        this.pull().catch(() => {});
+      }
+      // El scheduleNext() ya usa getSyncInterval() que se adapta automáticamente
+    });
+
     this.scheduleNext();
   }
 
@@ -278,10 +303,16 @@ export class SyncEngine {
       clearTimeout(this.syncTimer);
       this.syncTimer = null;
     }
+    if (this.unsubscribeNetwork) {
+      this.unsubscribeNetwork();
+      this.unsubscribeNetwork = null;
+    }
   }
 
   private scheduleNext(): void {
     if (!this.running) return;
+
+    const interval = networkAware.getSyncInterval();
 
     this.syncTimer = setTimeout(async () => {
       if (!this.running) return;
@@ -291,12 +322,12 @@ export class SyncEngine {
         await this.pull();
       }
 
-      if (navigator.onLine) {
+      if (networkAware.isOnline()) {
         await flushPendingAudits();
       }
 
       this.scheduleNext();
-    }, SYNC_INTERVAL_MS);
+    }, interval);
   }
 
   getIsSyncing(): boolean {

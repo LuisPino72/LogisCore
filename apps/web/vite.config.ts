@@ -32,6 +32,24 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,svg,png,woff2}'],
         navigateFallback: '/index.html',
         maximumFileSizeToCacheInBytes: 4.5 * 1024 * 1024, // 4.5 MB
+        runtimeCaching: [
+          {
+            // Cachea las imágenes de productos de Supabase Storage con StaleWhileRevalidate
+            // Sirve de respaldo offline cuando imageCacheService no las ha precargado
+            urlPattern: /\/storage\/v1\/object\/public\/Products\/[^?]+/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'logiscore-supabase-images',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 días
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
     }),
   ],
