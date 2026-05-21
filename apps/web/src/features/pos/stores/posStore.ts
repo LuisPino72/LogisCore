@@ -11,8 +11,8 @@ const MAX_PARKED_CARTS = 10;
 
 interface PosStore extends PosState {
   setSearchQuery: (query: string) => void;
-  fetchProducts: (tenantId: string) => Promise<void>;
-  fetchCashRegister: (tenantId: string) => Promise<void>;
+  fetchProducts: (tenantId: string, silent?: boolean) => Promise<void>;
+  fetchCashRegister: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchExchangeRate: (tenantId: string) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
@@ -52,8 +52,8 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   setSearchQuery: (query) => set({ searchQuery: query }),
 
-  fetchProducts: async (tenantId) => {
-    set({ loading: true, error: null });
+  fetchProducts: async (tenantId, silent = false) => {
+    if (!silent) set({ loading: true, error: null });
     const result = await posService.getProductsForSale(tenantId);
     if (result.ok) {
       const favResult = await posService.getFavorites(tenantId);
@@ -63,19 +63,19 @@ export const usePosStore = create<PosStore>((set, get) => ({
         const bFav = favIds.has(b.id) ? 1 : 0;
         return bFav - aFav;
       });
-      set({ products: sorted, favoriteProductIds: favIds, loading: false });
+      set({ products: sorted, favoriteProductIds: favIds, ...(!silent && { loading: false }) });
       imageCacheService.preloadAll(result.data);
-    } else {
+    } else if (!silent) {
       set({ loading: false, error: result.error.message });
     }
   },
 
-  fetchCashRegister: async (tenantId) => {
-    set({ loading: true, error: null });
+  fetchCashRegister: async (tenantId, silent = false) => {
+    if (!silent) set({ loading: true, error: null });
     const result = await posService.getCashRegister(tenantId);
     if (result.ok) {
-      set({ cashRegister: result.data, loading: false });
-    } else {
+      set({ cashRegister: result.data, ...(!silent && { loading: false }) });
+    } else if (!silent) {
       set({ loading: false, error: result.error.message });
     }
   },
@@ -249,7 +249,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
       if (activeId) {
         await posService.deleteParkedCart(activeId);
       }
-      set({ loading: false, cart: [], exchangeRate: null, activeParkedCartId: null });
+      set({ loading: false, cart: [], activeParkedCartId: null });
       if (activeId) {
         const remaining = get().parkedCarts.filter((p) => p.id !== activeId);
         set({ parkedCarts: remaining });

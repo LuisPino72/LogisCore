@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { Button, Badge, Modal, DataTable, EmptyState, Skeleton, Input } from '../../../common/components';
 import { Eye, Ban, Calendar } from 'lucide-react';
+import { useDebounce } from '../../../common/hooks/useDebounce';
 import type { Column } from '../../../common/components';
 import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
@@ -20,7 +21,7 @@ interface SalesHistoryProps {
   canVoid: boolean;
 }
 
-export function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid }: SalesHistoryProps) {
+export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid }: SalesHistoryProps) {
   const [page, setPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
@@ -29,6 +30,9 @@ export function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid 
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  const debouncedStartDate = useDebounce(startDate, 400);
+  const debouncedEndDate = useDebounce(endDate, 400);
 
   const fetchSalesHistory = usePosStore((s) => s.fetchSalesHistory);
 
@@ -39,12 +43,12 @@ export function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid 
 
   useEffect(() => {
     setPage(1);
-  }, [startDate, endDate, tenantId]);
+  }, [debouncedStartDate, debouncedEndDate, tenantId]);
 
   useEffect(() => {
     const offset = (page - 1) * PAGE_SIZE;
-    fetchSalesHistory(tenantId, offset, PAGE_SIZE, startDate || undefined, endDate || undefined);
-  }, [page, tenantId, fetchSalesHistory, startDate, endDate]);
+    fetchSalesHistory(tenantId, offset, PAGE_SIZE, debouncedStartDate || undefined, debouncedEndDate || undefined);
+  }, [page, tenantId, fetchSalesHistory, debouncedStartDate, debouncedEndDate]);
 
   const handleView = async (sale: Sale) => {
     setSelectedSale(sale);
@@ -245,4 +249,4 @@ export function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid 
       </Modal>
     </div>
   );
-}
+});

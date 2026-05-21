@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Button, Input } from '../../../common/components';
 import { Trash2, Minus, Plus } from 'lucide-react';
 import type { CartItem } from '../types';
@@ -9,7 +10,7 @@ interface CartItemRowProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
 }
 
-export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
+export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
   const step = item.isWeighted ? 0.01 : 1;
   const decimals = item.isWeighted ? 2 : 0;
 
@@ -40,43 +41,43 @@ export function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowPro
         <p className="text-xs text-gray-500">
           {item.isWeighted ? item.unit : 'u'} x {formatUsd(item.unitPriceUsd)}
         </p>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => handleStep(-step)}
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors shadow-xs"
             aria-label="Reducir cantidad"
           >
-            <Minus size={14} />
+            <Minus size={16} />
           </button>
-          <div className="w-14">
+          <div className="w-16">
             <Input
               type="text"
               inputMode="decimal"
               step={step}
               value={item.quantity}
               onChange={handleChange}
-              className="text-center py-1 text-sm"
+              className="text-center py-1.5 text-sm font-semibold"
             />
           </div>
           <button
             type="button"
             onClick={() => handleStep(step)}
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-alt hover:bg-gray-200 active:bg-gray-300 transition-colors shadow-xs"
             aria-label="Aumentar cantidad"
           >
-            <Plus size={14} />
+            <Plus size={16} />
           </button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onRemove(item.productId)}
-            className="p-2 min-w-10 min-h-10 ml-1"
+            className="p-2.5 min-w-11 min-h-11 ml-1"
           >
-            <Trash2 size={14} className="text-danger" />
+            <Trash2 size={16} className="text-danger" />
           </Button>
         </div>
       </div>
     </div>
   );
-}
+});

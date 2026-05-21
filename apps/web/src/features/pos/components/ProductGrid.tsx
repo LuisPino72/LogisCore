@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { SearchInput, EmptyState, Skeleton, Badge, Modal, Button, Pagination } from '../../../common/components';
+import { useState, useEffect, memo } from 'react';
+import { SearchInput, EmptyState, Skeleton, Modal, Button, Pagination } from '../../../common/components';
 import { Package, ListTree } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import type { Product } from '../../../specs/inventory';
@@ -23,7 +23,7 @@ interface ProductGridProps {
 
 const PAGE_SIZE = 20;
 
-export function ProductGrid({
+export const ProductGrid = memo(function ProductGrid({
   products,
   categories,
   selectedCategory,
@@ -74,19 +74,36 @@ export function ProductGrid({
       {categories.length > 0 && (
         <>
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <button type="button" onClick={() => onCategoryChange(null)} className="shrink-0 min-h-11 px-1 flex items-center">
-              <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
+            <button
+              type="button"
+              onClick={() => onCategoryChange(null)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+                selectedCategory === null
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+              }`}
+            >
+              Todos
             </button>
             {visibleCategories.map((cat) => (
-              <button key={cat.id} type="button" onClick={() => onCategoryChange(cat.id)} className="shrink-0 min-h-11 px-1 flex items-center">
-                <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => onCategoryChange(cat.id)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+                  selectedCategory === cat.id
+                    ? 'bg-primary text-white border-primary shadow-sm'
+                    : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+                }`}
+              >
+                {cat.name}
               </button>
             ))}
             {hasMoreCategories && (
               <button
                 type="button"
                 onClick={() => setShowAllCategories(true)}
-                className="shrink-0 min-h-11 flex items-center gap-1 px-2 rounded-full bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 transition-colors"
+                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-white text-text-secondary hover:border-primary/30 hover:text-primary transition-all"
               >
                 <ListTree size={12} />
                 +{categories.length - VISIBLE_CATEGORIES}
@@ -108,30 +125,43 @@ export function ProductGrid({
                 onClear={() => setCategorySearch('')}
               />
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => { onCategoryChange(null); setShowAllCategories(false); setCategorySearch(''); }}
-                  className="shrink-0"
-                >
-                  <Badge variant={selectedCategory === null ? 'info' : 'neutral'}>Todos</Badge>
-                </button>
-                {categories
-                  .filter((cat) => cat.name.toLowerCase().includes(categorySearch.toLowerCase()))
-                  .map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => { onCategoryChange(cat.id); setShowAllCategories(false); setCategorySearch(''); }}
-                      className="shrink-0"
-                    >
-                      <Badge variant={selectedCategory === cat.id ? 'info' : 'neutral'}>{cat.name}</Badge>
-                    </button>
-                  ))}
-                {categories.filter((cat) => cat.name.toLowerCase().includes(categorySearch.toLowerCase())).length === 0 && (
-                  <div className="w-full text-center text-sm text-gray-400 py-4">
-                    No se encontraron categorías
-                  </div>
-                )}
+                {(() => {
+                  const filtered = categories.filter((cat) => cat.name.toLowerCase().includes(categorySearch.toLowerCase()));
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { onCategoryChange(null); setShowAllCategories(false); setCategorySearch(''); }}
+                        className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          selectedCategory === null
+                            ? 'bg-primary text-white border-primary shadow-sm'
+                            : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+                        }`}
+                      >
+                        Todos
+                      </button>
+                      {filtered.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => { onCategoryChange(cat.id); setShowAllCategories(false); setCategorySearch(''); }}
+                          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                            selectedCategory === cat.id
+                              ? 'bg-primary text-white border-primary shadow-sm'
+                              : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+                          }`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                      {filtered.length === 0 && (
+                        <div className="w-full text-center text-sm text-gray-400 py-4">
+                          No se encontraron categorías
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </Modal>
@@ -176,4 +206,4 @@ export function ProductGrid({
       )}
     </div>
   );
-}
+});

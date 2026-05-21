@@ -215,15 +215,15 @@ export function PosPage({ tenantId }: PosPageProps) {
             </Button>
           </Tooltip>
           <div className="flex-1" />
-          <div className="hidden md:flex items-center gap-1 border-b border-gray-200">
+          <div className="hidden md:flex items-center gap-1.5 bg-surface-alt/80 rounded-full p-1 shadow-sm">
             <Tooltip content="Registrar ventas" position="bottom">
               <button
                 type="button"
                 onClick={() => setActiveTab('sell')}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all ${
                   activeTab === 'sell'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-text-secondary hover:text-gray-700'
+                    ? 'bg-white text-primary shadow-sm'
+                    : 'text-text-secondary hover:text-gray-700'
                 }`}
               >
                 <Package size={16} />
@@ -234,10 +234,10 @@ export function PosPage({ tenantId }: PosPageProps) {
               <button
                 type="button"
                 onClick={() => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); }}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all ${
                   activeTab === 'history'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-text-secondary hover:text-gray-700'
+                    ? 'bg-white text-primary shadow-sm'
+                    : 'text-text-secondary hover:text-gray-700'
                 }`}
               >
                 <HistoryIcon size={16} />

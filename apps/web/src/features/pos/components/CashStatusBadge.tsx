@@ -1,5 +1,3 @@
-import { Badge } from '../../../common/components';
-
 interface CashStatusBadgeProps {
   isOpen: boolean;
   onClick: () => void;
@@ -8,26 +6,28 @@ interface CashStatusBadgeProps {
 
 export function CashStatusBadge({ isOpen, onClick, role }: CashStatusBadgeProps) {
   const canInteract = role === 'owner' || role === 'admin';
+  const classes = isOpen
+    ? 'bg-gradient-to-r from-primary to-primary-light text-white shadow-xs'
+    : 'bg-gradient-to-r from-danger to-red-400 text-white shadow-xs';
+  const dot = isOpen ? 'bg-green-200' : 'bg-red-200';
 
   if (canInteract) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className="w-full text-left px-3 py-2 hover:bg-white/5 transition-colors"
+        className={`w-full text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} hover:opacity-90 transition-all flex items-center gap-1.5`}
       >
-        <Badge variant={isOpen ? 'success' : 'danger'} dot>
-          {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
-        </Badge>
+        <span className={`w-1.5 h-1.5 rounded-full ${dot} animate-pulse`} />
+        {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
       </button>
     );
   }
 
   return (
-    <div className="w-full text-left px-3 py-2">
-      <Badge variant={isOpen ? 'success' : 'danger'} dot>
-        {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
-      </Badge>
+    <div className={`w-full text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} flex items-center gap-1.5`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dot} animate-pulse`} />
+      {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
     </div>
   );
 }

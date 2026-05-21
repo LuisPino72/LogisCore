@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Star } from 'lucide-react';
 import { Card, Badge, ImageWithFallback } from '../../../common/components';
 import type { Product } from '../../../specs/inventory';
@@ -12,7 +13,7 @@ interface ProductCardProps {
   exchangeRateBs: number;
 }
 
-export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs }: ProductCardProps) {
   const priceBs = exchangeRateBs > 0
     ? formatBs(product.priceUsd * exchangeRateBs)
     : null;
@@ -43,12 +44,12 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
           e.stopPropagation();
           onToggleFavorite(product.id);
         }}
-        className="absolute top-1.5 right-1.5 z-20 min-w-11 min-h-11 flex items-center justify-center rounded-full bg-white/80 hover:bg-white active:bg-white transition-colors shadow-sm"
+        className="absolute top-1.5 right-1.5 z-20 min-w-11 min-h-11 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-white active:bg-white transition-colors shadow-sm"
         aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
       >
         <Star
           size={16}
-          className={isFavorite ? 'text-warning fill-warning' : 'text-gray-400'}
+          className={`transition-all ${isFavorite ? 'text-accent fill-accent drop-shadow-sm' : 'text-gray-300'}`}
         />
       </button>
 
@@ -62,13 +63,13 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
         />
 
         {product.isTaxable && (
-          <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-info/80 text-white text-[10px] font-semibold leading-none z-10">
+          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-primary/85 text-white text-[10px] font-semibold leading-none z-10 shadow-xs">
             IVA
           </span>
         )}
 
         {product.isWeighted && (
-          <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-accent/80 text-white text-[10px] font-semibold leading-none z-10">
+          <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-accent/85 text-white text-[10px] font-semibold leading-none z-10 shadow-xs">
             {product.unit}
           </span>
         )}
@@ -80,11 +81,11 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
         </p>
 
         <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-bold text-primary">
+          <p className="text-base font-bold text-primary">
             {formatUsd(product.priceUsd)}
           </p>
           {priceBs && (
-            <p className="text-xs text-gray-500 leading-none">{priceBs}</p>
+            <p className="text-xs text-text-muted leading-none">{priceBs}</p>
           )}
         </div>
 
@@ -99,4 +100,4 @@ export function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exch
       </div>
     </Card>
   );
-}
+});

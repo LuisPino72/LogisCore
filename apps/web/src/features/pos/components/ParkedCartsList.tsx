@@ -27,19 +27,26 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
         <h4 className="text-sm font-semibold text-gray-700">Ventas en cola</h4>
         <Badge variant="info">{carts.length}/10</Badge>
       </div>
-      <div className="flex flex-col gap-1.5 max-h-32 md:max-h-48 overflow-y-auto">
+      <div className="flex flex-col gap-2 max-h-32 md:max-h-48 overflow-y-auto">
         {carts.map((cart) => {
           const totalItems = cart.cart.reduce((sum, item) => sum + item.quantity, 0);
           const totalUsd = cart.cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
           return (
             <div
               key={cart.id}
-              className="flex items-center gap-2 p-2 rounded-lg border border-border bg-surface-alt hover:bg-white transition-colors"
+              className="flex items-center gap-3 p-3 rounded-xl border border-border bg-white hover:bg-surface-alt transition-all cursor-pointer shadow-xs hover:shadow-sm"
+              onClick={() => onLoad(cart)}
             >
-              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onLoad(cart)}>
-                <p className="text-sm font-medium text-gray-800 truncate">{cart.name}</p>
-                <p className="text-xs text-gray-500">
-                  {totalItems} items · {formatUsd(totalUsd)} ·{' '}
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <ShoppingBag size={16} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{cart.name}</p>
+                <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                  <span className="font-medium text-gray-700">{formatUsd(totalUsd)}</span>
+                  <span className="text-gray-300">·</span>
+                  <span>{totalItems} items</span>
+                  <span className="text-gray-300">·</span>
                   <span className="inline-flex items-center gap-0.5">
                     <Clock size={10} />
                     {fmtTime(cart.createdAt)}
@@ -50,7 +57,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
                 variant="ghost"
                 size="sm"
                 icon={<Trash2 size={16} />}
-                onClick={() => setDeleteTarget(cart)}
+                onClick={(e) => { e.stopPropagation(); setDeleteTarget(cart); }}
                 className="min-w-11 min-h-11"
               />
             </div>

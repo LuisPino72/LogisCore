@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, memo } from 'react';
 import { Button, EmptyState, Modal } from '../../../common/components';
 import { ShoppingCart } from 'lucide-react';
 import { CartItemRow } from './CartItem';
@@ -21,7 +21,7 @@ interface CartPanelProps {
   onMobileToggle: () => void;
 }
 
-export function CartPanel({
+export const CartPanel = memo(function CartPanel({
   cart,
   exchangeRateBs,
   paymentMethod,
@@ -119,4 +119,4 @@ export function CartPanel({
       </div>
     </>
   );
-}
+});

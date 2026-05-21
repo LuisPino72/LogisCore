@@ -4,7 +4,38 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
 
 export function usePos(tenantId: string | null) {
-  const store = usePosStore();
+  const products = usePosStore((s) => s.products);
+  const cart = usePosStore((s) => s.cart);
+  const cashRegister = usePosStore((s) => s.cashRegister);
+  const exchangeRate = usePosStore((s) => s.exchangeRate);
+  const parkedCarts = usePosStore((s) => s.parkedCarts);
+  const favoriteProductIds = usePosStore((s) => s.favoriteProductIds);
+  const salesHistory = usePosStore((s) => s.salesHistory);
+  const salesHistoryTotal = usePosStore((s) => s.salesHistoryTotal);
+  const salesHistoryLoading = usePosStore((s) => s.salesHistoryLoading);
+  const loading = usePosStore((s) => s.loading);
+  const error = usePosStore((s) => s.error);
+  const searchQuery = usePosStore((s) => s.searchQuery);
+
+  const addToCart = usePosStore((s) => s.addToCart);
+  const removeFromCart = usePosStore((s) => s.removeFromCart);
+  const updateCartItemQuantity = usePosStore((s) => s.updateCartItemQuantity);
+  const clearCart = usePosStore((s) => s.clearCart);
+  const completeSale = usePosStore((s) => s.completeSale);
+  const openCashRegister = usePosStore((s) => s.openCashRegister);
+  const closeCashRegister = usePosStore((s) => s.closeCashRegister);
+  const parkCart = usePosStore((s) => s.parkCart);
+  const loadParkedCart = usePosStore((s) => s.loadParkedCart);
+  const deleteParkedCart = usePosStore((s) => s.deleteParkedCart);
+  const toggleFavorite = usePosStore((s) => s.toggleFavorite);
+  const fetchSalesHistory = usePosStore((s) => s.fetchSalesHistory);
+  const fetchProducts = usePosStore((s) => s.fetchProducts);
+  const fetchCashRegister = usePosStore((s) => s.fetchCashRegister);
+  const fetchExchangeRate = usePosStore((s) => s.fetchExchangeRate);
+  const fetchParkedCarts = usePosStore((s) => s.fetchParkedCarts);
+  const setSearchQuery = usePosStore((s) => s.setSearchQuery);
+  const reset = usePosStore((s) => s.reset);
+
   const session = useAuthStore((s) => s.session);
   const initialFetchDone = useRef(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -12,43 +43,46 @@ export function usePos(tenantId: string | null) {
   const doRefresh = useCallback(async () => {
     if (!tenantId) return;
     await Promise.all([
-      store.fetchProducts(tenantId),
-      store.fetchCashRegister(tenantId),
-      store.fetchExchangeRate(tenantId),
+      fetchProducts(tenantId),
+      fetchCashRegister(tenantId),
+      fetchExchangeRate(tenantId),
     ]);
-  }, [tenantId, store]);
+  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate]);
 
   useEffect(() => {
     if (!tenantId || initialFetchDone.current) return;
     initialFetchDone.current = true;
     doRefresh();
-    store.fetchParkedCarts(tenantId);
-  }, [tenantId, doRefresh, store]);
+    fetchParkedCarts(tenantId);
+  }, [tenantId, doRefresh, fetchParkedCarts]);
 
   useEffect(() => {
     const subs: ReturnType<typeof EventBus.on>[] = [];
 
     subs.push(
       EventBus.on('SALE.COMPLETED', () => {
-        doRefresh();
+        if (tenantId) {
+          fetchCashRegister(tenantId);
+          fetchExchangeRate(tenantId);
+        }
       }),
     );
 
     subs.push(
       EventBus.on('INVENTORY.UPDATED', () => {
-        if (tenantId) store.fetchProducts(tenantId);
+        if (tenantId) fetchProducts(tenantId);
       }),
     );
 
     subs.push(
       EventBus.on('BOX.OPENED', () => {
-        if (tenantId) store.fetchCashRegister(tenantId);
+        if (tenantId) fetchCashRegister(tenantId);
       }),
     );
 
     subs.push(
       EventBus.on('BOX.CLOSED', () => {
-        if (tenantId) store.fetchCashRegister(tenantId);
+        if (tenantId) fetchCashRegister(tenantId);
       }),
     );
 
@@ -56,30 +90,36 @@ export function usePos(tenantId: string | null) {
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (table === 'products' && tenantId) {
-          store.fetchProducts(tenantId);
+          fetchProducts(tenantId, true);
         }
         if (table === 'cash_registers' && tenantId) {
-          store.fetchCashRegister(tenantId);
+          fetchCashRegister(tenantId, true);
         }
       }),
     );
 
     return () => subs.forEach((s) => EventBus.off(s));
-  }, [tenantId, store, doRefresh]);
+  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate]);
 
   const search = useCallback(
     (query: string) => {
-      store.setSearchQuery(query);
+      setSearchQuery(query);
       if (searchTimer.current) clearTimeout(searchTimer.current);
       searchTimer.current = setTimeout(() => {
-        if (tenantId) store.fetchProducts(tenantId);
+        if (tenantId) fetchProducts(tenantId);
       }, 300);
     },
-    [tenantId, store],
+    [tenantId, setSearchQuery, fetchProducts],
   );
 
   return {
-    ...store,
+    products, cart, cashRegister, exchangeRate, parkedCarts,
+    favoriteProductIds, salesHistory, salesHistoryTotal, salesHistoryLoading,
+    loading, error, searchQuery,
+    addToCart, removeFromCart, updateCartItemQuantity, clearCart,
+    completeSale, openCashRegister, closeCashRegister,
+    parkCart, loadParkedCart, deleteParkedCart,
+    toggleFavorite, fetchSalesHistory, reset,
     search,
     refresh: doRefresh,
     userId: session?.userId ?? null,

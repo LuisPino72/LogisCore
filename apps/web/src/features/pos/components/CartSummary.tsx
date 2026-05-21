@@ -1,5 +1,5 @@
 import { preciseRound, IGTF_RATE } from '@logiscore/shared';
-import { Button, Badge } from '../../../common/components';
+import { Button } from '../../../common/components';
 import { ShoppingCart, Pause } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS } from '../../../specs/sales';
@@ -71,19 +71,22 @@ export function CartSummary({
         <span>{formatBs(totalBs)} / {formatUsd(totalUsd)}</span>
       </div>
 
-      <div className="flex gap-0.5 flex-wrap">
+      <div className="grid grid-cols-2 gap-1.5">
         {PAYMENT_METHODS.map((m) => {
           const meta = METADATA_PAGOS[m];
+          const selected = paymentMethod === m;
           return (
             <button
               key={m}
               type="button"
               onClick={() => onPaymentMethodChange(m)}
-              className="cursor-pointer min-h-11 flex items-center px-1"
+              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 ${
+                selected
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+              }`}
             >
-              <Badge variant={paymentMethod === m ? 'info' : 'neutral'} className="text-xs px-2 py-1">
-                {meta.label}
-              </Badge>
+              {meta.label}
             </button>
           );
         })}
