@@ -123,7 +123,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
 
       const element = printRef.current;
       const html2pdf = (await import('html2pdf.js')).default;
-      const fileName = `LogisCore-Reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
+      const fileName = `Sasa-Reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
       
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],

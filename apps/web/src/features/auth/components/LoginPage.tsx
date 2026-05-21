@@ -59,14 +59,14 @@ export function LoginPage() {
             </div>
           ) : (
             <img
-              src="/Emblema.ico"
-              alt="LogisCore"
+              src="/Sasa con fondo.png"
+              alt="Sasa"
               className="w-16 h-16"
               onError={() => setLogoError(true)}
             />
           )}
           <div className="text-center">
-            <h1 className="text-2xl font-title font-bold text-white">LogisCore</h1>
+            <h1 className="text-2xl font-title font-bold text-white">Sasa</h1>
             <p className="text-sm text-white/70 mt-1">Inicia sesión para continuar</p>
           </div>
         </div>

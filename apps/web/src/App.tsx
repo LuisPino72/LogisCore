@@ -144,7 +144,7 @@ function DashboardLayout() {
             onClick={() => handleNavigate('dashboard')}
             className="font-semibold text-sm flex-1 text-left"
           >
-            LogisCore
+            Sasa
           </Button>
           {role && <Badge variant="success">{role}</Badge>}
         </>

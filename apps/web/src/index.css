@@ -223,7 +223,7 @@
 .bottom-nav-icon { @apply h-6 w-6 transition-transform duration-150; }
 .bottom-nav-active .bottom-nav-icon { @apply scale-110; }
 .bottom-nav-label { @apply text-[10px] font-medium; }
-.bottom-nav-badge { @apply absolute -top-1 -right-2 bg-danger text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shadow-sm; }
+.bottom-nav-badge { @apply absolute -top-1 -right-2 bg-danger text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-4 text-center shadow-sm; }
 
 /* ───────────────────── APP SHELL ───────────────────── */
 .app-shell {

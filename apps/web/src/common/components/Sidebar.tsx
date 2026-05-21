@@ -43,8 +43,8 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
       >
         <div className="flex items-center h-12 border-b border-gray-100 shrink-0">
           <div className="hidden md:flex items-center gap-2 px-3 w-full">
-            <img src="/Emblema.ico" alt="Emblema" className="h-5 w-5" />
-            <span className="font-title font-bold text-sm text-gray-900">LogisCore</span>
+            <img src="/Sasa.png" alt="Sasa" className="h-5 w-5" />
+            <span className="font-title font-bold text-sm text-gray-900">Sasa</span>
           </div>
 
           <div className="md:hidden flex items-center justify-center w-full h-full">
@@ -61,8 +61,8 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
               </Button>
             ) : (
               <div className="flex items-center gap-2 px-3 w-full h-full">
-                <img src="/Emblema.ico" alt="Emblema" className="h-5 w-5" />
-                <span className="font-title font-bold text-sm text-gray-900">LogisCore</span>
+                <img src="/Sasa.png" alt="Sasa" className="h-5 w-5" />
+                <span className="font-title font-bold text-sm text-gray-900">Sasa</span>
                 <div className="ml-auto">
                   <Button
                     variant="ghost"

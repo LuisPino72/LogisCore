@@ -176,7 +176,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
       <style>{printStyles}</style>
 
       <div className="print-header">
-        <h1 className="print-title">LogisCore ERP</h1>
+        <h1 className="print-title">Sasa ERP</h1>
         <p className="print-subtitle">Reporte de Gesti&oacute;n &mdash; {reportDate}</p>
         <p className="print-domain">Dominio: {window.location.host}</p>
       </div>
@@ -355,7 +355,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
       )}
 
       <div className="print-footer">
-        LogisCore ERP — Reporte generado automáticamente el {reportDate}
+        Sasa ERP — Reporte generado automáticamente el {reportDate}
       </div>
     </div>
   );
