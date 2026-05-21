@@ -59,7 +59,7 @@ export function LoginPage() {
             </div>
           ) : (
             <img
-              src="/Sasa.png"
+              src="/Sasa con fondo.png"
               alt="Sasa"
               className="w-16 h-16"
               onError={() => setLogoError(true)}
