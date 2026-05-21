@@ -125,7 +125,7 @@ class NetworkAwareService {
 
       clearTimeout(timeout);
 
-      if (res.ok) {
+      if (res.ok || res.status === 401) {
         const wasOffline = this.healthCheckFails >= 2;
         this.healthCheckFails = 0;
         if (wasOffline) {

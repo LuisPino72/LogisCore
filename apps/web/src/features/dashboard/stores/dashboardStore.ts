@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { DashboardState } from '../types';
 import { dashboardService } from '../services/dashboardService';
 
+const FETCH_COOLDOWN_MS = 2000;
+
 export interface DashboardStore extends DashboardState {
   fetchDashboard: (tenantId: string) => Promise<void>;
   reset: () => void;
@@ -16,10 +18,21 @@ const initialState: DashboardState = {
   error: null,
 };
 
+let lastFetchAt = 0;
+let lastFetchTenant: string | null = null;
+
 export const useDashboardStore = create<DashboardStore>((set) => ({
   ...initialState,
 
   fetchDashboard: async (tenantId: string) => {
+    const now = Date.now();
+    if (lastFetchTenant === tenantId && now - lastFetchAt < FETCH_COOLDOWN_MS) {
+      return;
+    }
+
+    lastFetchAt = now;
+    lastFetchTenant = tenantId;
+
     set({ loading: true, error: null });
 
     const [tenantResult, subResult, empResult, earningsResult] = await Promise.all([
@@ -44,5 +57,9 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     });
   },
 
-  reset: () => set(initialState),
+  reset: () => {
+    lastFetchAt = 0;
+    lastFetchTenant = null;
+    set(initialState);
+  },
 }));
