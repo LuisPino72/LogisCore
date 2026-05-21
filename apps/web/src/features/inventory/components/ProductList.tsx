@@ -3,7 +3,7 @@ import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, Mor
 import { Button, Badge, DataTable, Dropdown, EmptyState, Select, ImageWithFallback } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
-import type { Product, Category } from '../types';
+import type { Product, Category, TabState } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -11,6 +11,8 @@ interface ProductListProps {
   products: Product[];
   categories: Category[];
   onSearch: (query: string, categoryId?: string) => void;
+  initialTabState: TabState;
+  onSaveTabState: (state: Partial<TabState>) => void;
   isOwner: boolean;
   totalLowStock?: number;
   onNewProduct: () => void;
@@ -39,10 +41,10 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, isOwner, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [page, setPage] = useState(1);
+export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
+  const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
+  const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
+  const [page, setPage] = useState(initialTabState.page);
 
   useEffect(() => {
     setPage(1);
@@ -50,11 +52,13 @@ export function ProductList({ products, categories, onSearch, isOwner, totalLowS
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
+    onSaveTabState({ searchQuery: value, filterCategory, page });
     onSearch(value, filterCategory || undefined);
   };
 
   const handleCategoryFilter = (categoryId: string) => {
     setFilterCategory(categoryId);
+    onSaveTabState({ searchQuery, filterCategory: categoryId, page });
     onSearch(searchQuery, categoryId || undefined);
   };
 
@@ -208,7 +212,10 @@ export function ProductList({ products, categories, onSearch, isOwner, totalLowS
         emptyMessage="No se encontraron productos"
         renderCardOnMobile
         page={page}
-        onPageChange={setPage}
+        onPageChange={(newPage) => {
+          setPage(newPage);
+          onSaveTabState({ searchQuery, filterCategory, page: newPage });
+        }}
         total={products.length}
       />
     </div>

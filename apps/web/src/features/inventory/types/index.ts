@@ -44,6 +44,14 @@ export interface MovementRow {
   reason?: string;
 }
 
+export type TabKey = 'productos' | 'categorias' | 'historial';
+
+export interface TabState {
+  searchQuery: string;
+  filterCategory: string;
+  page: number;
+}
+
 export interface ProductFilters {
   query?: string;
   categoryId?: string;
@@ -56,7 +64,8 @@ export interface InventoryState {
   loading: boolean;
   error: string | null;
   searchQuery: string;
-  activeTab: 'productos' | 'categorias' | 'historial';
+  activeTab: TabKey;
+  tabStates: Record<TabKey, TabState>;
 }
 
 export function kgToGrams(kg: number): number {

@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ListTree, Trash2, Edit3 } from 'lucide-react';
-import { Button, SearchInput, Input, Modal, EmptyState } from '../../../common/components';
+import { Button, SearchInput, Input, Modal, EmptyState, Pagination } from '../../../common/components';
 import type { Category } from '../types';
+
+const PAGE_SIZE = 10;
 
 interface CategoryManagerProps {
   categories: Category[];
@@ -15,6 +17,7 @@ interface CategoryManagerProps {
 
 export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onRequestDelete, isOpen, onClose }: CategoryManagerProps) {
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,6 +30,13 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
     const q = search.toLowerCase();
     return categories.filter((c) => c.name.toLowerCase().includes(q));
   }, [categories, search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => {
     if (isOpen && !showModal) {
@@ -85,23 +95,23 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
         onClear={() => setSearch('')}
       />
 
-      {filtered.length === 0 ? (
+      {paginated.length === 0 ? (
         <EmptyState
           icon={<ListTree size={32} />}
           title={search ? 'Sin resultados' : 'Sin categorías'}
           description={search ? 'No se encontraron categorías con ese nombre' : 'Crea tu primera categoría'}
         />
       ) : (
-        <div className="space-y-1.5">
-          {filtered.map((cat) => (
-            <div key={cat.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-primary/5 transition-colors group border border-transparent hover:border-primary/10">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
-                <ListTree size={14} className="text-primary" />
+        <>
+          <div className="space-y-2">
+            {paginated.map((cat) => (
+            <div key={cat.id} className="flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-lg bg-white sm:hover:bg-primary/5 transition-colors border border-gray-100 sm:border-transparent sm:hover:border-primary/10">
+              <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <ListTree size={16} className="text-primary" />
               </div>
-              <span className="text-sm font-medium text-gray-800 truncate flex-1">{cat.name}</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-primary/30 shrink-0" />
+              <span className="text-sm font-medium text-gray-900 truncate w-full text-center sm:text-left sm:flex-1 sm:min-w-0">{cat.name}</span>
               {isOwner && (
-                <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-8 min-h-8" title="Editar">
                     <Edit3 size={14} />
                   </Button>
@@ -112,7 +122,11 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
               )}
             </div>
           ))}
-        </div>
+          </div>
+          {totalPages > 1 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          )}
+        </>
       )}
 
       <Modal isOpen={showModal} onClose={handleClose} title={modalMode === 'create' ? 'Nueva categoría' : 'Editar categoría'} size="sm">

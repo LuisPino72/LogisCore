@@ -16,6 +16,7 @@ import {
   Dropdown,
   Input,
   Modal,
+  Pagination,
   SearchInput,
   Select,
   Spinner,
@@ -25,6 +26,8 @@ import {
 import { useToastStore } from '../../../stores/toastStore';
 import { Store, Building2, UsersRound, ArrowLeft, Plus, Trash2, Eye, Users as UsersIcon, CreditCard, RefreshCw, UserPlus, Shield, RotateCcw, KeyRound, BarChart3, Tags, MoreVertical } from 'lucide-react';
 import { AnalyticsModal } from './AnalyticsModal';
+
+const ADMIN_PAGE_SIZE = 10;
 
 interface EmployeeForm {
   email: string;
@@ -104,6 +107,12 @@ export function AdminPanelPage() {
   const [resetPassError, setResetPassError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
 
+  const [tenantPage, setTenantPage] = useState(1);
+  const [userPage, setUserPage] = useState(1);
+  const [allUserPage, setAllUserPage] = useState(1);
+  const [subPage, setSubPage] = useState(1);
+  const [globalCatPage, setGlobalCatPage] = useState(1);
+
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
   const [editForm, setEditForm] = useState<EditForm>({ name: '', rif: '', direccion: '', telefono: '' });
   const [newEmployee, setNewEmployee] = useState<EmployeeForm>({ email: '', password: '', name: '' });
@@ -118,6 +127,27 @@ export function AdminPanelPage() {
     const q = globalCatSearch.toLowerCase();
     return globalCategories.filter((c) => c.name.toLowerCase().includes(q));
   }, [globalCategories, globalCatSearch]);
+
+  useEffect(() => { setTenantPage(1); }, [filteredTenants.length]);
+  useEffect(() => { setUserPage(1); }, [users.length]);
+  useEffect(() => { setAllUserPage(1); }, [allUsers.length]);
+  useEffect(() => { setSubPage(1); }, [subscriptions.length]);
+  useEffect(() => { setGlobalCatPage(1); }, [globalCatSearch]);
+
+  const tenantTotalPages = Math.max(1, Math.ceil(filteredTenants.length / ADMIN_PAGE_SIZE));
+  const paginatedTenants = filteredTenants.slice((tenantPage - 1) * ADMIN_PAGE_SIZE, tenantPage * ADMIN_PAGE_SIZE);
+
+  const userTotalPages = Math.max(1, Math.ceil(users.length / ADMIN_PAGE_SIZE));
+  const paginatedUsers = users.slice((userPage - 1) * ADMIN_PAGE_SIZE, userPage * ADMIN_PAGE_SIZE);
+
+  const allUserTotalPages = Math.max(1, Math.ceil(allUsers.length / ADMIN_PAGE_SIZE));
+  const paginatedAllUsers = allUsers.slice((allUserPage - 1) * ADMIN_PAGE_SIZE, allUserPage * ADMIN_PAGE_SIZE);
+
+  const subTotalPages = Math.max(1, Math.ceil(subscriptions.length / ADMIN_PAGE_SIZE));
+  const paginatedSubs = subscriptions.slice((subPage - 1) * ADMIN_PAGE_SIZE, subPage * ADMIN_PAGE_SIZE);
+
+  const globalCatTotalPages = Math.max(1, Math.ceil(filteredGlobalCategories.length / ADMIN_PAGE_SIZE));
+  const paginatedGlobalCats = filteredGlobalCategories.slice((globalCatPage - 1) * ADMIN_PAGE_SIZE, globalCatPage * ADMIN_PAGE_SIZE);
 
   const handleCloseDeleteModal = useCallback(() => {
     setDeleteTarget(null);
@@ -555,11 +585,14 @@ export function AdminPanelPage() {
             <div className="p-4 pt-0">
               <DataTable
                 columns={tenantColumns}
-                data={filteredTenants}
+                data={paginatedTenants}
                 emptyMessage="No hay locales que coincidan con los filtros."
                 keyExtractor={(t: Tenant) => t.id}
                 renderCardOnMobile
               />
+              {tenantTotalPages > 1 && (
+                <Pagination page={tenantPage} totalPages={tenantTotalPages} onPageChange={setTenantPage} />
+              )}
             </div>
           </Card>
         )}
@@ -580,11 +613,14 @@ export function AdminPanelPage() {
             <div className="p-4 pt-0">
               <DataTable
                 columns={userColumns}
-                data={users}
+                data={paginatedUsers}
                 emptyMessage="No hay usuarios en este local."
                 keyExtractor={(u: UserRole) => u.id}
                 renderCardOnMobile
               />
+              {userTotalPages > 1 && (
+                <Pagination page={userPage} totalPages={userTotalPages} onPageChange={setUserPage} />
+              )}
             </div>
           </Card>
         )}
@@ -612,11 +648,14 @@ export function AdminPanelPage() {
                   { key: 'role', header: 'Rol' },
                   { key: 'tenantName', header: 'Local' },
                 ]}
-                data={allUsers}
+                data={paginatedAllUsers}
                 emptyMessage="No hay usuarios registrados."
                 keyExtractor={(u: GlobalUser) => u.id}
                 renderCardOnMobile
               />
+              {allUserTotalPages > 1 && (
+                <Pagination page={allUserPage} totalPages={allUserTotalPages} onPageChange={setAllUserPage} />
+              )}
             </div>
           </Card>
         )}
@@ -697,11 +736,14 @@ export function AdminPanelPage() {
                     },
                   },
                 ]}
-                data={subscriptions}
+                data={paginatedSubs}
                 emptyMessage="No hay suscripciones registradas."
                 keyExtractor={(s: SubscriptionView) => s.tenantId}
                 renderCardOnMobile
               />
+              {subTotalPages > 1 && (
+                <Pagination page={subPage} totalPages={subTotalPages} onPageChange={setSubPage} />
+              )}
             </div>
           </Card>
         )}
@@ -752,17 +794,17 @@ export function AdminPanelPage() {
                       ),
                     },
                   ]}
-                  data={filteredGlobalCategories}
+                  data={paginatedGlobalCats}
                   emptyMessage={globalCatSearch ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas. Crea la primera para que esté disponible en todos los nuevos locales.'}
                   keyExtractor={(c: GlobalCategory) => c.id}
                 />
               </div>
               {/* Mobile cards */}
               <div className="sm:hidden space-y-2">
-                {filteredGlobalCategories.length === 0 ? (
+                {paginatedGlobalCats.length === 0 ? (
                   <p className="text-center text-sm text-text-secondary py-8">{globalCatSearch ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas.'}</p>
                 ) : (
-                  filteredGlobalCategories.map((c) => (
+                  paginatedGlobalCats.map((c) => (
                     <div key={c.id} className="flex flex-col gap-2 px-3 py-3 rounded-lg border border-gray-100 bg-white">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
@@ -781,6 +823,9 @@ export function AdminPanelPage() {
                   ))
                 )}
               </div>
+              {globalCatTotalPages > 1 && (
+                <Pagination page={globalCatPage} totalPages={globalCatTotalPages} onPageChange={setGlobalCatPage} />
+              )}
             </div>
           </Card>
         )}

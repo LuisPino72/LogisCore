@@ -1,12 +1,15 @@
 import { create } from 'zustand';
-import type { Product, ProductFilters, InventoryState } from '../types';
+import type { Product, ProductFilters, InventoryState, TabKey, TabState } from '../types';
 import { inventoryService } from '../services/inventoryService';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateProductInput, AdjustStockInput } from '../types';
 
+const DEFAULT_TAB_STATE: TabState = { searchQuery: '', filterCategory: '', page: 1 };
+
 interface InventoryStore extends InventoryState {
-  setActiveTab: (tab: InventoryState['activeTab']) => void;
+  setActiveTab: (tab: TabKey) => void;
   setSearchQuery: (query: string) => void;
+  saveTabState: (tab: TabKey, state: Partial<TabState>) => void;
   fetchProducts: (tenantId: string, filters?: ProductFilters) => Promise<void>;
   fetchCategories: (tenantId: string) => Promise<void>;
   createProduct: (tenantId: string, userId: string, input: CreateProductInput & { stockInicial?: number }) => Promise<Product | null>;
@@ -29,13 +32,32 @@ const initialState: InventoryState = {
   error: null,
   searchQuery: '',
   activeTab: 'productos',
+  tabStates: {
+    productos: { ...DEFAULT_TAB_STATE },
+    categorias: { ...DEFAULT_TAB_STATE },
+    historial: { ...DEFAULT_TAB_STATE },
+  },
 };
 
 export const useInventoryStore = create<InventoryStore>((set, get) => ({
   ...initialState,
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => {
+    const { tabStates } = get();
+    set({
+      activeTab: tab,
+      searchQuery: tabStates[tab].searchQuery,
+    });
+  },
   setSearchQuery: (query) => set({ searchQuery: query }),
+  saveTabState: (tab, state) => {
+    set({
+      tabStates: {
+        ...get().tabStates,
+        [tab]: { ...get().tabStates[tab], ...state },
+      },
+    });
+  },
 
   fetchProducts: async (tenantId, filters) => {
     set({ loading: true, error: null });

@@ -28,7 +28,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const {
     products, categories, loading, activeTab, setActiveTab,
     createProduct, updateProduct, deleteProduct, createCategory, updateCategory, deleteCategory, adjustStock,
-    search, refresh, userId, role,
+    search, refresh, userId, role, tabStates, saveTabState,
   } = useInventory(tenantId);
 
   const { totalLowStock, lowStockProducts } = useStockAlerts(tenantId);
@@ -231,6 +231,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             products={products}
             categories={categories}
             onSearch={search}
+            initialTabState={tabStates.productos}
+            onSaveTabState={(state) => saveTabState('productos', state)}
             isOwner={isOwner}
             totalLowStock={totalLowStock}
             onNewProduct={openNewProduct}

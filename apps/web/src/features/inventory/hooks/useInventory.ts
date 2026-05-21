@@ -2,11 +2,12 @@ import { useEffect, useRef, useCallback } from 'react';
 import { EventBus } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useInventoryStore } from '../stores/inventoryStore';
-import type { ProductFilters } from '../types';
+import type { ProductFilters, TabKey } from '../types';
 
-function buildFilters(store: ReturnType<typeof useInventoryStore.getState>, filters?: ProductFilters): ProductFilters | undefined {
+function buildFilters(state: ReturnType<typeof useInventoryStore.getState>, filters?: ProductFilters): ProductFilters | undefined {
   if (filters) return filters;
-  const q = store.searchQuery;
+  const tabState = state.tabStates[state.activeTab];
+  const q = tabState?.searchQuery;
   return q ? { query: q } : undefined;
 }
 
@@ -57,6 +58,7 @@ export function useInventory(tenantId: string | null) {
   const search = useCallback((query: string, categoryId?: string) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     store.setSearchQuery(query);
+    store.saveTabState(store.activeTab as TabKey, { searchQuery: query, filterCategory: categoryId || '' });
 
     debounceTimer.current = setTimeout(() => {
       if (!tenantId) return;
@@ -73,6 +75,7 @@ export function useInventory(tenantId: string | null) {
     ...store,
     search,
     refresh,
+    saveTabState: store.saveTabState,
     userId: session?.userId,
     role: session?.role,
   };
