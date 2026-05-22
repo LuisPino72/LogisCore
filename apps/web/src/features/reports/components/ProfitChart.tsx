@@ -71,12 +71,12 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
           <p className="text-[10px] sm:text-xs text-text-secondary">Ganancia Total</p>
           <p className="text-[10px] sm:text-sm font-bold text-primary truncate">{formatDual(totalProfit, totalProfitUsd)}</p>
         </div>
-        <div className="p-2 sm:p-3 rounded-lg bg-primary/[0.03] border border-primary/10">
+        <div className="p-2 sm:p-3 rounded-lg bg-primary/3 border border-primary/10">
           <p className="text-[10px] sm:text-xs text-text-secondary">Ventas Totales</p>
           <p className="text-[10px] sm:text-sm font-bold text-primary-dark truncate">{formatDual(totalSales, totalSalesUsd)}</p>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-danger/5 border border-danger/20">
-          <p className="text-[10px] sm:text-xs text-text-secondary">Costo Total</p>
+          <p className="text-[10px] sm:text-xs text-text-secondary">Gasto Total</p>
           <p className="text-[10px] sm:text-sm font-bold text-danger truncate">{formatDual(totalCost, totalCostUsd)}</p>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-accent/5 border border-accent/20">

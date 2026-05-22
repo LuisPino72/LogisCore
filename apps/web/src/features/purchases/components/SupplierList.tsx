@@ -70,7 +70,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
               <span className="text-xs font-bold text-primary">{initials}</span>
             </div>
             <div className="min-w-0 flex-1 w-full text-center sm:text-left">
-              <p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p>
+              <p className="text-sm font-semibold text-gray-900 wrap-break-word">{s.name}</p>
               <div className="flex items-center justify-center gap-2 sm:justify-start">
                 {s.phone && (
                   <p className="text-xs text-text-secondary flex items-center gap-1 truncate">

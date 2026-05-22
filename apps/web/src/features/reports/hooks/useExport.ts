@@ -85,7 +85,7 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): SheetConfig {
   if (summary) {
     rows.push(
       ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / ${formatUsd(summary.totalSalesUsd)}`],
-      ['Costo Total', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
+      ['Gasto Total', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
       ['Ganancia Bruta', `${formatBs(summary.grossProfitBs)} / ${formatUsd(summary.grossProfitUsd)}`],
       ['Margen %', `${summary.profitMarginPercent}%`],
       ['Transacciones', summary.totalTransactions],
@@ -116,7 +116,7 @@ function buildProfitSheet(profitOverTime: DailyProfitPoint[]): SheetConfig {
       p.transactions,
     ]);
   });
-  return { name: 'Ganancias', headers: ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'], rows, colWidths: [16, 10, 14, 10, 14, 10, 14, 10, 14] };
+  return { name: 'Ganancias', headers: ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'], rows, colWidths: [16, 10, 14, 10, 14, 10, 14, 10, 14] };
 }
 
 function buildProductsSheet(topProducts: TopProductData[]): SheetConfig {
@@ -134,7 +134,7 @@ function buildProductsSheet(topProducts: TopProductData[]): SheetConfig {
       `${p.marginPercent}%`,
     ]);
   });
-  return { name: 'Productos', headers: ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Costo Bs', 'Costo $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [30, 10, 14, 10, 14, 10, 14, 10, 10] };
+  return { name: 'Productos', headers: ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [30, 10, 14, 10, 14, 10, 14, 10, 10] };
 }
 
 function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): SheetConfig {

@@ -100,7 +100,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
                 <Truck size={18} className="text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900 truncate">{order.supplierName || 'Sin proveedor'}</p>
+                <p className="text-sm font-semibold text-gray-900 wrap-break-word">{order.supplierName || 'Sin proveedor'}</p>
                 <p className="text-xs text-text-secondary">{receivedItems} de {totalItems} items completados</p>
               </div>
               <div className="text-right shrink-0">
@@ -159,7 +159,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
                     <button
                       type="button"
                       onClick={() => handleQtyChange(item.id, pending)}
-                      className="text-xs text-primary font-medium shrink-0 hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center"
+                      className="text-xs text-primary font-medium shrink-0 hover:underline min-h-11 min-w-11 flex items-center justify-center"
                     >
                       Todo
                     </button>
@@ -174,7 +174,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
           <button
             type="button"
             onClick={receiveAll}
-            className="w-full text-sm text-primary font-medium py-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors min-h-[44px]"
+            className="w-full text-sm text-primary font-medium py-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors min-h-11"
           >
             <Package size={14} className="inline mr-1.5 -mt-0.5" />
             Recibir todo lo pendiente

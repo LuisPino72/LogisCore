@@ -188,7 +188,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
           <div className="print-kpi-grid">
             <KpiCard label="Ventas Totales" value={formatDual(summary.totalSalesBs, summary.totalSalesUsd)} subtitle={`${summary.totalTransactions} transacciones`} />
             <KpiCard label="Ganancia Bruta" value={formatDual(summary.grossProfitBs, summary.grossProfitUsd)} subtitle={`Margen ${summary.profitMarginPercent}%`} />
-            <KpiCard label="Costo Total" value={formatDual(summary.totalCostBs, summary.totalCostUsd)} />
+            <KpiCard label="Gasto Total" value={formatDual(summary.totalCostBs, summary.totalCostUsd)} />
             <KpiCard label="Ticket Promedio" value={formatDual(summary.averageTicketBs, summary.averageTicketUsd)} />
             {summary.topProductName && <KpiCard label="Top Producto" value={summary.topProductName} />}
             {summary.salesVsYesterdayPercent !== undefined && (
@@ -212,8 +212,8 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                   <th>Tasa</th>
                   <th>Ventas Bs</th>
                   <th>Ventas $</th>
-                  <th>Costo Bs</th>
-                  <th>Costo $</th>
+                  <th>Gasto Bs</th>
+                  <th>Gasto $</th>
                   <th>Ganancia Bs</th>
                   <th>Ganancia $</th>
                   <th>Transacciones</th>
@@ -251,8 +251,8 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                   <th>Vendidos</th>
                   <th>Ingreso Bs</th>
                   <th>Ingreso $</th>
-                  <th>Costo Bs</th>
-                  <th>Costo $</th>
+                  <th>Gasto Bs</th>
+                  <th>Gasto $</th>
                   <th>Ganancia Bs</th>
                   <th>Ganancia $</th>
                   <th>Margen</th>

@@ -121,7 +121,7 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
           gradient={data.grossProfitBs >= 0 ? 'green' : 'red'}
         />
         <KpiCard
-          label="Costo Total"
+          label="Gasto Total"
           value={formatDual(data.totalCostBs, data.totalCostUsd)}
           icon={<DollarSign size={18} />}
           gradient="amber"

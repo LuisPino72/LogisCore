@@ -102,6 +102,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     }
 
     const originalStyles = {
+      display: container.style.display,
       position: container.style.position,
       top: container.style.top,
       left: container.style.left,
@@ -111,6 +112,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     };
 
     try {
+      container.style.display = 'block';
       container.style.position = 'fixed';
       container.style.top = '0';
       container.style.left = '0';
@@ -150,6 +152,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       console.error('Error generando PDF:', error);
       addToast({ type: 'error', message: 'Error al generar el PDF. Intenta nuevamente.', duration: 5000 });
     } finally {
+      container.style.display = originalStyles.display;
       container.style.position = originalStyles.position;
       container.style.top = originalStyles.top;
       container.style.left = originalStyles.left;

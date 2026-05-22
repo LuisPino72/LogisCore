@@ -207,7 +207,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                     <StatusBadge status={order.status} />
                     <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
                   </div>
-                  <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{order.supplierName || 'Sin proveedor'}</p>
+                  <p className="text-sm font-semibold text-gray-800 wrap-break-word mt-0.5">{order.supplierName || 'Sin proveedor'}</p>
                   <p className="text-base font-bold text-primary">{formatUsd(order.totalUsd)}</p>
                 </div>
                 {isOwner && (

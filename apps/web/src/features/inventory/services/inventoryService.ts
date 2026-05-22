@@ -324,11 +324,13 @@ export const inventoryService = {
       .filter((c) => !c.deletedAt)
       .toArray();
 
-    // If local is empty, try pulling from Supabase
+    // If local is empty, try pulling from Supabase filtering by tenant UUID
     if (rows.length === 0) {
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .eq('tenant_id', tenantUuid)
         .is('deleted_at', null);
 
       if (!error && data && data.length > 0) {

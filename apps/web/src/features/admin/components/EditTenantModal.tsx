@@ -63,7 +63,7 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
           validation={{ required: true, maxLength: 30 }}
         />
         <Input
-          placeholder="RIF"
+          placeholder="RIF (J123456789)"
           value={editForm.rif}
           onChange={(e) => setEditForm((p) => ({ ...p, rif: e.target.value.toUpperCase() }))}
           validation={{ required: true, pattern: /^[VJEGP]\d{9}$/ }}

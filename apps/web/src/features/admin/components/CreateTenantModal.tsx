@@ -103,7 +103,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             validation={{ required: true, maxLength: 30 }}
           />
           <Input
-            placeholder="RIF (J-123456789)"
+            placeholder="RIF (J123456789)"
             value={createForm.tenant.rif}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value.toUpperCase() } }))}
             validation={{ required: true, pattern: /^[VJEGP]\d{9}$/ }}
