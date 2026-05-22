@@ -115,11 +115,10 @@ export const inventoryService = {
           };
           await db.inventoryLots.add(lot);
 
+          await syncQueue.enqueue('products', 'CREATE', id, toSnake(product as unknown as Record<string, unknown>), tenantId);
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
           await syncQueue.enqueue('inventory_lots', 'CREATE', lot.id, toSnake(lot as unknown as Record<string, unknown>), tenantId);
         }
-
-        await syncQueue.enqueue('products', 'CREATE', id, toSnake(product as unknown as Record<string, unknown>), tenantId);
 
         await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial });
       });
@@ -545,7 +544,7 @@ export const inventoryService = {
       const options = {
         maxSizeMB: 1,
         maxWidthOrHeight: 1024,
-        useWebWorker: true,
+        useWebWorker: false,
         fileType: file.type === 'image/png' ? 'image/png' : 'image/jpeg',
       };
       compressedFile = await imageCompression(file, options);

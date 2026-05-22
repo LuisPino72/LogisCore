@@ -268,18 +268,6 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         {/* Section: Configuración */}
         <SectionDivider icon={<Settings size={14} className="text-primary" />} title="Configuración" />
 
-        {Object.keys(errors).length > 0 && (
-          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger space-y-0.5">
-            {Object.entries(errors).map(([key, msg]) => {
-              const label: Record<string, string> = {
-                name: 'Nombre', sku: 'Código SKU', priceUsd: 'Precio USD',
-                categoryId: 'Categoría', stockMin: 'Stock mínimo',
-              };
-              return <p key={key}>• {label[key] || key}: {msg}</p>;
-            })}
-          </div>
-        )}
-
         <div className="input-wrapper">
           <Checkbox
             label="Producto gravado con IVA"

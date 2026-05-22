@@ -207,6 +207,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       if (ok) {
         setShowParkModal(false);
         setPaymentMethod(null);
+        setMobileCartOpen(false);
       }
     },
     [tenantId, parkCart],
@@ -216,6 +217,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     (parked: ParkedCart) => {
       loadParkedCart(parked);
       setPaymentMethod(null);
+      setMobileCartOpen(true);
     },
     [loadParkedCart],
   );

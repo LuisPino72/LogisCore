@@ -115,8 +115,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
                 return (
                   <div key={p.productId}>
-                    <div className="flex items-start text-xs mb-1 gap-1">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
                         {isTop3 && (
                           <span
                             className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
@@ -125,9 +125,9 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                             {i + 1}
                           </span>
                         )}
-                        <span className="text-sm text-gray-700 truncate" title={p.name}>{p.name}</span>
+                        <span className="text-sm text-gray-700 truncate flex-1" title={p.name}>{p.name}</span>
                       </div>
-                      <span className="text-xs font-medium text-gray-500 shrink-0 whitespace-nowrap">{p.totalQty} vendidos</span>
+                      <span className="text-xs text-gray-500 ml-7 block">{p.totalQty} vendidos</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
