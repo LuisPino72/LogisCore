@@ -22,24 +22,31 @@ function DiffIndicator({ differenceBs, differenceUsd }: { differenceBs: number |
     );
   }
 
-  const isPositive = differenceBs > 0;
   const isZero = differenceBs === 0;
+  const isPositive = differenceBs > 0;
 
-  const bgClass = isZero ? 'bg-gray-50' : isPositive ? 'bg-success/5' : 'bg-danger/5';
-  const borderClass = isZero ? 'border-gray-200' : isPositive ? 'border-success/20' : 'border-danger/20';
-  const textClass = isZero ? 'text-gray-500' : isPositive ? 'text-success' : 'text-danger';
-  const icon = isZero ? <Minus size={14} /> : isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />;
+  if (isZero) {
+    return (
+      <div className="flex items-center gap-1.5 p-2 rounded-lg border border-success/20 bg-success/5">
+        <Minus size={14} className="text-success" />
+        <span className="text-sm font-semibold text-success">Ajustado</span>
+      </div>
+    );
+  }
+
+  const icon = isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />;
 
   return (
-    <div className={`flex items-center gap-1.5 p-2 rounded-lg border ${bgClass} ${borderClass}`}>
-      <span className={textClass}>{icon}</span>
+    <div className="flex items-start gap-1.5 p-2 rounded-lg border border-danger/20 bg-danger/5">
+      <span className="text-danger mt-0.5">{icon}</span>
       <div className="flex flex-col">
-        <span className={`text-sm font-semibold ${textClass}`}>
-          {isZero ? 'Cuadrado' : (isPositive ? '+' : '-')}{formatBs(Math.abs(differenceBs))}
+        <span className="text-sm font-semibold text-danger">Desajuste</span>
+        <span className="text-[10px] text-danger">
+          {(isPositive ? '+' : '-')}{formatBs(Math.abs(differenceBs))}
         </span>
         {differenceUsd !== undefined && differenceUsd !== null && (
-          <span className={`text-[10px] ${textClass}`}>
-            {isZero ? '' : (isPositive ? '+' : '-')}{formatUsd(Math.abs(differenceUsd))}
+          <span className="text-[10px] text-danger">
+            {(isPositive ? '+' : '-')}{formatUsd(Math.abs(differenceUsd))}
           </span>
         )}
       </div>
