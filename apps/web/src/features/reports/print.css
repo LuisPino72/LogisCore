@@ -1,6 +1,5 @@
 /* PrintView para html2pdf - oculto por defecto, se hace visible temporalmente durante generación */
 .print-container {
-  display: none;
   position: absolute;
   left: -10000px;
   top: 0;
