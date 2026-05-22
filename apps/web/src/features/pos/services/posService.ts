@@ -1,6 +1,7 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { preciseRound, toSnake, generateId, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
+import type { DexieCashRegister, LogisCoreDB } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -16,6 +17,86 @@ import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
 
 const MODULE_NAME = 'POS';
+
+function isSameDay(d1: Date, d2: Date): boolean {
+  return d1.getFullYear() === d2.getFullYear()
+    && d1.getMonth() === d2.getMonth()
+    && d1.getDate() === d2.getDate();
+}
+
+function startOfDayLocal(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDayLocal(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+async function autoCloseRegister(
+  db: LogisCoreDB,
+  register: DexieCashRegister,
+  tenantId: string,
+  userId: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+  const expectedClosingBs = preciseRound(
+    (register.openingBalanceBs ?? 0) + register.totalSalesBs, 2,
+  );
+
+  await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
+    await db.cashRegisters.update(register.id, {
+      isOpen: false,
+      closedBy: userId,
+      closedAt: now,
+      closingBalanceBs: expectedClosingBs,
+      expectedClosingBs,
+      differenceBs: 0,
+      updatedAt: now,
+    });
+
+    await syncQueue.enqueue('cash_registers', 'UPDATE', register.id, toSnake({
+      id: register.id,
+      tenant_id: tenantUuid,
+      is_open: false,
+      closed_by: userId,
+      closed_at: now,
+      closing_balance_bs: expectedClosingBs,
+      expected_closing_bs: expectedClosingBs,
+      difference_bs: 0,
+      total_sales_count: register.totalSalesCount,
+      total_sales_bs: register.totalSalesBs,
+      total_igtf_bs: register.totalIgtfBs,
+      updated_at: now,
+    } as Record<string, unknown>), tenantId);
+
+    await outboxService.enqueue('BOX.CLOSED', MODULE_NAME, {
+      registerId: register.id,
+      tenantSlug: tenantId,
+      expectedBs: expectedClosingBs,
+      declaredBs: expectedClosingBs,
+      differenceBs: 0,
+      autoClosed: true,
+    });
+  });
+
+  await emitWithAudit('BOX.CLOSED', MODULE_NAME, {
+    registerId: register.id,
+    tenantSlug: tenantId,
+    expectedBs: expectedClosingBs,
+    declaredBs: expectedClosingBs,
+    differenceBs: 0,
+    autoClosed: true,
+  }, {
+    userId,
+    tenantId,
+    tenantUuid,
+  });
+}
 
 export const posService = {
   async getCashRegister(tenantId: string): Promise<Result<CashRegister | null, AppError>> {
@@ -465,7 +546,28 @@ export const posService = {
       .first();
 
     if (existing) {
-      return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta para este local.'));
+      const openedDate = existing.openedAt ? new Date(existing.openedAt) : null;
+      if (openedDate && isSameDay(openedDate, new Date())) {
+        return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta para hoy.'));
+      }
+      await autoCloseRegister(db, existing, tenantId, userId);
+    }
+
+    // Option B: Una caja por día — no permitir abrir si ya se cerró una hoy
+    const todayStart = startOfDayLocal(new Date()).toISOString();
+    const todayEnd = endOfDayLocal(new Date()).toISOString();
+    const todayClosed = await db.cashRegisters
+      .where({ tenantId })
+      .filter((r) => !r.deletedAt && !r.isOpen && r.openedAt != null && r.openedAt >= todayStart && r.openedAt <= todayEnd)
+      .first();
+
+    if (todayClosed) {
+      // Permitir reabrir si la caja cerrada no tuvo ventas (cierre accidental)
+      if (todayClosed.totalSalesCount === 0) {
+        await db.cashRegisters.update(todayClosed.id, { deletedAt: new Date().toISOString() });
+      } else {
+        return failure(new AppError(PosErrors.BOX_CLOSED_TODAY, 'Ya hay un cierre de caja registrado para hoy. No puedes abrir otra caja el mismo día.'));
+      }
     }
 
     // Si no hay caja local pero estamos online, verificar Supabase para evitar 409 en sync

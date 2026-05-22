@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
@@ -23,6 +23,12 @@ import { logger } from '../../../lib/logger';
 interface PosPageProps {
   tenantId: string | null;
   userEmail?: string;
+}
+
+function isSameDay(d1: Date, d2: Date): boolean {
+  return d1.getFullYear() === d2.getFullYear()
+    && d1.getMonth() === d2.getMonth()
+    && d1.getDate() === d2.getDate();
 }
 
 export function PosPage({ tenantId }: PosPageProps) {
@@ -204,6 +210,11 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const isFromPreviousDay = useMemo(() => {
+    if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
+    return !isSameDay(new Date(cashRegister.openedAt), new Date());
+  }, [cashRegister?.isOpen, cashRegister?.openedAt]);
+
   return (
     <div className="flex flex-row h-full w-full min-w-0">
       <div className="flex-1 min-w-0 h-full flex flex-col">
@@ -251,6 +262,14 @@ export function PosPage({ tenantId }: PosPageProps) {
         {error && (
           <div className="px-3 pt-1">
             <Alert variant="warning">{error}</Alert>
+          </div>
+        )}
+
+        {isFromPreviousDay && (
+          <div className="px-3 pt-1">
+            <Alert variant="warning">
+              La caja quedó abierta desde el día anterior. Al abrir una nueva, la anterior se cerrará automáticamente (sin diferencias).
+            </Alert>
           </div>
         )}
 
