@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
-import { getDb, type DexiePurchaseOrderItem } from '../../../services/dexie/db';
+import { getDb, isDbClosing, type DexiePurchaseOrderItem } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
@@ -473,6 +473,7 @@ export const purchaseService = {
   },
 
   async getOrders(tenantId: string, status?: PurchaseOrder['status']): Promise<Result<PurchaseOrderWithItems[], AppError>> {
+    if (isDbClosing()) return failure({ message: 'Base de datos cerrando', code: 'DB_CLOSING' } as AppError);
     const db = getDb();
     let rows = await db.purchaseOrders
       .where({ tenantId })

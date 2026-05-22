@@ -65,11 +65,15 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
 
   fetchOrders: async (tenantId, status) => {
     set({ loading: true, error: null });
-    const result = await purchaseService.getOrders(tenantId, status);
-    if (result.ok) {
-      set({ orders: result.data, loading: false });
-    } else {
-      set({ loading: false, error: result.error.message });
+    try {
+      const result = await purchaseService.getOrders(tenantId, status);
+      if (result.ok) {
+        set({ orders: result.data, loading: false });
+      } else {
+        set({ loading: false, error: result.error.message });
+      }
+    } catch (err) {
+      set({ loading: false, error: err instanceof Error ? err.message : 'Error al cargar órdenes' });
     }
   },
 

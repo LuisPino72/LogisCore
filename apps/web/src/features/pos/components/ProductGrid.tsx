@@ -50,10 +50,11 @@ export const ProductGrid = memo(function ProductGrid({
   let filtered = searchQuery
     ? products.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.sku.toLowerCase().includes(searchQuery.toLowerCase()),
+          (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.sku.toLowerCase().includes(searchQuery.toLowerCase())) &&
+          p.stock > 0,
       )
-    : products;
+    : products.filter((p) => p.stock > 0);
 
   if (selectedCategory) {
     filtered = filtered.filter((p) => p.categoryId === selectedCategory);

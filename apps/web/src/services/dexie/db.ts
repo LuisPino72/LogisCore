@@ -273,6 +273,7 @@ export function initDb(tenantSlug: string): LogisCoreDB {
     return dbInstance;
   }
   if (dbInstance) {
+    _dbClosing = true;
     dbInstance.close();
   }
   _dbClosing = false;

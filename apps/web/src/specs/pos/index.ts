@@ -18,6 +18,7 @@ export const CartItemSchema = z.object({
   isWeighted: z.boolean(),
   isTaxable: z.boolean().default(true),
   unit: z.string(),
+  stock: z.number().int().min(0),
 });
 
 export type CartItem = z.infer<typeof CartItemSchema>;

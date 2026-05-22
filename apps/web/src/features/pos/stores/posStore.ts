@@ -167,15 +167,41 @@ export const usePosStore = create<PosStore>((set, get) => ({
     }
     const existing = cart.find((item) => item.productId === product.id);
     if (existing) {
-      const newQty = preciseRound(existing.quantity + quantity, 2);
+      // Si ya existe, suma la cantidad y valida stock
+      const product = get().products.find(p => p.id === product.id);
+      const maxQty = product?.isWeighted ? (product?.stock ?? 0) / 1000 : (product?.stock ?? 0);
+      const newQty = Math.min(preciseRound(existing.quantity + quantity, 2), maxQty);
+
       set({
         cart: cart.map((item) =>
           item.productId === product.id
-            ? {
-                ...item,
-                quantity: newQty,
-                totalPriceUsd: preciseRound(newQty * item.unitPriceUsd, 2),
-              }
+            ? { ...item, quantity: newQty, totalPriceUsd: preciseRound(newQty * item.unitPriceUsd, 2) }
+            : item,
+        ),
+      });
+    } else {
+      // Nuevo item en el carrito - validar stock inicial
+      const maxQty = product.isWeighted ? product.stock / 1000 : product.stock;
+      const finalQty = Math.min(quantity, maxQty);
+
+      set({
+        cart: [
+          ...cart,
+          {
+            productId: product.id,
+            name: product.name,
+            sku: product.sku,
+            quantity: finalQty,
+            unitPriceUsd: product.priceUsd,
+            totalPriceUsd: preciseRound(finalQty * product.priceUsd, 2),
+            isWeighted: product.isWeighted,
+            isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
+            unit: product.unit,
+            stock: product.stock,
+          },
+        ],
+      });
+    }
             : item,
         ),
       });
@@ -204,14 +230,24 @@ export const usePosStore = create<PosStore>((set, get) => ({
   },
 
   updateCartItemQuantity: (productId, quantity) => {
+    const product = get().products.find(p => p.id === productId);
+    if (!product) {
+      get().removeFromCart(productId);
+      return;
+    }
+
     if (quantity <= 0) {
       get().removeFromCart(productId);
       return;
     }
+
+    const maxQty = product.isWeighted ? product.stock / 1000 : product.stock;
+    const finalQty = Math.min(quantity, maxQty);
+
     set({
       cart: get().cart.map((item) =>
         item.productId === productId
-          ? { ...item, quantity, totalPriceUsd: preciseRound(quantity * item.unitPriceUsd, 2) }
+          ? { ...item, quantity: finalQty, totalPriceUsd: preciseRound(finalQty * item.unitPriceUsd, 2) }
           : item,
       ),
     });

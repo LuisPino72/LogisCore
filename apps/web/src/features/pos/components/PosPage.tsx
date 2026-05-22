@@ -200,6 +200,11 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [voidConfirmId, tenantId, userId, addToast, fetchSalesHistory]);
 
+  const isFromPreviousDay = useMemo(() => {
+    if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
+    return !isSameDay(new Date(cashRegister.openedAt), new Date());
+  }, [cashRegister?.isOpen, cashRegister?.openedAt]);
+
   if (!tenantId) {
     return (
       <div className="p-4 flex items-center justify-center h-full">
@@ -209,11 +214,6 @@ export function PosPage({ tenantId }: PosPageProps) {
   }
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  const isFromPreviousDay = useMemo(() => {
-    if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
-    return !isSameDay(new Date(cashRegister.openedAt), new Date());
-  }, [cashRegister?.isOpen, cashRegister?.openedAt]);
 
   return (
     <div className="flex flex-row h-full w-full min-w-0">
