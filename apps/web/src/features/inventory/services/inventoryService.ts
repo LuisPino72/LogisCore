@@ -224,6 +224,7 @@ export const inventoryService = {
                   unit: prod.unit,
                   stock: prod.stock,
                   stockMin: prod.stock_min,
+                  imageUrl: prod.image_url,
                 });
               }
 

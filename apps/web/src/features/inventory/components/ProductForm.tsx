@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button, Input, Modal, Checkbox, Select } from '../../../common/components';
 import { ImagePlus, X, Scan, Package, DollarSign, Layers, Settings } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
@@ -27,6 +27,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const isEditing = !!editProduct;
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(editProduct?.imageUrl ?? null);
+  const blobUrlRef = useRef<string | null>(null);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const initialValues = editProduct ? {
     name: editProduct.name,
@@ -49,7 +50,15 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
   const { formData, errors, isSubmitting, setField, handleSubmit: formSubmit, reset } = useProductForm({ onSubmit: wrappedOnSubmit, initialValues });
 
+  const revokeBlobUrl = () => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+  };
+
   const handleClose = () => {
+    revokeBlobUrl();
     reset();
     setImageFile(null);
     setImagePreview(null);
@@ -59,12 +68,16 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      revokeBlobUrl();
+      const url = URL.createObjectURL(file);
+      blobUrlRef.current = url;
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      setImagePreview(url);
     }
   };
 
   const removeImage = () => {
+    revokeBlobUrl();
     setImageFile(null);
     setImagePreview(null);
   };
