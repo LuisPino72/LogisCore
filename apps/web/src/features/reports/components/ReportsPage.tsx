@@ -336,6 +336,18 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           cashAnalysis={cashAnalysis}
         />
       </div>
+
+      {isGeneratingPdf && (
+        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-xl border border-gray-100">
+            <Spinner size="lg" />
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-900">Generando PDF</p>
+              <p className="text-xs text-text-secondary mt-1">Esto puede tomar unos segundos...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
