@@ -1,4 +1,4 @@
-import { type FC, useState, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
+import { forwardRef, useState, useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useDebounce } from '../../common/hooks/useDebounce';
@@ -12,7 +12,7 @@ interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
   value?: string;
 }
 
-export const SearchInput: FC<SearchInputProps> = ({
+export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(({
   onClear,
   className,
   value,
@@ -20,10 +20,10 @@ export const SearchInput: FC<SearchInputProps> = ({
   onSearch,
   onChange,
   ...props
-}) => {
+}, ref) => {
   const [internalValue, setInternalValue] = useState(value ?? '');
   const debouncedValue = useDebounce(internalValue, debounceMs);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const internalRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (value !== undefined) setInternalValue(value);
@@ -44,8 +44,9 @@ export const SearchInput: FC<SearchInputProps> = ({
     setInternalValue('');
     onClear?.();
     if (onSearch) onSearch('');
-    inputRef.current?.focus();
-  }, [onClear, onSearch]);
+    const input = (ref as React.RefObject<HTMLInputElement>)?.current || internalRef.current;
+    input?.focus();
+  }, [onClear, onSearch, ref]);
 
   const displayValue = value !== undefined ? value : internalValue;
 
@@ -55,7 +56,11 @@ export const SearchInput: FC<SearchInputProps> = ({
         <Search size={16} />
       </div>
       <input
-        ref={inputRef}
+        ref={(node) => {
+          internalRef.current = node;
+          if (typeof ref === 'function') ref(node);
+          else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+        }}
         className="search-input"
         value={displayValue}
         onChange={handleChange}
@@ -73,4 +78,5 @@ export const SearchInput: FC<SearchInputProps> = ({
       )}
     </div>
   );
-};
+});
+SearchInput.displayName = 'SearchInput';

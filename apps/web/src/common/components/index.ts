@@ -19,6 +19,7 @@ export { Spinner, Skeleton } from './Loading';
 export { Modal } from './Modal';
 export { Radio } from './Radio';
 export { SearchInput } from './SearchInput';
+export { SearchableSelect } from './SearchableSelect';
 export { Select } from './Select';
 export { Tabs } from './Tabs';
 export type { Tab } from './Tabs';

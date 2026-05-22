@@ -1,0 +1,143 @@
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Search, ChevronDown } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+interface SearchableSelectOption {
+  value: string;
+  label: string;
+}
+
+interface SearchableSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: SearchableSelectOption[];
+  placeholder?: string;
+  searchPlaceholder?: string;
+  className?: string;
+  noResultsText?: string;
+}
+
+export function SearchableSelect({
+  value,
+  onChange,
+  options,
+  placeholder = 'Seleccionar...',
+  searchPlaceholder = 'Buscar...',
+  className,
+  noResultsText = 'Sin resultados',
+}: SearchableSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [highlightIdx, setHighlightIdx] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find((o) => o.value === value);
+
+  const filteredOptions = options.filter((o) =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    setIsOpen(true);
+    setSearch('');
+    setHighlightIdx(0);
+    setTimeout(() => searchRef.current?.focus(), 0);
+  }, []);
+
+  const handleSelect = useCallback((optionValue: string) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setSearch('');
+  }, [onChange]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIdx((prev) => Math.min(prev + 1, filteredOptions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIdx((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && filteredOptions[highlightIdx]) {
+      e.preventDefault();
+      handleSelect(filteredOptions[highlightIdx].value);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && listRef.current) {
+      const item = listRef.current.children[highlightIdx] as HTMLElement;
+      item?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightIdx, isOpen]);
+
+  return (
+    <div ref={wrapperRef} className={cn('relative', className)}>
+      <button
+        type="button"
+        onClick={isOpen ? () => setIsOpen(false) : handleOpen}
+        onKeyDown={handleKeyDown}
+        className={cn('select w-full text-left truncate pr-8', !selectedOption && 'text-text-muted')}
+      >
+        {selectedOption ? selectedOption.label : placeholder}
+      </button>
+      <div className="select-arrow">
+        <ChevronDown size={16} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          <div className="relative border-b border-gray-100">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setHighlightIdx(0); }}
+              onKeyDown={handleKeyDown}
+              placeholder={searchPlaceholder}
+              className="w-full pl-9 pr-3 py-2.5 text-sm outline-none bg-transparent"
+            />
+          </div>
+
+          <div ref={listRef} className="overflow-y-auto max-h-48">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-gray-400 text-center">{noResultsText}</div>
+            ) : (
+              filteredOptions.map((opt, idx) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleSelect(opt.value)}
+                  onMouseEnter={() => setHighlightIdx(idx)}
+                  className={cn(
+                    'w-full text-left px-3 py-2 text-sm transition-colors',
+                    opt.value === value && 'bg-primary/5 font-medium',
+                    idx === highlightIdx && 'bg-gray-50 hover:bg-gray-100',
+                    'hover:bg-gray-50'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

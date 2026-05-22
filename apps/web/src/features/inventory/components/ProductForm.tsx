@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Button, Input, Modal, Checkbox, Select } from '../../../common/components';
+import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
 import { ImagePlus, X, Scan, Package, DollarSign, Layers, Settings } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
@@ -221,17 +221,17 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         </div>
 
         <div className="input-wrapper">
-          <Select
-            label="Categoría"
+          <SearchableSelect
             value={formData.categoryId || ''}
-            onChange={(e) => setField('categoryId', e.target.value || undefined)}
-            error={errors.categoryId}
-          >
-            <option value="">Seleccionar categoría...</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </Select>
+            onChange={(value) => setField('categoryId', value || undefined)}
+            options={[
+              { value: '', label: 'Seleccionar categoría...' },
+              ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+            ]}
+            placeholder="Seleccionar categoría..."
+            searchPlaceholder="Buscar categoría..."
+          />
+          {errors.categoryId && <span className="input-error-text">{errors.categoryId}</span>}
         </div>
 
         {/* Section: Configuración */}

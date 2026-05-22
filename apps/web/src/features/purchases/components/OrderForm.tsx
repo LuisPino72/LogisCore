@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Truck, Package, FileText, DollarSign } from 'lucide-react';
-import { Button, Input, Modal, Select } from '../../../common/components';
+import { Button, Input, Modal, SearchableSelect } from '../../../common/components';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import type { Product } from '../../../specs/inventory';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
@@ -143,16 +143,16 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
         {/* Section: Proveedor */}
         <SectionDivider icon={<Truck size={14} className="text-primary" />} title="Proveedor" />
 
-        <Select
+        <SearchableSelect
           value={supplierId}
-          onChange={(e) => setSupplierId(e.target.value)}
-          validation={{ required: true }}
-        >
-          <option value="">Seleccionar proveedor...</option>
-          {suppliers.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </Select>
+          onChange={setSupplierId}
+          options={suppliers.map((s) => ({
+            value: s.id,
+            label: s.name,
+          }))}
+          placeholder="Seleccionar proveedor..."
+          searchPlaceholder="Buscar proveedor..."
+        />
 
         {/* Section: Items */}
         <SectionDivider icon={<Package size={14} className="text-primary" />} title={`Items (${items.length})`} />
@@ -168,16 +168,16 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
               <div key={idx} className="rounded-lg border border-border bg-surface-alt p-3 space-y-2">
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <Select
+                    <SearchableSelect
                       value={item.productId}
-                      onChange={(e) => updateItem(idx, 'productId', e.target.value)}
-                      validation={{ required: true }}
-                    >
-                      <option value="">Producto...</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                      ))}
-                    </Select>
+                      onChange={(value) => updateItem(idx, 'productId', value)}
+                      options={products.map((p) => ({
+                        value: p.id,
+                        label: `${p.name} (${p.sku})`,
+                      }))}
+                      placeholder="Producto..."
+                      searchPlaceholder="Buscar producto..."
+                    />
                   </div>
                   {items.length > 1 && (
                     <Button variant="ghost" size="sm" onClick={() => removeItem(idx)} className="text-danger shrink-0 mt-0.5">

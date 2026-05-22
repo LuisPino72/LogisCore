@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, MoreVertical } from 'lucide-react';
-import { Button, Badge, DataTable, Dropdown, EmptyState, Select, ImageWithFallback } from '../../../common/components';
+import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import type { Product, Category, TabState } from '../types';
@@ -182,15 +182,16 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
           <ProductSearchInput value={searchQuery} onChange={handleSearch} />
         </div>
         <div className="w-full sm:max-w-45">
-          <Select
+          <SearchableSelect
             value={filterCategory}
-            onChange={(e) => handleCategoryFilter(e.target.value)}
-          >
-            <option value="">Todas las categorías</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </Select>
+            onChange={handleCategoryFilter}
+            options={[
+              { value: '', label: 'Todas las categorías' },
+              ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+            ]}
+            placeholder="Todas las categorías"
+            searchPlaceholder="Buscar categoría..."
+          />
         </div>
       </div>
 

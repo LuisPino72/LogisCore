@@ -9,7 +9,6 @@ import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
 import type { TabKey } from '../types';
 import type { CreateSupplierInput, CreatePurchaseOrderInput, Supplier, PurchaseOrderWithItems, PurchaseOrderStatus } from '../../../specs/purchases';
-
 interface ConfirmDeleteSupplier {
   id: string;
   name: string;
@@ -36,6 +35,10 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const [confirmDeleteSupplier, setConfirmDeleteSupplier] = useState<ConfirmDeleteSupplier | null>(null);
   const [confirmCancelOrder, setConfirmCancelOrder] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeleteOrder, setConfirmDeleteOrder] = useState<{ id: string; name: string } | null>(null);
+  const handleStatusFilter = (value: PurchaseOrderStatus | 'all', el: HTMLElement) => {
+    saveTabState(activeTab, { statusFilter: value });
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
 
   const statusOptions: { value: PurchaseOrderStatus | 'all'; label: string; variant: 'neutral' | 'warning' | 'info' | 'success' | 'danger' }[] = [
     { value: 'all', label: 'Todas', variant: 'neutral' },
@@ -188,7 +191,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => saveTabState(activeTab, { statusFilter: opt.value })}
+                  onClick={(e) => handleStatusFilter(opt.value, e.currentTarget)}
                   className={cn(
                     'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap',
                     tabState.statusFilter === opt.value
