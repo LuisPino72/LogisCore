@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal } from '../../../common/components';
+import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
@@ -13,6 +13,7 @@ import { CashStatusBadge } from './CashStatusBadge';
 import { ParkCartModal } from './ParkCartModal';
 import { ParkedCartsList } from './ParkedCartsList';
 import { SalesHistory } from './SalesHistory';
+import { StockVerificationModal } from './StockVerificationModal';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
@@ -58,6 +59,10 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'sell' | 'history'>('sell');
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showVerifyConfirm, setShowVerifyConfirm] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyCounts, setVerifyCounts] = useState({ sold: 0, lowStock: 0 });
 
   const exchangeRateBs = exchangeRate ?? 0;
 
@@ -124,8 +129,53 @@ export function PosPage({ tenantId }: PosPageProps) {
   }, []);
 
   const handleCloseCash = useCallback(async () => {
+    if (!tenantId) return;
+    setVerifyLoading(true);
+    setShowVerifyConfirm(true);
+    try {
+      const [soldResult, lowStockResult] = await Promise.all([
+        posService.getTodaySoldProducts(tenantId, 10),
+        inventoryService.getLowStockProducts(tenantId),
+      ]);
+      const soldCount = soldResult.ok ? soldResult.data.length : 0;
+      const lowStockCount = lowStockResult.ok ? lowStockResult.data.length : 0;
+      setVerifyCounts({ sold: soldCount, lowStock: lowStockCount });
+
+      if (soldCount === 0 && lowStockCount === 0) {
+        setShowVerifyConfirm(false);
+        setCashMode('close');
+        setShowCashModal(true);
+        return;
+      }
+    } catch {
+      setVerifyCounts({ sold: 0, lowStock: 0 });
+      setShowVerifyConfirm(false);
+      setCashMode('close');
+      setShowCashModal(true);
+    } finally {
+      setVerifyLoading(false);
+    }
+  }, [tenantId]);
+
+  const handleVerifyYes = useCallback(() => {
+    setShowVerifyConfirm(false);
+    setShowVerifyModal(true);
+  }, []);
+
+  const handleVerifyNo = useCallback(() => {
+    setShowVerifyConfirm(false);
     setCashMode('close');
     setShowCashModal(true);
+  }, []);
+
+  const handleVerifyComplete = useCallback(() => {
+    setShowVerifyModal(false);
+    setCashMode('close');
+    setShowCashModal(true);
+  }, []);
+
+  const handleVerifyClose = useCallback(() => {
+    setShowVerifyModal(false);
   }, []);
 
   const handleCashOpenSubmit = useCallback(
@@ -375,6 +425,42 @@ export function PosPage({ tenantId }: PosPageProps) {
         onCloseCash={handleCashCloseSubmit}
         loading={loading}
       />
+
+      <StockVerificationModal
+        isOpen={showVerifyModal}
+        onClose={handleVerifyClose}
+        onComplete={handleVerifyComplete}
+        tenantId={tenantId ?? ''}
+        userId={userId ?? ''}
+      />
+
+      <Modal
+        isOpen={showVerifyConfirm}
+        onClose={() => setShowVerifyConfirm(false)}
+        title="Verificar inventario"
+        size="sm"
+      >
+        {verifyLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Spinner />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-gray-600">
+              Hay <strong>{verifyCounts.sold + verifyCounts.lowStock}</strong> producto{(verifyCounts.sold + verifyCounts.lowStock) > 1 ? 's' : ''} para verificar
+              {verifyCounts.sold > 0 && <> (<strong>{verifyCounts.sold}</strong> vendido{verifyCounts.sold > 1 ? 's' : ''} hoy</>}
+              {verifyCounts.sold > 0 && verifyCounts.lowStock > 0 ? <>, </> : null}
+              {verifyCounts.lowStock > 0 ? <><strong>{verifyCounts.lowStock}</strong> con bajo stock</> : null}
+              {verifyCounts.sold > 0 ? <> )</> : null}.
+              ¿Deseas verificar el stock físico antes de cerrar caja?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={handleVerifyNo}>Solo cerrar</Button>
+              <Button variant="primary" onClick={handleVerifyYes}>Verificar</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <ParkCartModal
         isOpen={showParkModal}

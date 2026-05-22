@@ -137,7 +137,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
             <Badge variant={getStockVariant(product)}>
               {getStockBadgeContent(product)}
             </Badge>
-            {product.stockMin && product.stock <= product.stockMin && (
+            {product.stockMin && parseFloat(displayStock(product.stock, product.unit)) <= product.stockMin && (
               <AlertTriangle size={12} className="text-danger shrink-0" />
             )}
           </div>
@@ -259,7 +259,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         columns={columns}
         data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
-        rowClassName={(p: Product) => p.stockMin && p.stock <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined}
+        rowClassName={(p: Product) => p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined}
         emptyMessage="No se encontraron productos"
         renderCardOnMobile
         page={page}

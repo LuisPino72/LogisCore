@@ -17,7 +17,7 @@ export function LowStockBadge({ count, onClick }: LowStockBadgeProps) {
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
     >
       <AlertTriangle size={12} />
-      <span>{count} bajo stock</span>
+      <span>{count} bajo stock Pulsa aqui para reponer</span>
     </div>
   );
 }

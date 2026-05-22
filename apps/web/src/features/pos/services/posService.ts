@@ -1087,4 +1087,47 @@ export const posService = {
       return failure(new AppError('FAVORITES_FETCH_FAILED', 'Error al cargar favoritos.'));
     }
   },
+
+  async getTodaySoldProducts(
+    tenantId: string,
+    maxProducts = 10,
+  ): Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>> {
+    try {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+
+      const salesResult = await this.getSalesHistory(tenantId, 0, 1000, todayStart, todayEnd);
+      if (!salesResult.ok) return failure(salesResult.error);
+
+      const productMap = new Map<string, { productId: string; productName: string; productSku: string; quantity: number }>();
+
+      for (const sale of salesResult.data.sales) {
+        const itemsResult = await this.getSaleItems(sale.id);
+        if (!itemsResult.ok) continue;
+        for (const item of itemsResult.data) {
+          const existing = productMap.get(item.productId);
+          if (existing) {
+            existing.quantity += item.quantity;
+          } else {
+            productMap.set(item.productId, {
+              productId: item.productId,
+              productName: item.productName,
+              productSku: item.productSku,
+              quantity: item.quantity,
+            });
+          }
+        }
+      }
+
+      const sorted = Array.from(productMap.values())
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, maxProducts);
+
+      return success(sorted);
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getTodaySoldProducts:', err);
+      return failure(new AppError('TOP_SOLD_FETCH_FAILED', 'Error al obtener productos más vendidos.'));
+    }
+  },
 };
