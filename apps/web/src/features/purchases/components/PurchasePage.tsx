@@ -3,6 +3,7 @@ import { ShoppingCart, Truck, AlertTriangle, Plus, ClipboardCheck } from 'lucide
 import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal, ModuleOnboarding, DatePicker } from '../../../common/components';
 import { cn } from '../../../lib/utils';
 import { usePurchases } from '../hooks/usePurchases';
+import { useToastStore } from '../../../stores/toastStore';
 import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
 import { OrderList } from './OrderList';
@@ -23,8 +24,9 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     suppliers, orders, loading, activeTab, setActiveTab,
     createSupplier, updateSupplier, deleteSupplier, createOrder, updateOrder, softDeleteOrder,
     confirmOrder, receiveOrder, cancelOrder,
-    refresh, userId, role, tabStates, saveTabState,
+    refresh, userId, role, tabStates, saveTabState, error: storeError,
   } = usePurchases(tenantId);
+  const { addToast } = useToastStore();
 
   const tabState = tabStates[activeTab];
 
@@ -71,8 +73,16 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
   const handleConfirmDeleteSupplier = async () => {
     if (!confirmDeleteSupplier || !tenantId) return;
-    await deleteSupplier(confirmDeleteSupplier.id, tenantId);
-    setConfirmDeleteSupplier(null);
+    const success = await deleteSupplier(confirmDeleteSupplier.id, tenantId);
+    if (success) {
+      setConfirmDeleteSupplier(null);
+    } else {
+      // Usamos el error del store que ya fue actualizado por deleteSupplier
+      addToast({
+        type: 'error',
+        message: storeError || 'No se pudo eliminar el proveedor',
+      });
+    }
   };
 
   const handleCreateOrder = async (data: CreatePurchaseOrderInput) => {
