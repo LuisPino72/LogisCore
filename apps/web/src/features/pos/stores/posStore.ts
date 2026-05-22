@@ -167,11 +167,9 @@ export const usePosStore = create<PosStore>((set, get) => ({
     }
     const existing = cart.find((item) => item.productId === product.id);
     if (existing) {
-      // Si ya existe, suma la cantidad y valida stock
-      const product = get().products.find(p => p.id === product.id);
-      const maxQty = product?.isWeighted ? (product?.stock ?? 0) / 1000 : (product?.stock ?? 0);
+      const foundProduct = get().products.find(p => p.id === product.id);
+      const maxQty = foundProduct?.isWeighted ? (foundProduct?.stock ?? 0) / 1000 : (foundProduct?.stock ?? 0);
       const newQty = Math.min(preciseRound(existing.quantity + quantity, 2), maxQty);
-
       set({
         cart: cart.map((item) =>
           item.productId === product.id
@@ -180,10 +178,8 @@ export const usePosStore = create<PosStore>((set, get) => ({
         ),
       });
     } else {
-      // Nuevo item en el carrito - validar stock inicial
       const maxQty = product.isWeighted ? product.stock / 1000 : product.stock;
       const finalQty = Math.min(quantity, maxQty);
-
       set({
         cart: [
           ...cart,
@@ -198,27 +194,6 @@ export const usePosStore = create<PosStore>((set, get) => ({
             isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
             unit: product.unit,
             stock: product.stock,
-          },
-        ],
-      });
-    }
-            : item,
-        ),
-      });
-    } else {
-      set({
-        cart: [
-          ...cart,
-          {
-            productId: product.id,
-            name: product.name,
-            sku: product.sku,
-            quantity,
-            unitPriceUsd: product.priceUsd,
-            totalPriceUsd: preciseRound(quantity * product.priceUsd, 2),
-            isWeighted: product.isWeighted,
-            isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
-            unit: product.unit,
           },
         ],
       });

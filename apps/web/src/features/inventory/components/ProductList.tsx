@@ -3,7 +3,7 @@ import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, Mor
 import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
-import type { Product, Category, TabState } from '../types';
+import type { Product, Category, TabState, StockFilter } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -35,6 +35,17 @@ function getStockBadgeContent(product: Product): string {
   return `${display} ${label}`;
 }
 
+function applyStockFilter(product: Product, filter: StockFilter): boolean {
+  const displayStock = product.isWeighted ? (product.unit === 'kg' || product.unit === 'lt' ? product.stock / 1000 : product.stock) : product.stock;
+  const threshold = product.stockMin ?? 5;
+  switch (filter) {
+    case 'all': return true;
+    case 'in_stock': return displayStock > threshold;
+    case 'low_stock': return displayStock > 0 && displayStock <= threshold;
+    case 'out_of_stock': return displayStock === 0;
+  }
+}
+
 function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   if (product.stockMin && product.stock <= product.stockMin) return 'danger';
   if (product.stockMin && product.stock <= product.stockMin * 2) return 'warning';
@@ -44,6 +55,7 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
 export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
+  const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
   const [page, setPage] = useState(initialTabState.page);
 
   useEffect(() => {
@@ -61,6 +73,23 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
     onSaveTabState({ searchQuery, filterCategory: categoryId, page });
     onSearch(searchQuery, categoryId || undefined);
   };
+
+  const handleStockFilter = (value: StockFilter, el: HTMLElement) => {
+    setStockFilter(value);
+    onSaveTabState({ searchQuery, filterCategory, stockFilter: value, page });
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
+
+  const stockOptions: { value: StockFilter; label: string }[] = [
+    { value: 'all', label: 'Todos' },
+    { value: 'in_stock', label: 'Stock alto' },
+    { value: 'low_stock', label: 'Stock bajo' },
+    { value: 'out_of_stock', label: 'Sin stock' },
+  ];
+
+  const filteredByStock = useMemo(() => {
+    return products.filter((p) => applyStockFilter(p, stockFilter));
+  }, [products, stockFilter]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [
@@ -195,9 +224,26 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         </div>
       </div>
 
-      {products.length > 0 && (
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        {stockOptions.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={(e) => handleStockFilter(opt.value, e.currentTarget)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+              stockFilter === opt.value
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {filteredByStock.length > 0 && (
         <div className="flex items-center justify-between px-1">
-          <p className="text-xs text-text-secondary">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-text-secondary">{filteredByStock.length} producto{filteredByStock.length !== 1 ? 's' : ''}</p>
           {totalLowStock > 0 && (
             <span className="text-[10px] font-medium text-danger bg-danger/10 px-2 py-0.5 rounded-full">
               {totalLowStock} con stock bajo
@@ -208,16 +254,16 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
 
       <DataTable
         columns={columns}
-        data={products}
+        data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
         emptyMessage="No se encontraron productos"
         renderCardOnMobile
         page={page}
         onPageChange={(newPage) => {
           setPage(newPage);
-          onSaveTabState({ searchQuery, filterCategory, page: newPage });
+          onSaveTabState({ searchQuery, filterCategory, stockFilter, page: newPage });
         }}
-        total={products.length}
+        total={filteredByStock.length}
       />
     </div>
   );

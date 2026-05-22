@@ -80,7 +80,7 @@ export const ProductGrid = memo(function ProductGrid({
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             <button
               type="button"
-              onClick={() => onCategoryChange(null)}
+              onClick={(e) => { onCategoryChange(null); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
                 selectedCategory === null
                   ? 'bg-primary text-white border-primary shadow-sm'
@@ -93,7 +93,7 @@ export const ProductGrid = memo(function ProductGrid({
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => onCategoryChange(cat.id)}
+                onClick={(e) => { onCategoryChange(cat.id); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
                   selectedCategory === cat.id
                     ? 'bg-primary text-white border-primary shadow-sm'

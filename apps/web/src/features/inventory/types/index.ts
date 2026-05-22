@@ -44,11 +44,14 @@ export interface MovementRow {
   reason?: string;
 }
 
+export type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
+
 export type TabKey = 'productos' | 'categorias' | 'historial';
 
 export interface TabState {
   searchQuery: string;
   filterCategory: string;
+  stockFilter: StockFilter;
   page: number;
 }
 
