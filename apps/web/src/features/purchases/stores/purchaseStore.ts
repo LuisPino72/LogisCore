@@ -14,8 +14,8 @@ interface PurchaseStore {
   tabStates: Record<TabKey, TabState>;
   setActiveTab: (tab: TabKey) => void;
   saveTabState: (tab: TabKey, state: Partial<TabState>) => void;
-  fetchSuppliers: (tenantId: string) => Promise<void>;
-  fetchOrders: (tenantId: string, status?: PurchaseOrderStatus) => Promise<void>;
+  fetchSuppliers: (tenantId: string, silent?: boolean) => Promise<void>;
+  fetchOrders: (tenantId: string, status?: PurchaseOrderStatus, silent?: boolean) => Promise<void>;
   createSupplier: (tenantId: string, userId: string, input: CreateSupplierInput) => Promise<boolean>;
   updateSupplier: (id: string, input: Partial<CreateSupplierInput>, tenantId: string) => Promise<boolean>;
   deleteSupplier: (id: string, tenantId: string) => Promise<boolean>;
@@ -53,8 +53,8 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     });
   },
 
-  fetchSuppliers: async (tenantId) => {
-    set({ loading: true, error: null });
+  fetchSuppliers: async (tenantId, silent = false) => {
+    if (!silent) set({ loading: true, error: null });
     const result = await purchaseService.getSuppliers(tenantId);
     if (result.ok) {
       set({ suppliers: result.data, loading: false });
@@ -63,8 +63,8 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     }
   },
 
-  fetchOrders: async (tenantId, status) => {
-    set({ loading: true, error: null });
+  fetchOrders: async (tenantId, status, silent = false) => {
+    if (!silent) set({ loading: true, error: null });
     try {
       const result = await purchaseService.getOrders(tenantId, status);
       if (result.ok) {

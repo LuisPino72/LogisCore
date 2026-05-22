@@ -338,7 +338,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       </div>
 
       {isGeneratingPdf && (
-        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-xl border border-gray-100">
             <Spinner size="lg" />
             <div className="text-center">

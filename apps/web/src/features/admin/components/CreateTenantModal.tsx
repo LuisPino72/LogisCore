@@ -100,25 +100,25 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             placeholder="Nombre"
             value={createForm.tenant.name}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, name: e.target.value } }))}
-            validation={{ required: true, maxLength: 30 }}
+            validation={{ required: true, maxLength: 25 }}
           />
           <Input
             placeholder="RIF (J123456789)"
             value={createForm.tenant.rif}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value.toUpperCase() } }))}
-            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/ }}
+            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 9 }}
           />
           <Input
             placeholder="Teléfono (04121234567)"
             value={createForm.tenant.telefono}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: e.target.value } }))}
-            validation={{ pattern: /^(\+58|0)\d{10}$/ }}
+            validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 12 }}
           />
           <Input
             placeholder="Dirección"
             value={createForm.tenant.direccion}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, direccion: e.target.value } }))}
-            validation={{ maxLength: 30 }}
+            validation={{ maxLength: 25 }}
           />
         </div>
 
@@ -141,7 +141,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             type="email"
             value={createForm.owner.email}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, email: e.target.value } }))}
-            validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }}
+            validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 25 }}
           />
           <Input
             placeholder="Contraseña"
@@ -190,7 +190,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 type="email"
                 value={emp.email}
                 onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
-                validation={{ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }}
+                validation={{ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 25 }}
               />
               <Input
                 placeholder="Contraseña"

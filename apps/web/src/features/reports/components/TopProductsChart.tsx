@@ -84,7 +84,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
                   </span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-700 truncate text-xs sm:text-sm">{p.name}</p>
+                  <p className="font-medium text-gray-700 wrap-break-word text-xs sm:text-sm">{p.name}</p>
                   <p className="text-[10px] sm:text-[11px] text-text-secondary">
                     {p.quantitySold.toFixed(p.quantitySold % 1 !== 0 ? 2 : 0)} u
                   </p>

@@ -126,7 +126,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               value={formData.name}
               onChange={(e) => setField('name', e.target.value)}
               error={errors.name}
-              validation={{ required: true, maxLength: 50 }}
+              validation={{ required: true, maxLength: 25 }}
               inputClassName="text-sm"
             />
           </div>
@@ -145,7 +145,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 value={formData.sku}
                 onChange={(e) => setField('sku', e.target.value)}
                 error={errors.sku}
-                validation={{ required: true, maxLength: 50 }}
+                validation={{ required: true, maxLength: 25 }}
                 inputClassName="text-sm"
               />
               <Button variant="outline" size="sm" onClick={() => setShowBarcodeScanner(true)} className="shrink-0 px-2" title="Escanear código de barras">

@@ -100,7 +100,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
   return (
     <div className="py-2.5 border-b border-border last:border-0">
       <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-sm font-medium text-gray-800 truncate flex-1">{item.name}</p>
+        <p className="text-sm font-medium text-gray-800 wrap-break-word flex-1">{item.name}</p>
         <p className="text-sm font-semibold text-gray-900 shrink-0">{formatUsd(item.totalPriceUsd)}</p>
       </div>
       <div className="flex items-center justify-between gap-2">

@@ -85,7 +85,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={error && !name.trim() ? error : undefined}
-              validation={{ required: true, maxLength: 50 }}
+              validation={{ required: true, maxLength: 25 }}
               inputClassName="text-sm pl-10"
             />
           </div>
@@ -101,7 +101,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
               placeholder="Ej: 0412-1234567"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              validation={{ pattern: /^(\+58|0)\d{10}$/ }}
+              validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 25 }}
               hint="Formato: 04121234567 o +584121234567"
               inputClassName="text-sm pl-10"
             />

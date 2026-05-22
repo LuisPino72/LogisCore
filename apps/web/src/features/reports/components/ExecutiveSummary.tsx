@@ -141,7 +141,7 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] sm:text-xs text-text-secondary">Producto m&aacute;s rentable</p>
-            <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{data.topProductName}</p>
+            <p className="text-xs sm:text-sm font-semibold text-gray-900 wrap-break-word">{data.topProductName}</p>
           </div>
           <Badge variant="info" className="shrink-0">
             #1

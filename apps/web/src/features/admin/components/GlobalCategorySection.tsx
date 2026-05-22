@@ -106,7 +106,7 @@ export function GlobalCategorySection({
               paginated.map((c) => (
                 <div key={c.id} className="flex flex-col gap-2 px-3 py-3 rounded-lg border border-gray-100 bg-white">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
+                    <p className="text-sm font-medium text-gray-900 wrap-break-word">{c.name}</p>
                     <p className="text-xs text-text-secondary">{new Date(c.createdAt).toLocaleDateString('es-ES')}</p>
                   </div>
                   <div className="flex gap-2">

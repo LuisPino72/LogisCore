@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Package, ListTree, History, AlertTriangle, Plus, Settings } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
@@ -129,11 +129,16 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     }
   };
 
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
+  }, [loading, hasLoadedOnce]);
+
   if (!tenantId) {
     return <EmptyState icon={<Package size={48} />} title="Selecciona un tenant" description="No hay tenant activo" />;
   }
 
-  if (loading && products.length === 0) {
+  if (loading && products.length === 0 && !hasLoadedOnce) {
     return (
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
@@ -338,7 +343,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
               <div className="input-wrapper">
                 <label className="input-label">Motivo (obligatorio)</label>
-                <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} validation={{ required: 'El motivo es obligatorio', maxLength: 50 }} error={adjError} inputClassName="text-sm" />
+                <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} validation={{ required: 'El motivo es obligatorio', maxLength: 15 }} error={adjError} inputClassName="text-sm" />
               </div>
             </div>
           </Modal>
@@ -426,7 +431,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               return (
                 <div key={product.id} className="flex items-center justify-between bg-surface-alt rounded-lg p-3 border border-border">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{product.name}</p>
+                    <p className="text-sm font-semibold text-gray-800 wrap-break-word">{product.name}</p>
                     <p className="text-xs text-text-secondary">
                       Stock: {displayStock} {unitLabel} / Mín: {displayMin} {unitLabel}
                     </p>

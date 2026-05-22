@@ -41,7 +41,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
                 <ShoppingBag size={16} className="text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{cart.name}</p>
+                <p className="text-sm font-semibold text-gray-800 wrap-break-word">{cart.name}</p>
                 <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
                   <span className="font-medium text-gray-700">{formatUsd(totalUsd)}</span>
                   <span className="text-gray-300">·</span>

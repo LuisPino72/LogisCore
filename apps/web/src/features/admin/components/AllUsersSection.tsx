@@ -16,7 +16,7 @@ export function AllUsersSection({ allUsers, page, totalPages, onPageChange }: Al
       key: 'email',
       header: 'Email',
       render: (u: GlobalUser) => (
-        <span className="truncate block" title={u.email}>{u.email}</span>
+        <span className="wrap-break-word block" title={u.email}>{u.email}</span>
       ),
     },
     { key: 'name', header: 'Nombre' },

@@ -10,8 +10,8 @@ interface InventoryStore extends InventoryState {
   setActiveTab: (tab: TabKey) => void;
   setSearchQuery: (query: string) => void;
   saveTabState: (tab: TabKey, state: Partial<TabState>) => void;
-  fetchProducts: (tenantId: string, filters?: ProductFilters) => Promise<void>;
-  fetchCategories: (tenantId: string) => Promise<void>;
+  fetchProducts: (tenantId: string, filters?: ProductFilters, silent?: boolean) => Promise<void>;
+  fetchCategories: (tenantId: string, silent?: boolean) => Promise<void>;
   createProduct: (tenantId: string, userId: string, input: CreateProductInput & { stockInicial?: number }) => Promise<Product | null>;
   updateProduct: (id: string, input: Partial<Product>, tenantId: string) => Promise<boolean>;
   deleteProduct: (id: string, tenantId: string) => Promise<boolean>;
@@ -19,7 +19,7 @@ interface InventoryStore extends InventoryState {
   updateCategory: (id: string, name: string, tenantId: string) => Promise<boolean>;
   deleteCategory: (id: string, tenantId: string) => Promise<boolean>;
   adjustStock: (input: AdjustStockInput & { userId: string; tenantId: string }) => Promise<boolean>;
-  fetchLowStock: (tenantId: string) => Promise<void>;
+  fetchLowStock: (tenantId: string, silent?: boolean) => Promise<void>;
   refresh: (tenantId: string, userId: string) => Promise<void>;
   reset: () => void;
 }
@@ -59,8 +59,8 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     });
   },
 
-  fetchProducts: async (tenantId, filters) => {
-    set({ loading: true, error: null });
+  fetchProducts: async (tenantId, filters, silent = false) => {
+    if (!silent) set({ loading: true, error: null });
     const result = await inventoryService.getProducts(tenantId, filters);
     if (result.ok) {
       set({ products: result.data, loading: false });
@@ -70,8 +70,8 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     }
   },
 
-  fetchCategories: async (tenantId) => {
-    set({ loading: true, error: null });
+  fetchCategories: async (tenantId, silent = false) => {
+    if (!silent) set({ loading: true, error: null });
     const result = await inventoryService.getCategories(tenantId);
     if (result.ok) {
       set({ categories: result.data, loading: false });
@@ -157,10 +157,13 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     return false;
   },
 
-  fetchLowStock: async (tenantId) => {
+  fetchLowStock: async (tenantId, silent = false) => {
+    if (!silent) set({ loading: true, error: null });
     const result = await inventoryService.getLowStockProducts(tenantId);
     if (result.ok) {
-      set({ lowStockProducts: result.data });
+      set({ lowStockProducts: result.data, loading: false });
+    } else {
+      set({ loading: false, error: result.error.message });
     }
   },
 

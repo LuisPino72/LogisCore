@@ -5,6 +5,7 @@ import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
 import { PurchaseErrors } from '../../../specs/purchases/errors';
 import type {
@@ -144,9 +145,11 @@ export const purchaseService = {
       .toArray();
 
     if (rows.length === 0) {
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
+        .eq('tenant_id', tenantUuid)
         .is('deleted_at', null);
 
       if (!error && data && data.length > 0) {
@@ -481,9 +484,11 @@ export const purchaseService = {
       .toArray();
 
     if (rows.length === 0) {
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
       const { data, error } = await supabase
         .from('purchase_orders')
         .select('*')
+        .eq('tenant_id', tenantUuid)
         .is('deleted_at', null);
 
       if (!error && data && data.length > 0) {

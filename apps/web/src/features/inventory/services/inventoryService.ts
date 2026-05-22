@@ -203,9 +203,11 @@ export const inventoryService = {
       if (rows.length === 0) {
         if (isDbClosing()) return success([]);
 
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
         const { data, error } = await supabase
           .from('products')
           .select('*')
+          .eq('tenant_id', tenantUuid)
           .is('deleted_at', null);
 
         if (!error && data && data.length > 0) {

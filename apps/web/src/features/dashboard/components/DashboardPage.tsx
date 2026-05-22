@@ -125,7 +125,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                             {i + 1}
                           </span>
                         )}
-                        <span className="text-sm text-gray-700 truncate" title={p.name}>{p.name}</span>
+                        <span className="text-sm text-gray-700 wrap-break-word" title={p.name}>{p.name}</span>
                       </div>
                       <span className="text-sm font-medium text-gray-900 shrink-0 ml-2">{p.totalQty} vendidos</span>
                     </div>
@@ -184,7 +184,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                 return (
                   <div key={p.id} className={`rounded-lg border p-3 transition-shadow ${isZero ? 'bg-danger/5 border-danger/20' : 'bg-surface-alt border-border'}`}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-800 truncate flex-1" title={p.name}>{p.name}</span>
+                      <span className="text-sm font-medium text-gray-800 wrap-break-word flex-1" title={p.name}>{p.name}</span>
                       <Badge variant={isZero ? 'danger' : 'warning'} className="shrink-0 ml-2">
                         {displayStock(p.stock, p.unit)} {p.unit}
                       </Badge>

@@ -27,6 +27,11 @@ const SUPPLIERS_PAGE_SIZE = 20;
 
 export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySupplier, onEdit, onDelete }: SupplierListProps) {
   const [page, setPage] = useState(1);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
+  }, [loading, hasLoadedOnce]);
 
   useEffect(() => {
     setPage(1);
@@ -35,7 +40,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
   const totalPages = Math.max(1, Math.ceil(suppliers.length / SUPPLIERS_PAGE_SIZE));
   const pagedSuppliers = suppliers.slice((page - 1) * SUPPLIERS_PAGE_SIZE, page * SUPPLIERS_PAGE_SIZE);
 
-  if (loading && suppliers.length === 0) {
+  if (loading && suppliers.length === 0 && !hasLoadedOnce) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
@@ -73,9 +78,9 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
               <p className="text-sm font-semibold text-gray-900 wrap-break-word">{s.name}</p>
               <div className="flex items-center justify-center gap-2 sm:justify-start">
                 {s.phone && (
-                  <p className="text-xs text-text-secondary flex items-center gap-1 truncate">
+                  <p className="text-xs text-text-secondary flex items-center gap-1">
                     <Phone size={12} className="shrink-0" />
-                    <span className="truncate">{s.phone}</span>
+                    <span className="wrap-break-word">{s.phone}</span>
                   </p>
                 )}
                 {activeOrders > 0 && (

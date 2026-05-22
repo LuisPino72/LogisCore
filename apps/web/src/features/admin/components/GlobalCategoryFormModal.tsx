@@ -57,7 +57,7 @@ export function GlobalCategoryFormModal({ isOpen, onClose, categoryId, initialNa
             setError(null);
           }}
           error={error ?? undefined}
-          validation={{ required: true, maxLength: 30 }}
+          validation={{ required: true, maxLength: 25 }}
         />
         {error && <p className="text-danger text-sm">{error}</p>}
         <div className="flex gap-2">

@@ -186,7 +186,7 @@ export function DataTable<T>({
                       {imageContent}
                     </div>
                   )}  
-                  <div className="text-sm font-semibold text-gray-900 text-center w-full truncate">{nameContent}</div>
+                  <div className="text-sm font-semibold text-gray-900 text-center w-full wrap-break-word">{nameContent}</div>
                 </div>
                 <div className="mt-2 text-xs text-gray-600 space-y-1 flex flex-col items-center">
                   {columns.map((col) => {
@@ -200,7 +200,7 @@ export function DataTable<T>({
                         {!col.hideLabelOnMobile && (
                           <div className="text-gray-500 text-xs">{col.header}</div>
                         )}
-                        <div className={cn('text-gray-800 truncate text-sm', col.hideLabelOnMobile && 'w-full text-center')}>{content}</div>
+                        <div className={cn('text-gray-800 wrap-break-word text-sm', col.hideLabelOnMobile && 'w-full text-center')}>{content}</div>
                       </div>
                     );
                   })}

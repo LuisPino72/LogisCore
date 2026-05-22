@@ -60,25 +60,25 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
           placeholder="Nombre"
           value={editForm.name}
           onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
-          validation={{ required: true, maxLength: 30 }}
+          validation={{ required: true, maxLength: 25 }}
         />
         <Input
           placeholder="RIF (J123456789)"
           value={editForm.rif}
           onChange={(e) => setEditForm((p) => ({ ...p, rif: e.target.value.toUpperCase() }))}
-          validation={{ required: true, pattern: /^[VJEGP]\d{9}$/ }}
+          validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 11 }}
         />
         <Input
           placeholder="Teléfono (04121234567)"
           value={editForm.telefono}
           onChange={(e) => setEditForm((p) => ({ ...p, telefono: e.target.value }))}
-          validation={{ pattern: /^(\+58|0)\d{10}$/ }}
+          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 12 }}
         />
         <Input
           placeholder="Dirección"
           value={editForm.direccion}
           onChange={(e) => setEditForm((p) => ({ ...p, direccion: e.target.value }))}
-          validation={{ maxLength: 30 }}
+          validation={{ maxLength: 25 }}
         />
         <div className="border-t border-gray-100 pt-3">
           <Button variant="secondary" fullWidth onClick={onAddEmployeeClick}>

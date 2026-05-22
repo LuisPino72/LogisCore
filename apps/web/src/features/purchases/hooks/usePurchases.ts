@@ -9,11 +9,11 @@ export function usePurchases(tenantId: string | null) {
   const session = useAuthStore((s) => s.session);
   const initialFetchDone = useRef(false);
 
-  const doFetch = useCallback(async (status?: PurchaseOrderStatus) => {
+  const doFetch = useCallback(async (status?: PurchaseOrderStatus, silent = false) => {
     if (!tenantId) return;
     await Promise.all([
-      store.fetchSuppliers(tenantId),
-      store.fetchOrders(tenantId, status),
+      store.fetchSuppliers(tenantId, silent),
+      store.fetchOrders(tenantId, status, silent),
     ]);
   }, [tenantId]);
 
@@ -29,7 +29,7 @@ export function usePurchases(tenantId: string | null) {
     const sub = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
       const { table } = payload as { table?: string };
       if (!table || ['purchase_orders', 'purchase_order_items', 'suppliers', 'products', 'inventory_lots'].includes(table)) {
-        doFetch();
+        doFetch(undefined, true);
       }
     });
 

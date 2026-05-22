@@ -148,6 +148,11 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
   const [receiveOrderId, setReceiveOrderId] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [page, setPage] = useState(1);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
+  }, [loading, hasLoadedOnce]);
 
   useEffect(() => {
     setPage(1);
@@ -156,7 +161,7 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
   const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PAGE_SIZE));
   const pagedOrders = orders.slice((page - 1) * ORDERS_PAGE_SIZE, page * ORDERS_PAGE_SIZE);
 
-  if (loading && orders.length === 0) {
+  if (loading && orders.length === 0 && !hasLoadedOnce) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (

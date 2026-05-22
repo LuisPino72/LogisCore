@@ -44,7 +44,7 @@ export function ParkCartModal({ isOpen, onClose, onConfirm, loading }: ParkCartM
             setName(e.target.value);
           }}
           error={error}
-          validation={{ required: 'Indica un nombre', maxLength: 20 }}
+          validation={{ required: 'Indica un nombre', maxLength: 15 }}
           autoFocus
         />
         <div className="flex gap-2 justify-end">

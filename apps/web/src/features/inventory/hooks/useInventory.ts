@@ -19,13 +19,13 @@ export function useInventory(tenantId: string | null) {
   const initialFetchDone = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const doFetch = useCallback(async (filters?: ProductFilters) => {
+  const doFetch = useCallback(async (filters?: ProductFilters, silent = false) => {
     if (!tenantId) return;
     const effectiveFilters = buildFilters(useInventoryStore.getState(), filters);
     await Promise.all([
-      store.fetchProducts(tenantId, effectiveFilters),
-      store.fetchCategories(tenantId),
-      store.fetchLowStock(tenantId),
+      store.fetchProducts(tenantId, effectiveFilters, silent),
+      store.fetchCategories(tenantId, silent),
+      store.fetchLowStock(tenantId, silent),
     ]);
   }, [tenantId]);
 
@@ -41,12 +41,12 @@ export function useInventory(tenantId: string | null) {
     const sub1 = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
       const { table } = payload as { table?: string };
       if (!table || ['products', 'categories', 'inventory_movements', 'inventory_lots'].includes(table)) {
-        doFetch();
+        doFetch(undefined, true);
       }
     });
 
     const sub2 = EventBus.on('SALE.COMPLETED', () => {
-      doFetch();
+      doFetch(undefined, true);
     });
 
     return () => {

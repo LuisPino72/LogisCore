@@ -109,7 +109,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
               <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <ListTree size={16} className="text-primary" />
               </div>
-              <span className="text-sm font-medium text-gray-900 truncate w-full text-center sm:text-left sm:flex-1 sm:min-w-0">{cat.name}</span>
+              <span className="text-sm font-medium text-gray-900 wrap-break-word w-full text-center sm:text-left sm:flex-1 sm:min-w-0">{cat.name}</span>
               {isOwner && (
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-8 min-h-8" title="Editar">
@@ -138,7 +138,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
               value={formName}
               onChange={(e) => { setFormName(e.target.value); setFormError(''); }}
               error={formError}
-              validation={{ required: true, maxLength: 30 }}
+              validation={{ required: true, maxLength: 25 }}
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
             />
