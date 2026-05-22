@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
-import { ImagePlus, X, Scan, Package, DollarSign, Layers, Settings } from 'lucide-react';
+import { ImagePlus, Plus, X, Scan, Package, DollarSign, Layers, Settings } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Category, CreateProductInput, Product } from '../types';
@@ -11,6 +11,7 @@ interface ProductFormProps {
   onSubmit: (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => Promise<boolean>;
   categories: Category[];
   editProduct?: Product | null;
+  onCreateCategory?: (name: string) => Promise<string | null>;
 }
 
 const SectionDivider = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
@@ -23,12 +24,16 @@ const SectionDivider = ({ icon, title }: { icon: React.ReactNode; title: string 
   </div>
 );
 
-export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct }: ProductFormProps) {
+export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct, onCreateCategory }: ProductFormProps) {
   const isEditing = !!editProduct;
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(editProduct?.imageUrl ?? null);
   const blobUrlRef = useRef<string | null>(null);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
   const initialValues = editProduct ? {
     name: editProduct.name,
     sku: editProduct.sku,
@@ -80,6 +85,22 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     revokeBlobUrl();
     setImageFile(null);
     setImagePreview(null);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!categoryName.trim()) { setCategoryError('Ingresa un nombre'); return; }
+    if (!onCreateCategory) return;
+    setCategorySubmitting(true);
+    setCategoryError('');
+    const newId = await onCreateCategory(categoryName.trim());
+    setCategorySubmitting(false);
+    if (newId) {
+      setField('categoryId', newId);
+      setShowCreateCategory(false);
+      setCategoryName('');
+    } else {
+      setCategoryError('Error al crear categoría');
+    }
   };
 
   return (
@@ -230,6 +251,16 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             ]}
             placeholder="Seleccionar categoría..."
             searchPlaceholder="Buscar categoría..."
+            footer={
+              <button
+                type="button"
+                onClick={() => { setShowCreateCategory(true); setCategoryName(''); setCategoryError(''); }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+              >
+                <Plus size={14} />
+                Crear nueva categoría
+              </button>
+            }
           />
           {errors.categoryId && <span className="input-error-text">{errors.categoryId}</span>}
         </div>
@@ -239,9 +270,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
         {Object.keys(errors).length > 0 && (
           <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger space-y-0.5">
-            {Object.entries(errors).map(([key, msg]) => (
-              <p key={key}><strong>{key}:</strong> {msg}</p>
-            ))}
+            {Object.entries(errors).map(([key, msg]) => {
+              const label: Record<string, string> = {
+                name: 'Nombre', sku: 'Código SKU', priceUsd: 'Precio USD',
+                categoryId: 'Categoría', stockMin: 'Stock mínimo',
+              };
+              return <p key={key}>• {label[key] || key}: {msg}</p>;
+            })}
           </div>
         )}
 
@@ -267,6 +302,29 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           </p>
         </div>
       </div>
+
+      <Modal isOpen={showCreateCategory} onClose={() => setShowCreateCategory(false)} title="Nueva categoría" size="sm">
+        <div className="space-y-4">
+          <div className="input-wrapper">
+            <label className="input-label">Nombre</label>
+            <Input
+              placeholder="Ej: Bebidas"
+              value={categoryName}
+              onChange={(e) => { setCategoryName(e.target.value); setCategoryError(''); }}
+              error={categoryError}
+              validation={{ required: true, maxLength: 25 }}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCategory(); }}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setShowCreateCategory(false)}>Cancelar</Button>
+            <Button variant="primary" onClick={handleCreateCategory} disabled={categorySubmitting}>
+              {categorySubmitting ? 'Creando...' : 'Crear'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <BarcodeScannerModal
         isOpen={showBarcodeScanner}

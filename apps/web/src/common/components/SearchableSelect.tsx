@@ -15,6 +15,7 @@ interface SearchableSelectProps {
   searchPlaceholder?: string;
   className?: string;
   noResultsText?: string;
+  footer?: React.ReactNode;
 }
 
 export function SearchableSelect({
@@ -25,6 +26,7 @@ export function SearchableSelect({
   searchPlaceholder = 'Buscar...',
   className,
   noResultsText = 'Sin resultados',
+  footer,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -134,6 +136,11 @@ export function SearchableSelect({
                   {opt.label}
                 </button>
               ))
+            )}
+            {footer && (
+              <div className="border-t border-gray-100">
+                {footer}
+              </div>
             )}
           </div>
         </div>

@@ -16,7 +16,7 @@ interface PurchaseStore {
   saveTabState: (tab: TabKey, state: Partial<TabState>) => void;
   fetchSuppliers: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchOrders: (tenantId: string, status?: PurchaseOrderStatus, silent?: boolean) => Promise<void>;
-  createSupplier: (tenantId: string, userId: string, input: CreateSupplierInput) => Promise<boolean>;
+  createSupplier: (tenantId: string, userId: string, input: CreateSupplierInput) => Promise<string | null>;
   updateSupplier: (id: string, input: Partial<CreateSupplierInput>, tenantId: string) => Promise<boolean>;
   deleteSupplier: (id: string, tenantId: string) => Promise<boolean>;
   createOrder: (tenantId: string, userId: string, input: CreatePurchaseOrderInput) => Promise<boolean>;
@@ -82,10 +82,10 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     const result = await purchaseService.createSupplier(tenantId, userId, input);
     if (result.ok) {
       await get().fetchSuppliers(tenantId);
-      return true;
+      return result.data.id;
     }
     set({ loading: false, error: result.error.message });
-    return false;
+    return null;
   },
 
   updateSupplier: async (id, input, tenantId) => {

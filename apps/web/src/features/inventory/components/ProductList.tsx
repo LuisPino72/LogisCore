@@ -47,8 +47,11 @@ function applyStockFilter(product: Product, filter: StockFilter): boolean {
 }
 
 function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
-  if (product.stockMin && product.stock <= product.stockMin) return 'danger';
-  if (product.stockMin && product.stock <= product.stockMin * 2) return 'warning';
+  const displayStock = product.isWeighted && (product.unit === 'kg' || product.unit === 'lt')
+    ? product.stock / 1000
+    : product.stock;
+  if (product.stockMin && displayStock <= product.stockMin) return 'danger';
+  if (product.stockMin && displayStock <= product.stockMin * 2) return 'warning';
   return 'success';
 }
 
@@ -256,6 +259,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         columns={columns}
         data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
+        rowClassName={(p: Product) => p.stockMin && p.stock <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined}
         emptyMessage="No se encontraron productos"
         renderCardOnMobile
         page={page}

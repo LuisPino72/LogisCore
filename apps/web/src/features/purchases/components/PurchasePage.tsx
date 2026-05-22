@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ShoppingCart, Truck, AlertTriangle, Plus, ClipboardCheck } from 'lucide-react';
 import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal, ModuleOnboarding, DatePicker } from '../../../common/components';
 import { cn } from '../../../lib/utils';
@@ -8,6 +9,8 @@ import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
+import { inventoryService } from '../../inventory/services/inventoryService';
+import type { Product } from '../../../specs/inventory';
 import type { TabKey } from '../types';
 import type { CreateSupplierInput, CreatePurchaseOrderInput, Supplier, PurchaseOrderWithItems, PurchaseOrderStatus } from '../../../specs/purchases';
 interface ConfirmDeleteSupplier {
@@ -30,10 +33,13 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
   const tabState = tabStates[activeTab];
 
+  const location = useLocation();
   const [showSupplierForm, setShowSupplierForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [editSupplier, setEditSupplier] = useState<Supplier | null>(null);
   const [editOrder, setEditOrder] = useState<PurchaseOrderWithItems | null>(null);
+  const [preSelectedProducts, setPreSelectedProducts] = useState<Product[]>([]);
+  const [createdSupplierId, setCreatedSupplierId] = useState<string | null>(null);
   const [confirmDeleteSupplier, setConfirmDeleteSupplier] = useState<ConfirmDeleteSupplier | null>(null);
   const [confirmCancelOrder, setConfirmCancelOrder] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeleteOrder, setConfirmDeleteOrder] = useState<{ id: string; name: string } | null>(null);
@@ -53,6 +59,21 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
   const isOwner = role === 'owner' || role === 'admin';
 
+  useEffect(() => {
+    const state = location.state as { preSelectedProductIds?: string[] } | null;
+    if (state?.preSelectedProductIds?.length && tenantId) {
+      inventoryService.getProducts(tenantId).then((res) => {
+        if (res.ok) {
+          const selected = res.data.filter((p) => state.preSelectedProductIds!.includes(p.id));
+          setPreSelectedProducts(selected);
+          setEditOrder(null);
+          setShowOrderForm(true);
+        }
+      });
+      window.history.replaceState({}, '');
+    }
+  }, [location.state, tenantId]);
+
   const pendingOrdersCount = useMemo(
     () => orders.filter((o) => o.status === 'draft' || o.status === 'confirmed' || o.status === 'partially_received').length,
     [orders]
@@ -61,9 +82,16 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const handleCreateSupplier = async (data: CreateSupplierInput) => {
     if (!tenantId || !userId) return false;
     if (editSupplier) {
-      return updateSupplier(editSupplier.id, data, tenantId);
+      const ok = await updateSupplier(editSupplier.id, data, tenantId);
+      if (ok) addToast({ type: 'success', message: 'Proveedor actualizado.', duration: 3000 });
+      return ok;
     }
-    return createSupplier(tenantId, userId, data);
+    const newId = await createSupplier(tenantId, userId, data);
+    if (newId) {
+      setCreatedSupplierId(newId);
+      addToast({ type: 'success', message: 'Proveedor creado.', duration: 3000 });
+    }
+    return !!newId;
   };
 
   const handleEditSupplier = (supplier: Supplier) => {
@@ -88,9 +116,13 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const handleCreateOrder = async (data: CreatePurchaseOrderInput) => {
     if (!tenantId || !userId) return false;
     if (editOrder) {
-      return updateOrder(editOrder.id, tenantId, userId, data);
+      const ok = await updateOrder(editOrder.id, tenantId, userId, data);
+      if (ok) addToast({ type: 'success', message: 'Orden actualizada.', duration: 3000 });
+      return ok;
     }
-    return createOrder(tenantId, userId, data);
+    const ok = await createOrder(tenantId, userId, data);
+    if (ok) addToast({ type: 'success', message: 'Orden creada.', duration: 3000 });
+    return ok;
   };
 
   const handleEditOrder = (order: PurchaseOrderWithItems) => {
@@ -106,12 +138,14 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const handleConfirmCancelOrder = async () => {
     if (!confirmCancelOrder || !tenantId) return;
     await cancelOrder(confirmCancelOrder.id, tenantId);
+    addToast({ type: 'success', message: 'Orden cancelada.', duration: 3000 });
     setConfirmCancelOrder(null);
   };
 
   const handleConfirmDeleteOrder = async () => {
     if (!confirmDeleteOrder || !tenantId) return;
     await softDeleteOrder(confirmDeleteOrder.id, tenantId);
+    addToast({ type: 'success', message: 'Orden eliminada.', duration: 3000 });
     setConfirmDeleteOrder(null);
   };
 
@@ -308,11 +342,14 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
       {showOrderForm && (
         <OrderForm
           isOpen={showOrderForm}
-          onClose={() => { setShowOrderForm(false); setEditOrder(null); }}
+          onClose={() => { setShowOrderForm(false); setEditOrder(null); setPreSelectedProducts([]); setCreatedSupplierId(null); }}
           onSubmit={handleCreateOrder}
           suppliers={suppliers}
           tenantId={tenantId}
           editOrder={editOrder}
+          preSelectedProducts={preSelectedProducts}
+          autoSelectSupplierId={createdSupplierId}
+          onRequestCreateSupplier={() => { setEditSupplier(null); setShowSupplierForm(true); }}
         />
       )}
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Package, ListTree, History, AlertTriangle, Plus, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Package, ListTree, History, AlertTriangle, Plus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
@@ -45,6 +46,26 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
   const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
+
+  const navigate = useNavigate();
+
+  const handleToggleProduct = (productId: string) => {
+    setSelectedForOrder((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const handleRequestOrder = () => {
+    const selectedIds = Array.from(selectedForOrder);
+    if (selectedIds.length === 0) return;
+    setShowLowStockModal(false);
+    setSelectedForOrder(new Set());
+    navigate('/purchases', { state: { preSelectedProductIds: selectedIds } });
+  };
 
   const isOwner = role === 'owner' || role === 'admin';
 
@@ -55,12 +76,15 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
     if (!tenantId || !userId) return false;
     const product = await createProduct(tenantId, userId, data);
-    if (product && imageFile) {
-      const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, product.id);
-      if (!imgResult.ok) {
-        addToast({ type: 'warning', message: `Producto creado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
+    if (product) {
+      addToast({ type: 'success', message: 'Producto creado exitosamente.', duration: 3000 });
+      if (imageFile) {
+        const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, product.id);
+        if (!imgResult.ok) {
+          addToast({ type: 'warning', message: `Producto creado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
+        }
+        refresh();
       }
-      refresh();
     }
     if (product) setShowProductForm(false);
     return !!product;
@@ -73,6 +97,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       addToast({ type: 'error', message: 'Error al actualizar el producto. Verifica que los datos sean correctos y que el SKU no esté duplicado.', duration: 5000 });
       return false;
     }
+    addToast({ type: 'success', message: 'Producto actualizado exitosamente.', duration: 3000 });
     if (imageFile) {
       const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, editProduct.id);
       if (!imgResult.ok) {
@@ -93,8 +118,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (!confirmDelete || !tenantId) return;
     if (confirmDelete.type === 'product') {
       await deleteProduct(confirmDelete.id, tenantId);
+      addToast({ type: 'success', message: 'Producto eliminado.', duration: 3000 });
     } else {
       await deleteCategory(confirmDelete.id, tenantId);
+      addToast({ type: 'success', message: 'Categoría eliminada.', duration: 3000 });
     }
     setConfirmDelete(null);
   };
@@ -120,6 +147,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     setAdjSubmitting(false);
 
     if (ok) {
+      addToast({ type: 'success', message: `Stock ajustado correctamente`, duration: 3000 });
       setAdjQuantity('');
       setAdjReason('');
       setAdjProductId('');
@@ -259,7 +287,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <CategoryManager
               categories={categories}
               isOwner={isOwner}
-              onCreate={async (name) => { if (!tenantId) return false; return createCategory(name, tenantId); }}
+              onCreate={async (name) => { if (!tenantId) return false; return !!(await createCategory(name, tenantId)); }}
               onUpdate={async (id, name) => { if (!tenantId) return false; return updateCategory(id, name, tenantId); }}
               onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
               isOpen={showCategoryForm}
@@ -302,6 +330,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           onSubmit={editProduct ? handleEditProduct : handleCreateProduct}
           categories={categories}
           editProduct={editProduct}
+          onCreateCategory={async (name) => {
+            if (!tenantId) return null;
+            const newId = await createCategory(name, tenantId);
+            if (newId) refresh();
+            return newId;
+          }}
         />
       )}
 
@@ -415,8 +449,19 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       {showLowStockModal && (
         <Modal
           isOpen={showLowStockModal}
-          onClose={() => setShowLowStockModal(false)}
+          onClose={() => { setShowLowStockModal(false); setSelectedForOrder(new Set()); }}
           title="Productos con stock bajo"
+          footer={
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={handleRequestOrder}
+              disabled={selectedForOrder.size === 0}
+            >
+              <ShoppingCart size={16} />
+              Pedir seleccionados ({selectedForOrder.size})
+            </Button>
+          }
         >
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {lowStockProducts.map((product) => {
@@ -427,16 +472,30 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 ? ((product.stockMin ?? 0) / 1000).toFixed(2)
                 : (product.stockMin ?? 0).toString();
               const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : '';
+              const isSelected = selectedForOrder.has(product.id);
 
               return (
-                <div key={product.id} className="flex items-center justify-between bg-surface-alt rounded-lg p-3 border border-border">
+                <div
+                  key={product.id}
+                  onClick={() => handleToggleProduct(product.id)}
+                  className={`flex items-center gap-3 bg-surface-alt rounded-lg p-3 border cursor-pointer transition-all ${
+                    isSelected ? 'border-primary ring-1 ring-primary/30' : 'border-border'
+                  }`}
+                >
+                  <div className="shrink-0">
+                    {isSelected ? (
+                      <CheckCircle2 size={20} className="text-primary" />
+                    ) : (
+                      <Circle size={20} className="text-gray-300" />
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-800 wrap-break-word">{product.name}</p>
                     <p className="text-xs text-text-secondary">
                       Stock: {displayStock} {unitLabel} / Mín: {displayMin} {unitLabel}
                     </p>
                   </div>
-                  <AlertTriangle size={16} className="text-danger shrink-0 ml-2" />
+                  <AlertTriangle size={16} className="text-danger shrink-0" />
                 </div>
               );
             })}

@@ -13,6 +13,9 @@ interface OrderFormProps {
   suppliers: Supplier[];
   tenantId: string;
   editOrder?: PurchaseOrderWithItems | null;
+  preSelectedProducts?: Product[];
+  autoSelectSupplierId?: string | null;
+  onRequestCreateSupplier?: () => void;
 }
 
 interface OrderItemInput {
@@ -47,7 +50,7 @@ function isWeighted(products: Product[], productId: string): boolean {
   return p?.isWeighted ?? false;
 }
 
-export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, editOrder }: OrderFormProps) {
+export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, editOrder, preSelectedProducts, autoSelectSupplierId, onRequestCreateSupplier }: OrderFormProps) {
   const [supplierId, setSupplierId] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<OrderItemInput[]>([{ productId: '', quantity: 1, totalCostUsd: 0 }]);
@@ -70,6 +73,14 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
           quantity: i.quantity,
           totalCostUsd: i.totalUsd,
         })));
+      } else if (preSelectedProducts?.length) {
+        setSupplierId('');
+        setNotes('');
+        setItems(preSelectedProducts.map((p) => ({
+          productId: p.id,
+          quantity: 1,
+          totalCostUsd: 0,
+        })));
       } else {
         setSupplierId('');
         setNotes('');
@@ -77,7 +88,13 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
       }
       setError('');
     }
-  }, [isOpen, editOrder, tenantId]);
+  }, [isOpen, editOrder, tenantId, preSelectedProducts]);
+
+  useEffect(() => {
+    if (autoSelectSupplierId && isOpen && !editOrder) {
+      setSupplierId(autoSelectSupplierId);
+    }
+  }, [autoSelectSupplierId, isOpen, editOrder]);
 
   const addItem = () => {
     setItems([...items, { productId: '', quantity: 1, totalCostUsd: 0 }]);
@@ -152,6 +169,16 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
           }))}
           placeholder="Seleccionar proveedor..."
           searchPlaceholder="Buscar proveedor..."
+          footer={
+            <button
+              type="button"
+              onClick={() => onRequestCreateSupplier?.()}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+            >
+              <Plus size={14} />
+              Crear nuevo proveedor
+            </button>
+          }
         />
 
         {/* Section: Items */}

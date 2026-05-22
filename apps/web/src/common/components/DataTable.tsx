@@ -36,6 +36,7 @@ interface DataTableProps<T> {
   sortKey?: string;
   sortDirection?: SortDirection;
   onSort?: (key: string) => void;
+  rowClassName?: (item: T) => string | undefined;
 }
 
 const PAGE_SIZE_DEFAULT = 20;
@@ -45,10 +46,11 @@ interface DataRowProps<T> {
   columns: Column<T>[];
   index: number;
   onRowClick?: (item: T) => void;
+  className?: string;
 }
 
 const DataRow = <T,>(props: DataRowProps<T>): ReactNode => {
-  const { item, columns, index, onRowClick } = props;
+  const { item, columns, index, onRowClick, className } = props;
   return (
     <div
       className={cn(
@@ -56,6 +58,7 @@ const DataRow = <T,>(props: DataRowProps<T>): ReactNode => {
         index % 2 === 0 && 'bg-white',
         index % 2 !== 0 && 'bg-gray-50/50',
         onRowClick && 'cursor-pointer',
+        className,
       )}
       onClick={() => onRowClick?.(item)}
       role={onRowClick ? 'button' : undefined}
@@ -92,6 +95,7 @@ export function DataTable<T>({
   sortKey,
   sortDirection,
   onSort,
+  rowClassName,
 }: DataTableProps<T>) {
   const currentPageSize = pageSize ?? PAGE_SIZE_DEFAULT;
 
@@ -156,7 +160,7 @@ export function DataTable<T>({
         ))}
       </div>
 
-      {/* Desktop / Tablet rows */}
+       {/* Desktop / Tablet rows */}
       <div className="hidden sm:block">
         {paged.map((item, index) => (
           <DataRow
@@ -165,6 +169,7 @@ export function DataTable<T>({
             columns={columns}
             index={index}
             onRowClick={onRowClick}
+            className={rowClassName?.(item)}
           />
         ))}
       </div>
@@ -178,7 +183,7 @@ export function DataTable<T>({
           const imageContent = imageCol?.render ? imageCol.render(item) : null;
           const nameContent = nameCol?.render ? nameCol.render(item) : String((item as Record<string, unknown>)[nameCol?.key ?? ''] ?? '');
           return (
-            <Card key={keyExtractor(item)} className="mb-3">
+            <Card key={keyExtractor(item)} className={cn('mb-3', rowClassName?.(item))}>
               <div className="card-body">
                 <div className="flex flex-col items-center gap-3">
                   {imageContent && (

@@ -44,12 +44,12 @@ export function PosPage({ tenantId }: PosPageProps) {
   const { isOpen } = useCashRegister();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showWeightModal, setShowWeightModal] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
   const [showParkModal, setShowParkModal] = useState(false);
   const [cashMode, setCashMode] = useState<'open' | 'close'>('open');
-  const [weightedProduct, setWeightedProduct] = useState<Product | null>(null);
-  const [weightedQty, setWeightedQty] = useState('');
+  const [weightingProduct, setWeightingProduct] = useState<Product | null>(null);
+  const [weightingQty, setWeightingQty] = useState('');
   const [processing, setProcessing] = useState(false);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -74,9 +74,9 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleAddToCart = useCallback(
     (product: Product) => {
       if (product.isWeighted) {
-        setWeightedProduct(product);
-        setWeightedQty('');
-        setShowPaymentModal(true);
+        setWeightingProduct(product);
+        setWeightingQty('');
+        setShowWeightModal(true);
         return;
       }
       addToCart(product, 1);
@@ -86,15 +86,15 @@ export function PosPage({ tenantId }: PosPageProps) {
   );
 
   const handleWeightedConfirm = useCallback(() => {
-    if (!weightedProduct) return;
-    const qty = parseFloat(weightedQty);
+    if (!weightingProduct) return;
+    const qty = parseFloat(weightingQty);
     if (!qty || qty <= 0) return;
-    addToCart(weightedProduct, qty);
-    setShowPaymentModal(false);
-    setWeightedProduct(null);
-    setWeightedQty('');
-    addToast({ type: 'success', message: `${weightedProduct.name} agregado`, duration: 1500 });
-  }, [weightedProduct, weightedQty, addToCart, addToast]);
+    addToCart(weightingProduct, qty);
+    setShowWeightModal(false);
+    setWeightingProduct(null);
+    setWeightingQty('');
+    addToast({ type: 'success', message: `${weightingProduct.name} agregado`, duration: 1500 });
+  }, [weightingProduct, weightingQty, addToCart, addToast]);
 
   const handlePay = useCallback(async () => {
     if (!tenantId || !userId || !paymentMethod) return;
@@ -351,16 +351,16 @@ export function PosPage({ tenantId }: PosPageProps) {
       />
 
       <PaymentModal
-        isOpen={showPaymentModal}
+        isOpen={showWeightModal}
         onClose={() => {
-          setShowPaymentModal(false);
-          setWeightedProduct(null);
+          setShowWeightModal(false);
+          setWeightingProduct(null);
         }}
         onConfirm={handleWeightedConfirm}
         loading={false}
-        product={weightedProduct}
-        quantity={weightedQty}
-        onQuantityChange={setWeightedQty}
+        product={weightingProduct}
+        quantity={weightingQty}
+        onQuantityChange={setWeightingQty}
       />
 
       <CashRegisterModal
