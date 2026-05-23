@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, ListTree, History, AlertTriangle, Plus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, Select, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
@@ -413,14 +413,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
               <div className="input-wrapper">
                 <label className="input-label">Motivo</label>
-                <Select
+                <SearchableSelect
                   value={adjReasonType}
-                  onChange={(e) => setAdjReasonType(e.target.value as AdjustmentReason)}
-                >
-                  {REASON_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </Select>
+                  onChange={(v) => setAdjReasonType(v as AdjustmentReason)}
+                  options={REASON_OPTIONS}
+                  hideSearch
+                />
               </div>
 
               {!adjHasCost && (

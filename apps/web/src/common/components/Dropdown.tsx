@@ -85,14 +85,26 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
         <div
           ref={menuRef}
           className={cn(
-            'fixed z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1',
-            align === 'right' ? 'right-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0',
+            'fixed z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-y-auto',
           )}
           role="menu"
-          style={{
-            top: ref.current ? ref.current.getBoundingClientRect().bottom + 4 : 0,
-            left: align === 'right' ? (ref.current ? ref.current.getBoundingClientRect().right - 160 : 0) : align === 'center' ? (ref.current ? ref.current.getBoundingClientRect().left + ref.current.getBoundingClientRect().width / 2 - 80 : 0) : (ref.current ? ref.current.getBoundingClientRect().left : 0),
-          }}
+          style={(() => {
+            if (!ref.current) return { top: 0, left: 0 };
+            const rect = ref.current.getBoundingClientRect();
+            const menuWidth = 160;
+            const padding = 8;
+            let left: number;
+            if (align === 'right') {
+              left = rect.right - menuWidth;
+            } else if (align === 'center') {
+              left = rect.left + rect.width / 2 - menuWidth / 2;
+            } else {
+              left = rect.left;
+            }
+            left = Math.max(padding, Math.min(left, window.innerWidth - menuWidth - padding));
+            const maxHeight = Math.min(320, window.innerHeight - rect.bottom - 12);
+            return { top: rect.bottom + 4, left, maxHeight };
+          })()}
         >
           {items.map((item, i) => (
             <button

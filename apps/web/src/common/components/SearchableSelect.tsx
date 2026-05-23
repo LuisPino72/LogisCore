@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface SearchableSelectOption {
   value: string;
@@ -16,6 +18,7 @@ interface SearchableSelectProps {
   className?: string;
   noResultsText?: string;
   footer?: React.ReactNode;
+  hideSearch?: boolean;
 }
 
 export function SearchableSelect({
@@ -27,36 +30,34 @@ export function SearchableSelect({
   className,
   noResultsText = 'Sin resultados',
   footer,
+  hideSearch,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  useClickOutside([wrapperRef, menuRef], () => setIsOpen(false));
+
   const selectedOption = options.find((o) => o.value === value);
 
-  const filteredOptions = options.filter((o) =>
-    o.label.toLowerCase().includes(search.toLowerCase())
-  );
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const filteredOptions = hideSearch
+    ? options
+    : options.filter((o) =>
+        o.label.toLowerCase().includes(search.toLowerCase())
+      );
 
   const handleOpen = useCallback(() => {
     setIsOpen(true);
     setSearch('');
     setHighlightIdx(0);
-    setTimeout(() => searchRef.current?.focus(), 0);
-  }, []);
+    if (!hideSearch) {
+      setTimeout(() => searchRef.current?.focus(), 0);
+    }
+  }, [hideSearch]);
 
   const handleSelect = useCallback((optionValue: string) => {
     onChange(optionValue);
@@ -101,22 +102,45 @@ export function SearchableSelect({
         <ChevronDown size={16} />
       </div>
 
-      {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
-          <div className="relative border-b border-gray-100">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              ref={searchRef}
-              type="text"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setHighlightIdx(0); }}
-              onKeyDown={handleKeyDown}
-              placeholder={searchPlaceholder}
-              className="w-full pl-9 pr-3 py-2.5 text-sm outline-none bg-transparent"
-            />
-          </div>
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg"
+          style={{
+            top: wrapperRef.current ? wrapperRef.current.getBoundingClientRect().bottom + 4 : 0,
+            left: wrapperRef.current ? (() => {
+              const rect = wrapperRef.current.getBoundingClientRect();
+              const menuWidth = Math.max(200, rect.width);
+              const padding = 8;
+              return Math.max(padding, Math.min(rect.left, window.innerWidth - menuWidth - padding));
+            })() : 0,
+            minWidth: wrapperRef.current ? Math.max(200, wrapperRef.current.getBoundingClientRect().width) : 200,
+          }}
+        >
+          {!hideSearch && (
+            <div className="relative border-b border-gray-100">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setHighlightIdx(0); }}
+                onKeyDown={handleKeyDown}
+                placeholder={searchPlaceholder}
+                className="w-full pl-9 pr-3 py-2.5 text-sm outline-none bg-transparent"
+              />
+            </div>
+          )}
 
-          <div ref={listRef} className="overflow-y-auto max-h-48">
+          <div
+            ref={listRef}
+            className="overflow-y-auto"
+            style={{
+              maxHeight: wrapperRef.current
+                ? Math.min(320, window.innerHeight - wrapperRef.current.getBoundingClientRect().bottom - 12 - (hideSearch ? 0 : 44))
+                : 320,
+            }}
+          >
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-xs text-gray-400 text-center">{noResultsText}</div>
             ) : (
@@ -143,7 +167,8 @@ export function SearchableSelect({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
