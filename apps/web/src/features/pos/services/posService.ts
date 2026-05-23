@@ -9,6 +9,7 @@ import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
+import { requireNetwork } from '../../../services/network/requireNetwork';
 import { PosErrors } from '../../../specs/pos/errors';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import { CreateSaleInputSchema } from '../../../specs/pos';
@@ -96,6 +97,9 @@ async function autoCloseRegister(
     tenantId,
     tenantUuid,
   });
+
+  // Push inmediato para sincronizar cierre automático a la nube
+  syncEngine.pushNow().catch(() => {});
 }
 
 export const posService = {
@@ -533,6 +537,9 @@ export const posService = {
   },
 
   async openCashRegister(input: OpenCashRegisterInput): Promise<Result<CashRegister, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const db = getDb();
     const { tenantId, userId, openingBalanceBs } = input;
 
@@ -570,43 +577,41 @@ export const posService = {
       }
     }
 
-    // Si no hay caja local pero estamos online, verificar Supabase para evitar 409 en sync
-    if (navigator.onLine) {
-      try {
-        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
-        const { data: remoteRegister } = await supabase
-          .from('cash_registers')
-          .select('*')
-          .eq('tenant_id', tenantUuid)
-          .is('deleted_at', null)
-          .eq('is_open', true)
-          .maybeSingle();
+    // Verificar Supabase para evitar 409 en sync (siempre online por el guard de arriba)
+    try {
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+      const { data: remoteRegister } = await supabase
+        .from('cash_registers')
+        .select('*')
+        .eq('tenant_id', tenantUuid)
+        .is('deleted_at', null)
+        .eq('is_open', true)
+        .maybeSingle();
 
-        if (remoteRegister) {
-          await db.cashRegisters.put({
-            id: remoteRegister.id as string,
-            tenantId,
-            isOpen: remoteRegister.is_open as boolean,
-            openedBy: remoteRegister.opened_by as string | null,
-            openedAt: remoteRegister.opened_at as string | null,
-            openingBalanceBs: remoteRegister.opening_balance_bs as number | null,
-            closedBy: remoteRegister.closed_by as string | null,
-            closedAt: remoteRegister.closed_at as string | null,
-            closingBalanceBs: remoteRegister.closing_balance_bs as number | null,
-            expectedClosingBs: remoteRegister.expected_closing_bs as number | null,
-            differenceBs: remoteRegister.difference_bs as number | null,
-            totalSalesCount: remoteRegister.total_sales_count as number,
-            totalSalesBs: remoteRegister.total_sales_bs as number,
-            totalIgtfBs: remoteRegister.total_igtf_bs as number,
-            createdAt: remoteRegister.created_at as string,
-            updatedAt: remoteRegister.updated_at as string,
-          });
-          return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta en el servidor.'));
-        }
-      } catch {
-        // Si falla la verificación remota, continuar con creación local
-        // El sync fallará con 409 si hay conflicto, lo cual es recuperable
+      if (remoteRegister) {
+        await db.cashRegisters.put({
+          id: remoteRegister.id as string,
+          tenantId,
+          isOpen: remoteRegister.is_open as boolean,
+          openedBy: remoteRegister.opened_by as string | null,
+          openedAt: remoteRegister.opened_at as string | null,
+          openingBalanceBs: remoteRegister.opening_balance_bs as number | null,
+          closedBy: remoteRegister.closed_by as string | null,
+          closedAt: remoteRegister.closed_at as string | null,
+          closingBalanceBs: remoteRegister.closing_balance_bs as number | null,
+          expectedClosingBs: remoteRegister.expected_closing_bs as number | null,
+          differenceBs: remoteRegister.difference_bs as number | null,
+          totalSalesCount: remoteRegister.total_sales_count as number,
+          totalSalesBs: remoteRegister.total_sales_bs as number,
+          totalIgtfBs: remoteRegister.total_igtf_bs as number,
+          createdAt: remoteRegister.created_at as string,
+          updatedAt: remoteRegister.updated_at as string,
+        });
+        return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta en el servidor.'));
       }
+    } catch {
+      // Si falla la verificación remota, continuar con creación local
+      // El sync fallará con 409 si hay conflicto, lo cual es recuperable
     }
 
     const id = generateId();
@@ -668,6 +673,9 @@ export const posService = {
         tenantId,
         tenantUuid,
       });
+
+      // Push inmediato para sincronizar apertura de caja a la nube
+      syncEngine.pushNow().catch(() => {});
 
       return success({ ...register, deletedAt: null });
     } catch (err) {
@@ -907,6 +915,9 @@ export const posService = {
   },
 
   async closeCashRegister(input: CloseCashRegisterInput): Promise<Result<CashRegister, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const db = getDb();
     const { tenantId, userId, declaredClosingBalanceBs } = input;
 
@@ -980,6 +991,9 @@ export const posService = {
         tenantId,
         tenantUuid,
       });
+
+      // Push inmediato para sincronizar cierre de caja a la nube
+      syncEngine.pushNow().catch(() => {});
 
       return success({
         id: cashReg.id,

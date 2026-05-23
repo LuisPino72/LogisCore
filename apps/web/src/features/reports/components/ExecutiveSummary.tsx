@@ -122,7 +122,11 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
         />
         <KpiCard
           label="Gasto Total"
-          value={formatDual(data.totalCostBs, data.totalCostUsd)}
+          value={formatDual(
+            data.totalCostBs + data.totalExpensesBs,
+            data.totalCostUsd + data.totalExpensesUsd,
+          )}
+          subtitle={`Costo ventas ${formatUsd(data.totalCostUsd)} + Gastos ${formatUsd(data.totalExpensesUsd)}`}
           icon={<DollarSign size={18} />}
           gradient="amber"
         />

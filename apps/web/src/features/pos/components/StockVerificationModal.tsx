@@ -161,6 +161,7 @@ export function StockVerificationModal({
       const result = await inventoryService.adjustStock({
         productId: item.productId,
         quantity: diff,
+        reasonType: 'ajuste_manual',
         reason: 'Ajuste por cierre de caja',
         userId,
         tenantId,

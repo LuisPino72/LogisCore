@@ -6,6 +6,15 @@ export type Category = z.infer<typeof CategorySchema>;
 export type InventoryMovement = z.infer<typeof InventoryMovementSchema>;
 export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
 
+export type AdjustmentReason =
+  | 'inventario_inicial'
+  | 'ajuste_manual'
+  | 'perdida'
+  | 'robo'
+  | 'vencido'
+  | 'consumo_interno'
+  | 'otros';
+
 export interface ProductFormData {
   name: string;
   sku: string;
@@ -18,12 +27,15 @@ export interface ProductFormData {
   unit: string;
   stockInicial: number;
   stockMin?: number;
+  costPrice: number;
 }
 
 export interface AdjustStockInput {
   productId: string;
   quantity: number;
-  reason: string;
+  reasonType: AdjustmentReason;
+  reason?: string;
+  costTotal?: number;
   costUsdPerUnit?: number;
 }
 
@@ -42,6 +54,7 @@ export interface MovementRow {
   exit: number;
   balance: number;
   reason?: string;
+  reasonType?: string;
 }
 
 export type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';

@@ -28,6 +28,7 @@ const defaultFormData: ProductFormData = {
   unit: 'unidad',
   stockInicial: 0,
   stockMin: undefined,
+  costPrice: 0,
 };
 
 export function useProductForm(options: UseProductFormOptions): UseProductFormReturn {
@@ -75,6 +76,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       isSellable: formData.isSellable,
       unit: formData.unit,
       stockMin: formData.stockMin || undefined,
+      costPrice: formData.costPrice || undefined,
     });
 
     if (!parsed.success) {

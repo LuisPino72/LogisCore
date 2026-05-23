@@ -12,6 +12,7 @@ import type {
   TopProductData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
+  AdjustmentLossExpenses,
 } from '../types';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -251,6 +252,22 @@ export const reportsService = {
       const nonSellableExpensesUsd = nsResult.ok ? nsResult.data.totalUsd : 0;
       const nonSellableExpensesBs = nsResult.ok ? nsResult.data.totalBs : 0;
 
+      // Adjustment loss expenses
+      const adjResult = await this.getAdjustmentLossExpenses(tenantId, start, end);
+      const adjustmentLossExpenses = adjResult.ok ? adjResult.data : {
+        perdida: { totalUsd: 0, count: 0 },
+        robo: { totalUsd: 0, count: 0 },
+        vencido: { totalUsd: 0, count: 0 },
+        consumo_interno: { totalUsd: 0, count: 0 },
+        otros: { totalUsd: 0, count: 0 },
+        totalUsd: 0,
+        totalBs: 0,
+      };
+      const totalExpensesUsd = preciseRound(nonSellableExpensesUsd + adjustmentLossExpenses.totalUsd, 2);
+      const totalExpensesBs = preciseRound(nonSellableExpensesBs + adjustmentLossExpenses.totalBs, 2);
+      const netProfitUsd = preciseRound(grossProfitUsd - totalExpensesUsd, 2);
+      const netProfitBs = preciseRound(grossProfitBs - totalExpensesBs, 2);
+
       // Comparacion vs ayer
       let salesVsYesterdayPercent: number | undefined;
       if (filters.timeRange === 'today') {
@@ -280,6 +297,11 @@ export const reportsService = {
         salesVsYesterdayPercent,
         nonSellableExpensesUsd,
         nonSellableExpensesBs,
+        adjustmentLossExpenses,
+        totalExpensesUsd,
+        totalExpensesBs,
+        netProfitUsd,
+        netProfitBs,
       });
     } catch (err) {
       console.error('[reportsService.getExecutiveSummary]', err);
@@ -558,6 +580,67 @@ export const reportsService = {
     } catch (err) {
       logger.error('Reports', 'Error al obtener gastos no vendibles', err);
       return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener gastos no vendibles.'));
+    }
+  },
+
+  async getAdjustmentLossExpenses(tenantId: string, start: string, end: string): Promise<Result<AdjustmentLossExpenses, AppError>> {
+    try {
+      const db = getDb();
+      const movements = await db.inventoryMovements
+        .where({ tenantId })
+        .filter((m) =>
+          m.type === 'adjustment'
+          && m.quantity < 0
+          && m.createdAt >= start
+          && m.createdAt <= end
+          && m.costUsd !== undefined
+          && m.costUsd > 0
+        )
+        .toArray();
+
+      const LOSING_REASONS = ['perdida', 'robo', 'vencido', 'consumo_interno', 'otros'] as const;
+      const byReason: Record<string, { totalUsd: number; count: number }> = {};
+      for (const reason of LOSING_REASONS) {
+        byReason[reason] = { totalUsd: 0, count: 0 };
+      }
+
+      let totalUsd = 0;
+      for (const mov of movements) {
+        const reason = mov.reasonType ?? 'otros';
+        if (!byReason[reason]) byReason[reason] = { totalUsd: 0, count: 0 };
+        byReason[reason].totalUsd += mov.costUsd!;
+        byReason[reason].count += 1;
+        totalUsd += mov.costUsd!;
+      }
+      totalUsd = preciseRound(totalUsd, 2);
+
+      // Get average exchange rate for the period
+      const salesInRange = await db.sales
+        .where('[tenantId+createdAt]')
+        .between([tenantId, start], [tenantId, end])
+        .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
+        .toArray();
+
+      let avgRate = 0;
+      if (salesInRange.length > 0) {
+        const sumRate = salesInRange.reduce((sum, s) => sum + s.exchangeRate, 0);
+        avgRate = sumRate / salesInRange.length;
+      }
+
+      const totalBs = avgRate > 0 ? preciseRound(totalUsd * avgRate, 2) : 0;
+
+      return success({
+        perdida: byReason['perdida'],
+        robo: byReason['robo'],
+        vencido: byReason['vencido'],
+        consumo_interno: byReason['consumo_interno'],
+        otros: byReason['otros'],
+        totalUsd,
+        totalBs,
+      });
+    } catch (err) {
+      logger.error('Reports', 'Error al obtener gastos por pérdidas', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener gastos por pérdidas.'));
     }
   },
 };

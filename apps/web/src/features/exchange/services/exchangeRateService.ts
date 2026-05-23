@@ -2,6 +2,7 @@ import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { getDb, isDbReady } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
+import { requireNetwork } from '../../../services/network/requireNetwork';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { ExchangeRateResponse } from '../types';
 
@@ -85,6 +86,9 @@ export const exchangeRateService = {
   },
 
   async triggerBcvFetch(tenantId: string): Promise<Result<ExchangeRateResponse, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const tokenResult = await getAuthToken();
     if (!tokenResult.ok) return tokenResult;
 
@@ -116,6 +120,9 @@ export const exchangeRateService = {
   },
 
   async setManualRate(tenantId: string, rate: number): Promise<Result<ExchangeRateResponse, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     if (!rate || rate <= 0) {
       return failure(new AppError(DashboardErrors.TASA_INVALID_RATE, 'La tasa debe ser mayor a 0'));
     }

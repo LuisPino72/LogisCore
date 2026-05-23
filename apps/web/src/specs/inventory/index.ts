@@ -29,6 +29,7 @@ export const CreateProductInputSchema = ProductSchema.omit({
   deletedAt: true,
 }).extend({
   categoryId: z.string().uuid('Selecciona una categoría'),
+  costPrice: z.number().positive().optional(),
 }).strict();
 
 export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
@@ -51,6 +52,8 @@ export const InventoryMovementSchema = z.object({
   createdAt: z.string().datetime(),
   userId: z.string().uuid(),
   reason: z.string().optional(),
+  reasonType: z.string().optional(),
+  costUsd: z.number().optional(),
 });
 
 export type InventoryMovement = z.infer<typeof InventoryMovementSchema>;

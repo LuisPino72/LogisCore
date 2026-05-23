@@ -7,6 +7,7 @@ import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
+import { requireNetwork } from '../../../services/network/requireNetwork';
 import { PurchaseErrors } from '../../../specs/purchases/errors';
 import type {
   Supplier,
@@ -67,6 +68,8 @@ export const purchaseService = {
     userId: string,
     input: CreateSupplierInput,
   ): Promise<Result<Supplier, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const id = generateId();
     const now = new Date().toISOString();
@@ -96,6 +99,8 @@ export const purchaseService = {
     input: Partial<CreateSupplierInput>,
     tenantId: string,
   ): Promise<Result<Supplier, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const existing = await db.suppliers.get(id);
     if (!existing) {
@@ -112,6 +117,8 @@ export const purchaseService = {
   },
 
   async softDeleteSupplier(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const supplier = await db.suppliers.get(id);
     if (!supplier) {
@@ -177,6 +184,8 @@ export const purchaseService = {
     userId: string,
     input: CreatePurchaseOrderInput,
   ): Promise<Result<PurchaseOrder, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const id = generateId();
     const now = new Date().toISOString();
@@ -236,8 +245,10 @@ export const purchaseService = {
     id: string,
     tenantId: string,
     userId: string,
-    input: CreatePurchaseOrderInput,
+    input: Partial<CreatePurchaseOrderInput>,
   ): Promise<Result<PurchaseOrder, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const order = await db.purchaseOrders.get(id);
     if (!order || order.deletedAt) {
@@ -245,6 +256,10 @@ export const purchaseService = {
     }
     if (order.status !== 'draft') {
       return failure(new AppError(PurchaseErrors.ORDER_INVALID_STATUS, 'Solo órdenes en borrador pueden editarse.'));
+    }
+
+    if (!input.items || input.items.length === 0) {
+      return failure(new AppError('PURCHASE_UPDATE_NO_ITEMS', 'La orden debe tener al menos un producto.'));
     }
 
     const now = new Date().toISOString();
@@ -276,7 +291,8 @@ export const purchaseService = {
           await syncQueue.enqueue('purchase_order_items', 'DELETE', old.id, { id: old.id }, tenantId);
         }
 
-        const updatedOrder = { ...order, supplierId: input.supplierId, totalUsd, notes: input.notes, updatedAt: now };
+        const supplierId = input.supplierId ?? order.supplierId;
+        const updatedOrder = { ...order, supplierId, totalUsd, notes: input.notes, updatedAt: now };
         await db.purchaseOrders.put(updatedOrder);
         await db.purchaseOrderItems.bulkAdd(newItems.map((i) => ({ ...i, tenantId })));
 
@@ -296,6 +312,8 @@ export const purchaseService = {
   },
 
   async softDeleteOrder(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const order = await db.purchaseOrders.get(id);
     if (!order || order.deletedAt) {
@@ -312,6 +330,8 @@ export const purchaseService = {
   },
 
   async confirmOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const order = await db.purchaseOrders.get(id);
     if (!order || order.deletedAt) {
@@ -337,6 +357,8 @@ export const purchaseService = {
     tenantId: string,
     userId: string,
   ): Promise<Result<PurchaseOrder, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const order = await db.purchaseOrders.get(id);
     if (!order || order.deletedAt) {
@@ -456,6 +478,8 @@ export const purchaseService = {
   },
 
   async cancelOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const order = await db.purchaseOrders.get(id);
     if (!order || order.deletedAt) {

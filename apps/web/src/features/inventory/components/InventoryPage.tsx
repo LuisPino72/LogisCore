@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, ListTree, History, AlertTriangle, Plus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, Select, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
@@ -13,7 +13,9 @@ import { KardexView } from './KardexView';
 import { CategoryManager } from './CategoryManager';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
-import type { CreateProductInput, Product } from '../types';
+import type { CreateProductInput, Product, AdjustmentReason } from '../types';
+
+const LOSS_REASONS: AdjustmentReason[] = ['perdida', 'robo', 'vencido', 'consumo_interno', 'otros'];
 
 interface ConfirmDelete {
   type: 'product' | 'category';
@@ -39,7 +41,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [showAdjustment, setShowAdjustment] = useState(false);
   const [adjProductId, setAdjProductId] = useState<string>('');
   const [adjQuantity, setAdjQuantity] = useState('');
-  const [adjReason, setAdjReason] = useState('');
+  const [adjReasonType, setAdjReasonType] = useState<AdjustmentReason>('ajuste_manual');
+  const [adjCostTotal, setAdjCostTotal] = useState('');
+  const [adjShowCostInput, setAdjShowCostInput] = useState(false);
+  const [adjHasCost, setAdjHasCost] = useState(true);
   const [adjError, setAdjError] = useState('');
   const [adjSubmitting, setAdjSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
@@ -109,9 +114,9 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     return true;
   };
 
-  const handleAdjustStock = async (productId: string, quantity: number, reason: string) => {
+  const handleAdjustStock = async (productId: string, quantity: number, reasonType: AdjustmentReason, costTotal?: number) => {
     if (!tenantId || !userId) return false;
-    return adjustStock({ productId, quantity, reason, userId, tenantId });
+    return adjustStock({ productId, quantity, reasonType, costTotal, userId, tenantId });
   };
 
   const handleConfirmDelete = async () => {
@@ -139,21 +144,40 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const handleSubmitAdjustment = async () => {
     const qty = parseFloat(adjQuantity);
     if (isNaN(qty) || qty === 0) { setAdjError('Ingresa una cantidad válida (positiva o negativa)'); return; }
-    if (!adjReason.trim()) { setAdjError('El motivo es obligatorio'); return; }
+    if (!adjReasonType) { setAdjError('Selecciona un motivo para el ajuste'); return; }
+    if (qty > 0 && LOSS_REASONS.includes(adjReasonType)) {
+      setAdjError('No puedes agregar stock con motivos negativos. Si quieres sumar stock, usa "Error de ingreso inicial" o crea una Orden de Compra.');
+      return;
+    }
 
     setAdjSubmitting(true);
     setAdjError('');
-    const ok = await handleAdjustStock(adjProductId, qty, adjReason.trim());
+    const ok = await handleAdjustStock(
+      adjProductId,
+      qty,
+      adjReasonType,
+      adjShowCostInput && adjCostTotal ? parseFloat(adjCostTotal) : undefined,
+    );
     setAdjSubmitting(false);
 
     if (ok) {
       addToast({ type: 'success', message: `Stock ajustado correctamente`, duration: 3000 });
       setAdjQuantity('');
-      setAdjReason('');
+      setAdjReasonType('ajuste_manual');
+      setAdjCostTotal('');
+      setAdjShowCostInput(false);
+      setAdjHasCost(true);
       setAdjProductId('');
       setShowAdjustment(false);
     } else {
       setAdjError('Error al ajustar stock. Verifica el stock disponible.');
+    }
+  };
+
+  const checkProductCost = async (productId: string) => {
+    const result = await inventoryService.getProductLots(productId);
+    if (result.ok) {
+      setAdjHasCost(result.data.some((l) => (l.costUsdPerUnit ?? 0) > 0));
     }
   };
 
@@ -272,7 +296,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             onNewProduct={openNewProduct}
             onEditProduct={openEditProduct}
             onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
-            onAdjust={(id) => { setAdjProductId(id); setShowAdjustment(true); }}
+            onAdjust={async (id) => { setAdjProductId(id); setShowAdjustment(true); await checkProductCost(id); }}
             onViewLots={(id) => setSelectedProductLotsId(id)}
             onViewKardex={(id) => {
               const product = products.find((p) => p.id === id);
@@ -348,14 +372,23 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         })() : '';
         const unitLabel = product?.unit === 'kg' ? 'Kg' : product?.unit === 'lt' ? 'Lt' : '';
 
+        const REASON_OPTIONS: { value: AdjustmentReason; label: string }[] = [
+          { value: 'inventario_inicial', label: 'Error de ingreso inicial' },
+          { value: 'perdida', label: 'Pérdida' },
+          { value: 'robo', label: 'Robo' },
+          { value: 'vencido', label: 'Vencido' },
+          { value: 'consumo_interno', label: 'Consumo interno' },
+          { value: 'otros', label: 'Otros' },
+        ];
+
         return (
           <Modal
             isOpen={showAdjustment}
-            onClose={() => { setShowAdjustment(false); setAdjProductId(''); }}
+            onClose={() => { setShowAdjustment(false); setAdjProductId(''); setAdjHasCost(true); }}
             title="Ajuste de stock"
             footer={
               <div className="flex gap-3 w-full">
-                <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setAdjProductId(''); }}>Cancelar</Button>
+                <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setAdjProductId(''); setAdjHasCost(true); }}>Cancelar</Button>
                 <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
               </div>
             }
@@ -376,9 +409,47 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               </div>
 
               <div className="input-wrapper">
-                <label className="input-label">Motivo (obligatorio)</label>
-                <Input placeholder="Ej: merma por rotura, stock inicial, devolución" value={adjReason} onChange={(e) => setAdjReason(e.target.value)} validation={{ required: 'El motivo es obligatorio', maxLength: 15 }} error={adjError} inputClassName="text-sm" />
+                <label className="input-label">Motivo</label>
+                <Select
+                  value={adjReasonType}
+                  onChange={(e) => setAdjReasonType(e.target.value as AdjustmentReason)}
+                >
+                  {REASON_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </Select>
               </div>
+
+              {!adjHasCost && (
+                <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 space-y-2">
+                  <p className="text-xs text-warning-dark font-medium">
+                    ⚠️ Este producto no tiene costo registrado. Los ajustes se registrarán con costo <strong>$0 por unidad</strong>.
+                  </p>
+                  {!adjShowCostInput && (
+                    <Button variant="outline" size="sm" onClick={() => setAdjShowCostInput(true)}>
+                      Agregar costo total ($)
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {adjShowCostInput && (
+                <div className="input-wrapper">
+                  <label className="input-label">Costo total del ajuste ($)</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={adjCostTotal}
+                    onChange={(e) => setAdjCostTotal(e.target.value)}
+                    inputClassName="text-sm"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Costo total de las unidades que entran (para ajustes positivos).
+                  </p>
+                </div>
+              )}
             </div>
           </Modal>
         );

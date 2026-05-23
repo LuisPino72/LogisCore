@@ -85,20 +85,27 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): SheetConfig {
   if (summary) {
     rows.push(
       ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / ${formatUsd(summary.totalSalesUsd)}`],
-      ['Gasto Total', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
+      ['Costo de Ventas', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
       ['Ganancia Bruta', `${formatBs(summary.grossProfitBs)} / ${formatUsd(summary.grossProfitUsd)}`],
       ['Margen %', `${summary.profitMarginPercent}%`],
       ['Transacciones', summary.totalTransactions],
       ['Ticket Promedio', `${formatBs(summary.averageTicketBs)} / ${formatUsd(summary.averageTicketUsd)}`],
-      ['Gastos de Consumo Bs', formatBs(summary.nonSellableExpensesBs)],
-      ['Gastos de Consumo USD', formatUsd(summary.nonSellableExpensesUsd)],
+      ['Gastos de Consumo', `${formatBs(summary.nonSellableExpensesBs)} / ${formatUsd(summary.nonSellableExpensesUsd)}`],
+      ['Pérdidas por Ajustes', `${formatBs(summary.adjustmentLossExpenses.totalBs)} / ${formatUsd(summary.adjustmentLossExpenses.totalUsd)}`],
+      ['- Pérdida', `${formatUsd(summary.adjustmentLossExpenses.perdida.totalUsd)} (${summary.adjustmentLossExpenses.perdida.count})`],
+      ['- Robo', `${formatUsd(summary.adjustmentLossExpenses.robo.totalUsd)} (${summary.adjustmentLossExpenses.robo.count})`],
+      ['- Vencido', `${formatUsd(summary.adjustmentLossExpenses.vencido.totalUsd)} (${summary.adjustmentLossExpenses.vencido.count})`],
+      ['- Consumo Interno', `${formatUsd(summary.adjustmentLossExpenses.consumo_interno.totalUsd)} (${summary.adjustmentLossExpenses.consumo_interno.count})`],
+      ['- Otros', `${formatUsd(summary.adjustmentLossExpenses.otros.totalUsd)} (${summary.adjustmentLossExpenses.otros.count})`],
+      ['Gastos Totales', `${formatBs(summary.totalExpensesBs)} / ${formatUsd(summary.totalExpensesUsd)}`],
+      ['Ganancia Neta', `${formatBs(summary.netProfitBs)} / ${formatUsd(summary.netProfitUsd)}`],
       ['Top Producto', summary.topProductName ?? 'N/A'],
     );
     if (summary.salesVsYesterdayPercent !== undefined) {
       rows.push(['Vs Ayer %', `${summary.salesVsYesterdayPercent}%`]);
     }
   }
-  return { name: 'Resumen', headers: ['Métrica', 'Valor'], rows, colWidths: [24, 28] };
+  return { name: 'Resumen', headers: ['Métrica', 'Valor'], rows, colWidths: [28, 28] };
 }
 
 function buildProfitSheet(profitOverTime: DailyProfitPoint[]): SheetConfig {

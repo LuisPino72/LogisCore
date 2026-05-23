@@ -1,5 +1,5 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
-import { toSnake, generateId } from '@logiscore/shared';
+import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -7,6 +7,7 @@ import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
+import { requireNetwork } from '../../../services/network/requireNetwork';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
@@ -52,6 +53,8 @@ function toMovement(raw: Record<string, unknown>): InventoryMovement {
     createdAt: raw.createdAt as string,
     userId: raw.userId as string,
     reason: raw.reason as string | undefined,
+    reasonType: raw.reasonType as string | undefined,
+    costUsd: raw.costUsd as number | undefined,
   };
 }
 
@@ -61,6 +64,9 @@ export const inventoryService = {
     userId: string,
     input: CreateProductInput & { stockInicial?: number },
   ): Promise<Result<Product, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const db = getDb();
     const id = generateId();
     const now = new Date().toISOString();
@@ -102,13 +108,16 @@ export const inventoryService = {
           };
           await db.inventoryMovements.add(movement);
 
+          const costPerUnit = input.costPrice != null && input.costPrice > 0
+            ? preciseRound(input.costPrice / stockInicial, 4)
+            : 0;
           const lot = {
             id: generateId(),
             tenantId,
             productId: id,
             quantityAdded: stockInicial,
             remainingQuantity: stockInicial,
-            costUsdPerUnit: input.priceUsd,
+            costUsdPerUnit: costPerUnit,
             sourceMovementId: movementId,
             createdAt: now,
             updatedAt: now,
@@ -133,6 +142,9 @@ export const inventoryService = {
   },
 
   async updateProduct(id: string, input: Partial<Product>, tenantId: string): Promise<Result<Product, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const db = getDb();
     try {
       const existing = await db.products.get(id);
@@ -169,6 +181,9 @@ export const inventoryService = {
   },
 
   async softDeleteProduct(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const db = getDb();
     const product = await db.products.get(id);
     if (!product) {
@@ -294,6 +309,8 @@ export const inventoryService = {
   },
 
   async createCategory(input: { name: string; tenantId: string }): Promise<Result<Category, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const id = generateId();
     const cat = { id, name: input.name, tenantId: input.tenantId };
@@ -307,6 +324,8 @@ export const inventoryService = {
   },
 
   async updateCategory(id: string, name: string, tenantId: string): Promise<Result<Category, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const updated = { name };
     await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
@@ -350,6 +369,8 @@ export const inventoryService = {
   },
 
   async deleteCategory(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
     const productsInCategory = await db.products
       .where({ tenantId })
@@ -371,8 +392,15 @@ export const inventoryService = {
   },
 
   async adjustStock(input: AdjustStockInput & { userId: string; tenantId: string }): Promise<Result<InventoryMovement, AppError>> {
-    if (!input.reason || input.reason.trim().length === 0) {
-      return failure(new AppError('INVENTORY_ADJUSTMENT_INVALID', 'El ajuste debe incluir un motivo.'));
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+    if (!input.reasonType) {
+      return failure(new AppError('INVENTORY_ADJUSTMENT_INVALID', 'Debes seleccionar un motivo para el ajuste.'));
+    }
+
+    const LOSS_REASONS = ['perdida', 'robo', 'vencido', 'consumo_interno', 'otros'];
+    if (input.quantity > 0 && LOSS_REASONS.includes(input.reasonType)) {
+      return failure(new AppError('INVENTORY_ADJUSTMENT_INVALID', 'No puedes agregar stock con motivo de pérdida.'));
     }
 
     const db = getDb();
@@ -397,50 +425,61 @@ export const inventoryService = {
  
     try {
       const movementId = generateId();
-      const movement = {
-        id: movementId,
-        tenantId: input.tenantId,
-        productId: input.productId,
-        userId: input.userId,
-        type: 'adjustment' as const,
-        quantity: storageQuantity,
-        previousStock,
-        newStock,
-        reason: input.reason,
-        createdAt: now,
-      };
- 
+      let movementCostUsd: number | undefined;
+
       await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
         await db.products.update(input.productId, { stock: newStock });
-        await db.inventoryMovements.add(movement);
  
         if (storageQuantity > 0) {
           const lotId = generateId();
-          // Usar costo explícito si se provee, o último costo conocido del producto
-          const lotCost = input.costUsdPerUnit ?? await (async () => {
-            const lots = await db.inventoryLots
-              .where({ productId: input.productId })
-              .filter((l) => l.costUsdPerUnit !== undefined && l.costUsdPerUnit! > 0)
-              .sortBy('createdAt');
-            return lots.length > 0 ? lots[lots.length - 1].costUsdPerUnit : undefined;
-          })();
+          const costPerUnit = input.costTotal != null && input.costTotal > 0
+            ? preciseRound(input.costTotal / Math.abs(storageQuantity), 4)
+            : await (async (): Promise<number> => {
+                const lots = await db.inventoryLots
+                  .where({ productId: input.productId })
+                  .filter((l) => l.costUsdPerUnit !== undefined && l.costUsdPerUnit! > 0)
+                  .sortBy('createdAt');
+                return lots.length > 0 ? (lots[lots.length - 1].costUsdPerUnit ?? 0) : 0;
+              })();
           const lot = {
             id: lotId,
             tenantId: input.tenantId,
             productId: input.productId,
             quantityAdded: storageQuantity,
             remainingQuantity: storageQuantity,
-            costUsdPerUnit: lotCost,
+            costUsdPerUnit: costPerUnit,
             sourceMovementId: movementId,
             createdAt: now,
             updatedAt: now,
           };
           await db.inventoryLots.add(lot);
-          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
-          await syncQueue.enqueue('inventory_lots', 'CREATE', lotId, toSnake(lot as unknown as Record<string, unknown>), input.tenantId);
+          movementCostUsd = costPerUnit > 0 ? preciseRound(Math.abs(storageQuantity) * costPerUnit, 2) : undefined;
         } else {
           const fifoResult = await this.consumeFifo(input.productId, Math.abs(storageQuantity), input.tenantId);
           if (!fifoResult.ok) throw new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Stock insuficiente para completar el ajuste.');
+          movementCostUsd = fifoResult.data.reduce((sum, c) => sum + ((c.costUsdPerUnit ?? 0) * c.quantity), 0);
+          movementCostUsd = movementCostUsd > 0 ? preciseRound(movementCostUsd, 2) : undefined;
+        }
+
+        const movement = {
+          id: movementId,
+          tenantId: input.tenantId,
+          productId: input.productId,
+          userId: input.userId,
+          type: 'adjustment' as const,
+          quantity: storageQuantity,
+          previousStock,
+          newStock,
+          reasonType: input.reasonType,
+          costUsd: movementCostUsd,
+          createdAt: now,
+        };
+        await db.inventoryMovements.add(movement);
+ 
+        if (storageQuantity > 0) {
+          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
+        } else {
+          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
         }
 
         // Enqueue product update so stock syncs to Supabase
@@ -449,17 +488,30 @@ export const inventoryService = {
           await syncQueue.enqueue('products', 'UPDATE', input.productId, toSnake(updatedProduct as unknown as Record<string, unknown>), input.tenantId);
         }
         await outboxService.enqueue('INVENTORY.ADJUSTMENT', INVENTORY_MODULE, {
-          productId: input.productId, quantity: input.quantity, reason: input.reason,
-          previousStock, newStock,
+          productId: input.productId, quantity: input.quantity, reasonType: input.reasonType,
+          previousStock, newStock, costUsd: movementCostUsd,
         });
       });
 
       await emitWithAudit('INVENTORY.ADJUSTMENT', INVENTORY_MODULE, {
-        productId: input.productId, quantity: input.quantity, reason: input.reason,
-        previousStock, newStock,
+        productId: input.productId, quantity: input.quantity, reasonType: input.reasonType,
+        previousStock, newStock, costUsd: movementCostUsd,
       }, { userId: input.userId, tenantId: input.tenantId });
 
-      return success(toMovement(movement as unknown as Record<string, unknown>));
+      const resultMovement = {
+        id: movementId,
+        tenantId: input.tenantId,
+        productId: input.productId,
+        userId: input.userId,
+        type: 'adjustment' as const,
+        quantity: storageQuantity,
+        previousStock,
+        newStock,
+        reasonType: input.reasonType,
+        costUsd: movementCostUsd,
+        createdAt: now,
+      };
+      return success(toMovement(resultMovement as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error('adjustStock', 'Error:', err);
       return failure(new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Error al ajustar stock. Verifica el stock disponible.'));
@@ -520,6 +572,7 @@ export const inventoryService = {
         exit: exit_,
         balance,
         reason: mov.reason ?? undefined,
+        reasonType: mov.reasonType ?? undefined,
       });
     }
 
@@ -714,6 +767,8 @@ export const inventoryService = {
             previousStock: mov.previous_stock,
             newStock: mov.new_stock,
             reason: mov.reason,
+            reasonType: mov.reason_type,
+            costUsd: mov.cost_usd ? Number(mov.cost_usd) : undefined,
             createdAt: mov.created_at,
           });
         }

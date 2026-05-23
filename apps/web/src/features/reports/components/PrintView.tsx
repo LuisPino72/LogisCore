@@ -188,7 +188,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
           <div className="print-kpi-grid">
             <KpiCard label="Ventas Totales" value={formatDual(summary.totalSalesBs, summary.totalSalesUsd)} subtitle={`${summary.totalTransactions} transacciones`} />
             <KpiCard label="Ganancia Bruta" value={formatDual(summary.grossProfitBs, summary.grossProfitUsd)} subtitle={`Margen ${summary.profitMarginPercent}%`} />
-            <KpiCard label="Gasto Total" value={formatDual(summary.totalCostBs, summary.totalCostUsd)} />
+            <KpiCard label="Gasto Total" value={formatDual(summary.totalCostBs + summary.totalExpensesBs, summary.totalCostUsd + summary.totalExpensesUsd)} subtitle={`Costo ventas ${formatUsd(summary.totalCostUsd)} + Gastos ${formatUsd(summary.totalExpensesUsd)}`} />
             <KpiCard label="Ticket Promedio" value={formatDual(summary.averageTicketBs, summary.averageTicketUsd)} />
             {summary.topProductName && <KpiCard label="Top Producto" value={summary.topProductName} />}
             {summary.salesVsYesterdayPercent !== undefined && (

@@ -44,6 +44,8 @@ export interface DexieInventoryMovement {
   previousStock: number;
   newStock: number;
   reason?: string;
+  reasonType?: string;
+  costUsd?: number;
   createdAt: string;
   deletedAt?: string;
 }

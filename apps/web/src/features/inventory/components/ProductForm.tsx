@@ -42,6 +42,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     isWeighted: editProduct.isWeighted,
     unit: editProduct.unit,
     stockMin: editProduct.stockMin,
+    costPrice: 0,
   } : undefined;
 
   const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number }): Promise<boolean> => {
@@ -175,7 +176,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </div>
           </div>
           <div className="input-wrapper">
-            <label className="input-label">Precio USD</label>
+            <label className="input-label">Precio de Venta en $</label>
             <Input
               type="number"
               step="0.01"
@@ -189,6 +190,24 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             />
           </div>
         </div>
+
+        {!isEditing && (
+          <div className="input-wrapper">
+            <label className="input-label">Costo total del lote inicial ($)</label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={formData.costPrice || ''}
+              onChange={(e) => setField('costPrice', parseFloat(e.target.value) || 0)}
+              inputClassName="text-sm"
+            />
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Opcional. Si se deja vacío, el lote se registra con costo $0.
+            </p>
+          </div>
+        )}
 
         {/* Section: Stock y Categoría */}
         <SectionDivider icon={<Layers size={14} className="text-primary" />} title="Stock y categoría" />

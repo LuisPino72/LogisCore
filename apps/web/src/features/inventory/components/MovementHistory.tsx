@@ -11,7 +11,18 @@ interface MovementHistoryProps {
   products: Product[];
 }
 
+const REASON_TYPE_LABELS: Record<string, string> = {
+  inventario_inicial: 'Inventario inicial',
+  ajuste_manual: 'Ajuste manual',
+  perdida: 'Pérdida',
+  robo: 'Robo',
+  vencido: 'Vencido',
+  consumo_interno: 'Consumo interno',
+  otros: 'Otros',
+};
+
 function getTypeLabel(mov: InventoryMovement) {
+  if (mov.type === 'adjustment' && mov.reasonType) return REASON_TYPE_LABELS[mov.reasonType] ?? mov.reasonType;
   if (mov.type === 'adjustment' && mov.reason) return mov.reason;
   switch (mov.type) {
     case 'sale': return 'Venta';

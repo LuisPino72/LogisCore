@@ -6,6 +6,16 @@ export interface ReportFilters {
   endDate?: string;
 }
 
+export interface AdjustmentLossExpenses {
+  perdida: { totalUsd: number; count: number };
+  robo: { totalUsd: number; count: number };
+  vencido: { totalUsd: number; count: number };
+  consumo_interno: { totalUsd: number; count: number };
+  otros: { totalUsd: number; count: number };
+  totalUsd: number;
+  totalBs: number;
+}
+
 export interface ExecutiveSummaryData {
   totalSalesBs: number;
   totalSalesUsd: number;
@@ -21,6 +31,11 @@ export interface ExecutiveSummaryData {
   salesVsYesterdayPercent?: number;
   nonSellableExpensesUsd: number;
   nonSellableExpensesBs: number;
+  adjustmentLossExpenses: AdjustmentLossExpenses;
+  totalExpensesUsd: number;
+  totalExpensesBs: number;
+  netProfitUsd: number;
+  netProfitBs: number;
 }
 
 export interface DailyProfitPoint {
