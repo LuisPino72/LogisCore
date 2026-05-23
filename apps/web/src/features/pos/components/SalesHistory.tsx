@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Button, Badge, Modal, DataTable, EmptyState, Skeleton, Input } from '../../../common/components';
+import { Button, Badge, Modal, DataTable, EmptyState, Skeleton, DatePicker } from '../../../common/components';
 import { Eye, Ban, Calendar } from 'lucide-react';
 import { useDebounce } from '../../../common/hooks/useDebounce';
 import type { Column } from '../../../common/components';
@@ -119,20 +119,20 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Calendar size={16} />
           <span>Desde:</span>
-          <Input
-            type="date"
+          <DatePicker
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-36 text-xs"
+            formatHint="dd/mm/aaaa"
+            className="w-36"
           />
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>Hasta:</span>
-          <Input
-            type="date"
+          <DatePicker
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-36 text-xs"
+            formatHint="dd/mm/aaaa"
+            className="w-36"
           />
         </div>
         {(startDate || endDate) && (
