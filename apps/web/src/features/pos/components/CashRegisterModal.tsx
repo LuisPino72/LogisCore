@@ -15,6 +15,7 @@ interface CashRegisterModalProps {
   onOpenCash: (balance: number) => Promise<boolean>;
   onCloseCash: (declared: number) => Promise<boolean>;
   loading: boolean;
+  disabled?: boolean;
 }
 
 export function CashRegisterModal({
@@ -28,6 +29,7 @@ export function CashRegisterModal({
   onOpenCash,
   onCloseCash,
   loading,
+  disabled,
 }: CashRegisterModalProps) {
   const [balance, setBalance] = useState('');
   const [declaredClosing, setDeclaredClosing] = useState('');
@@ -107,6 +109,8 @@ export function CashRegisterModal({
             variant={mode === 'open' ? 'primary' : 'danger'}
             onClick={mode === 'open' ? handleOpen : handleClose}
             loading={loading}
+            disabled={disabled}
+            title={disabled ? 'Necesitas internet para realizar esta acción' : undefined}
           >
             {mode === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}
           </Button>

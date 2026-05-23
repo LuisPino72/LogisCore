@@ -14,6 +14,7 @@ interface ProductListProps {
   initialTabState: TabState;
   onSaveTabState: (state: Partial<TabState>) => void;
   isOwner: boolean;
+  isOnline: boolean;
   totalLowStock?: number;
   onNewProduct: () => void;
   onEditProduct: (product: Product) => void;
@@ -55,7 +56,7 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
+export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
@@ -161,10 +162,10 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         className: 'text-right',
         render: (product) => (
           <div className="flex items-center justify-end gap-0.5">
-            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar">
+            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
               <Edit3 size={15} />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar">
+            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
               <Trash2 size={15} className="text-danger" />
             </Button>
             <Dropdown
@@ -174,11 +175,18 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
                   <MoreVertical size={15} className="text-gray-600" />
                 </div>
               }
-              items={[
-                { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
-                { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
-              ]}
+              items={
+                isOnline
+                  ? [
+                    { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                    { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
+                    { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
+                  ]
+                  : [
+                    { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                    { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
+                  ]
+              }
             />
           </div>
         ),
@@ -186,7 +194,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
     }
 
     return cols;
-  }, [isOwner, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots]);
+  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (

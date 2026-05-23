@@ -294,6 +294,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             initialTabState={tabStates.productos}
             onSaveTabState={(state) => saveTabState('productos', state)}
             isOwner={isOwner}
+            isOnline={isOnline}
             totalLowStock={totalLowStock}
             onNewProduct={openNewProduct}
             onEditProduct={openEditProduct}

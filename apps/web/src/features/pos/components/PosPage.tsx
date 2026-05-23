@@ -19,6 +19,7 @@ import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../inventory/services/inventoryService';
+import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
 
 interface PosPageProps {
@@ -65,6 +66,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [verifyCounts, setVerifyCounts] = useState({ sold: 0, lowStock: 0 });
 
   const exchangeRateBs = exchangeRate ?? 0;
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     if (!tenantId) return;
@@ -271,7 +273,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     <div className="flex flex-row h-full w-full min-w-0">
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-          <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} />
+          <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} disabled={!isOnline} />
           <Tooltip content="Escanear código de barras" position="bottom">
             <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-11 min-h-11">
               <Scan size={18} />
@@ -426,6 +428,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         onOpenCash={handleCashOpenSubmit}
         onCloseCash={handleCashCloseSubmit}
         loading={loading}
+        disabled={!isOnline}
       />
 
       <StockVerificationModal

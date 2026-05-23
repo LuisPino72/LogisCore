@@ -286,6 +286,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               })}
               loading={loading}
               isOwner={isOwner}
+              isOnline={isOnline}
               onConfirm={confirmOrder}
               onReceive={(id, items) => {
                 if (!tenantId || !userId) return Promise.resolve(false);

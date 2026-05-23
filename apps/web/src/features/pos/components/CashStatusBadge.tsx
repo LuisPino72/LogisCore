@@ -2,9 +2,10 @@ interface CashStatusBadgeProps {
   isOpen: boolean;
   onClick: () => void;
   role: string | null;
+  disabled?: boolean;
 }
 
-export function CashStatusBadge({ isOpen, onClick, role }: CashStatusBadgeProps) {
+export function CashStatusBadge({ isOpen, onClick, role, disabled }: CashStatusBadgeProps) {
   const canInteract = role === 'owner' || role === 'admin';
   const classes = isOpen
     ? 'bg-gradient-to-r from-primary to-primary-light text-white shadow-xs'
@@ -16,7 +17,9 @@ export function CashStatusBadge({ isOpen, onClick, role }: CashStatusBadgeProps)
       <button
         type="button"
         onClick={onClick}
-        className={`w-full text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} hover:opacity-90 transition-all flex items-center gap-1.5`}
+        disabled={disabled}
+        title={disabled ? 'Necesitas internet para abrir o cerrar caja' : undefined}
+        className={`w-full text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} hover:opacity-90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         <span className={`w-1.5 h-1.5 rounded-full ${dot} animate-pulse`} />
         {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}

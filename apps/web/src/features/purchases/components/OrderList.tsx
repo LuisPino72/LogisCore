@@ -9,6 +9,7 @@ interface OrderListProps {
   orders: PurchaseOrderWithItems[];
   loading: boolean;
   isOwner: boolean;
+  isOnline: boolean;
   onConfirm: (id: string, tenantId: string) => Promise<boolean>;
   onReceive: (id: string, items: { itemId: string; receivedQuantity: number }[]) => Promise<boolean>;
   onCancel: (id: string, tenantId: string) => void;
@@ -144,7 +145,7 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
 
 const ORDERS_PAGE_SIZE = 20;
 
-export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCancel, onEdit, onDeleteOrder, tenantId }: OrderListProps) {
+export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onReceive, onCancel, onEdit, onDeleteOrder, tenantId }: OrderListProps) {
   const [receiveOrderId, setReceiveOrderId] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [page, setPage] = useState(1);
@@ -263,28 +264,28 @@ export function OrderList({ orders, loading, isOwner, onConfirm, onReceive, onCa
                 <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
                     {order.status === 'draft' && (
                       <>
-                        <Button variant="primary" size="sm" onClick={() => onConfirm(order.id, tenantId)}>
+                        <Button variant="primary" size="sm" onClick={() => onConfirm(order.id, tenantId)} disabled={!isOnline}>
                           <CheckCircle size={14} />
                           <span className="ml-1">Confirmar</span>
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0">
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0" disabled={!isOnline}>
                           <Pencil size={14} />
                         </Button>
                       </>
                     )}
                     {(order.status === 'confirmed' || order.status === 'partially_received') && (
-                      <Button variant="primary" size="sm" onClick={() => setReceiveOrderId(order.id)}>
+                      <Button variant="primary" size="sm" onClick={() => setReceiveOrderId(order.id)} disabled={!isOnline}>
                         <Package size={14} />
                         <span className="ml-1">Recibir</span>
                       </Button>
                     )}
                     {(order.status === 'draft' || order.status === 'confirmed') && (
-                      <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger">
+                      <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger" disabled={!isOnline}>
                         <XCircle size={14} />
                       </Button>
                     )}
                     {order.status === 'cancelled' && (
-                      <Button variant="ghost" size="sm" onClick={() => onDeleteOrder(order.id, order.supplierName ?? '')} className="text-danger">
+                      <Button variant="ghost" size="sm" onClick={() => onDeleteOrder(order.id, order.supplierName ?? '')} className="text-danger" disabled={!isOnline}>
                         <Trash2 size={14} />
                         <span className="ml-1">Eliminar</span>
                       </Button>
