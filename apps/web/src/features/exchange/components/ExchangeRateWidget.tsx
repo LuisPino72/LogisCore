@@ -3,6 +3,7 @@ import { DollarSign, RefreshCw, AlertCircle, Settings } from 'lucide-react';
 import { Button, Input, Modal, Spinner } from '../../../common/components';
 import { useExchangeRate } from '../hooks/useExchangeRate';
 import { formatBs } from '@/lib/formatBs';
+import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 
 interface ExchangeRateWidgetProps {
   tenantId: string | null;
@@ -14,6 +15,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
     useExchangeRate(tenantId);
   const [showModal, setShowModal] = useState(false);
   const [manualRate, setManualRate] = useState('');
+  const isOnline = useOnlineStatus();
   const [manualError, setManualError] = useState('');
 
   const isOwner = role === 'owner' || role === 'admin';
@@ -82,7 +84,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               variant="ghost"
               size="sm"
               onClick={handleUpdate}
-              disabled={isUpdating || !tenantId}
+              disabled={isUpdating || !tenantId || !isOnline}
               className="min-h-9 px-2 w-full"
             >
               {isUpdating ? (
@@ -133,7 +135,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               <Button
                 variant="primary"
                 onClick={handleManualSubmit}
-                disabled={isUpdating}
+                disabled={isUpdating || !isOnline}
               >
                 {isUpdating ? 'Guardando...' : 'Guardar tasa'}
               </Button>

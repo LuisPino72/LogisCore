@@ -6,6 +6,7 @@ import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
 import { inventoryService } from '../services/inventoryService';
+import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
 import { ProductLots } from './ProductLots';
@@ -36,6 +37,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
   const { totalLowStock, lowStockProducts } = useStockAlerts(tenantId);
   const { addToast } = useToastStore();
+  const isOnline = useOnlineStatus();
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showAdjustment, setShowAdjustment] = useState(false);
@@ -229,7 +231,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isOwner && activeTab !== 'historial' && (
-            <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct}>
+            <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para esta acción' : undefined}>
               <Plus size={16} />
               <span className="hidden sm:inline">{activeTab === 'categorias' ? 'Nueva categoría' : 'Nuevo producto'}</span>
             </Button>
@@ -389,7 +391,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             footer={
               <div className="flex gap-3 w-full">
                 <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setAdjProductId(''); setAdjHasCost(true); }}>Cancelar</Button>
-                <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
+                <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting || !isOnline}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
               </div>
             }
           >
@@ -465,7 +467,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               <Button variant="ghost" fullWidth onClick={() => setConfirmDelete(null)}>
                 Cancelar
               </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmDelete}>
+              <Button variant="danger" fullWidth onClick={handleConfirmDelete} disabled={!isOnline}>
                 Eliminar
               </Button>
             </div>
@@ -527,7 +529,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               variant="primary"
               fullWidth
               onClick={handleRequestOrder}
-              disabled={selectedForOrder.size === 0}
+              disabled={selectedForOrder.size === 0 || !isOnline}
             >
               <ShoppingCart size={16} />
               Pedir seleccionados ({selectedForOrder.size})

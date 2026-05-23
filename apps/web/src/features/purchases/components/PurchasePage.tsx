@@ -5,6 +5,7 @@ import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, M
 import { cn } from '../../../lib/utils';
 import { usePurchases } from '../hooks/usePurchases';
 import { useToastStore } from '../../../stores/toastStore';
+import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
 import { OrderList } from './OrderList';
@@ -30,6 +31,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     refresh, userId, role, tabStates, saveTabState, error: storeError,
   } = usePurchases(tenantId);
   const { addToast } = useToastStore();
+  const isOnline = useOnlineStatus();
 
   const tabState = tabStates[activeTab];
 
@@ -191,7 +193,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
           </div>
         </div>
         {isOwner && (
-          <Button variant="primary" size="sm" onClick={activeTab === 'ordenes' ? openNewOrder : openNewSupplier}>
+          <Button variant="primary" size="sm" onClick={activeTab === 'ordenes' ? openNewOrder : openNewSupplier} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para esta acción' : undefined}>
             <Plus size={16} />
             <span className="hidden sm:inline">{activeTab === 'ordenes' ? 'Nueva orden' : 'Nuevo proveedor'}</span>
           </Button>
@@ -371,7 +373,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               <Button variant="ghost" fullWidth onClick={() => setConfirmDeleteSupplier(null)}>
                 Cancelar
               </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmDeleteSupplier}>
+              <Button variant="danger" fullWidth onClick={handleConfirmDeleteSupplier} disabled={!isOnline}>
                 Eliminar
               </Button>
             </div>
@@ -397,7 +399,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               <Button variant="ghost" fullWidth onClick={() => setConfirmCancelOrder(null)}>
                 Volver
               </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmCancelOrder}>
+              <Button variant="danger" fullWidth onClick={handleConfirmCancelOrder} disabled={!isOnline}>
                 Cancelar orden
               </Button>
             </div>
@@ -423,7 +425,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               <Button variant="ghost" fullWidth onClick={() => setConfirmDeleteOrder(null)}>
                 Volver
               </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmDeleteOrder}>
+              <Button variant="danger" fullWidth onClick={handleConfirmDeleteOrder} disabled={!isOnline}>
                 Eliminar
               </Button>
             </div>
