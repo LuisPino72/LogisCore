@@ -1,7 +1,7 @@
 import { type UserSession, AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
-import { initDb, destroyDb, setDbClosing } from '../../../services/dexie/db';
+import { initDb, destroyDb, setDbClosing, getDb } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
@@ -255,7 +255,24 @@ export const authService = {
     // 7. Pequeña pausa para que operaciones en vuelo terminen
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // 8. Limpieza de infraestructura
+    // 8. Persistir favoritos a localStorage antes de destruir DB
+    try {
+      const db = getDb();
+      const favs = await db.productFavorites.toArray();
+      const byTenant = new Map<string, string[]>();
+      for (const f of favs) {
+        const list = byTenant.get(f.tenantId) ?? [];
+        list.push(f.productId);
+        byTenant.set(f.tenantId, list);
+      }
+      for (const [tid, pids] of byTenant) {
+        localStorage.setItem(`sasa-favorites-${tid}`, JSON.stringify(pids));
+      }
+    } catch {
+      // Si la DB ya se está cerrando, ignoramos
+    }
+
+    // 9. Limpieza de infraestructura
     offlineGrace.clear();
     await destroyDb();
     TenantTranslator.clearCache();

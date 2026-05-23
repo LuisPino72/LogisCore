@@ -1075,15 +1075,31 @@ export const posService = {
 
   // ===== FAVORITES =====
 
+  getFavoritesStorageKey(tenantId: string): string {
+    return `sasa-favorites-${tenantId}`;
+  },
+
+  async persistFavoritesToStorage(tenantId: string): Promise<void> {
+    try {
+      const db = getDb();
+      const favs = await db.productFavorites.where({ tenantId }).toArray();
+      localStorage.setItem(`sasa-favorites-${tenantId}`, JSON.stringify(favs.map((f) => f.productId)));
+    } catch {
+      // Silencioso: si la DB se está cerrando, ignoramos
+    }
+  },
+
   async toggleFavorite(tenantId: string, productId: string): Promise<Result<boolean, AppError>> {
     try {
       const db = getDb();
       const existing = await db.productFavorites.get([productId, tenantId]);
       if (existing) {
         await db.productFavorites.delete([productId, tenantId]);
+        await this.persistFavoritesToStorage(tenantId);
         return success(false);
       }
       await db.productFavorites.add({ productId, tenantId, createdAt: new Date().toISOString() });
+      await this.persistFavoritesToStorage(tenantId);
       return success(true);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en toggleFavorite:', err);
@@ -1094,7 +1110,23 @@ export const posService = {
   async getFavorites(tenantId: string): Promise<Result<Set<string>, AppError>> {
     try {
       const db = getDb();
-      const favs = await db.productFavorites.where({ tenantId }).toArray();
+      let favs = await db.productFavorites.where({ tenantId }).toArray();
+
+      if (favs.length === 0) {
+        const stored = localStorage.getItem(`sasa-favorites-${tenantId}`);
+        if (stored) {
+          try {
+            const productIds: string[] = JSON.parse(stored);
+            for (const pid of productIds) {
+              await db.productFavorites.add({ productId: pid, tenantId, createdAt: new Date().toISOString() });
+            }
+            favs = await db.productFavorites.where({ tenantId }).toArray();
+          } catch {
+            // Silencioso: datos corruptos en localStorage
+          }
+        }
+      }
+
       return success(new Set(favs.map((f) => f.productId)));
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getFavorites:', err);

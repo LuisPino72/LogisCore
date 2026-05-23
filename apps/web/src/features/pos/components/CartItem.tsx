@@ -14,7 +14,7 @@ interface CartItemRowProps {
 const WEIGHABLE_PRESETS = [0.5, 1, 2, 5];
 
 function getAcceleration(elapsed: number): { mult: number; interval: number } {
-  if (elapsed < 800) return { mult: 1, interval: 150 };
+  if (elapsed < 1000) return { mult: 1, interval: 150 };
   if (elapsed < 2000) return { mult: 5, interval: 100 };
   if (elapsed < 4000) return { mult: 10, interval: 80 };
   return { mult: 25, interval: 60 };
@@ -64,7 +64,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
       repeatRef.current.timer = setTimeout(tick, interval);
     };
 
-    repeatRef.current.timer = setTimeout(tick, 300);
+    repeatRef.current.timer = setTimeout(tick, 450);
   }, [handleStepDelta, step, stopRepeat]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
