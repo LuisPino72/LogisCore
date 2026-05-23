@@ -436,6 +436,7 @@ export const inventoryService = {
             updatedAt: now,
           };
           await db.inventoryLots.add(lot);
+          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
           await syncQueue.enqueue('inventory_lots', 'CREATE', lotId, toSnake(lot as unknown as Record<string, unknown>), input.tenantId);
         } else {
           const fifoResult = await this.consumeFifo(input.productId, Math.abs(storageQuantity), input.tenantId);
@@ -447,8 +448,6 @@ export const inventoryService = {
         if (updatedProduct) {
           await syncQueue.enqueue('products', 'UPDATE', input.productId, toSnake(updatedProduct as unknown as Record<string, unknown>), input.tenantId);
         }
-        await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
-
         await outboxService.enqueue('INVENTORY.ADJUSTMENT', INVENTORY_MODULE, {
           productId: input.productId, quantity: input.quantity, reason: input.reason,
           previousStock, newStock,

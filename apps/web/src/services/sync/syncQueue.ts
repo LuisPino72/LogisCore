@@ -2,6 +2,20 @@ import { getDb } from '../dexie/db';
 import type { SyncQueueItem, SyncOperationType } from './types';
 import { MAX_RETRIES, BASE_BACKOFF_MS } from './types';
 
+const TABLE_PRIORITY: Record<string, number> = {
+  categories: 90,
+  suppliers: 90,
+  products: 80,
+  purchase_orders: 70,
+  sales: 70,
+  cash_registers: 70,
+  inventory_movements: 60,
+  inventory_lots: 55,
+  sale_items: 50,
+  purchase_order_items: 50,
+  exchange_rates: 40,
+};
+
 export const syncQueue = {
   async enqueue(
     table: string,
@@ -37,6 +51,8 @@ export const syncQueue = {
       .and((item) => !item.nextRetryAt || item.nextRetryAt <= now)
       .limit(batchSize)
       .toArray();
+
+    items.sort((a, b) => (TABLE_PRIORITY[b.table] ?? 0) - (TABLE_PRIORITY[a.table] ?? 0));
 
     const ids = items.map((i) => i.id!);
     await db.syncQueue.where('id').anyOf(ids).modify({ status: 'syncing' });
