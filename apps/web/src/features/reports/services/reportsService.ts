@@ -110,34 +110,38 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
       .anyOf(saleIds)
       .toArray();
 
-    const itemsBySaleId = new Map<string, typeof allItems>();
-    for (const item of allItems) {
-      const group = itemsBySaleId.get(item.saleId);
-      if (group) group.push(item);
-      else itemsBySaleId.set(item.saleId, [item]);
-    }
+    // Si hay ventas pero NO hay items, es una race condition de sync
+    // (sales se sincroniza antes que sale_items). Caemos a Supabase.
+    if (allItems.length > 0) {
+      const itemsBySaleId = new Map<string, typeof allItems>();
+      for (const item of allItems) {
+        const group = itemsBySaleId.get(item.saleId);
+        if (group) group.push(item);
+        else itemsBySaleId.set(item.saleId, [item]);
+      }
 
-    return sales.map((sale) => ({
-      sale: {
-        id: sale.id,
-        totalBs: sale.totalBs,
-        igtfBs: sale.igtfBs,
-        exchangeRate: sale.exchangeRate,
-        paymentMethod: sale.paymentMethod,
-        createdAt: sale.createdAt,
-      },
-      items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
-        productId: i.productId,
-        productName: i.productName,
-        productSku: i.productSku,
-        quantity: i.quantity,
-        unitPriceUsd: i.unitPriceUsd,
-        costUsdPerUnit: i.costUsdPerUnit,
-      })),
-    }));
+      return sales.map((sale) => ({
+        sale: {
+          id: sale.id,
+          totalBs: sale.totalBs,
+          igtfBs: sale.igtfBs,
+          exchangeRate: sale.exchangeRate,
+          paymentMethod: sale.paymentMethod,
+          createdAt: sale.createdAt,
+        },
+        items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
+          productId: i.productId,
+          productName: i.productName,
+          productSku: i.productSku,
+          quantity: i.quantity,
+          unitPriceUsd: i.unitPriceUsd,
+          costUsdPerUnit: i.costUsdPerUnit,
+        })),
+      }));
+    }
   }
 
-  // Fallback a Supabase si Dexie está vacío
+  // Fallback a Supabase si Dexie está vacío o hay race condition de sync
   try {
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const { data: cloudSales, error: salesError } = await supabase

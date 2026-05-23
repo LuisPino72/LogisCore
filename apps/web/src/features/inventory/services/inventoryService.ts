@@ -259,6 +259,7 @@ export const inventoryService = {
                     productId: lot.product_id,
                     quantityAdded: lot.quantity_added,
                     remainingQuantity: lot.remaining_quantity,
+                    costUsdPerUnit: lot.cost_usd_per_unit,
                     sourceMovementId: lot.source_movement_id,
                     createdAt: lot.created_at,
                     updatedAt: lot.updated_at ?? lot.created_at,
