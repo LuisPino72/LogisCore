@@ -287,8 +287,17 @@ export class SyncEngine {
       const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
       local[camel] = val;
     }
-    if (local.tenantId || record.tenant_id) {
-      local.tenantId ??= record.tenant_id;
+    if (record.tenant_id) {
+      const tid = record.tenant_id as string;
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tid)) {
+        try {
+          local.tenantId = await TenantTranslator.uuidToSlug(tid);
+        } catch {
+          local.tenantId = tid;
+        }
+      } else {
+        local.tenantId = tid;
+      }
     }
     await db.table(tableName).put(local);
   }

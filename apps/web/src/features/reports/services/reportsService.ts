@@ -481,18 +481,97 @@ export const reportsService = {
     try {
       const { start, end } = getDateRange(filters);
       const db = getDb();
-      const registers = await db.cashRegisters
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+      let registers = await db.cashRegisters
         .where({ tenantId })
         .filter((r) => !r.deletedAt && r.createdAt >= start && r.createdAt <= end)
         .reverse()
         .sortBy('createdAt');
 
+      // Merge Dexie + Supabase para cubrir cajas con tenantId UUID (sync corrupto)
+      try {
+        const { data: cloudRegs, error: regErr } = await supabase
+          .from('cash_registers')
+          .select('*')
+          .eq('tenant_id', tenantUuid)
+          .is('deleted_at', null)
+          .gte('created_at', start)
+          .lt('created_at', end);
+
+        if (!regErr && cloudRegs && cloudRegs.length > 0) {
+          const merged = new Map<string, typeof registers[0]>();
+          for (const r of registers) merged.set(r.id, r);
+          for (const r of cloudRegs) {
+            merged.set(r.id as string, {
+              id: r.id as string,
+              tenantId,
+              isOpen: r.is_open as boolean,
+              openedBy: r.opened_by as string | null,
+              openedAt: r.opened_at as string | null,
+              openingBalanceBs: r.opening_balance_bs ? Number(r.opening_balance_bs) : 0,
+              openingRate: r.opening_rate ? Number(r.opening_rate) : null,
+              closedBy: r.closed_by as string | null,
+              closedAt: r.closed_at as string | null,
+              closingBalanceBs: r.closing_balance_bs ? Number(r.closing_balance_bs) : null,
+              closingRate: r.closing_rate ? Number(r.closing_rate) : null,
+              expectedClosingBs: r.expected_closing_bs ? Number(r.expected_closing_bs) : null,
+              differenceBs: r.difference_bs ? Number(r.difference_bs) : null,
+              totalSalesCount: Number(r.total_sales_count) || 0,
+              totalSalesBs: Number(r.total_sales_bs) || 0,
+              totalIgtfBs: Number(r.total_igtf_bs) || 0,
+              createdAt: r.created_at as string,
+              updatedAt: r.updated_at as string,
+            });
+          }
+          registers = [...merged.values()].sort(
+            (a, b) => b.createdAt.localeCompare(a.createdAt),
+          );
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
       // Get all completed sales in the range with their individual exchange rates
-      const allSales = await db.sales
+      let allSales = await db.sales
         .where('[tenantId+createdAt]')
         .between([tenantId, start], [tenantId, end])
         .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
         .toArray();
+
+      // Merge Dexie + Supabase para ventas
+      try {
+        const { data: cloudSales, error: salesErr } = await supabase
+          .from('sales')
+          .select('id, user_id, total_bs, subtotal_bs, igtf_bs, iva_bs, exchange_rate, payment_method, status, created_at')
+          .eq('tenant_id', tenantUuid)
+          .eq('status', 'completed')
+          .is('deleted_at', null)
+          .gte('created_at', start)
+          .lt('created_at', end);
+
+        if (!salesErr && cloudSales && cloudSales.length > 0) {
+          const mergedSales = new Map<string, typeof allSales[0]>();
+          for (const s of allSales) mergedSales.set(s.id, s);
+          for (const s of cloudSales) {
+            mergedSales.set(s.id as string, {
+              id: s.id as string,
+              tenantId,
+              userId: (s.user_id as string) || '',
+              paymentMethod: (s.payment_method as string) || 'efectivo_bs',
+              subtotalBs: Number(s.subtotal_bs) || 0,
+              igtfBs: Number(s.igtf_bs) || 0,
+              ivaBs: Number(s.iva_bs) || 0,
+              totalBs: Number(s.total_bs) || 0,
+              exchangeRate: Number(s.exchange_rate) || 0,
+              status: (s.status as string) || 'completed',
+              createdAt: s.created_at as string,
+            });
+          }
+          allSales = [...mergedSales.values()];
+        }
+      } catch {
+        // Fallback silencioso
+      }
 
       const result: CashRegisterSummaryData[] = registers.map((r) => {
         // Filter sales that belong to this register (by time range)
