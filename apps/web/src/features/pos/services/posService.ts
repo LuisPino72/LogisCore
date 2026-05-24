@@ -253,6 +253,11 @@ export const posService = {
       return failure(new AppError(PosErrors.SALE_BOX_CLOSED, 'La caja esta cerrada. Abrala para realizar ventas.'));
     }
 
+    const openedDate = cashReg.openedAt ? new Date(cashReg.openedAt) : null;
+    if (openedDate && !isSameDayVzla(openedDate, new Date())) {
+      return failure(new AppError(PosErrors.SALE_BOX_CLOSED, 'La caja activa es del día anterior. Debe cerrarla antes de realizar ventas de hoy.'));
+    }
+
     if (items.length === 0) {
       return failure(new AppError(PosErrors.SALE_NO_ITEMS, 'No hay productos en el carrito.'));
     }

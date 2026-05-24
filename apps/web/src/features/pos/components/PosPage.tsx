@@ -59,6 +59,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyCounts, setVerifyCounts] = useState({ sold: 0, lowStock: 0 });
+  const [cashError, setCashError] = useState<string | null>(null);
 
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
@@ -122,11 +123,13 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const handleOpenCash = useCallback(async () => {
     setCashMode('open');
+    setCashError(null);
     setShowCashModal(true);
   }, []);
 
   const handleCloseCash = useCallback(async () => {
     if (!tenantId) return;
+    setCashError(null);
     setVerifyLoading(true);
     setShowVerifyConfirm(true);
     try {
@@ -178,7 +181,11 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleCashOpenSubmit = useCallback(
     async (balance: number) => {
       if (!tenantId || !userId) return false;
-      return openCashRegister(tenantId, balance, userId);
+      const ok = await openCashRegister(tenantId, balance, userId);
+      if (!ok) {
+        setCashError(usePosStore.getState().error);
+      }
+      return ok;
     },
     [tenantId, userId, openCashRegister],
   );
@@ -186,7 +193,11 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleCashCloseSubmit = useCallback(
     async (declared: number) => {
       if (!tenantId || !userId) return false;
-      return closeCashRegister(tenantId, declared, userId);
+      const ok = await closeCashRegister(tenantId, declared, userId);
+      if (!ok) {
+        setCashError(usePosStore.getState().error);
+      }
+      return ok;
     },
     [tenantId, userId, closeCashRegister],
   );
@@ -308,7 +319,7 @@ export function PosPage({ tenantId }: PosPageProps) {
           </div>
         </div>
 
-        {error && (
+        {error && !(cashError && showCashModal) && (
           <div className="px-3 pt-1">
             <Alert variant="warning">{error}</Alert>
           </div>
@@ -342,22 +353,26 @@ export function PosPage({ tenantId }: PosPageProps) {
               onDelete={deleteParkedCart}
             />
             <div className="flex-1 overflow-hidden relative">
-              {!isOpen && (
-                <div className="absolute inset-0 z-10 bg-surface/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center pointer-events-none">
-                  <div className="bg-white p-6 rounded-2xl shadow-xl border border-border max-w-xs flex flex-col items-center gap-3 pointer-events-auto">
+              {(!isOpen || isFromPreviousDay) && (
+                <div className="absolute inset-0 z-30 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+                  <div className="bg-white p-6 rounded-2xl shadow-xl border border-border max-w-xs flex flex-col items-center gap-3">
                     <div className="p-3 bg-warning/10 rounded-full text-warning">
                       <AlertTriangle size={32} />
                     </div>
-                    <h3 className="font-bold text-gray-900">Caja Cerrada</h3>
+                    <h3 className="font-bold text-gray-900">
+                      {isFromPreviousDay ? 'Caja del Día Anterior' : 'Caja Cerrada'}
+                    </h3>
                     <p className="text-sm text-gray-600">
-                      Debes abrir la caja del día para poder agregar productos y realizar ventas.
+                      {isFromPreviousDay 
+                        ? 'La caja quedó abierta desde ayer. Debes realizar el cierre para poder continuar hoy.'
+                        : 'Debes abrir la caja del día para poder agregar productos y realizar ventas.'}
                     </p>
                     <Button 
-                      variant="primary" 
+                      variant={isFromPreviousDay ? 'danger' : 'primary'} 
                       className="w-full mt-2" 
-                      onClick={handleOpenCash}
+                      onClick={isFromPreviousDay ? handleCloseCash : handleOpenCash}
                     >
-                      Abrir Caja
+                      {isFromPreviousDay ? 'Cerrar Caja de Ayer' : 'Abrir Caja'}
                     </Button>
                   </div>
                 </div>
@@ -434,7 +449,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
       <CashRegisterModal
         isOpen={showCashModal}
-        onClose={() => setShowCashModal(false)}
+        onClose={() => { setShowCashModal(false); setCashError(null); }}
         mode={cashMode}
         currentSalesCount={cashRegister?.totalSalesCount ?? 0}
         currentSalesBs={cashRegister?.totalSalesBs ?? 0}
@@ -443,6 +458,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         exchangeRate={exchangeRate}
         onOpenCash={handleCashOpenSubmit}
         onCloseCash={handleCashCloseSubmit}
+        error={cashError}
         loading={loading}
         disabled={!isOnline}
       />

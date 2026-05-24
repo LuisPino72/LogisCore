@@ -219,8 +219,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>
               {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
             </h1>
-            <p className="text-[11px] text-text-secondary hidden sm:block">
-              {activeTab === 'categorias' ? 'Gestiona tus categorías' : activeTab === 'historial' ? 'Movimientos de stock' : 'Gestiona productos y stock'}
+            <p className="text-[14px] text-text-secondary hidden sm:block">
+              {activeTab === 'categorias' ? 'Gestiona tus categorías. Aquí puedes crear, editar y eliminar categorías para tus productos.' : activeTab === 'historial' ? 'Acá puedes ver todos los movimientos de tus productos (ventas, compras, pérdidas...)' : 'Gestiona productos, crea edita y elimina. También puedes hacer ajustes de invnetario y ver movimientos de los productos '}
             </p>
             {totalLowStock > 0 && activeTab === 'productos' && (
               <div className="mt-0.5">

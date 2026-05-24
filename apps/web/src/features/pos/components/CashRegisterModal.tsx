@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Input, Button } from '../../../common/components';
+import { Alert, Modal, Input, Button } from '../../../common/components';
 import { formatBs } from '@/lib/formatBs';
 
 type CashMode = 'open' | 'close';
@@ -15,6 +15,7 @@ interface CashRegisterModalProps {
   exchangeRate: number | null;
   onOpenCash: (balance: number) => Promise<boolean>;
   onCloseCash: (declared: number) => Promise<boolean>;
+  error?: string | null;
   loading: boolean;
   disabled?: boolean;
 }
@@ -30,6 +31,7 @@ export function CashRegisterModal({
   exchangeRate,
   onOpenCash,
   onCloseCash,
+  error,
   loading,
   disabled,
 }: CashRegisterModalProps) {
@@ -111,6 +113,12 @@ export function CashRegisterModal({
               placeholder="0.00"
             />
           </>
+        )}
+
+        {error && (
+          <Alert variant="error" className="p-3! text-sm">
+            {error}
+          </Alert>
         )}
 
         <div className="flex gap-2 justify-end">
