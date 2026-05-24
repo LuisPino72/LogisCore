@@ -167,6 +167,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       <div className="space-y-2" ref={dropdownRef}>
         <label className="input-label">Seleccionar producto</label>
         <SearchInput
+          maxLength={20}
           placeholder="Buscar por nombre o SKU..."
           value={selectedProductId
             ? (products.find((p) => p.id === selectedProductId)?.name ?? '')

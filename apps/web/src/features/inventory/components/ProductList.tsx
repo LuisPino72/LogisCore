@@ -219,7 +219,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
     <div className="space-y-3 p-3 sm:p-4">
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
-          <ProductSearchInput value={searchQuery} onChange={handleSearch} />
+          <ProductSearchInput maxLength={20} value={searchQuery} onChange={handleSearch} />
         </div>
         <div className="w-full sm:max-w-45">
           <SearchableSelect

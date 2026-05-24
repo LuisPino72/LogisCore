@@ -85,6 +85,7 @@ export function GlobalCategorySection({
           </div>
           <SearchInput
             placeholder="Buscar categoría..."
+            maxLength={15}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="mb-4"

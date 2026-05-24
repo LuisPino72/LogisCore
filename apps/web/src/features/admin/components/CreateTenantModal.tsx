@@ -105,14 +105,15 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
           <Input
             placeholder="RIF (J123456789)"
             value={createForm.tenant.rif}
-            onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value.toUpperCase() } }))}
-            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 9 }}
+            sanitize="rif"
+            onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value } }))}
+            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 10 }}
           />
           <Input
             placeholder="Teléfono (04121234567)"
             value={createForm.tenant.telefono}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: e.target.value } }))}
-            validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 12 }}
+            validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
           />
           <Input
             placeholder="Dirección"
@@ -141,7 +142,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             type="email"
             value={createForm.owner.email}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, email: e.target.value } }))}
-            validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 25 }}
+            validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
           />
           <Input
             placeholder="Contraseña"
@@ -190,7 +191,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 type="email"
                 value={emp.email}
                 onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
-                validation={{ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 25 }}
+                validation={{ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
               />
               <Input
                 placeholder="Contraseña"

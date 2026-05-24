@@ -75,7 +75,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           type="email"
           value={employee.email}
           onChange={(e) => setEmployee((p) => ({ ...p, email: e.target.value }))}
-          validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 15 }}
+          validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
         />
         <Input
           placeholder="Contraseña"
@@ -83,7 +83,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           showPassword
           value={employee.password}
           onChange={(e) => setEmployee((p) => ({ ...p, password: e.target.value }))}
-          validation={{ required: true, minLength: 8, maxLength: 15 }}
+          validation={{ required: true, minLength: 8, maxLength: 14 }}
         />
         {error && <p className="text-danger text-sm">{error}</p>}
         <div className="flex gap-2">

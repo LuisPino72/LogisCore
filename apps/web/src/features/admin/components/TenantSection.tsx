@@ -219,6 +219,7 @@ export function TenantSection({
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <SearchInput
               placeholder="Buscar local..."
+              maxLength={15}
               value={filters.search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 min-w-50"

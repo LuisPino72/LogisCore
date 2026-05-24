@@ -155,6 +155,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       setAdjError('Los productos por unidad solo aceptan números enteros');
       return;
     }
+    if (product?.isWeighted && !/^\d+(\.\d{1,2})?$/.test(adjQuantity)) {
+      setAdjError('Los productos pesables aceptan máximo 2 decimales');
+      return;
+    }
 
     if (adjMode === 'restar') {
       if (product) {
@@ -467,16 +471,13 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 <div className="input-wrapper">
                   <label className="input-label">Cantidad {adjMode === 'sumar' ? 'a sumar' : 'a restar'}</label>
                   <Input
-                    type="text"
+                    sanitize="number"
+                    decimals={product?.isWeighted ? 2 : 0}
                     inputMode={product?.isWeighted ? "decimal" : "numeric"}
                     placeholder={product?.isWeighted ? "Ej: 10.5" : "Ej: 10"}
                     value={adjQuantity}
-                    onChange={(e) => setAdjQuantity(
-                      product?.isWeighted
-                        ? e.target.value.replace(/[^0-9.]/g, '')
-                        : e.target.value.replace(/[^0-9]/g, '')
-                    )}
-                    validation={{ required: true }}
+                    onChange={(e) => setAdjQuantity(e.target.value)}
+                    validation={{ required: true, min: 0.01 }}
                     error={adjError}
                     inputClassName="text-sm"
                   />
@@ -516,12 +517,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 <div className="input-wrapper">
                   <label className="input-label">Costo total del ajuste ($)</label>
                   <Input
-                    type="number"
+                    sanitize="currency"
                     step="0.01"
-                    min="0"
                     placeholder="0.00"
                     value={adjCostTotal}
                     onChange={(e) => setAdjCostTotal(e.target.value)}
+                    validation={{ min: 0, max: 999999 }}
                     inputClassName="text-sm"
                   />
                   <p className="text-[10px] text-gray-400 mt-0.5">

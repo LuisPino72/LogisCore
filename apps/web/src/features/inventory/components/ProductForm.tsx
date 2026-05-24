@@ -167,7 +167,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 value={formData.sku}
                 onChange={(e) => setField('sku', e.target.value)}
                 error={errors.sku}
-                validation={{ required: true, maxLength: 25 }}
+                validation={{ required: true, maxLength: 14 }}
                 inputClassName="text-sm"
               />
               <Button variant="outline" size="sm" onClick={() => setShowBarcodeScanner(true)} className="shrink-0 px-2" title="Escanear código de barras">
@@ -178,9 +178,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <div className="input-wrapper">
             <label className="input-label">Precio de Venta en $</label>
             <Input
-              type="number"
+              sanitize="currency"
               step="0.01"
-              min="0.01"
               placeholder="2.50"
               value={formData.priceUsd || ''}
               onChange={(e) => setField('priceUsd', parseFloat(e.target.value) || 0)}
@@ -195,12 +194,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <div className="input-wrapper">
             <label className="input-label">Costo total del lote inicial ($)</label>
             <Input
-              type="number"
+              sanitize="currency"
               step="0.01"
-              min="0"
               placeholder="0.00"
               value={formData.costPrice || ''}
               onChange={(e) => setField('costPrice', parseFloat(e.target.value) || 0)}
+              validation={{ min: 0, max: 999999 }}
               inputClassName="text-sm"
             />
             <p className="text-[10px] text-gray-400 mt-0.5">
@@ -233,9 +232,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 {formData.productType === 'pesable_lt' && ' (Lt)'}
               </label>
               <Input
-                type="number"
+                sanitize="number"
+                decimals={formData.productType === 'unidad' ? 0 : 2}
                 step={formData.productType === 'unidad' ? '1' : '0.01'}
-                min="0"
                 placeholder="0"
                 value={formData.stockInicial || ''}
                 onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
@@ -250,8 +249,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <div className={`input-wrapper ${isEditing ? 'col-span-2' : ''}`}>
             <label className="input-label">Stock mínimo (alerta)</label>
             <Input
-              type="number"
-              min="0"
+              sanitize="number"
+              decimals={0}
               placeholder="0"
               value={formData.stockMin || ''}
               onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}

@@ -60,13 +60,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       }
     }
 
+    if (validation?.maxLength && rawValue.length > validation.maxLength) {
+      rawValue = rawValue.slice(0, validation.maxLength);
+    }
+
     if (validation && touched) {
       const err = validateValue(rawValue, validation);
       setInternalError(err);
       onValidate?.(err);
     }
 
-    if (sanitize === 'none') {
+    if (sanitize === 'none' && rawValue === e.target.value) {
       onChange?.(e);
       return;
     }
@@ -133,6 +137,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
               displayError && 'input-error',
               inputClassName
             )}
+            maxLength={validation?.maxLength}
             value={value}
             onChange={handleChange}
             onBlur={handleBlur}

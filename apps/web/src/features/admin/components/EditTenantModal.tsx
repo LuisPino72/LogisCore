@@ -65,14 +65,15 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
         <Input
           placeholder="RIF (J123456789)"
           value={editForm.rif}
-          onChange={(e) => setEditForm((p) => ({ ...p, rif: e.target.value.toUpperCase() }))}
-          validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 11 }}
+          sanitize="rif"
+          onChange={(e) => setEditForm((p) => ({ ...p, rif: e.target.value }))}
+          validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 10 }}
         />
         <Input
           placeholder="Teléfono (04121234567)"
           value={editForm.telefono}
           onChange={(e) => setEditForm((p) => ({ ...p, telefono: e.target.value }))}
-          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 12 }}
+          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
         />
         <Input
           placeholder="Dirección"

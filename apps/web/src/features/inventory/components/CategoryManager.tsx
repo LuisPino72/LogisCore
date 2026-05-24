@@ -90,6 +90,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
     <div className="space-y-3">
       <SearchInput
         placeholder="Buscar categoría..."
+        maxLength={20}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onClear={() => setSearch('')}

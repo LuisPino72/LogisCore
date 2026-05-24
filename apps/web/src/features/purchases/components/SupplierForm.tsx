@@ -101,7 +101,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
               placeholder="Ej: 0412-1234567"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 25 }}
+              validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
               hint="Formato: 04121234567 o +584121234567"
               inputClassName="text-sm pl-10"
             />

@@ -7,6 +7,7 @@ interface SearchInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
   onClear?: () => void;
   className?: string;
   debounceMs?: number;
+  maxLength?: number;
   onSearch?: (value: string) => void;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   value?: string;
@@ -36,9 +37,19 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(({
   }, [debouncedValue, onSearch, internalValue]);
 
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setInternalValue(e.target.value);
+    let rawValue = e.target.value;
+    if (props.maxLength && rawValue.length > props.maxLength) {
+      rawValue = rawValue.slice(0, props.maxLength);
+    }
+    setInternalValue(rawValue);
+    if (rawValue !== e.target.value) {
+      Object.defineProperty(e.target, 'value', {
+        writable: true,
+        value: rawValue,
+      });
+    }
     onChange?.(e);
-  }, [onChange]);
+  }, [onChange, props.maxLength]);
 
   const handleClear = useCallback(() => {
     setInternalValue('');
@@ -61,6 +72,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(({
           if (typeof ref === 'function') ref(node);
           else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
         }}
+        maxLength={props.maxLength}
         className="search-input"
         value={displayValue}
         onChange={handleChange}

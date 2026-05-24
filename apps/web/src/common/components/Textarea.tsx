@@ -34,11 +34,25 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
   const displayError = externalError || (touched ? internalError : null);
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    let rawValue = e.target.value;
+
+    if (validation?.maxLength && rawValue.length > validation.maxLength) {
+      rawValue = rawValue.slice(0, validation.maxLength);
+    }
+
     if (validation && touched) {
-      const err = validateValue(e.target.value, validation);
+      const err = validateValue(rawValue, validation);
       setInternalError(err);
       onValidate?.(err);
     }
+
+    if (rawValue !== e.target.value) {
+      Object.defineProperty(e.target, 'value', {
+        writable: true,
+        value: rawValue,
+      });
+    }
+
     if (autoResize && textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       const lineHeight = parseFloat(getComputedStyle(textareaRef.current).lineHeight);
@@ -87,6 +101,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
           'textarea',
           displayError && 'input-error'
         )}
+        maxLength={validation?.maxLength}
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}

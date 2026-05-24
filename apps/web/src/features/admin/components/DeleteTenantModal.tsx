@@ -88,7 +88,8 @@ export function DeleteTenantModal({ isOpen, onClose, tenant, onSoftDelete, onHar
             <Input
               placeholder="BORRAR"
               value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
+              onChange={(e) => setConfirmText(e.target.value.toUpperCase().slice(0, 6))}
+              validation={{ maxLength: 6 }}
             />
           </div>
         </div>
