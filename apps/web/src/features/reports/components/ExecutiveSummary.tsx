@@ -9,13 +9,18 @@ interface ExecutiveSummaryProps {
   onKpiClick?: (type: DrillDownType) => void;
 }
 
-function formatDual(bs: number, usd: number): string {
-  return `${formatBs(bs)} / ${formatUsd(usd)}`;
+function formatDual(bs: number, usd: number): React.ReactNode {
+  return (
+    <div className="flex flex-col leading-tight">
+      <span className="text-xs sm:text-lg font-bold text-gray-900 truncate">{formatBs(bs)}</span>
+      <span className="text-xs sm:text-lg font-semibold text-text-secondary truncate">{formatUsd(usd)}</span>
+    </div>
+  );
 }
 
 interface KpiCardProps {
   label: string;
-  value: string;
+  value: React.ReactNode;
   subtitle?: React.ReactNode;
   icon: React.ReactNode;
   gradient: 'blue' | 'green' | 'amber' | 'red';
@@ -60,7 +65,7 @@ function KpiCard({
       </div>
       <div className="space-y-1 pr-8 sm:pr-10">
         <p className="text-[10px] sm:text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
-        <p className="text-xs sm:text-lg font-bold text-gray-900 truncate">{value}</p>
+        <div className="truncate">{value}</div>
         {subtitle && <div className="text-[10px] sm:text-xs text-text-secondary truncate">{subtitle}</div>}
         {trend && (
           <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
