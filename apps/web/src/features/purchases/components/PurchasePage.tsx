@@ -252,6 +252,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
                 <SearchInput
+                  maxLength={20}
                   placeholder="Buscar orden..."
                   value={tabState.searchQuery}
                   onChange={(e) => saveTabState(activeTab, { searchQuery: e.target.value })}
@@ -307,6 +308,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
         {activeTab === 'proveedores' && (
           <div className="p-4 space-y-4">
             <SearchInput
+              maxLength={20}
               placeholder="Buscar proveedor..."
               value={tabState.searchQuery}
               onChange={(e) => saveTabState(activeTab, { searchQuery: e.target.value })}

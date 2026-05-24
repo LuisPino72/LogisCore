@@ -45,7 +45,8 @@ export function PaymentModal({
 
         <Input
           label={`Cantidad (${product.unit})`}
-          type="number"
+          sanitize="number"
+          decimals={2}
           inputMode="decimal"
           step="0.01"
           value={quantity}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Modal, Button, Spinner } from '../../../common/components';
+import { Modal, Button, Input, Spinner } from '../../../common/components';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { getDb } from '../../../services/dexie/db';
@@ -297,14 +297,13 @@ export function StockVerificationModal({
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Stock físico</label>
-                      <input
-                        type="number"
-                        step={item.isWeighted ? '0.01' : '1'}
-                        min="0"
+                      <Input
+                        sanitize="number"
+                        decimals={item.isWeighted ? 2 : 0}
                         value={item.physicalInput}
                         onChange={(e) => handlePhysicalChange(item.productId, e.target.value)}
-                        className="w-full input text-sm py-1.5 px-2 mt-0.5"
-                        inputMode="decimal"
+                        validation={{ min: 0, max: 999999 }}
+                        inputClassName="text-sm"
                       />
                     </div>
                     <div>

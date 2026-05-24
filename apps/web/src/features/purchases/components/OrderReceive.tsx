@@ -146,11 +146,11 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
                     <Input
-                      type="number"
-                      min="0"
-                      max={pending}
+                      sanitize="number"
+                      decimals={0}
                       value={received}
                       onChange={(e) => handleQtyChange(item.id, parseInt(e.target.value) || 0)}
+                      validation={{ required: true, min: 0 }}
                       inputClassName="text-sm"
                     />
                   </div>

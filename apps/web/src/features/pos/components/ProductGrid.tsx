@@ -70,6 +70,7 @@ export const ProductGrid = memo(function ProductGrid({
     <div className="flex flex-col gap-3 p-3 h-full">
       <SearchInput
         placeholder="Buscar producto..."
+        maxLength={20}
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
         onClear={() => onSearchChange('')}
@@ -124,6 +125,7 @@ export const ProductGrid = memo(function ProductGrid({
             <div className="space-y-3">
               <SearchInput
                 placeholder="Buscar categoría..."
+                maxLength={20}
                 value={categorySearch}
                 onChange={(e) => setCategorySearch(e.target.value)}
                 onClear={() => setCategorySearch('')}

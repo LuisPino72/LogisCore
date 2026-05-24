@@ -77,16 +77,18 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
       const parts = cleaned.split('.');
       if (parts.length > 2) return;
       const sanitized = (parts[0] || '0') + (parts.length > 1 ? '.' + parts[1].slice(0, 2) : '');
-      const val = parseFloat(sanitized);
+      let val = parseFloat(sanitized);
       if (!isNaN(val) && val > 0) {
+        if (val > 99999) val = 99999;
         onUpdateQuantity(item.productId, preciseRound(val, 2));
       }
       return;
     }
 
     const cleaned = raw.replace(/[^0-9.]/g, '').split('.')[0] || '0';
-    const val = parseFloat(cleaned);
+    let val = parseFloat(cleaned);
     if (!isNaN(val) && val > 0) {
+      if (val > 99999) val = 99999;
       onUpdateQuantity(item.productId, val);
     }
   };
@@ -129,6 +131,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
               step={step}
               value={displayQty}
               onChange={handleChange}
+              validation={{ min: 0.01, max: 99999 }}
               className="text-center py-1.5 text-sm font-semibold"
             />
           </div>

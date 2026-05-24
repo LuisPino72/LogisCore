@@ -231,23 +231,24 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <Input
-                      type="number"
-                      min="0"
+                      sanitize="number"
+                      decimals={weighted ? 2 : 0}
                       step={weighted ? '0.01' : '1'}
                       placeholder={`Cant (${unit || 'Und'})`}
                       value={item.quantity || ''}
                       onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                      validation={{ required: true, min: 0, max: 99999 }}
                       inputClassName="text-sm"
                     />
                   </div>
                   <div className="flex-1">
                     <Input
-                      type="number"
+                      sanitize="currency"
                       step="0.01"
-                      min="0.01"
                       placeholder="Costo del item ($)"
                       value={item.totalCostUsd || ''}
                       onChange={(e) => updateItem(idx, 'totalCostUsd', parseFloat(e.target.value) || 0)}
+                      validation={{ required: true, min: 0, max: 999999 }}
                       inputClassName="text-sm"
                     />
                   </div>

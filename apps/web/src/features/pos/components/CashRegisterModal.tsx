@@ -75,8 +75,7 @@ export function CashRegisterModal({
             )}
             <Input
               label="Monto inicial (Bs)"
-              type="number"
-              inputMode="decimal"
+              sanitize="currency"
               value={balance}
               onChange={(e) => setBalance(e.target.value)}
               validation={{ required: true, min: 0.01 }}
@@ -105,8 +104,7 @@ export function CashRegisterModal({
             </div>
             <Input
               label="Monto final declarado (Bs)"
-              type="number"
-              inputMode="decimal"
+              sanitize="currency"
               value={declaredClosing}
               onChange={(e) => setDeclaredClosing(e.target.value)}
               validation={{ required: true, min: 0 }}
