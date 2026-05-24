@@ -113,7 +113,7 @@ export function StockVerificationModal({
       });
 
       setItems(verified);
-    } catch (err) {
+    } catch {
       setError('Error al cargar productos para verificación.');
     } finally {
       setLoading(false);

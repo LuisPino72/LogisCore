@@ -10,6 +10,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
+import { isSameDayVzla, startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import { PosErrors } from '../../../specs/pos/errors';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import { CreateSaleInputSchema } from '../../../specs/pos';
@@ -18,24 +19,6 @@ import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
 
 const MODULE_NAME = 'POS';
-
-function isSameDay(d1: Date, d2: Date): boolean {
-  return d1.getFullYear() === d2.getFullYear()
-    && d1.getMonth() === d2.getMonth()
-    && d1.getDate() === d2.getDate();
-}
-
-function startOfDayLocal(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDayLocal(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
 
 async function autoCloseRegister(
   db: LogisCoreDB,
@@ -543,9 +526,25 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, openingBalanceBs } = input;
 
+    // --- ROLE CHECK: Only owner or admin ---
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para abrir la caja.'));
+      
+      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const role = decoded.app_metadata?.role || decoded.role;
+      
+      if (role !== 'owner' && role !== 'admin') {
+        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden abrir la caja.'));
+      }
+    } catch (err) {
+      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
+    }
+
     if (!openingBalanceBs || openingBalanceBs <= 0) {
       return failure(new AppError(PosErrors.BOX_OPENING_BALANCE_REQUIRED, 'Debe ingresar un monto inicial para abrir la caja.'));
     }
+
 
     const existing = await db.cashRegisters
       .where({ tenantId })
@@ -554,15 +553,15 @@ export const posService = {
 
     if (existing) {
       const openedDate = existing.openedAt ? new Date(existing.openedAt) : null;
-      if (openedDate && isSameDay(openedDate, new Date())) {
+      if (openedDate && isSameDayVzla(openedDate, new Date())) {
         return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta para hoy.'));
       }
       await autoCloseRegister(db, existing, tenantId, userId);
     }
 
     // Option B: Una caja por día — no permitir abrir si ya se cerró una hoy
-    const todayStart = startOfDayLocal(new Date()).toISOString();
-    const todayEnd = endOfDayLocal(new Date()).toISOString();
+    const todayStart = startOfDayVzla();
+    const todayEnd = endOfDayVzla();
     const todayClosed = await db.cashRegisters
       .where({ tenantId })
       .filter((r) => !r.deletedAt && !r.isOpen && r.openedAt != null && r.openedAt >= todayStart && r.openedAt <= todayEnd)
@@ -921,9 +920,25 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, declaredClosingBalanceBs } = input;
 
+    // --- ROLE CHECK: Only owner or admin ---
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para cerrar la caja.'));
+      
+      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const role = decoded.app_metadata?.role || decoded.role;
+      
+      if (role !== 'owner' && role !== 'admin') {
+        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden cerrar la caja.'));
+      }
+    } catch (err) {
+      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
+    }
+
     if (declaredClosingBalanceBs === undefined || declaredClosingBalanceBs === null) {
       return failure(new AppError(PosErrors.BOX_CLOSING_BALANCE_REQUIRED, 'Debe ingresar el monto final para cerrar la caja.'));
     }
+
 
     const cashReg = await db.cashRegisters
       .where({ tenantId })
@@ -1139,9 +1154,8 @@ export const posService = {
     maxProducts = 10,
   ): Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>> {
     try {
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
-      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+      const todayStart = startOfDayVzla();
+      const todayEnd = endOfDayVzla();
 
       const salesResult = await this.getSalesHistory(tenantId, 0, 1000, todayStart, todayEnd);
       if (!salesResult.ok) return failure(salesResult.error);

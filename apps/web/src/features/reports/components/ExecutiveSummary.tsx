@@ -1,15 +1,26 @@
-import { Card, Badge } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight } from 'lucide-react';
-import type { ExecutiveSummaryData } from '@/features/reports/types';
+import { Card, Badge, Tooltip } from '@/common/components';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight } from 'lucide-react';
+import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface ExecutiveSummaryProps {
   data: ExecutiveSummaryData | null;
   loading: boolean;
+  onKpiClick?: (type: DrillDownType) => void;
 }
 
 function formatDual(bs: number, usd: number): string {
   return `${formatBs(bs)} / ${formatUsd(usd)}`;
+}
+
+interface KpiCardProps {
+  label: string;
+  value: string;
+  subtitle?: React.ReactNode;
+  icon: React.ReactNode;
+  gradient: 'blue' | 'green' | 'amber' | 'red';
+  trend?: { value: number; positive: boolean };
+  onClick?: () => void;
 }
 
 function KpiCard({
@@ -19,14 +30,8 @@ function KpiCard({
   icon,
   gradient,
   trend,
-}: {
-  label: string;
-  value: string;
-  subtitle?: string;
-  icon: React.ReactNode;
-  gradient: 'blue' | 'green' | 'amber' | 'red';
-  trend?: { value: number; positive: boolean };
-}) {
+  onClick,
+}: KpiCardProps) {
   const gradients = {
     blue: 'from-primary/5 to-primary/[0.02] border-primary/20',
     green: 'from-success/5 to-success/[0.02] border-success/20',
@@ -42,7 +47,14 @@ function KpiCard({
   };
 
   return (
-    <Card className={`relative p-3 sm:p-4 border bg-linear-to-br ${gradients[gradient]} transition-shadow hover:shadow-md`}>
+    <Card
+      className={`relative p-3 sm:p-4 border bg-linear-to-br ${gradients[gradient]} transition-shadow ${onClick ? 'cursor-pointer hover:shadow-lg active:scale-[0.98]' : 'hover:shadow-md'}`}
+      interactive={!!onClick}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
+    >
       <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1 sm:p-1.5 rounded-lg ${iconBgs[gradient]}`}>
         {icon}
       </div>
@@ -57,6 +69,11 @@ function KpiCard({
           </div>
         )}
       </div>
+      {onClick && (
+        <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 text-text-secondary/40">
+          <ChevronRight size={14} />
+        </div>
+      )}
     </Card>
   );
 }
@@ -76,7 +93,7 @@ function KpiSkeleton() {
   );
 }
 
-export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
+export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummaryProps) {
   if (loading) {
     return (
       <div className="space-y-4">
@@ -112,6 +129,7 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
           icon={<ShoppingCart size={18} />}
           gradient="blue"
           trend={data.salesVsYesterdayPercent !== undefined ? { value: data.salesVsYesterdayPercent, positive: data.salesVsYesterdayPercent >= 0 } : undefined}
+          onClick={onKpiClick ? () => onKpiClick('ventas') : undefined}
         />
         <KpiCard
           label="Ganancia Bruta"
@@ -119,27 +137,37 @@ export function ExecutiveSummary({ data, loading }: ExecutiveSummaryProps) {
           subtitle={`Margen ${data.profitMarginPercent}%`}
           icon={<TrendingUp size={18} />}
           gradient={data.grossProfitBs >= 0 ? 'green' : 'red'}
+          onClick={onKpiClick ? () => onKpiClick('ganancia') : undefined}
         />
-        <KpiCard
-          label="Gasto Total"
-          value={formatDual(
-            data.totalCostBs + data.totalExpensesBs,
-            data.totalCostUsd + data.totalExpensesUsd,
-          )}
-          subtitle={`Costo ventas ${formatUsd(data.totalCostUsd)} + Gastos ${formatUsd(data.totalExpensesUsd)}`}
-          icon={<DollarSign size={18} />}
-          gradient="amber"
-        />
+         <KpiCard
+           label="Gasto Total"
+           value={formatDual(
+             data.totalCostBs + data.totalExpensesBs,
+             data.totalCostUsd + data.totalExpensesUsd,
+           )}
+           subtitle={
+             <div className="flex items-center gap-1">
+               <Tooltip content="Suma del costo de adquisición de los productos vendidos (COGS).">
+                 <span className="underline decoration-dotted cursor-help">Costo ventas</span>
+               </Tooltip>
+               <span>{formatUsd(data.totalCostUsd)} + Gastos {formatUsd(data.totalExpensesUsd)}</span>
+             </div>
+           }
+           icon={<DollarSign size={18} />}
+           gradient="amber"
+           onClick={onKpiClick ? () => onKpiClick('gastos') : undefined}
+         />
         <KpiCard
           label="Ticket Promedio"
           value={formatDual(data.averageTicketBs, data.averageTicketUsd)}
           icon={<DollarSign size={18} />}
           gradient="amber"
+          onClick={onKpiClick ? () => onKpiClick('ticket') : undefined}
         />
       </div>
 
       {data.topProductName && (
-        <Card className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20 transition-shadow hover:shadow-sm">
+        <Card className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20">
           <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
             <ShoppingCart size={14} className="sm:w-4.5 sm:h-4.5 text-primary" />
           </div>

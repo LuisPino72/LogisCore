@@ -21,16 +21,11 @@ import { posService } from '../services/posService';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
+import { isSameDayVzla } from '../../../lib/date';
 
 interface PosPageProps {
   tenantId: string | null;
   userEmail?: string;
-}
-
-function isSameDay(d1: Date, d2: Date): boolean {
-  return d1.getFullYear() === d2.getFullYear()
-    && d1.getMonth() === d2.getMonth()
-    && d1.getDate() === d2.getDate();
 }
 
 export function PosPage({ tenantId }: PosPageProps) {
@@ -256,7 +251,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const isFromPreviousDay = useMemo(() => {
     if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
-    return !isSameDay(new Date(cashRegister.openedAt), new Date());
+    return !isSameDayVzla(new Date(cashRegister.openedAt), new Date());
   }, [cashRegister?.isOpen, cashRegister?.openedAt]);
 
   if (!tenantId) {
@@ -346,7 +341,27 @@ export function PosPage({ tenantId }: PosPageProps) {
               onLoad={handleLoadParked}
               onDelete={deleteParkedCart}
             />
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden relative">
+              {!isOpen && (
+                <div className="absolute inset-0 z-10 bg-surface/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-6 text-center pointer-events-none">
+                  <div className="bg-white p-6 rounded-2xl shadow-xl border border-border max-w-xs flex flex-col items-center gap-3 pointer-events-auto">
+                    <div className="p-3 bg-warning/10 rounded-full text-warning">
+                      <AlertTriangle size={32} />
+                    </div>
+                    <h3 className="font-bold text-gray-900">Caja Cerrada</h3>
+                    <p className="text-sm text-gray-600">
+                      Debes abrir la caja del día para poder agregar productos y realizar ventas.
+                    </p>
+                    <Button 
+                      variant="primary" 
+                      className="w-full mt-2" 
+                      onClick={handleOpenCash}
+                    >
+                      Abrir Caja
+                    </Button>
+                  </div>
+                </div>
+              )}
               <ProductGrid
                 products={products}
                 categories={categories}

@@ -55,20 +55,20 @@ export function CartSummary({
       {paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
           <span>IGTF (3%)</span>
-          <span>{formatBs(igtfBs)} / {formatUsd(igtfUsd)}</span>
+          <span>{formatUsd(igtfUsd)} / {formatBs(igtfBs)}</span>
         </div>
       )}
 
       {subtotalTaxableBs > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
           <span>IVA (16%)</span>
-          <span>{formatBs(ivaBs)} / {formatUsd(ivaUsd)}</span>
+          <span>{formatUsd(ivaUsd)} / {formatBs(ivaBs)}</span>
         </div>
       )}
 
       <div className="flex justify-between text-base font-bold text-gray-900">
         <span>Total</span>
-        <span>{formatBs(totalBs)} / {formatUsd(totalUsd)}</span>
+        <span>{formatUsd(totalUsd)} / {formatBs(totalBs)}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-1.5">

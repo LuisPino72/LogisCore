@@ -95,3 +95,31 @@ export interface CashRegisterSummaryData {
 
 
 export type ReportTab = 'summary' | 'profits' | 'products' | 'cash';
+
+export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto';
+
+export interface SaleDetail {
+  id: string;
+  date: string;
+  time: string;
+  itemCount: number;
+  totalBs: number;
+  totalUsd: number;
+  paymentMethod: string;
+}
+
+export interface ExpenseBreakdownItem {
+  type: string;
+  label: string;
+  amountBs: number;
+  amountUsd: number;
+}
+
+export interface TicketDistributionItem {
+  range: string;
+  count: number;
+  percentage: number;
+  cumulative: number;
+}
+
+

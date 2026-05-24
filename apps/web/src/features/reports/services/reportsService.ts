@@ -5,6 +5,7 @@ import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import { logger } from '../../../lib/logger';
+import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import type {
   ReportFilters,
   ExecutiveSummaryData,
@@ -13,6 +14,9 @@ import type {
   PaymentBreakdownData,
   CashRegisterSummaryData,
   AdjustmentLossExpenses,
+  SaleDetail,
+  ExpenseBreakdownItem,
+  TicketDistributionItem,
 } from '../types';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -22,58 +26,40 @@ const PAYMENT_LABELS: Record<string, string> = {
   efectivo_usd: 'Efectivo USD',
 };
 
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
-
 function getDateRange(filters: ReportFilters): { start: string; end: string } {
-  const now = new Date();
-  let start: Date;
-  let end: Date = endOfDay(now);
-
   switch (filters.timeRange) {
     case 'today':
-      start = startOfDay(now);
-      break;
+      return { start: startOfDayVzla(), end: endOfDayVzla() };
     case 'yesterday': {
-      const y = new Date(now);
+      const y = new Date();
       y.setDate(y.getDate() - 1);
-      start = startOfDay(y);
-      end = endOfDay(y);
-      break;
+      const d = new Date(y.getFullYear(), y.getMonth(), y.getDate());
+      return { start: startOfDayVzla(d), end: endOfDayVzla(d) };
     }
     case 'last7days': {
-      start = new Date(now);
-      start.setDate(start.getDate() - 6);
-      start = startOfDay(start);
-      break;
+      const d = new Date();
+      d.setDate(d.getDate() - 6);
+      return { start: startOfDayVzla(d), end: endOfDayVzla() };
     }
-    case 'thisMonth':
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      break;
+    case 'thisMonth': {
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: startOfDayVzla(firstDay), end: endOfDayVzla() };
+    }
     case 'lastMonth': {
+      const now = new Date();
       const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      start = lm;
-      end = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0));
-      break;
+      const lmEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { start: startOfDayVzla(lm), end: endOfDayVzla(lmEnd) };
     }
     case 'custom':
-      start = filters.startDate ? startOfDay(new Date(filters.startDate)) : startOfDay(now);
-      end = filters.endDate ? endOfDay(new Date(filters.endDate)) : endOfDay(now);
-      break;
+      return {
+        start: filters.startDate ? startOfDayVzla(new Date(filters.startDate)) : startOfDayVzla(),
+        end: filters.endDate ? endOfDayVzla(new Date(filters.endDate)) : endOfDayVzla(),
+      };
     default:
-      start = startOfDay(now);
+      return { start: startOfDayVzla(), end: endOfDayVzla() };
   }
-
-  return { start: start.toISOString(), end: end.toISOString() };
 }
 
 interface SaleWithItems {
@@ -277,8 +263,8 @@ export const reportsService = {
       if (filters.timeRange === 'today') {
         const yest = new Date();
         yest.setDate(yest.getDate() - 1);
-        const yStart = startOfDay(yest).toISOString();
-        const yEnd = endOfDay(yest).toISOString();
+        const yStart = startOfDayVzla(yest);
+        const yEnd = endOfDayVzla(yest);
         const yData = await fetchSalesWithItems(tenantId, yStart, yEnd);
         const ySales = yData.reduce((sum, d) => sum + d.sale.totalBs, 0);
         if (ySales > 0) {
@@ -645,6 +631,189 @@ export const reportsService = {
     } catch (err) {
       logger.error('Reports', 'Error al obtener gastos por pérdidas', err);
       return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener gastos por pérdidas.'));
+    }
+  },
+
+  async getSalesDetail(tenantId: string, filters: ReportFilters): Promise<Result<SaleDetail[], AppError>> {
+    try {
+      const { start, end } = getDateRange(filters);
+      const data = await fetchSalesWithItems(tenantId, start, end);
+
+      const sales: SaleDetail[] = data.map(({ sale, items }) => {
+        const dateObj = new Date(sale.createdAt);
+        return {
+          id: sale.id,
+          date: dateObj.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
+          time: dateObj.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+          itemCount: items.length,
+          totalBs: sale.totalBs,
+          totalUsd: sale.exchangeRate > 0 ? preciseRound(sale.totalBs / sale.exchangeRate, 2) : 0,
+          paymentMethod: sale.paymentMethod,
+        };
+      });
+
+      sales.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+      return success(sales);
+    } catch (err) {
+      console.error('[reportsService.getSalesDetail]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener detalle de ventas.'));
+    }
+  },
+
+  async getExpenseBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<ExpenseBreakdownItem[], AppError>> {
+    try {
+      const { start, end } = getDateRange(filters);
+      const data = await fetchSalesWithItems(tenantId, start, end);
+
+      let totalCostBs = 0;
+      let totalCostUsd = 0;
+      for (const { sale, items } of data) {
+        for (const item of items) {
+          totalCostUsd += item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
+          totalCostBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
+        }
+      }
+
+      const db = getDb();
+      const periodSales = await db.sales
+        .where('[tenantId+createdAt]')
+        .between([tenantId, start], [tenantId, end])
+        .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
+        .toArray();
+      const avgRate = periodSales.length > 0
+        ? periodSales.reduce((sum, s) => sum + s.exchangeRate, 0) / periodSales.length
+        : 0;
+
+      const items: ExpenseBreakdownItem[] = [];
+
+      if (totalCostUsd > 0) {
+        items.push({
+          type: 'costo_ventas',
+          label: 'Costo de Ventas',
+          amountBs: preciseRound(totalCostBs, 2),
+          amountUsd: preciseRound(totalCostUsd, 2),
+        });
+      }
+
+      const nsResult = await this.getNonSellableExpenses(tenantId, start, end);
+      if (nsResult.ok && nsResult.data.totalUsd > 0) {
+        items.push({
+          type: 'no_vendibles',
+          label: 'Gastos No Vendibles',
+          amountBs: nsResult.data.totalBs,
+          amountUsd: nsResult.data.totalUsd,
+        });
+      }
+
+      const adjResult = await this.getAdjustmentLossExpenses(tenantId, start, end);
+      if (adjResult.ok) {
+        const reasons = adjResult.data as AdjustmentLossExpenses;
+        const REASON_LABELS: Record<string, string> = {
+          perdida: 'Pérdida',
+          robo: 'Robo',
+          vencido: 'Vencido',
+          consumo_interno: 'Consumo Interno',
+          otros: 'Otros',
+        };
+        for (const [reason, val] of Object.entries(reasons)) {
+          if (reason === 'totalUsd' || reason === 'totalBs') continue;
+          if (val.count > 0) {
+            items.push({
+              type: reason,
+              label: REASON_LABELS[reason] ?? reason,
+              amountBs: avgRate > 0 ? preciseRound(val.totalUsd * avgRate, 2) : 0,
+              amountUsd: val.totalUsd,
+            });
+          }
+        }
+      }
+
+      return success(items);
+    } catch (err) {
+      console.error('[reportsService.getExpenseBreakdown]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener desglose de gastos.'));
+    }
+  },
+
+  async getTicketDistribution(tenantId: string, filters: ReportFilters): Promise<Result<TicketDistributionItem[], AppError>> {
+    try {
+      const { start, end } = getDateRange(filters);
+      const db = getDb();
+      const sales = await db.sales
+        .where('[tenantId+createdAt]')
+        .between([tenantId, start], [tenantId, end])
+        .filter((s) => !s.deletedAt && s.status === 'completed')
+        .toArray();
+
+      let salesData = sales;
+
+      if (salesData.length === 0) {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data: cloudSales } = await supabase
+          .from('sales')
+          .select('total_bs, exchange_rate')
+          .eq('tenant_id', tenantUuid)
+          .eq('status', 'completed')
+          .is('deleted_at', null)
+          .gte('created_at', start)
+          .lt('created_at', end);
+        if (cloudSales) {
+          salesData = cloudSales.map((s) => {
+            const sale = s as { total_bs: number; exchange_rate: number };
+            return {
+              id: `cloud-${Math.random()}`,
+              tenantId,
+              totalBs: Number(sale.total_bs) || 0,
+              exchangeRate: Number(sale.exchange_rate) || 1,
+              createdAt: '',
+              status: 'completed' as const,
+              paymentMethod: '',
+              userId: '',
+              subtotalBs: Number(sale.total_bs) || 0,
+              ivaBs: 0,
+              igtfBs: 0,
+              deletedAt: undefined,
+              syncedAt: undefined,
+            } as unknown as DexieSale;
+          });
+        }
+      }
+
+      const RANGES = [
+        { min: 0, max: 5, label: 'Menos de $5' },
+        { min: 5, max: 20, label: '$5 – $20' },
+        { min: 20, max: 50, label: '$20 – $50' },
+        { min: 50, max: 100, label: '$50 – $100' },
+        { min: 100, max: Infinity, label: 'Más de $100' },
+      ];
+
+      const buckets = new Array(RANGES.length).fill(0);
+      for (const sale of salesData) {
+        const usdAmount = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
+        for (let i = 0; i < RANGES.length; i++) {
+          if (usdAmount >= RANGES[i].min && usdAmount < RANGES[i].max) {
+            buckets[i]++;
+            break;
+          }
+        }
+      }
+
+      const total = salesData.length;
+      let cumulative = 0;
+      const result: TicketDistributionItem[] = RANGES.map((r, i) => {
+        cumulative += buckets[i];
+        return {
+          range: r.label,
+          count: buckets[i],
+          percentage: total > 0 ? preciseRound((buckets[i] / total) * 100, 1) : 0,
+          cumulative: total > 0 ? preciseRound((cumulative / total) * 100, 1) : 0,
+        };
+      });
+
+      return success(result);
+    } catch (err) {
+      console.error('[reportsService.getTicketDistribution]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener distribución de tickets.'));
     }
   },
 };

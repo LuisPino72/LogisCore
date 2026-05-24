@@ -6,6 +6,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { getDb, isDbReady, type DexieTenantRef } from '../../../services/dexie/db';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import type { TenantInfoResponse, SubscriptionResponse } from '../types';
+import { startOfDayVzla, startOfNextDayVzla } from '../../../lib/date';
 import type { Product } from '../../../specs/inventory';
 import { inventoryService } from '../../inventory/services/inventoryService';
 
@@ -171,9 +172,8 @@ export const dashboardService = {
   async getTodayEarnings(tenantId: string): Promise<Result<number, AppError>> {
     try {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+      const startOfDay = startOfDayVzla();
+      const endOfDay = startOfNextDayVzla();
 
       // Intentamos primero Dexie para rapidez offline
       const db = getDb();

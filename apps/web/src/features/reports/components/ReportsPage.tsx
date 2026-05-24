@@ -1,5 +1,6 @@
 import { useState, Suspense, lazy, useRef, useCallback } from 'react';
-import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip } from '@/common/components';
+import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip, DrillDownModal } from '@/common/components';
+import type { Column } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
@@ -7,7 +8,9 @@ import { useToastStore } from '../../../stores/toastStore';
 import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
 import { PrintView } from './PrintView';
-import type { ReportTimeRange, ReportTab } from '../types';
+import { reportsService } from '../services/reportsService';
+import type { ReportTimeRange, ReportTab, DrillDownType } from '../types';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 import '../print.css';
 
 const ProfitChart = lazy(() => import('./ProfitChart').then((m) => ({ default: m.ProfitChart })));
@@ -69,6 +72,181 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
   } = useReports(tenantId);
 
   const [showCustomDate, setShowCustomDate] = useState(false);
+
+  const [activeDrillDown, setActiveDrillDown] = useState<DrillDownType | null>(null);
+  const [drillDownData, setDrillDownData] = useState<Record<string, unknown>[]>([]);
+  const [drillDownLoading, setDrillDownLoading] = useState(false);
+
+  const PAYMENT_LABELS: Record<string, string> = {
+    efectivo_bs: 'Efectivo Bs',
+    pago_movil: 'Pago Móvil',
+    tarjeta_bs: 'Tarjeta Bs',
+    efectivo_usd: 'Efectivo USD',
+  };
+
+  const drillDownConfigs: Record<DrillDownType, {
+    title: string;
+    columns: Column<Record<string, unknown>>[];
+    footerSummary?: (data: Record<string, unknown>[]) => { label: string; value: string }[];
+  }> = {
+    ventas: {
+      title: 'Ventas Totales',
+      columns: [
+        { key: 'date', header: 'Fecha' },
+        { key: 'time', header: 'Hora', hideOnMobile: true },
+        { key: 'itemCount', header: 'Items', className: 'text-center' },
+        { key: 'totalBs', header: 'Total Bs', render: (item) => formatBs(item.totalBs as number) },
+        { key: 'totalUsd', header: 'Total USD', render: (item) => formatUsd(item.totalUsd as number) },
+        { key: 'paymentMethod', header: 'Pago', render: (item) => PAYMENT_LABELS[item.paymentMethod as string] ?? item.paymentMethod as string, hideOnMobile: true },
+      ],
+      footerSummary: (data) => {
+        const totalBs = data.reduce((s, d) => s + (d.totalBs as number), 0);
+        const totalUsd = data.reduce((s, d) => s + (d.totalUsd as number), 0);
+        return [
+          { label: 'Total Bs', value: formatBs(totalBs) },
+          { label: 'Total USD', value: formatUsd(totalUsd) },
+          { label: 'Transacciones', value: String(data.length) },
+        ];
+      },
+    },
+    ganancia: {
+      title: 'Ganancia Bruta por Producto',
+      columns: [
+        { key: 'name', header: 'Producto', render: (item) => <span className="wrap-break-word">{item.name as string}</span> },
+        { key: 'quantitySold', header: 'Cant', className: 'text-center' },
+        { key: 'revenueBs', header: 'Ingreso Bs', render: (item) => formatBs(item.revenueBs as number), hideOnMobile: true },
+        { key: 'revenueUsd', header: 'Ingreso $', render: (item) => formatUsd(item.revenueUsd as number), hideOnMobile: true },
+        { key: 'costBs', header: 'Costo Bs', render: (item) => formatBs(item.costBs as number), hideOnMobile: true },
+        { key: 'costUsd', header: 'Costo $', render: (item) => formatUsd(item.costUsd as number), hideOnMobile: true },
+        { key: 'profitBs', header: 'Ganancia Bs', render: (item) => formatBs(item.profitBs as number) },
+        { key: 'profitUsd', header: 'Ganancia $', render: (item) => formatUsd(item.profitUsd as number) },
+        { key: 'marginPercent', header: 'Margen', render: (item) => `${item.marginPercent}%`, className: 'text-right' },
+      ],
+      footerSummary: (data) => {
+        const totalRevenue = data.reduce((s, d) => s + (d.revenueBs as number), 0);
+        const totalRevenueUsd = data.reduce((s, d) => s + (d.revenueUsd as number), 0);
+        const totalCost = data.reduce((s, d) => s + (d.costBs as number), 0);
+        const totalCostUsd = data.reduce((s, d) => s + (d.costUsd as number), 0);
+        const totalProfit = data.reduce((s, d) => s + (d.profitBs as number), 0);
+        const totalProfitUsd = data.reduce((s, d) => s + (d.profitUsd as number), 0);
+        return [
+          { label: 'Ingreso', value: `${formatBs(totalRevenue)} / ${formatUsd(totalRevenueUsd)}` },
+          { label: 'Costo', value: `${formatBs(totalCost)} / ${formatUsd(totalCostUsd)}` },
+          { label: 'Ganancia', value: `${formatBs(totalProfit)} / ${formatUsd(totalProfitUsd)}` },
+        ];
+      },
+    },
+    gastos: {
+      title: 'Gasto Total',
+      columns: [
+        { key: 'label', header: 'Tipo de Gasto' },
+        { key: 'amountBs', header: 'Monto Bs', render: (item) => formatBs(item.amountBs as number) },
+        { key: 'amountUsd', header: 'Monto USD', render: (item) => formatUsd(item.amountUsd as number) },
+      ],
+      footerSummary: (data) => {
+        const totalBs = data.reduce((s, d) => s + (d.amountBs as number), 0);
+        const totalUsd = data.reduce((s, d) => s + (d.amountUsd as number), 0);
+        return [
+          { label: 'Total Bs', value: formatBs(totalBs) },
+          { label: 'Total USD', value: formatUsd(totalUsd) },
+        ];
+      },
+    },
+    ticket: {
+      title: 'Distribución de Tickets',
+      columns: [
+        { key: 'range', header: 'Rango' },
+        { key: 'count', header: 'Ventas', className: 'text-center' },
+        { key: 'percentage', header: '%', render: (item) => `${item.percentage}%`, className: 'text-center' },
+        { key: 'cumulative', header: 'Acumulado', render: (item) => `${item.cumulative}%`, hideOnMobile: true },
+      ],
+    },
+    topProducto: {
+      title: 'Productos más Rentables',
+      columns: [
+        { key: 'name', header: 'Producto', render: (item) => <span className="wrap-break-word">{item.name as string}</span> },
+        { key: 'quantitySold', header: 'Cant', className: 'text-center' },
+        { key: 'revenueBs', header: 'Ingreso Bs', render: (item) => formatBs(item.revenueBs as number), hideOnMobile: true },
+        { key: 'costBs', header: 'Costo Bs', render: (item) => formatBs(item.costBs as number), hideOnMobile: true },
+        { key: 'profitBs', header: 'Ganancia Bs', render: (item) => formatBs(item.profitBs as number) },
+        { key: 'marginPercent', header: 'Margen', render: (item) => `${item.marginPercent}%`, className: 'text-right' },
+      ],
+      footerSummary: (data) => {
+        const totalRevenue = data.reduce((s, d) => s + (d.revenueBs as number), 0);
+        const totalCost = data.reduce((s, d) => s + (d.costBs as number), 0);
+        const totalProfit = data.reduce((s, d) => s + (d.profitBs as number), 0);
+        return [
+          { label: 'Ingreso', value: formatBs(totalRevenue) },
+          { label: 'Costo', value: formatBs(totalCost) },
+          { label: 'Ganancia', value: formatBs(totalProfit) },
+        ];
+      },
+    },
+  };
+
+  const handleKpiClick = useCallback(async (type: DrillDownType) => {
+    if (!tenantId) return;
+    setActiveDrillDown(type);
+    setDrillDownLoading(true);
+
+    try {
+      let result;
+      if (type === 'ventas') {
+        result = await reportsService.getSalesDetail(tenantId, filters);
+      } else if (type === 'ganancia' || type === 'topProducto') {
+        result = await reportsService.getTopProducts(tenantId, filters, 50);
+      } else if (type === 'gastos') {
+        result = await reportsService.getExpenseBreakdown(tenantId, filters);
+      } else if (type === 'ticket') {
+        result = await reportsService.getTicketDistribution(tenantId, filters);
+      }
+
+      if (result?.ok) {
+        setDrillDownData(result.data as unknown as Record<string, unknown>[]);
+      } else {
+        setDrillDownData([]);
+      }
+    } catch {
+      setDrillDownData([]);
+    } finally {
+      setDrillDownLoading(false);
+    }
+  }, [tenantId, filters]);
+
+  const getSubtitle = (): string => {
+    const rangeLabels: Record<string, string> = {
+      today: 'Hoy',
+      yesterday: 'Ayer',
+      last7days: 'Últimos 7 días',
+      thisMonth: 'Este mes',
+      lastMonth: 'Mes pasado',
+      custom: 'Personalizado',
+    };
+    return rangeLabels[filters.timeRange] ?? '';
+  };
+
+  const renderTicketDistribution = (data: Record<string, unknown>[]) => {
+    if (data.length === 0) return null;
+    const maxCount = Math.max(...data.map((d) => d.count as number), 1);
+    return (
+      <div className="space-y-2 pt-2">
+        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Distribución</p>
+        {data.map((item, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <span className="text-xs text-text-secondary w-24 shrink-0 text-right">{item.range as string}</span>
+            <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary/60 rounded-full transition-all duration-300"
+                style={{ width: `${((item.count as number) / maxCount) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs font-semibold text-gray-700 w-8 text-right">{item.count as number}</span>
+            <span className="text-xs text-text-secondary w-12 text-right">{String(item.percentage)}%</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const handleTimeRangeChange = (value: string) => {
     const range = value as ReportTimeRange;
@@ -276,7 +454,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       <div className="space-y-4 sm:space-y-6">
         <div className={`print-section ${activeTab !== 'summary' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-            <ExecutiveSummary data={summary} loading={loading} />
+            <ExecutiveSummary data={summary} loading={loading} onKpiClick={handleKpiClick} />
           </Suspense>
         </div>
         <div className={`print-section ${activeTab !== 'profits' ? 'hidden' : ''}`}>
@@ -336,6 +514,19 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           cashAnalysis={cashAnalysis}
         />
       </div>
+
+      <DrillDownModal
+        isOpen={!!activeDrillDown}
+        onClose={() => setActiveDrillDown(null)}
+        title={activeDrillDown ? drillDownConfigs[activeDrillDown].title : ''}
+        subtitle={activeDrillDown ? getSubtitle() : undefined}
+        columns={activeDrillDown ? drillDownConfigs[activeDrillDown].columns : []}
+        data={drillDownData}
+        loading={drillDownLoading}
+        footerSummary={activeDrillDown && drillDownConfigs[activeDrillDown].footerSummary ? drillDownConfigs[activeDrillDown].footerSummary(drillDownData) : undefined}
+      >
+        {activeDrillDown === 'ticket' && renderTicketDistribution(drillDownData)}
+      </DrillDownModal>
 
       {isGeneratingPdf && (
         <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
