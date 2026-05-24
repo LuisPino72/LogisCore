@@ -213,6 +213,7 @@ Table cash_registers {
   opened_by uuid [ref: > auth.users.id]
   opened_at timestamptz
   opening_balance_bs numeric(19,2)
+  opening_rate numeric(19,2)
   closed_by uuid [ref: > auth.users.id]
   closed_at timestamptz
   closing_balance_bs numeric(19,2)

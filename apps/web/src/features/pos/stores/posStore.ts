@@ -273,7 +273,12 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   openCashRegister: async (tenantId, openingBalance, userId) => {
     set({ loading: true, error: null });
-    const result = await posService.openCashRegister({ tenantId, userId, openingBalanceBs: openingBalance });
+    const rate = get().exchangeRate;
+    if (!rate || rate <= 0) {
+      set({ error: 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.', loading: false });
+      return false;
+    }
+    const result = await posService.openCashRegister({ tenantId, userId, openingBalanceBs: openingBalance, openingRate: rate });
     if (result.ok) {
       set({ cashRegister: result.data, loading: false });
       return true;

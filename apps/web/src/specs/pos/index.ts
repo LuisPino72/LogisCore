@@ -66,6 +66,7 @@ export const CashRegisterSchema = z.object({
   openedBy: z.string().uuid().nullable(),
   openedAt: z.string().datetime().nullable(),
   openingBalanceBs: z.number().min(0).nullable(),
+  openingRate: z.number().positive().nullable(),
   closedBy: z.string().uuid().nullable(),
   closedAt: z.string().datetime().nullable(),
   closingBalanceBs: z.number().nullable(),
@@ -95,6 +96,7 @@ export const OpenCashRegisterInputSchema = z.object({
   tenantId: z.string().min(1),
   userId: z.string().uuid(),
   openingBalanceBs: z.number().positive('Monto inicial debe ser mayor a 0'),
+  openingRate: z.number().positive('Se requiere tasa de cambio al abrir la caja'),
 });
 
 export type OpenCashRegisterInput = z.infer<typeof OpenCashRegisterInputSchema>;

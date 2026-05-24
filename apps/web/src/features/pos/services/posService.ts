@@ -124,6 +124,7 @@ export const posService = {
             openedBy: data.opened_by as string | null,
             openedAt: data.opened_at as string | null,
             openingBalanceBs: data.opening_balance_bs as number | null,
+            openingRate: data.opening_rate as number | null,
             closedBy: data.closed_by as string | null,
             closedAt: data.closed_at as string | null,
             closingBalanceBs: data.closing_balance_bs as number | null,
@@ -148,6 +149,7 @@ export const posService = {
         openedBy: row.openedBy,
         openedAt: row.openedAt,
         openingBalanceBs: row.openingBalanceBs,
+        openingRate: row.openingRate,
         closedBy: row.closedBy,
         closedAt: row.closedAt,
         closingBalanceBs: row.closingBalanceBs,
@@ -524,7 +526,7 @@ export const posService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const { tenantId, userId, openingBalanceBs } = input;
+    const { tenantId, userId, openingBalanceBs, openingRate } = input;
 
     // --- ROLE CHECK: Only owner or admin ---
     try {
@@ -543,6 +545,10 @@ export const posService = {
 
     if (!openingBalanceBs || openingBalanceBs <= 0) {
       return failure(new AppError(PosErrors.BOX_OPENING_BALANCE_REQUIRED, 'Debe ingresar un monto inicial para abrir la caja.'));
+    }
+
+    if (!openingRate || openingRate <= 0) {
+      return failure(new AppError(PosErrors.BOX_OPENING_BALANCE_REQUIRED, 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.'));
     }
 
 
@@ -595,6 +601,7 @@ export const posService = {
           openedBy: remoteRegister.opened_by as string | null,
           openedAt: remoteRegister.opened_at as string | null,
           openingBalanceBs: remoteRegister.opening_balance_bs as number | null,
+          openingRate: remoteRegister.opening_rate as number | null,
           closedBy: remoteRegister.closed_by as string | null,
           closedAt: remoteRegister.closed_at as string | null,
           closingBalanceBs: remoteRegister.closing_balance_bs as number | null,
@@ -625,6 +632,7 @@ export const posService = {
         openedBy: userId,
         openedAt: now,
         openingBalanceBs,
+        openingRate,
         closedBy: null,
         closedAt: null,
         closingBalanceBs: null,
@@ -647,6 +655,7 @@ export const posService = {
           opened_by: userId,
           opened_at: now,
           opening_balance_bs: openingBalanceBs,
+          opening_rate: openingRate,
           total_sales_count: 0,
           total_sales_bs: 0,
           total_igtf_bs: 0,
@@ -1017,6 +1026,7 @@ export const posService = {
         openedBy: cashReg.openedBy,
         openedAt: cashReg.openedAt,
         openingBalanceBs: cashReg.openingBalanceBs,
+        openingRate: cashReg.openingRate,
         closedBy: userId,
         closedAt: now,
         closingBalanceBs: declaredClosingBalanceBs,

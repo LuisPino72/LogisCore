@@ -440,6 +440,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         currentSalesBs={cashRegister?.totalSalesBs ?? 0}
         currentIgtfBs={cashRegister?.totalIgtfBs ?? 0}
         openingBalanceBs={cashRegister?.openingBalanceBs ?? 0}
+        exchangeRate={exchangeRate}
         onOpenCash={handleCashOpenSubmit}
         onCloseCash={handleCashCloseSubmit}
         loading={loading}

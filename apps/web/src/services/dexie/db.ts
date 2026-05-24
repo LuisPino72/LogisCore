@@ -104,6 +104,7 @@ export interface DexieCashRegister {
   openedBy: string | null;
   openedAt: string | null;
   openingBalanceBs: number | null;
+  openingRate: number | null;
   closedBy: string | null;
   closedAt: string | null;
   closingBalanceBs: number | null;

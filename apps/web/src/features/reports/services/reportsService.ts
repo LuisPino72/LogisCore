@@ -500,12 +500,14 @@ export const reportsService = {
         avgRate = sumRate / salesInRange.length;
       }
 
-      const result: CashRegisterSummaryData[] = registers.map((r) => ({
+      const result: CashRegisterSummaryData[] = registers.map((r) => {
+        const effectiveRate = r.openingRate && r.openingRate > 0 ? r.openingRate : avgRate;
+        return {
         registerId: r.id,
         openedAt: r.openedAt ?? r.createdAt,
         closedAt: r.closedAt ?? undefined,
         openingBalanceBs: r.openingBalanceBs ?? 0,
-        openingBalanceUsd: avgRate > 0 ? preciseRound((r.openingBalanceBs ?? 0) / avgRate, 2) : 0,
+        openingBalanceUsd: effectiveRate > 0 ? preciseRound((r.openingBalanceBs ?? 0) / effectiveRate, 2) : 0,
         closingBalanceBs: r.closingBalanceBs ?? undefined,
         closingBalanceUsd: r.closingBalanceBs != null && avgRate > 0 ? preciseRound(r.closingBalanceBs / avgRate, 2) : undefined,
         expectedClosingBs: r.expectedClosingBs ?? undefined,
@@ -516,7 +518,8 @@ export const reportsService = {
         totalSalesBs: r.totalSalesBs,
         totalSalesUsd: avgRate > 0 ? preciseRound(r.totalSalesBs / avgRate, 2) : 0,
         status: r.isOpen ? 'open' : 'closed',
-      }));
+        };
+      });
 
       return success(result);
     } catch (err) {

@@ -12,6 +12,7 @@ interface CashRegisterModalProps {
   currentSalesBs: number;
   currentIgtfBs: number;
   openingBalanceBs: number | null;
+  exchangeRate: number | null;
   onOpenCash: (balance: number) => Promise<boolean>;
   onCloseCash: (declared: number) => Promise<boolean>;
   loading: boolean;
@@ -26,6 +27,7 @@ export function CashRegisterModal({
   currentSalesBs,
   currentIgtfBs,
   openingBalanceBs,
+  exchangeRate,
   onOpenCash,
   onCloseCash,
   loading,
@@ -60,15 +62,25 @@ export function CashRegisterModal({
     <Modal isOpen={isOpen} onClose={onClose} title={mode === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}>
       <div className="flex flex-col gap-4">
         {mode === 'open' ? (
-          <Input
-            label="Monto inicial (Bs)"
-            type="number"
-            inputMode="decimal"
-            value={balance}
-            onChange={(e) => setBalance(e.target.value)}
-            validation={{ required: true, min: 0.01 }}
-            placeholder="0.00"
-          />
+          <>
+            {exchangeRate && (
+              <div className="bg-surface-alt rounded-lg p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Tasa de cambio actual</span>
+                  <span className="font-semibold">Bs {exchangeRate.toFixed(2)} / USD</span>
+                </div>
+              </div>
+            )}
+            <Input
+              label="Monto inicial (Bs)"
+              type="number"
+              inputMode="decimal"
+              value={balance}
+              onChange={(e) => setBalance(e.target.value)}
+              validation={{ required: true, min: 0.01 }}
+              placeholder="0.00"
+            />
+          </>
         ) : (
           <>
             <div className="bg-surface-alt rounded-lg p-3 text-sm space-y-1">
