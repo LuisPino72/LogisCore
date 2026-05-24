@@ -61,7 +61,7 @@ function KpiCard({
       <div className="space-y-1 pr-8 sm:pr-10">
         <p className="text-[10px] sm:text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
         <p className="text-xs sm:text-lg font-bold text-gray-900 truncate">{value}</p>
-        {subtitle && <p className="text-[10px] sm:text-xs text-text-secondary truncate">{subtitle}</p>}
+        {subtitle && <div className="text-[10px] sm:text-xs text-text-secondary truncate">{subtitle}</div>}
         {trend && (
           <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
             {trend.positive ? <ArrowUpRight size={10} className="sm:w-3 sm:h-3" /> : <TrendingDown size={10} className="sm:w-3 sm:h-3" />}
