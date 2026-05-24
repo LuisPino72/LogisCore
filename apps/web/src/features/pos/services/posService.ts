@@ -855,11 +855,23 @@ export const posService = {
         return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Venta no encontrada o ya anulada.'));
       }
 
+      // Solo permitir anular ventas del día actual
+      const saleDate = new Date(sale.createdAt);
+      if (!isSameDayVzla(saleDate, new Date())) {
+        return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Solo se pueden anular ventas del día actual.'));
+      }
+
       const items = await db.saleItems.where({ saleId }).toArray();
       const now = new Date().toISOString();
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
-      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
+      // Buscar caja abierta para revertir totales
+      const cashReg = await db.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && r.isOpen)
+        .first();
+
+      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.syncQueue, db.outbox], async () => {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });
 
         for (const item of items) {
@@ -915,6 +927,32 @@ export const posService = {
             id: movementId, tenantId, productId: item.productId, userId,
             type: 'adjustment', quantity: storageQty, previousStock, newStock,
             reason: `Anulación venta #${saleId.slice(0, 8)}`, createdAt: now,
+          } as unknown as Record<string, unknown>), tenantId);
+        }
+
+        // Revertir totales de caja si existe una caja abierta
+        if (cashReg) {
+          const updatedCashReg = {
+            ...cashReg,
+            totalSalesCount: Math.max(0, cashReg.totalSalesCount - 1),
+            totalSalesBs: preciseRound(Math.max(0, cashReg.totalSalesBs - sale.totalBs), 2),
+            totalIgtfBs: preciseRound(Math.max(0, cashReg.totalIgtfBs - sale.igtfBs), 2),
+            updatedAt: now,
+          };
+          await db.cashRegisters.update(cashReg.id, {
+            totalSalesCount: updatedCashReg.totalSalesCount,
+            totalSalesBs: updatedCashReg.totalSalesBs,
+            totalIgtfBs: updatedCashReg.totalIgtfBs,
+            updatedAt: now,
+          });
+
+          await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
+            id: cashReg.id,
+            tenant_id: tenantUuid,
+            total_sales_count: updatedCashReg.totalSalesCount,
+            total_sales_bs: updatedCashReg.totalSalesBs,
+            total_igtf_bs: updatedCashReg.totalIgtfBs,
+            updated_at: now,
           } as unknown as Record<string, unknown>), tenantId);
         }
 

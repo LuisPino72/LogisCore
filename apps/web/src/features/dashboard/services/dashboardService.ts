@@ -135,6 +135,7 @@ export const dashboardService = {
         .from('sale_items')
         .select('product_id, product_name, quantity')
         .eq('tenant_id', tenantUuid)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -184,12 +185,13 @@ export const dashboardService = {
         .toArray();
 
       if (localSales.length > 0) {
-        const saleIds = new Set(localSales.map((s) => s.id));
-        const items = await db.saleItems.toArray();
-        const todayItems = items.filter((i) => saleIds.has(i.saleId));
+        const saleIds = [...new Set(localSales.map((s) => s.id))];
+        const items = saleIds.length > 0
+          ? await db.saleItems.where('saleId').anyOf(saleIds).toArray()
+          : [];
 
         let totalEarnings = 0;
-        for (const item of todayItems) {
+        for (const item of items) {
           const revenue = item.totalPriceUsd;
           const cost = calcItemCost(item.quantity, item.costUsdPerUnit);
           totalEarnings += revenue - cost;

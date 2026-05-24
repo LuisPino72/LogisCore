@@ -189,6 +189,36 @@ export const inventoryService = {
     if (!product) {
       return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
     }
+
+    // Validar que no tenga stock > 0
+    if (product.stock > 0) {
+      return failure(new AppError('PRODUCT_HAS_STOCK', `No se puede eliminar: el producto tiene ${product.stock} unidades en inventario. Ajuste el stock a cero primero.`));
+    }
+
+    // Validar que no tenga movimientos de inventario
+    const movementsCount = await db.inventoryMovements
+      .where({ productId: id })
+      .count();
+    if (movementsCount > 0) {
+      return failure(new AppError('PRODUCT_HAS_MOVEMENTS', `No se puede eliminar: el producto tiene ${movementsCount} movimiento(s) de inventario registrados.`));
+    }
+
+    // Validar que no tenga ventas asociadas
+    const salesCount = await db.saleItems
+      .where({ productId: id })
+      .count();
+    if (salesCount > 0) {
+      return failure(new AppError('PRODUCT_HAS_SALES', `No se puede eliminar: el producto aparece en ${salesCount} venta(s).`));
+    }
+
+    // Validar que no tenga órdenes de compra activas
+    const activeOrdersCount = await db.purchaseOrderItems
+      .where({ productId: id })
+      .count();
+    if (activeOrdersCount > 0) {
+      return failure(new AppError('PRODUCT_HAS_ORDERS', `No se puede eliminar: el producto está en ${activeOrdersCount} orden(es) de compra.`));
+    }
+
     const deletedAt = new Date().toISOString();
     await db.transaction('rw', [db.products, db.syncQueue, db.outbox], async () => {
       await db.products.update(id, { deletedAt });
@@ -557,9 +587,8 @@ export const inventoryService = {
     });
 
     for (const mov of rows) {
-      const isPositive = mov.quantity > 0;
-      const entry = isPositive ? Math.abs(mov.quantity) : 0;
-      const exit_ = isPositive ? 0 : Math.abs(mov.quantity);
+      const entry = mov.newStock > mov.previousStock ? Math.abs(mov.quantity) : 0;
+      const exit_ = mov.newStock < mov.previousStock ? Math.abs(mov.quantity) : 0;
       balance = mov.newStock;
 
       const typeLabel = mov.type === 'sale' ? 'sale'

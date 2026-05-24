@@ -393,6 +393,23 @@ export const purchaseService = {
     const now = new Date().toISOString();
     const newStatus: PurchaseOrder['status'] = totalReceived >= totalOrdered ? 'received' : 'partially_received';
 
+    // Validar que todos los productos a recibir existan y no estén borrados
+    const deletedProducts: string[] = [];
+    for (const rec of input.items) {
+      const item = itemMap.get(rec.itemId);
+      if (!item) continue;
+      if (rec.receivedQuantity > 0) {
+        const product = await db.products.get(item.productId);
+        if (!product || product.deletedAt) {
+          deletedProducts.push(item.productName ?? item.productId.slice(0, 8));
+        }
+      }
+    }
+    if (deletedProducts.length > 0) {
+      return failure(new AppError(PurchaseErrors.ORDER_RECEIVE_EXCEEDS,
+        `No se puede recibir: el(los) producto(s) "${deletedProducts.join(', ')}" han sido eliminados. Restáurelos o cree una nueva orden.`));
+    }
+
     try {
       await db.transaction('rw', [
         db.purchaseOrders,
@@ -416,7 +433,7 @@ export const purchaseService = {
 
           if (rec.receivedQuantity > 0) {
             const product = await db.products.get(item.productId);
-            if (!product || product.deletedAt) continue;
+            if (!product) continue;
 
             const storageQty = product.isWeighted
               ? convertToStorage(rec.receivedQuantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')

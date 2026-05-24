@@ -145,7 +145,8 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     const { data: cloudItems, error: itemsError } = await supabase
       .from('sale_items')
       .select('sale_id, product_id, product_name, product_sku, quantity, unit_price_usd, cost_usd_per_unit')
-      .in('sale_id', saleIds);
+      .in('sale_id', saleIds)
+      .is('deleted_at', null);
 
     if (itemsError || !cloudItems) return [];
 
@@ -681,7 +682,8 @@ export const reportsService = {
       const movements = await db.inventoryMovements
         .where({ tenantId })
         .filter((m) =>
-          m.type === 'adjustment'
+          !m.deletedAt
+          && m.type === 'adjustment'
           && m.quantity < 0
           && m.createdAt >= start
           && m.createdAt <= end
