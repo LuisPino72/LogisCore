@@ -289,7 +289,12 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   closeCashRegister: async (tenantId, declaredClosingBalance, userId) => {
     set({ loading: true, error: null });
-    const result = await posService.closeCashRegister({ tenantId, userId, declaredClosingBalanceBs: declaredClosingBalance });
+    const rate = get().exchangeRate;
+    if (!rate || rate <= 0) {
+      set({ error: 'No hay tasa de cambio disponible. Verifique la tasa antes de cerrar la caja.', loading: false });
+      return false;
+    }
+    const result = await posService.closeCashRegister({ tenantId, userId, declaredClosingBalanceBs: declaredClosingBalance, closingRate: rate });
     if (result.ok) {
       set({ cashRegister: result.data, loading: false });
       return true;

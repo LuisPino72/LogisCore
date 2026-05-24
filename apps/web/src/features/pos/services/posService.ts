@@ -38,6 +38,7 @@ async function autoCloseRegister(
       closedBy: userId,
       closedAt: now,
       closingBalanceBs: expectedClosingBs,
+      closingRate: register.openingRate,
       expectedClosingBs,
       differenceBs: 0,
       updatedAt: now,
@@ -50,6 +51,7 @@ async function autoCloseRegister(
       closed_by: userId,
       closed_at: now,
       closing_balance_bs: expectedClosingBs,
+      closing_rate: register.openingRate,
       expected_closing_bs: expectedClosingBs,
       difference_bs: 0,
       total_sales_count: register.totalSalesCount,
@@ -128,6 +130,7 @@ export const posService = {
             closedBy: data.closed_by as string | null,
             closedAt: data.closed_at as string | null,
             closingBalanceBs: data.closing_balance_bs as number | null,
+            closingRate: data.closing_rate as number | null,
             expectedClosingBs: data.expected_closing_bs as number | null,
             differenceBs: data.difference_bs as number | null,
             totalSalesCount: data.total_sales_count as number,
@@ -153,6 +156,7 @@ export const posService = {
         closedBy: row.closedBy,
         closedAt: row.closedAt,
         closingBalanceBs: row.closingBalanceBs,
+        closingRate: row.closingRate,
         expectedClosingBs: row.expectedClosingBs,
         differenceBs: row.differenceBs,
         totalSalesCount: row.totalSalesCount,
@@ -544,7 +548,7 @@ export const posService = {
       if (role !== 'owner' && role !== 'admin') {
         return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden abrir la caja.'));
       }
-    } catch (err) {
+    } catch {
       return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
     }
 
@@ -610,6 +614,7 @@ export const posService = {
           closedBy: remoteRegister.closed_by as string | null,
           closedAt: remoteRegister.closed_at as string | null,
           closingBalanceBs: remoteRegister.closing_balance_bs as number | null,
+          closingRate: remoteRegister.closing_rate as number | null,
           expectedClosingBs: remoteRegister.expected_closing_bs as number | null,
           differenceBs: remoteRegister.difference_bs as number | null,
           totalSalesCount: remoteRegister.total_sales_count as number,
@@ -641,6 +646,7 @@ export const posService = {
         closedBy: null,
         closedAt: null,
         closingBalanceBs: null,
+        closingRate: null,
         expectedClosingBs: null,
         differenceBs: null,
         totalSalesCount: 0,
@@ -932,7 +938,7 @@ export const posService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const { tenantId, userId, declaredClosingBalanceBs } = input;
+    const { tenantId, userId, declaredClosingBalanceBs, closingRate } = input;
 
     // --- ROLE CHECK: Only owner or admin ---
     try {
@@ -945,12 +951,8 @@ export const posService = {
       if (role !== 'owner' && role !== 'admin') {
         return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden cerrar la caja.'));
       }
-    } catch (err) {
+    } catch {
       return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
-    }
-
-    if (declaredClosingBalanceBs === undefined || declaredClosingBalanceBs === null) {
-      return failure(new AppError(PosErrors.BOX_CLOSING_BALANCE_REQUIRED, 'Debe ingresar el monto final para cerrar la caja.'));
     }
 
 
@@ -980,6 +982,7 @@ export const posService = {
           closedBy: userId,
           closedAt: now,
           closingBalanceBs: declaredClosingBalanceBs,
+          closingRate,
           expectedClosingBs,
           differenceBs,
           updatedAt: now,
@@ -992,6 +995,7 @@ export const posService = {
           closed_by: userId,
           closed_at: now,
           closing_balance_bs: declaredClosingBalanceBs,
+          closing_rate: closingRate,
           expected_closing_bs: expectedClosingBs,
           difference_bs: differenceBs,
           total_sales_count: cashReg.totalSalesCount,
@@ -1035,6 +1039,7 @@ export const posService = {
         closedBy: userId,
         closedAt: now,
         closingBalanceBs: declaredClosingBalanceBs,
+        closingRate,
         expectedClosingBs,
         differenceBs,
         totalSalesCount: cashReg.totalSalesCount,

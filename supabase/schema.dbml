@@ -217,6 +217,7 @@ Table cash_registers {
   closed_by uuid [ref: > auth.users.id]
   closed_at timestamptz
   closing_balance_bs numeric(19,2)
+  closing_rate numeric(19,2)
   expected_closing_bs numeric(19,2)
   difference_bs numeric(19,2)
   total_sales_count integer [not null, default: 0]

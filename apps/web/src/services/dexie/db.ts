@@ -108,6 +108,7 @@ export interface DexieCashRegister {
   closedBy: string | null;
   closedAt: string | null;
   closingBalanceBs: number | null;
+  closingRate: number | null;
   expectedClosingBs: number | null;
   differenceBs: number | null;
   totalSalesCount: number;

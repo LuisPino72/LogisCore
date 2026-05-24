@@ -70,6 +70,7 @@ export const CashRegisterSchema = z.object({
   closedBy: z.string().uuid().nullable(),
   closedAt: z.string().datetime().nullable(),
   closingBalanceBs: z.number().nullable(),
+  closingRate: z.number().positive().nullable(),
   expectedClosingBs: z.number().nullable(),
   differenceBs: z.number().nullable(),
   totalSalesCount: z.number().int().min(0),
@@ -105,6 +106,7 @@ export const CloseCashRegisterInputSchema = z.object({
   tenantId: z.string().min(1),
   userId: z.string().uuid(),
   declaredClosingBalanceBs: z.number().min(0, 'Monto final declarado requerido'),
+  closingRate: z.number().positive('Se requiere tasa de cambio al cerrar la caja'),
 });
 
 export type CloseCashRegisterInput = z.infer<typeof CloseCashRegisterInputSchema>;

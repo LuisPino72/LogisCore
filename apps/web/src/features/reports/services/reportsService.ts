@@ -487,37 +487,62 @@ export const reportsService = {
         .reverse()
         .sortBy('createdAt');
 
-      // Get average exchange rate for the period to convert Bs to USD
-      const salesInRange = await db.sales
+      // Get all completed sales in the range with their individual exchange rates
+      const allSales = await db.sales
         .where('[tenantId+createdAt]')
         .between([tenantId, start], [tenantId, end])
         .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
         .toArray();
 
-      let avgRate = 0;
-      if (salesInRange.length > 0) {
-        const sumRate = salesInRange.reduce((sum, s) => sum + s.exchangeRate, 0);
-        avgRate = sumRate / salesInRange.length;
-      }
-
       const result: CashRegisterSummaryData[] = registers.map((r) => {
-        const effectiveRate = r.openingRate && r.openingRate > 0 ? r.openingRate : avgRate;
+        // Filter sales that belong to this register (by time range)
+        const regStart = r.openedAt ?? r.createdAt;
+        const regEnd = r.closedAt ?? end;
+        const regSales = allSales.filter((s) => s.createdAt >= regStart && s.createdAt <= regEnd);
+
+        // Calculate totalSalesUsd from individual sales' own exchangeRate
+        let totalSalesUsd = 0;
+        for (const s of regSales) {
+          totalSalesUsd += preciseRound(s.totalBs / s.exchangeRate, 2);
+        }
+        totalSalesUsd = preciseRound(totalSalesUsd, 2);
+
+        // Use openingRate for opening conversion
+        const openingRate = r.openingRate && r.openingRate > 0 ? r.openingRate : 0;
+        const openingBalanceUsd = openingRate > 0
+          ? preciseRound((r.openingBalanceBs ?? 0) / openingRate, 2)
+          : 0;
+
+        // Use closingRate for closing conversion (fallback to openingRate)
+        const closeRate = r.closingRate && r.closingRate > 0 ? r.closingRate : openingRate;
+        const closingBalanceUsd = r.closingBalanceBs != null && closeRate > 0
+          ? preciseRound(r.closingBalanceBs / closeRate, 2)
+          : undefined;
+
+        const expectedClosingUsd = openingRate > 0
+          ? preciseRound(((r.openingBalanceBs ?? 0) + r.totalSalesBs) / openingRate, 2)
+          : undefined;
+
+        const differenceUsd = (r.differenceBs != null && closeRate > 0)
+          ? preciseRound(r.differenceBs / closeRate, 2)
+          : undefined;
+
         return {
-        registerId: r.id,
-        openedAt: r.openedAt ?? r.createdAt,
-        closedAt: r.closedAt ?? undefined,
-        openingBalanceBs: r.openingBalanceBs ?? 0,
-        openingBalanceUsd: effectiveRate > 0 ? preciseRound((r.openingBalanceBs ?? 0) / effectiveRate, 2) : 0,
-        closingBalanceBs: r.closingBalanceBs ?? undefined,
-        closingBalanceUsd: r.closingBalanceBs != null && avgRate > 0 ? preciseRound(r.closingBalanceBs / avgRate, 2) : undefined,
-        expectedClosingBs: r.expectedClosingBs ?? undefined,
-        expectedClosingUsd: r.expectedClosingBs != null && avgRate > 0 ? preciseRound(r.expectedClosingBs / avgRate, 2) : undefined,
-        differenceBs: r.differenceBs ?? undefined,
-        differenceUsd: r.differenceBs != null && avgRate > 0 ? preciseRound(r.differenceBs / avgRate, 2) : undefined,
-        totalSalesCount: r.totalSalesCount,
-        totalSalesBs: r.totalSalesBs,
-        totalSalesUsd: avgRate > 0 ? preciseRound(r.totalSalesBs / avgRate, 2) : 0,
-        status: r.isOpen ? 'open' : 'closed',
+          registerId: r.id,
+          openedAt: r.openedAt ?? r.createdAt,
+          closedAt: r.closedAt ?? undefined,
+          openingBalanceBs: r.openingBalanceBs ?? 0,
+          openingBalanceUsd,
+          closingBalanceBs: r.closingBalanceBs ?? undefined,
+          closingBalanceUsd,
+          expectedClosingBs: r.expectedClosingBs ?? undefined,
+          expectedClosingUsd,
+          differenceBs: r.differenceBs ?? undefined,
+          differenceUsd,
+          totalSalesCount: r.totalSalesCount,
+          totalSalesBs: r.totalSalesBs,
+          totalSalesUsd,
+          status: r.isOpen ? 'open' : 'closed',
         };
       });
 
@@ -554,20 +579,15 @@ export const reportsService = {
       }
       totalUsd = preciseRound(totalUsd, 2);
 
-      // Get average exchange rate for the period
-      const salesInRange = await db.sales
-        .where('[tenantId+createdAt]')
-        .between([tenantId, start], [tenantId, end])
-        .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
-        .toArray();
+      // Get exchange rate for the period from the exchangeRates table
+      const nsExchangeRates = await db.exchangeRates
+        .where('tenantId')
+        .equals(tenantId)
+        .reverse()
+        .sortBy('createdAt');
+      const nsPeriodRate = nsExchangeRates.length > 0 ? nsExchangeRates[0].rate : 0;
 
-      let avgRate = 0;
-      if (salesInRange.length > 0) {
-        const sumRate = salesInRange.reduce((sum, s) => sum + s.exchangeRate, 0);
-        avgRate = sumRate / salesInRange.length;
-      }
-
-      const totalBs = avgRate > 0 ? preciseRound(totalUsd * avgRate, 2) : 0;
+      const totalBs = nsPeriodRate > 0 ? preciseRound(totalUsd * nsPeriodRate, 2) : 0;
 
       return success({ totalUsd, totalBs });
     } catch (err) {
@@ -607,20 +627,15 @@ export const reportsService = {
       }
       totalUsd = preciseRound(totalUsd, 2);
 
-      // Get average exchange rate for the period
-      const salesInRange = await db.sales
-        .where('[tenantId+createdAt]')
-        .between([tenantId, start], [tenantId, end])
-        .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
-        .toArray();
+      // Get exchange rate for the period from the exchangeRates table
+      const adjExchangeRates = await db.exchangeRates
+        .where('tenantId')
+        .equals(tenantId)
+        .reverse()
+        .sortBy('createdAt');
+      const adjPeriodRate = adjExchangeRates.length > 0 ? adjExchangeRates[0].rate : 0;
 
-      let avgRate = 0;
-      if (salesInRange.length > 0) {
-        const sumRate = salesInRange.reduce((sum, s) => sum + s.exchangeRate, 0);
-        avgRate = sumRate / salesInRange.length;
-      }
-
-      const totalBs = avgRate > 0 ? preciseRound(totalUsd * avgRate, 2) : 0;
+      const totalBs = adjPeriodRate > 0 ? preciseRound(totalUsd * adjPeriodRate, 2) : 0;
 
       return success({
         perdida: byReason['perdida'],
