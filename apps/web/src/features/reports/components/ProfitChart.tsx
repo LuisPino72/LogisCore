@@ -16,8 +16,13 @@ function smartAxisFormat(value: number): string {
   return value >= 100 ? Math.round(value).toString() : value.toFixed(2);
 }
 
-function formatDual(bs: number, usd: number): string {
-  return `${formatBs(bs)} / ${formatUsd(usd)}`;
+function formatDual(bs: number, usd: number, colorClass: string): React.ReactNode {
+  return (
+    <div className="flex flex-col leading-tight">
+      <span className={`text-[10px] sm:text-sm font-bold ${colorClass} truncate`}>{formatBs(bs)}</span>
+      <span className={`text-[10px] sm:text-sm font-bold ${colorClass} truncate`}>{formatUsd(usd)}</span>
+    </div>
+  );
 }
 
 export function ProfitChart({ data, loading }: ProfitChartProps) {
@@ -69,15 +74,15 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
         <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
           <p className="text-[10px] sm:text-xs text-text-secondary">Ganancia Total</p>
-          <p className="text-[10px] sm:text-sm font-bold text-primary truncate">{formatDual(totalProfit, totalProfitUsd)}</p>
+          <div className="truncate">{formatDual(totalProfit, totalProfitUsd, 'text-primary')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-primary/3 border border-primary/10">
           <p className="text-[10px] sm:text-xs text-text-secondary">Ventas Totales</p>
-          <p className="text-[10px] sm:text-sm font-bold text-primary-dark truncate">{formatDual(totalSales, totalSalesUsd)}</p>
+          <div className="truncate">{formatDual(totalSales, totalSalesUsd, 'text-primary-dark')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-danger/5 border border-danger/20">
           <p className="text-[10px] sm:text-xs text-text-secondary">Gasto Total</p>
-          <p className="text-[10px] sm:text-sm font-bold text-danger truncate">{formatDual(totalCost, totalCostUsd)}</p>
+          <div className="truncate">{formatDual(totalCost, totalCostUsd, 'text-danger')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-accent/5 border border-accent/20">
           <p className="text-[10px] sm:text-xs text-text-secondary">Transacciones</p>
