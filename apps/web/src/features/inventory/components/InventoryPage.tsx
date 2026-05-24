@@ -16,7 +16,7 @@ import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
 import type { CreateProductInput, Product, AdjustmentReason } from '../types';
 
-const LOSS_REASONS: AdjustmentReason[] = ['perdida', 'robo', 'vencido', 'consumo_interno', 'otros'];
+
 
 interface ConfirmDelete {
   type: 'product' | 'category';
@@ -42,8 +42,9 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showAdjustment, setShowAdjustment] = useState(false);
   const [adjProductId, setAdjProductId] = useState<string>('');
+  const [adjMode, setAdjMode] = useState<'sumar' | 'restar' | ''>('');
   const [adjQuantity, setAdjQuantity] = useState('');
-  const [adjReasonType, setAdjReasonType] = useState<AdjustmentReason>('ajuste_manual');
+  const [adjReasonType, setAdjReasonType] = useState<string>('');
   const [adjCostTotal, setAdjCostTotal] = useState('');
   const [adjShowCostInput, setAdjShowCostInput] = useState(false);
   const [adjHasCost, setAdjHasCost] = useState(true);
@@ -144,31 +145,31 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   };
 
   const handleSubmitAdjustment = async () => {
-    const qty = parseFloat(adjQuantity);
-    if (isNaN(qty) || qty === 0) { setAdjError('Ingresa una cantidad válida (positiva o negativa)'); return; }
+    if (!adjMode) { setAdjError('Selecciona si quieres sumar o restar stock'); return; }
+    const rawQty = parseFloat(adjQuantity);
+    if (isNaN(rawQty) || rawQty <= 0) { setAdjError('Ingresa una cantidad válida mayor a 0'); return; }
     if (!adjReasonType) { setAdjError('Selecciona un motivo para el ajuste'); return; }
-    if (qty > 0 && LOSS_REASONS.includes(adjReasonType)) {
-      setAdjError('No puedes agregar stock con motivos negativos. Si quieres sumar stock, usa "Error de ingreso inicial" o crea una Orden de Compra.');
-      return;
-    }
+
+    const qty = adjMode === 'restar' ? -rawQty : rawQty;
 
     setAdjSubmitting(true);
     setAdjError('');
     const ok = await handleAdjustStock(
       adjProductId,
       qty,
-      adjReasonType,
+      adjReasonType as AdjustmentReason,
       adjShowCostInput && adjCostTotal ? parseFloat(adjCostTotal) : undefined,
     );
     setAdjSubmitting(false);
 
     if (ok) {
-      addToast({ type: 'success', message: `Stock ajustado correctamente`, duration: 3000 });
+      addToast({ type: 'success', message: 'Stock ajustado correctamente', duration: 3000 });
       setAdjQuantity('');
-      setAdjReasonType('ajuste_manual');
+      setAdjReasonType('');
       setAdjCostTotal('');
       setAdjShowCostInput(false);
       setAdjHasCost(true);
+      setAdjMode('');
       setAdjProductId('');
       setShowAdjustment(false);
     } else {
@@ -299,7 +300,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             onNewProduct={openNewProduct}
             onEditProduct={openEditProduct}
             onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
-            onAdjust={async (id) => { setAdjProductId(id); setShowAdjustment(true); await checkProductCost(id); }}
+            onAdjust={async (id) => { setAdjProductId(id); setShowAdjustment(true); setAdjMode(''); setAdjReasonType(''); setAdjQuantity(''); await checkProductCost(id); }}
             onViewLots={(id) => setSelectedProductLotsId(id)}
             onViewKardex={(id) => {
               const product = products.find((p) => p.id === id);
@@ -387,11 +388,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         return (
           <Modal
             isOpen={showAdjustment}
-            onClose={() => { setShowAdjustment(false); setAdjProductId(''); setAdjHasCost(true); }}
+            onClose={() => { setShowAdjustment(false); setAdjProductId(''); setAdjHasCost(true); setAdjMode(''); }}
             title="Ajuste de stock"
             footer={
               <div className="flex gap-3 w-full">
-                <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setAdjProductId(''); setAdjHasCost(true); }}>Cancelar</Button>
+                <Button variant="ghost" fullWidth onClick={() => { setShowAdjustment(false); setAdjProductId(''); setAdjHasCost(true); setAdjMode(''); }}>Cancelar</Button>
                 <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting || !isOnline}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
               </div>
             }
@@ -406,20 +407,75 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 </div>
               )}
 
-              <div className="input-wrapper">
-                <label className="input-label">Cantidad</label>
-                <Input type="number" step="0.01" placeholder="Ej: 10 suma, -10 resta" value={adjQuantity} onChange={(e) => setAdjQuantity(e.target.value)} validation={{ required: true }} error={adjError} inputClassName="text-sm" />
+              <div className="space-y-2">
+                <label className="input-label">Tipo de ajuste</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdjMode(adjMode === 'sumar' ? '' : 'sumar');
+                      setAdjQuantity('');
+                      setAdjError('');
+                      setAdjReasonType(adjMode === 'sumar' ? '' : 'inventario_inicial');
+                    }}
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      adjMode === 'sumar'
+                        ? 'bg-success text-white shadow-sm'
+                        : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
+                    }`}
+                  >
+                    ➕ Sumar stock
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdjMode(adjMode === 'restar' ? '' : 'restar');
+                      setAdjQuantity('');
+                      setAdjError('');
+                      setAdjReasonType(adjMode === 'restar' ? '' : 'perdida');
+                    }}
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      adjMode === 'restar'
+                        ? 'bg-danger text-white shadow-sm'
+                        : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
+                    }`}
+                  >
+                    ➖ Restar stock
+                  </button>
+                </div>
               </div>
 
-              <div className="input-wrapper">
-                <label className="input-label">Motivo</label>
-                <SearchableSelect
-                  value={adjReasonType}
-                  onChange={(v) => setAdjReasonType(v as AdjustmentReason)}
-                  options={REASON_OPTIONS}
-                  hideSearch
-                />
-              </div>
+              {adjMode && (
+                <div className="input-wrapper">
+                  <label className="input-label">Cantidad {adjMode === 'sumar' ? 'a sumar' : 'a restar'}</label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Ej: 10"
+                    value={adjQuantity}
+                    onChange={(e) => setAdjQuantity(e.target.value.replace(/[^0-9.]/g, ''))}
+                    validation={{ required: true }}
+                    error={adjError}
+                    inputClassName="text-sm"
+                  />
+                </div>
+              )}
+
+              {adjMode && (
+                <div className="input-wrapper">
+                  <label className="input-label">Motivo</label>
+                  <SearchableSelect
+                    value={adjReasonType}
+                    onChange={(v) => setAdjReasonType(v)}
+                    options={REASON_OPTIONS.filter((o) =>
+                      adjMode === 'sumar'
+                        ? o.value === 'inventario_inicial'
+                        : o.value !== 'inventario_inicial'
+                    )}
+                    hideSearch
+                  />
+                </div>
+              )}
 
               {!adjHasCost && (
                 <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 space-y-2">
