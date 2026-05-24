@@ -47,6 +47,7 @@ interface EditForm {
 interface TenantSectionProps {
   tenants: Tenant[];
   filteredTenants: Tenant[];
+  filters: { search: string; status: string; plan: string };
   setSearch: (v: string) => void;
   setStatus: (status: 'all' | 'active' | 'inactive') => void;
   setPlan: (plan: string) => void;
@@ -66,6 +67,7 @@ interface TenantSectionProps {
 export function TenantSection({
   tenants,
   filteredTenants,
+  filters,
   setSearch,
   setStatus,
   setPlan,
@@ -217,11 +219,12 @@ export function TenantSection({
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <SearchInput
               placeholder="Buscar local..."
+              value={filters.search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 min-w-50"
             />
             <Select
-              value=""
+              value={filters.status}
               onChange={(e) => setStatus(e.target.value as 'all' | 'active' | 'inactive')}
               className="w-32.5"
             >
@@ -230,7 +233,7 @@ export function TenantSection({
               <option value="inactive">Inactivos</option>
             </Select>
             <Select
-              value=""
+              value={filters.plan}
               onChange={(e) => setPlan(e.target.value)}
               className="w-32.5"
             >

@@ -8,7 +8,9 @@ function buildFilters(state: ReturnType<typeof useInventoryStore.getState>, filt
   if (filters) return filters;
   const tabState = state.tabStates[state.activeTab];
   const q = tabState?.searchQuery;
-  return q ? { query: q } : undefined;
+  const cat = tabState?.filterCategory;
+  if (!q && !cat) return undefined;
+  return { query: q || undefined, categoryId: cat || undefined };
 }
 
 const DEBOUNCE_MS = 300;

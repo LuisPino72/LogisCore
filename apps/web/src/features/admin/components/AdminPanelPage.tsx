@@ -23,7 +23,7 @@ export function AdminPanelPage() {
     createGlobalCategory, updateGlobalCategory, deleteGlobalCategory,
   } = useAdminPanel();
 
-  const { filteredTenants, setSearch, setStatus, setPlan } = useTenantFilters(tenants);
+  const { filters, filteredTenants, setSearch, setStatus, setPlan } = useTenantFilters(tenants);
 
   const [activeSheet, setActiveSheet] = useState<Sheet>('tenants');
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -157,6 +157,7 @@ export function AdminPanelPage() {
           <TenantSection
             tenants={tenants}
             filteredTenants={filteredTenants}
+            filters={filters}
             setSearch={setSearch}
             setStatus={setStatus}
             setPlan={setPlan}

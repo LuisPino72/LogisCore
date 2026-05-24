@@ -150,6 +150,24 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (isNaN(rawQty) || rawQty <= 0) { setAdjError('Ingresa una cantidad válida mayor a 0'); return; }
     if (!adjReasonType) { setAdjError('Selecciona un motivo para el ajuste'); return; }
 
+    const product = products.find((p) => p.id === adjProductId);
+    if (product && !product.isWeighted && rawQty !== Math.floor(rawQty)) {
+      setAdjError('Los productos por unidad solo aceptan números enteros');
+      return;
+    }
+
+    if (adjMode === 'restar') {
+      if (product) {
+        const maxStock = product.unit === 'kg' || product.unit === 'lt'
+          ? (product.stock / 1000) : product.stock;
+        if (rawQty > maxStock) {
+          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : 'unidades';
+          setAdjError(`No puedes restar más de ${maxStock} ${unitLabel} (stock actual)`);
+          return;
+        }
+      }
+    }
+
     const qty = adjMode === 'restar' ? -rawQty : rawQty;
 
     setAdjSubmitting(true);
@@ -450,10 +468,14 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                   <label className="input-label">Cantidad {adjMode === 'sumar' ? 'a sumar' : 'a restar'}</label>
                   <Input
                     type="text"
-                    inputMode="decimal"
-                    placeholder="Ej: 10"
+                    inputMode={product?.isWeighted ? "decimal" : "numeric"}
+                    placeholder={product?.isWeighted ? "Ej: 10.5" : "Ej: 10"}
                     value={adjQuantity}
-                    onChange={(e) => setAdjQuantity(e.target.value.replace(/[^0-9.]/g, ''))}
+                    onChange={(e) => setAdjQuantity(
+                      product?.isWeighted
+                        ? e.target.value.replace(/[^0-9.]/g, '')
+                        : e.target.value.replace(/[^0-9]/g, '')
+                    )}
                     validation={{ required: true }}
                     error={adjError}
                     inputClassName="text-sm"
