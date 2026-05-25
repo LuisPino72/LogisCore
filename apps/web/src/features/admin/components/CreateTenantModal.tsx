@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { Building2, Shield, UserPlus, Plus, Trash2 } from 'lucide-react';
 import { Modal, Input, Button } from '../../../common/components';
+import { sanitizeValue } from '../../../lib/validation';
 import { CreateTenantWithUsersInputSchema } from '../types';
 import type { CreateTenantWithUsersInput, CreateTenantResponse } from '../types';
 

@@ -127,9 +127,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       {validation?.maxLength && typeof value === 'string' && (
         <span className={cn(
           'text-xs text-right mt-0.5 block',
-          value.length > validation.maxLength * 0.9 ? 'text-warning' : 'text-text-muted'
+          getSanitized(value).length > validation.maxLength * 0.9 ? 'text-warning' : 'text-text-muted'
         )}>
-          {value.length}/{validation.maxLength}
+          {getSanitized(value).length}/{validation.maxLength}
         </span>
       )}
     </div>
