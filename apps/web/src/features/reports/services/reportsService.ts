@@ -11,6 +11,7 @@ import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
   TopProductData,
+  TopCategoryData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
   AdjustmentLossExpenses,
@@ -459,6 +460,97 @@ export const reportsService = {
     } catch (err) {
       console.error('[reportsService.getTopProducts]', err);
       return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al generar top productos.'));
+    }
+  },
+
+  async getTopCategories(tenantId: string, filters: ReportFilters): Promise<Result<TopCategoryData[], AppError>> {
+    try {
+      const { start, end } = getDateRange(filters);
+      const salesData = await fetchSalesWithItems(tenantId, start, end);
+
+      if (salesData.length === 0) return success([]);
+
+      const db = getDb();
+
+      const products = await db.products
+        .where({ tenantId })
+        .filter((p) => !p.deletedAt)
+        .toArray();
+      const productCategoryMap = new Map<string, string | undefined>();
+      for (const p of products) {
+        productCategoryMap.set(p.id, p.categoryId);
+      }
+
+      const categories = await db.categories
+        .where({ tenantId })
+        .filter((c) => !c.deletedAt)
+        .toArray();
+      const categoryNameMap = new Map<string, string>();
+      for (const c of categories) {
+        categoryNameMap.set(c.id, c.name);
+      }
+
+      const catAgg = new Map<string, {
+        productIds: Set<string>;
+        quantitySold: number;
+        revenueUsd: number;
+        revenueBs: number;
+        costUsd: number;
+        costBs: number;
+      }>();
+
+      const UNCATEGORIZED_KEY = '__uncategorized__';
+
+      for (const { sale, items } of salesData) {
+        for (const item of items) {
+          const catId = productCategoryMap.get(item.productId) ?? UNCATEGORIZED_KEY;
+          let agg = catAgg.get(catId);
+          if (!agg) {
+            agg = { productIds: new Set(), quantitySold: 0, revenueUsd: 0, revenueBs: 0, costUsd: 0, costBs: 0 };
+            catAgg.set(catId, agg);
+          }
+          const revUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
+          const revBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
+          const cUsd = item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
+          const cBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
+          agg.productIds.add(item.productId);
+          agg.quantitySold += item.quantity;
+          agg.revenueUsd = preciseRound(agg.revenueUsd + revUsd, 2);
+          agg.revenueBs = preciseRound(agg.revenueBs + revBs, 2);
+          agg.costUsd = preciseRound(agg.costUsd + cUsd, 2);
+          agg.costBs = preciseRound(agg.costBs + cBs, 2);
+        }
+      }
+
+      const result: TopCategoryData[] = [];
+      for (const [catId, agg] of catAgg) {
+        const name = catId === UNCATEGORIZED_KEY ? 'Sin categoría' : (categoryNameMap.get(catId) ?? 'Categoría desconocida');
+        const profitBs = preciseRound(agg.revenueBs - agg.costBs, 2);
+        const profitUsd = preciseRound(agg.revenueUsd - agg.costUsd, 2);
+        result.push({
+          categoryId: catId === UNCATEGORIZED_KEY ? '' : catId,
+          categoryName: name,
+          productCount: agg.productIds.size,
+          quantitySold: agg.quantitySold,
+          revenueBs: agg.revenueBs,
+          revenueUsd: agg.revenueUsd,
+          costBs: agg.costBs,
+          costUsd: agg.costUsd,
+          profitBs,
+          profitUsd,
+          marginPercent: agg.revenueBs > 0 ? preciseRound((profitBs / agg.revenueBs) * 100, 2) : 0,
+        });
+      }
+
+      result.sort((a, b) => {
+        if (b.profitBs !== a.profitBs) return b.profitBs - a.profitBs;
+        return a.categoryName.localeCompare(b.categoryName);
+      });
+
+      return success(result);
+    } catch (err) {
+      console.error('[reportsService.getTopCategories]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al generar análisis por categorías.'));
     }
   },
 

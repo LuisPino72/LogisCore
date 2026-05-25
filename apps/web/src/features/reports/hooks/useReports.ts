@@ -7,6 +7,7 @@ import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
   TopProductData,
+  TopCategoryData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
   ReportTab,
@@ -18,13 +19,14 @@ interface ReportsState {
   summary: ExecutiveSummaryData | null;
   profitOverTime: DailyProfitPoint[];
   topProducts: TopProductData[];
+  topCategories: TopCategoryData[];
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
 }
 
 const initialState: ReportsState = {
   loading: false, error: null,
-  summary: null, profitOverTime: [], topProducts: [], paymentBreakdown: [], cashAnalysis: [],
+  summary: null, profitOverTime: [], topProducts: [], topCategories: [], paymentBreakdown: [], cashAnalysis: [],
 };
 
 export function useReports(tenantId: string | null) {
@@ -51,10 +53,11 @@ export function useReports(tenantId: string | null) {
     try {
       let updates: Partial<ReportsState>;
       if (tab === 'summary') {
-        const [s, p, tp, pm, c] = await Promise.all([
+        const [s, p, tp, tc, pm, c] = await Promise.all([
           reportsService.getExecutiveSummary(tenantId, filters),
           reportsService.getProfitOverTime(tenantId, filters),
           reportsService.getTopProducts(tenantId, filters),
+          reportsService.getTopCategories(tenantId, filters),
           reportsService.getPaymentBreakdown(tenantId, filters),
           reportsService.getCashAnalysis(tenantId, filters),
         ]);
@@ -62,6 +65,7 @@ export function useReports(tenantId: string | null) {
           summary: s.ok ? s.data : null,
           profitOverTime: p.ok ? p.data : [],
           topProducts: tp.ok ? tp.data : [],
+          topCategories: tc.ok ? tc.data : [],
           paymentBreakdown: pm.ok ? pm.data : [],
           cashAnalysis: c.ok ? c.data : [],
         };
@@ -69,12 +73,14 @@ export function useReports(tenantId: string | null) {
         const res = await reportsService.getProfitOverTime(tenantId, filters);
         updates = { profitOverTime: res.ok ? res.data : [] };
       } else if (tab === 'products') {
-        const [tp, pm] = await Promise.all([
+        const [tp, tc, pm] = await Promise.all([
           reportsService.getTopProducts(tenantId, filters),
+          reportsService.getTopCategories(tenantId, filters),
           reportsService.getPaymentBreakdown(tenantId, filters),
         ]);
         updates = {
           topProducts: tp.ok ? tp.data : [],
+          topCategories: tc.ok ? tc.data : [],
           paymentBreakdown: pm.ok ? pm.data : [],
         };
       } else {
@@ -113,18 +119,20 @@ export function useReports(tenantId: string | null) {
 
     try {
       if (tab === 'summary') {
-        const [s, p, tp, pm, c] = await Promise.all([
+        const [s, p, tp, tc, pm, c] = await Promise.all([
           reportsService.getExecutiveSummary(tenantId, filters),
           reportsService.getProfitOverTime(tenantId, filters),
           reportsService.getTopProducts(tenantId, filters),
+          reportsService.getTopCategories(tenantId, filters),
           reportsService.getPaymentBreakdown(tenantId, filters),
           reportsService.getCashAnalysis(tenantId, filters),
         ]);
-        const errs = [s, p, tp, pm, c].filter((r) => !r.ok).map((r) => r.error.message);
+        const errs = [s, p, tp, tc, pm, c].filter((r) => !r.ok).map((r) => r.error.message);
         apply({
           summary: s.ok ? s.data : null,
           profitOverTime: p.ok ? p.data : [],
           topProducts: tp.ok ? tp.data : [],
+          topCategories: tc.ok ? tc.data : [],
           paymentBreakdown: pm.ok ? pm.data : [],
           cashAnalysis: c.ok ? c.data : [],
         }, errs.length ? errs.join('. ') : null);
@@ -132,16 +140,30 @@ export function useReports(tenantId: string | null) {
         return;
       }
 
+      if (tab === 'products') {
+        const [tp, tc, pm] = await Promise.all([
+          reportsService.getTopProducts(tenantId, filters),
+          reportsService.getTopCategories(tenantId, filters),
+          reportsService.getPaymentBreakdown(tenantId, filters),
+        ]);
+        const errs = [tp, tc, pm].filter((r) => !r.ok).map((r) => r.error.message);
+        apply({
+          topProducts: tp.ok ? tp.data : [],
+          topCategories: tc.ok ? tc.data : [],
+          paymentBreakdown: pm.ok ? pm.data : [],
+        }, errs.length ? errs.join('. ') : null);
+        preloadAdjacent(tab);
+        return;
+      }
+
       let res: Result<unknown, AppError>;
       if (tab === 'profits') res = await reportsService.getProfitOverTime(tenantId, filters);
-      else if (tab === 'products') res = await reportsService.getTopProducts(tenantId, filters);
       else if (tab === 'cash') res = await reportsService.getCashAnalysis(tenantId, filters);
       else return;
 
       if (res.ok) {
         const updates: Partial<ReportsState> = {};
         if (tab === 'profits') updates.profitOverTime = res.data as DailyProfitPoint[];
-        else if (tab === 'products') updates.topProducts = res.data as TopProductData[];
         else if (tab === 'cash') updates.cashAnalysis = res.data as CashRegisterSummaryData[];
         apply(updates, null);
       } else {
@@ -180,5 +202,23 @@ export function useReports(tenantId: string | null) {
     };
   }, [tenantId, refetch]);
 
-  return { filters, setFilters, activeTab, setActiveTab, ...state, refetch };
+  const topCategories = state.topCategories;
+  const worstCategories = topCategories.length > 5
+    ? [...topCategories].reverse().slice(0, 5)
+    : [...topCategories].reverse();
+
+  const worstProducts = state.topProducts.length > 5
+    ? [...state.topProducts].sort((a, b) => a.profitBs - b.profitBs).slice(0, 5)
+    : [];
+
+  const topByVolume = [...state.topProducts]
+    .sort((a, b) => b.quantitySold - a.quantitySold)
+    .slice(0, 5);
+
+  return {
+    filters, setFilters, activeTab, setActiveTab,
+    ...state,
+    topCategories, worstCategories, worstProducts, topByVolume,
+    refetch,
+  };
 }

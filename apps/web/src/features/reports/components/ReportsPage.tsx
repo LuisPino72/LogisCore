@@ -7,6 +7,7 @@ import { useReports } from '../hooks/useReports';
 import { useToastStore } from '../../../stores/toastStore';
 import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
+import { InsightsCarousel } from './InsightsCarousel';
 import { PrintView } from './PrintView';
 import { reportsService } from '../services/reportsService';
 import type { ReportTimeRange, ReportTab, DrillDownType } from '../types';
@@ -67,6 +68,10 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     summary,
     profitOverTime,
     topProducts,
+    topCategories,
+    worstCategories,
+    worstProducts,
+    topByVolume,
     paymentBreakdown,
     cashAnalysis,
   } = useReports(tenantId);
@@ -464,6 +469,14 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         </div>
         <div className={`print-section space-y-4 sm:space-y-6 ${activeTab !== 'products' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+            <InsightsCarousel
+              topCategories={topCategories}
+              worstCategories={worstCategories}
+              topProducts={topProducts}
+              worstProducts={worstProducts}
+              topByVolume={topByVolume}
+              loading={loading}
+            />
             <TopProductsChart data={topProducts} loading={loading} />
             <PaymentBreakdown data={paymentBreakdown} loading={loading} />
           </Suspense>

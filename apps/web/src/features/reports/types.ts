@@ -51,6 +51,20 @@ export interface DailyProfitPoint {
   lastRate: number;
 }
 
+export interface TopCategoryData {
+  categoryId: string;
+  categoryName: string;
+  productCount: number;
+  quantitySold: number;
+  revenueBs: number;
+  revenueUsd: number;
+  costBs: number;
+  costUsd: number;
+  profitBs: number;
+  profitUsd: number;
+  marginPercent: number;
+}
+
 export interface TopProductData {
   productId: string;
   name: string;
