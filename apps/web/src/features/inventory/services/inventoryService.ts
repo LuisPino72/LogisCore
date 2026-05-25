@@ -569,6 +569,7 @@ export const inventoryService = {
     const db = getDb();
     const rows = await db.inventoryMovements
       .where({ productId })
+      .filter((m) => !m.deletedAt)
       .sortBy('createdAt');
 
     if (rows.length === 0) return success([]);
@@ -738,7 +739,7 @@ export const inventoryService = {
     const db = getDb();
     const lots = await db.inventoryLots
       .where({ productId })
-      .filter((l) => l.remainingQuantity > 0)
+      .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
       .sortBy('createdAt');
 
     let toConsume = quantity;
@@ -777,6 +778,7 @@ export const inventoryService = {
     const db = getDb();
     let rows = await db.inventoryMovements
       .where({ productId })
+      .filter((m) => !m.deletedAt)
       .sortBy('createdAt');
 
     // If local is empty, try pulling from Supabase

@@ -796,6 +796,7 @@ export const posService = {
       const db = getDb();
       let rows = await db.saleItems
         .where({ saleId })
+        .filter((r) => !r.deletedAt)
         .toArray();
 
       if (rows.length === 0) {
