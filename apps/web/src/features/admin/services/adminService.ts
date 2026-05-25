@@ -80,6 +80,13 @@ export const adminService = {
       return failure(new AppError('TENANT_HARD_DELETE_FAILED', error.message || 'Error al eliminar permanentemente el local'));
     }
 
+    // Clean up Storage images for this tenant (fire-and-forget, non-critical)
+    try {
+      await supabase.rpc('hard_delete_tenant_storage', { p_tenant_id: id });
+    } catch {
+      // Non-critical: storage cleanup failure should not block tenant deletion
+    }
+
     try {
       await emitWithAudit('ADMIN.TENANT.HARD_DELETE', 'ADMIN', {
         tenantId: id,

@@ -164,7 +164,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       setAdjError('Los productos por unidad solo aceptan números enteros');
       return;
     }
-    if (product?.isWeighted && !/^\d+(\.\d{1,2})?$/.test(adjQuantity)) {
+    if (product?.isWeighted && adjQuantity && !/^\d+\.?\d{0,2}$/.test(adjQuantity)) {
       setAdjError('Los productos pesables aceptan máximo 2 decimales');
       return;
     }

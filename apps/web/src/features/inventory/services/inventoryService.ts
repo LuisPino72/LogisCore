@@ -16,6 +16,31 @@ import { convertToStorage } from '../types';
 
 const INVENTORY_MODULE = 'INVENTORY';
 
+async function deleteStorageImage(imageUrl: string, token?: string): Promise<void> {
+  try {
+    if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token ?? '';
+    }
+    if (!token) return;
+
+    const parts = imageUrl.split('/Products/');
+    if (parts.length < 2) return;
+    const filePath = parts[1];
+
+    const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
+    await fetch(storageUrl, {
+      method: 'DELETE',
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (err) {
+    logger.warn(INVENTORY_MODULE, 'Error al eliminar imagen de storage:', err);
+  }
+}
+
 function toProduct(raw: Record<string, unknown>): Product {
   return {
     id: raw.id as string,
@@ -654,6 +679,17 @@ export const inventoryService = {
       .toArray();
 
     const deletedAt = new Date().toISOString();
+
+    // Eliminar imágenes de storage (fire-and-forget, no bloquea la tx)
+    const childIds = presentations
+      .filter((p) => p.stockType === 'independent' && p.childProductId)
+      .map((p) => p.childProductId!);
+    const allImageIds = [id, ...childIds];
+    Promise.all(allImageIds.map(async (pid) => {
+      const p = await db.products.get(pid);
+      if (p?.imageUrl) await deleteStorageImage(p.imageUrl);
+    }));
+
     await db.transaction('rw', [db.products, db.productPresentations, db.syncQueue, db.outbox], async () => {
       for (const pres of presentations) {
         if (pres.stockType === 'independent' && pres.childProductId) {
@@ -1134,6 +1170,7 @@ export const inventoryService = {
       const oldProduct = await db.products.get(productId);
       if (oldProduct?.imageUrl) {
         await imageCacheService.invalidate(oldProduct.imageUrl);
+        await deleteStorageImage(oldProduct.imageUrl, token);
       }
       await db.products.update(productId, { imageUrl: publicUrl });
 
