@@ -49,37 +49,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   const effectiveType = showPassword && isPassword ? (visible ? 'text' : 'password') : props.type;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    let rawValue = e.target.value;
-
-    if (sanitize === 'number' || sanitize === 'currency') {
-      rawValue = sanitizeNumber(rawValue, { decimals: sanitize === 'currency' ? decimals : decimals, allowNegative });
-    } else if (sanitize === 'rif') {
-      rawValue = rawValue.toUpperCase().replace(/[^VJEGP0-9]/g, '');
-      if (rawValue.length > 1 && !/[VJEGP]/.test(rawValue[0])) {
-        rawValue = rawValue.slice(1);
-      }
-    } else if (sanitize === 'phone') {
-      rawValue = rawValue.replace(/\D/g, '');
-    }
-
-    if (validation?.maxLength && rawValue.length > validation.maxLength) {
-      rawValue = rawValue.slice(0, validation.maxLength);
-    }
-
-    if (validation && touched) {
-      const err = validateValue(rawValue, validation);
-      setInternalError(err);
-      onValidate?.(err);
-    }
-
-    if (sanitize === 'none' && rawValue === e.target.value) {
-      onChange?.(e);
-      return;
-    }
-
-    e.target.value = rawValue;
     onChange?.(e);
   };
+
 
   const handleBlur = () => {
     setTouched(true);
