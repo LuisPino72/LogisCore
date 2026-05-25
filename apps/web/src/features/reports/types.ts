@@ -32,6 +32,8 @@ export interface ExecutiveSummaryData {
   nonSellableExpensesUsd: number;
   nonSellableExpensesBs: number;
   adjustmentLossExpenses: AdjustmentLossExpenses;
+  operatingExpensesUsd: number;
+  operatingExpensesBs: number;
   totalExpensesUsd: number;
   totalExpensesBs: number;
   netProfitUsd: number;

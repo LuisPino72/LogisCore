@@ -226,6 +226,26 @@ export interface DexiePurchaseOrderItem {
   deletedAt?: string;
 }
 
+export interface DexieExpense {
+  id: string;
+  tenantId: string;
+  createdByUserId: string;
+  category: string;
+  amountUsd: number;
+  exchangeRate: number;
+  amountBs: number;
+  description?: string;
+  date: string;
+  isRecurring: boolean;
+  recurrenceType?: 'monthly' | 'yearly';
+  nextDueDate?: string;
+  parentExpenseId?: string;
+  status: 'pending' | 'paid' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
 export class LogisCoreDB extends Dexie {
   tenantRefs!: Table<DexieTenantRef, string>;
   syncQueue!: Table<SyncQueueItem, number>;
@@ -247,10 +267,12 @@ export class LogisCoreDB extends Dexie {
   purchaseOrderItems!: Table<DexiePurchaseOrderItem, string>;
   exchangeRates!: Table<DexieExchangeRate, string>;
   auditEntries!: Table<DexieAuditEntry, number>;
+  expenses!: Table<DexieExpense, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(13).stores({
+    this.version(14).stores({
+      expenses: 'id, tenantId, category, date, status, nextDueDate, isRecurring, parentExpenseId, [tenantId+date], [tenantId+status], [tenantId+deletedAt], [tenantId+isRecurring]',
       exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',

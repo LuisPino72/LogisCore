@@ -26,6 +26,7 @@ export type { Tab } from './Tabs';
 export { Textarea } from './Textarea';
 export { ToastContainer } from './Toast';
 export { ModuleOnboarding } from './ModuleOnboarding';
+export { NotificationBell } from './NotificationBell';
 export { ErrorBoundary } from './ErrorBoundary';
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';

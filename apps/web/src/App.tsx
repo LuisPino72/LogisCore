@@ -28,20 +28,24 @@ import {
   LayoutDashboard,
   FileText,
   Truck,
+  Receipt,
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
+import { NotificationBell } from './common/components/NotificationBell';
 
 const DashboardPage = lazy(() => import('./features/dashboard').then((m) => ({ default: m.DashboardPage })));
 const InventoryPage = lazy(() => import('./features/inventory').then((m) => ({ default: m.InventoryPage })));
 const PosPage = lazy(() => import('./features/pos').then((m) => ({ default: m.PosPage })));
 const PurchasePage = lazy(() => import('./features/purchases').then((m) => ({ default: m.PurchasePage })));
 const ReportsPage = lazy(() => import('./features/reports').then((m) => ({ default: m.ReportsPage })));
+const GastosPage = lazy(() => import('./features/gastos').then((m) => ({ default: m.GastosPage })));
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
+  { id: 'gastos', label: 'Gastos', icon: <Receipt size={20} /> },
   { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
   { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
@@ -52,6 +56,7 @@ const EMPLOYEE_ALLOWED = new Set(['pos']);
 const MODULE_ROUTE_MAP: Record<string, string> = {
   dashboard: '/dashboard',
   inventory: '/inventory',
+  gastos: '/gastos',
   purchases: '/purchases',
   pos: '/pos',
   reports: '/reports',
@@ -83,6 +88,7 @@ function useSyncModuleFromRoute() {
   const location = useLocation();
   const path = location.pathname;
   if (path.startsWith('/inventory')) return 'inventory';
+  if (path.startsWith('/gastos')) return 'gastos';
   if (path.startsWith('/purchases')) return 'purchases';
   if (path.startsWith('/pos')) return 'pos';
   if (path.startsWith('/reports')) return 'reports';
@@ -102,7 +108,7 @@ function DashboardLayout() {
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
   const role = session?.role ?? null;
 
-  const knownModulePaths = ['/dashboard', '/inventory', '/purchases', '/pos', '/reports'];
+  const knownModulePaths = ['/dashboard', '/inventory', '/gastos', '/purchases', '/pos', '/reports'];
   const isKnownModulePath = knownModulePaths.some(
     (p) => location.pathname === p || location.pathname.startsWith(p + '/')
   );
@@ -148,6 +154,7 @@ function DashboardLayout() {
             Sasa
           </Button>
           {role && <Badge variant="success">{role}</Badge>}
+          <NotificationBell />
         </>
       }
       sidebar={
@@ -181,6 +188,11 @@ function DashboardLayout() {
         <div className={`${activeModule !== 'inventory' ? 'hidden' : ''} animate-fade-in`}>
           <Suspense fallback={<ModuleSkeleton />}>
             <InventoryPage tenantId={effectiveTenantId} />
+          </Suspense>
+        </div>
+        <div className={`${activeModule !== 'gastos' ? 'hidden' : ''} animate-fade-in`}>
+          <Suspense fallback={<ModuleSkeleton />}>
+            <GastosPage tenantId={effectiveTenantId} />
           </Suspense>
         </div>
         <div className={`${activeModule !== 'purchases' ? 'hidden' : ''} animate-fade-in`}>

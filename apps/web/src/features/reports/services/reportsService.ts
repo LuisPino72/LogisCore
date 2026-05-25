@@ -325,8 +325,18 @@ export const reportsService = {
         totalUsd: 0,
         totalBs: 0,
       };
-      const totalExpensesUsd = preciseRound(nonSellableExpensesUsd + adjustmentLossExpenses.totalUsd, 2);
-      const totalExpensesBs = preciseRound(nonSellableExpensesBs + adjustmentLossExpenses.totalBs, 2);
+      // Operating expenses (gastos operativos del período)
+      const db = getDb();
+      const operatingExpenses = await db.expenses
+        .where('[tenantId+date]')
+        .between([tenantId, start], [tenantId, end])
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
+        .toArray();
+      const operatingExpensesUsd = operatingExpenses.reduce((s, e) => s + e.amountUsd, 0);
+      const operatingExpensesBs = operatingExpenses.reduce((s, e) => s + e.amountBs, 0);
+
+      const totalExpensesUsd = preciseRound(nonSellableExpensesUsd + adjustmentLossExpenses.totalUsd + operatingExpensesUsd, 2);
+      const totalExpensesBs = preciseRound(nonSellableExpensesBs + adjustmentLossExpenses.totalBs + operatingExpensesBs, 2);
       const netProfitUsd = preciseRound(grossProfitUsd - totalExpensesUsd, 2);
       const netProfitBs = preciseRound(grossProfitBs - totalExpensesBs, 2);
 
@@ -360,6 +370,8 @@ export const reportsService = {
         nonSellableExpensesUsd,
         nonSellableExpensesBs,
         adjustmentLossExpenses,
+        operatingExpensesUsd,
+        operatingExpensesBs,
         totalExpensesUsd,
         totalExpensesBs,
         netProfitUsd,
@@ -995,6 +1007,32 @@ export const reportsService = {
               amountUsd: val.totalUsd,
             });
           }
+        }
+      }
+
+      // Operating expenses breakdown
+      const db = getDb();
+      const operatingExpenses = await db.expenses
+        .where('[tenantId+date]')
+        .between([tenantId, start], [tenantId, end])
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
+        .toArray();
+
+      if (operatingExpenses.length > 0) {
+        const byCategory = new Map<string, { amountUsd: number; amountBs: number }>();
+        for (const exp of operatingExpenses) {
+          const curr = byCategory.get(exp.category) ?? { amountUsd: 0, amountBs: 0 };
+          curr.amountUsd += exp.amountUsd;
+          curr.amountBs += exp.amountBs;
+          byCategory.set(exp.category, curr);
+        }
+        for (const [category, val] of byCategory) {
+          items.push({
+            type: 'operating',
+            label: category,
+            amountBs: preciseRound(val.amountBs, 2),
+            amountUsd: preciseRound(val.amountUsd, 2),
+          });
         }
       }
 

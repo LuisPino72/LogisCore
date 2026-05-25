@@ -145,23 +145,33 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           onClick={onKpiClick ? () => onKpiClick('ganancia') : undefined}
         />
          <KpiCard
-           label="Gasto Total"
-           value={formatDual(
-             data.totalCostBs + data.totalExpensesBs,
-             data.totalCostUsd + data.totalExpensesUsd,
-           )}
-           subtitle={
-             <div className="flex items-center gap-1">
-               <Tooltip content="Suma del costo de adquisición de los productos vendidos (COGS).">
-                 <span className="underline decoration-dotted cursor-help">Costo ventas</span>
-               </Tooltip>
-               <span>{formatUsd(data.totalCostUsd)} + Gastos {formatUsd(data.totalExpensesUsd)}</span>
-             </div>
-           }
-           icon={<DollarSign size={18} />}
-           gradient="amber"
-           onClick={onKpiClick ? () => onKpiClick('gastos') : undefined}
-         />
+            label="Gasto Total"
+            value={formatDual(
+              data.totalCostBs + data.totalExpensesBs,
+              data.totalCostUsd + data.totalExpensesUsd,
+            )}
+            subtitle={
+              <div className="flex flex-col gap-0.5 text-[10px] sm:text-xs text-text-secondary">
+                <div className="flex items-center gap-1">
+                  <Tooltip content="Suma del costo de adquisición de los productos vendidos (COGS).">
+                    <span className="underline decoration-dotted cursor-help">Costo ventas</span>
+                  </Tooltip>
+                  <span>{formatUsd(data.totalCostUsd)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Tooltip content="Gastos operativos, no vendibles y ajustes de inventario.">
+                    <span className="underline decoration-dotted cursor-help">Gastos operativos</span>
+                  </Tooltip>
+                  <span>{formatUsd(data.operatingExpensesUsd)}</span>
+                  <span className="text-text-tertiary">·</span>
+                  <span className="text-text-tertiary">Total {formatUsd(data.totalExpensesUsd)}</span>
+                </div>
+              </div>
+            }
+            icon={<DollarSign size={18} />}
+            gradient="amber"
+            onClick={onKpiClick ? () => onKpiClick('gastos') : undefined}
+          />
         <KpiCard
           label="Ticket Promedio"
           value={formatDual(data.averageTicketBs, data.averageTicketUsd)}
