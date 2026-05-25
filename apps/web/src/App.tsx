@@ -34,6 +34,7 @@ import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
 import { NotificationBell } from './common/components/NotificationBell';
+import { useSystemNotifications } from './features/gastos/hooks/useSystemNotifications';
 
 const DashboardPage = lazy(() => import('./features/dashboard').then((m) => ({ default: m.DashboardPage })));
 const InventoryPage = lazy(() => import('./features/inventory').then((m) => ({ default: m.InventoryPage })));
@@ -122,6 +123,8 @@ function DashboardLayout() {
 
   const effectiveTenantId = useTenantResolution({ session, selectedTenantSlug, isAdminViewingTenant });
 
+  useSystemNotifications(effectiveTenantId, role);
+
   const handleNavigate = useCallback((moduleId: string) => {
     const route = MODULE_ROUTE_MAP[moduleId] ?? '/dashboard';
     navigate(route);
@@ -154,7 +157,7 @@ function DashboardLayout() {
             Sasa
           </Button>
           {role && <Badge variant="success">{role}</Badge>}
-          <NotificationBell />
+          {role && role !== 'employee' && <NotificationBell />}
         </>
       }
       sidebar={
