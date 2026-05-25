@@ -143,6 +143,16 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       return;
     }
 
+    // Validar nombres duplicados en presentaciones
+    if (presentations.length > 0) {
+      const names = presentations.map((p) => p.name.trim().toLowerCase());
+      if (new Set(names).size !== names.length) {
+        setErrors({ presentations: 'No puede haber dos presentaciones con el mismo nombre.' });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const isEditing = options.initialValues !== undefined;
     const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' } = {
       ...parsed.data,

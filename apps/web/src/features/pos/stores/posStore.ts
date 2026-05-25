@@ -257,7 +257,9 @@ export const usePosStore = create<PosStore>((set, get) => ({
               isWeighted: false,
               isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
               unit: 'unidad',
-              stock: product.stock,
+              stock: presentation.stockType === 'independent' && presentation.childProductId
+                ? (get().products.find(p => p.id === presentation.childProductId)?.stock ?? 0)
+                : product.stock,
               presentationId: presentation.id,
               presentationName: presentation.name,
               unitMultiplier: presentation.unitMultiplier || 1,

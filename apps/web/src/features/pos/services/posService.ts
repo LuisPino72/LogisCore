@@ -868,6 +868,7 @@ export const posService = {
               presentationId: item.presentation_id as string | undefined,
               presentationName: item.presentation_name as string | undefined,
               unitMultiplier: (item.unit_multiplier as number) ?? 1,
+              stockType: item.stock_type as 'shared' | 'independent' | undefined,
               createdAt: item.created_at as string,
             });
           }

@@ -575,6 +575,8 @@ export const purchaseService = {
               costUsdPerUnit: item.cost_usd_per_unit,
               receivedQuantity: item.received_quantity,
               totalUsd: item.total_usd,
+              presentationId: item.presentation_id as string | undefined,
+              unitMultiplier: (item.unit_multiplier as number) ?? 1,
               createdAt: item.created_at,
             } as unknown as DexiePurchaseOrderItem);
           }

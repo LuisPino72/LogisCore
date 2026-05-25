@@ -186,6 +186,12 @@ export const inventoryService = {
       return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, 'Debe agregar al menos una presentación.'));
     }
 
+    // Validar nombres duplicados
+    const names = presentations.map((p) => p.name.trim().toLowerCase());
+    if (new Set(names).size !== names.length) {
+      return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, 'No puede haber dos presentaciones con el mismo nombre.'));
+    }
+
     const db = getDb();
     const productId = generateId();
     const now = new Date().toISOString();
@@ -509,9 +515,30 @@ export const inventoryService = {
         return failure(new AppError(InventoryErrors.PRESENTATION_NOT_FOUND, 'Presentación no encontrada.'));
       }
 
+      if (input.name !== undefined && !input.name.trim()) {
+        return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, 'El nombre de la presentación no puede estar vacío.'));
+      }
+
+      if (existing.stockType === 'shared' && input.unitMultiplier !== undefined && input.unitMultiplier <= 0) {
+        return failure(new AppError(InventoryErrors.PRESENTATION_MULTIPLIER_INVALID, 'El multiplicador debe ser mayor a 0.'));
+      }
+
+      // Validar nombre duplicado dentro del mismo producto
+      const newName = input.name;
+      if (newName !== undefined && newName.trim().toLowerCase() !== existing.name.trim().toLowerCase()) {
+        const normalized = newName.trim().toLowerCase();
+        const duplicate = await db.productPresentations
+          .where({ productId: existing.productId })
+          .filter((p) => !p.deletedAt && p.id !== presentationId && p.name.trim().toLowerCase() === normalized)
+          .first();
+        if (duplicate) {
+          return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, `Ya existe una presentación llamada "${newName.trim()}".`));
+        }
+      }
+
       const updated = {
         ...existing,
-        ...(input.name !== undefined && { name: input.name }),
+        ...(newName !== undefined && { name: newName.trim() }),
         ...(input.priceUsd !== undefined && { priceUsd: input.priceUsd }),
         ...(input.unitMultiplier !== undefined && { unitMultiplier: input.unitMultiplier }),
         ...(input.barcode !== undefined && { barcode: input.barcode }),
@@ -595,6 +622,15 @@ export const inventoryService = {
     // Validar que no tenga stock > 0
     if (product.stock > 0) {
       return failure(new AppError('PRODUCT_HAS_STOCK', `No se puede eliminar: el producto tiene ${product.stock} unidades en inventario. Ajuste el stock a cero primero.`));
+    }
+
+    // Bloquear eliminacion directa de child products de presentaciones
+    const parentPresentation = await db.productPresentations
+      .where({ childProductId: id })
+      .filter((p) => !p.deletedAt)
+      .first();
+    if (parentPresentation) {
+      return failure(new AppError('PRODUCT_IS_PRESENTATION_CHILD', `No se puede eliminar directamente: es variante de "${parentPresentation.name}". Elimine la presentación desde el producto padre.`));
     }
 
     // Validar que no tenga órdenes de compra activas (draft, confirmed o partially_received)

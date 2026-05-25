@@ -262,11 +262,15 @@ export const reportsService = {
       let totalDiscountBs = 0;
       const productProfitMap = new Map<string, { name: string; profit: number }>();
 
+      let totalDiscountUsdAccum = 0;
       for (const { sale, items } of data) {
         totalSalesBs += sale.totalBs;
         totalDiscountBs += sale.discountBs || 0;
         const saleUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
         totalSalesUsd += saleUsd;
+        if (sale.discountBs && sale.exchangeRate > 0) {
+          totalDiscountUsdAccum += preciseRound(sale.discountBs / sale.exchangeRate, 2);
+        }
         for (const item of items) {
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
           const costUsd = item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
@@ -294,8 +298,7 @@ export const reportsService = {
       const totalTransactions = data.length;
       const averageTicketBs = totalTransactions > 0 ? preciseRound(totalSalesBs / totalTransactions, 2) : 0;
       const averageTicketUsd = totalTransactions > 0 ? preciseRound(totalSalesUsd / totalTransactions, 2) : 0;
-      const avgRate = totalTransactions > 0 ? totalSalesBs / totalSalesUsd : 1;
-      const totalDiscountUsd = totalDiscountBs > 0 ? preciseRound(totalDiscountBs / avgRate, 2) : 0;
+      const totalDiscountUsd = totalDiscountUsdAccum > 0 ? preciseRound(totalDiscountUsdAccum, 2) : 0;
 
       let topProductName: string | undefined;
       let maxProfit = -Infinity;

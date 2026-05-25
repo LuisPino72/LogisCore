@@ -215,8 +215,8 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
               ) : (
                 <div className="space-y-1.5">
                   {saleItems.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>{item.productName} x {item.quantity}</span>
+                      <div key={item.id} className="flex justify-between text-sm">
+                      <span>{item.productName}{item.presentationName ? ` - ${item.presentationName}` : ''} x {item.quantity}</span>
                       <span className="font-medium">{formatUsd(item.totalPriceUsd)}</span>
                     </div>
                   ))}
