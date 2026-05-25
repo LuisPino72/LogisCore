@@ -3,7 +3,7 @@ import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, Mor
 import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
-import type { Product, Category, TabState, StockFilter } from '../types';
+import type { Product, Category, TabState, StockFilter, PresentationWithProduct } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -23,6 +23,10 @@ interface ProductListProps {
   onViewLots: (productId: string) => void;
   onViewKardex: (productId: string) => void;
   onRefresh: () => void;
+  allPresentationChildIds: Set<string>;
+  allPresentationParentIds: Set<string>;
+  presentationsByProduct: Record<string, PresentationWithProduct[]>;
+  onViewPresentations: (productId: string) => void;
 }
 
 function getStockLabel(product: Product): string {
@@ -56,10 +60,11 @@ function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
+export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex, allPresentationChildIds, allPresentationParentIds, presentationsByProduct, onViewPresentations }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
+  const [productScope, setProductScope] = useState<'all' | 'parents_only'>('parents_only');
   const [page, setPage] = useState(initialTabState.page);
 
   useEffect(() => {
@@ -92,8 +97,14 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
   ];
 
   const filteredByStock = useMemo(() => {
-    return products.filter((p) => applyStockFilter(p, stockFilter));
-  }, [products, stockFilter]);
+    let result = products;
+
+    if (productScope === 'parents_only' && allPresentationChildIds) {
+      result = result.filter((p) => !allPresentationChildIds.has(p.id));
+    }
+
+    return result.filter((p) => applyStockFilter(p, stockFilter));
+  }, [products, stockFilter, productScope, allPresentationChildIds]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [
@@ -116,7 +127,27 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         header: 'Producto',
         render: (product) => (
           <div>
-            <div className="font-medium text-gray-900">{product.name}</div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium text-gray-900">{product.name}</span>
+              {allPresentationParentIds?.has(product.id) && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewPresentations?.(product.id);
+                  }}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <Layers size={10} />
+                  {presentationsByProduct?.[product.id]?.length || 0} var.
+                </button>
+              )}
+              {allPresentationChildIds?.has(product.id) && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-600 border border-border">
+                  variante
+                </span>
+              )}
+            </div>
             <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
           </div>
         ),
@@ -235,21 +266,48 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-        {stockOptions.map((opt) => (
+      <div className="flex flex-wrap gap-2">
+        <div className="flex gap-1 bg-gray-50 p-0.5 rounded-xl border border-border">
           <button
-            key={opt.value}
             type="button"
-            onClick={(e) => handleStockFilter(opt.value, e.currentTarget)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
-              stockFilter === opt.value
-                ? 'bg-primary text-white border-primary shadow-sm'
-                : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+            onClick={() => setProductScope('parents_only')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              productScope === 'parents_only'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            {opt.label}
+            Solo padres
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setProductScope('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              productScope === 'all'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Mostrar todo
+          </button>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          {stockOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={(e) => handleStockFilter(opt.value, e.currentTarget)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+                stockFilter === opt.value
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {filteredByStock.length > 0 && (

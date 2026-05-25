@@ -34,6 +34,43 @@ export const CreateProductInputSchema = ProductSchema.omit({
 
 export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
 
+export const PresentationSchema = z.object({
+  id: z.string().uuid().optional(),
+  productId: z.string().uuid(),
+  childProductId: z.string().uuid().optional(),
+  name: z.string().min(1, 'Nombre requerido').max(100),
+  priceUsd: z.number().positive('Precio debe ser mayor a 0'),
+  unitMultiplier: z.number().positive('El multiplicador debe ser mayor a 0').default(1),
+  stockType: z.enum(['shared', 'independent']),
+  barcode: z.string().max(50).optional(),
+  sortOrder: z.number().int().default(0),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+  deletedAt: z.string().datetime().optional(),
+});
+
+export type Presentation = z.infer<typeof PresentationSchema>;
+
+export const CreatePresentationInputSchema = PresentationSchema.omit({
+  id: true,
+  productId: true,
+  childProductId: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+}).extend({
+  stockInicial: z.number().int().min(0).optional(),
+});
+
+export type CreatePresentationInput = z.infer<typeof CreatePresentationInputSchema>;
+
+export const CreateProductWithPresentationsInputSchema = CreateProductInputSchema.extend({
+  presentations: z.array(CreatePresentationInputSchema),
+  stockType: z.enum(['shared', 'independent']),
+});
+
+export type CreateProductWithPresentationsInput = z.infer<typeof CreateProductWithPresentationsInputSchema>;
+
 export const CategorySchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),

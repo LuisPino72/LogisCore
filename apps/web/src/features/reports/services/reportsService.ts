@@ -6,6 +6,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import { logger } from '../../../lib/logger';
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
+import { inventoryService } from '../../inventory/services/inventoryService';
 import type {
   ReportFilters,
   ExecutiveSummaryData,
@@ -71,6 +72,7 @@ interface SaleWithItems {
     exchangeRate: number;
     paymentMethod: string;
     createdAt: string;
+    discountBs?: number;
   };
   items: {
     productId: string;
@@ -116,6 +118,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
           exchangeRate: sale.exchangeRate,
           paymentMethod: sale.paymentMethod,
           createdAt: sale.createdAt,
+          discountBs: sale.discountBs,
         },
         items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
           productId: i.productId,
@@ -134,7 +137,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const { data: cloudSales, error: salesError } = await supabase
       .from('sales')
-      .select('id, total_bs, igtf_bs, exchange_rate, payment_method, created_at')
+      .select('id, total_bs, igtf_bs, exchange_rate, payment_method, created_at, discount_bs')
       .eq('tenant_id', tenantUuid)
       .eq('status', 'completed')
       .is('deleted_at', null)
@@ -167,6 +170,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         exchangeRate: Number(sale.exchange_rate) || 1,
         paymentMethod: sale.payment_method || 'efectivo_bs',
         createdAt: sale.created_at,
+        discountBs: sale.discount_bs ? Number(sale.discount_bs) : undefined,
       },
       items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
         productId: i.product_id,
@@ -255,10 +259,12 @@ export const reportsService = {
       let totalSalesUsd = 0;
       let totalCostBs = 0;
       let totalCostUsd = 0;
+      let totalDiscountBs = 0;
       const productProfitMap = new Map<string, { name: string; profit: number }>();
 
       for (const { sale, items } of data) {
         totalSalesBs += sale.totalBs;
+        totalDiscountBs += sale.discountBs || 0;
         const saleUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
         totalSalesUsd += saleUsd;
         for (const item of items) {
@@ -288,6 +294,8 @@ export const reportsService = {
       const totalTransactions = data.length;
       const averageTicketBs = totalTransactions > 0 ? preciseRound(totalSalesBs / totalTransactions, 2) : 0;
       const averageTicketUsd = totalTransactions > 0 ? preciseRound(totalSalesUsd / totalTransactions, 2) : 0;
+      const avgRate = totalTransactions > 0 ? totalSalesBs / totalSalesUsd : 1;
+      const totalDiscountUsd = totalDiscountBs > 0 ? preciseRound(totalDiscountBs / avgRate, 2) : 0;
 
       let topProductName: string | undefined;
       let maxProfit = -Infinity;
@@ -353,6 +361,8 @@ export const reportsService = {
         totalExpensesBs,
         netProfitUsd,
         netProfitBs,
+        totalDiscountBs,
+        totalDiscountUsd,
       });
     } catch (err) {
       console.error('[reportsService.getExecutiveSummary]', err);
@@ -411,10 +421,29 @@ export const reportsService = {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
 
+      // Construir mapa de child product → parent info para agrupar por familia
+      const childToParent = new Map<string, { parentId: string; parentName: string }>();
+      const allPres = await inventoryService.getAllPresentations(tenantId);
+      if (allPres.ok) {
+        const db = getDb();
+        const products = await db.products.toArray();
+        const productNameMap = new Map(products.map((p) => [p.id, p.name]));
+        for (const p of allPres.data) {
+          if (p.stockType === 'independent' && p.childProductId) {
+            childToParent.set(p.childProductId, {
+              parentId: p.productId,
+              parentName: productNameMap.get(p.productId) || p.name,
+            });
+          }
+        }
+      }
+
       const map = new Map<string, TopProductData>();
       for (const { sale, items } of data) {
         for (const item of items) {
-          const existing = map.get(item.productId);
+          const effectiveId = childToParent.get(item.productId)?.parentId || item.productId;
+          const effectiveName = childToParent.get(item.productId)?.parentName || item.productName;
+          const existing = map.get(effectiveId);
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
@@ -431,9 +460,9 @@ export const reportsService = {
             existing.profitBs = preciseRound(existing.profitBs + profitBs, 2);
             existing.profitUsd = preciseRound(existing.profitUsd + profitUsd, 2);
           } else {
-            map.set(item.productId, {
-              productId: item.productId,
-              name: item.productName,
+            map.set(effectiveId, {
+              productId: effectiveId,
+              name: effectiveName,
               sku: item.productSku,
               quantitySold: item.quantity,
               revenueBs,

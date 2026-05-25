@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Truck, Package, FileText, DollarSign } from 'lucide-react';
 import { Button, Input, Modal, SearchableSelect } from '../../../common/components';
 import { inventoryService } from '../../inventory/services/inventoryService';
-import type { Product } from '../../../specs/inventory';
+import type { Product, PresentationWithProduct } from '../../inventory/types';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -20,6 +20,8 @@ interface OrderFormProps {
 
 interface OrderItemInput {
   productId: string;
+  presentationId?: string;
+  unitMultiplier?: number;
   quantity: number;
   totalCostUsd: number;
 }
@@ -55,6 +57,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<OrderItemInput[]>([{ productId: '', quantity: 1, totalCostUsd: 0 }]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [presentationsByProduct, setPresentationsByProduct] = useState<Record<string, PresentationWithProduct[]>>({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -104,9 +107,29 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
     setItems(items.filter((_, i) => i !== index));
   };
 
+  const loadPresentations = async (productId: string) => {
+    if (!productId || presentationsByProduct[productId]) return;
+    const result = await inventoryService.getPresentationsForProduct(productId);
+    if (result.ok && result.data.length > 0) {
+      setPresentationsByProduct(prev => ({ ...prev, [productId]: result.data }));
+    }
+  };
+
   const updateItem = (index: number, field: keyof OrderItemInput, value: string | number) => {
     const next = [...items];
     next[index] = { ...next[index], [field]: value };
+    if (field === 'productId') {
+      const presId = value as string;
+      next[index].presentationId = undefined;
+      next[index].unitMultiplier = undefined;
+      loadPresentations(presId);
+    }
+    setItems(next);
+  };
+
+  const updateItemFields = (index: number, fields: Partial<OrderItemInput>) => {
+    const next = [...items];
+    next[index] = { ...next[index], ...fields };
     setItems(next);
   };
 
@@ -128,7 +151,13 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
     const ok = await onSubmit({
       supplierId,
       notes: notes.trim() || undefined,
-      items: validItems,
+      items: validItems.map((i) => ({
+        productId: i.productId,
+        presentationId: i.presentationId,
+        unitMultiplier: i.unitMultiplier,
+        quantity: i.quantity,
+        totalCostUsd: i.totalCostUsd,
+      })),
     });
     setSubmitting(false);
 
@@ -225,6 +254,43 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                         {sku}
                       </span>
                     )}
+                  </div>
+                )}
+
+                {hasProduct && presentationsByProduct[item.productId] && presentationsByProduct[item.productId].length > 0 && (
+                  <div className="p-2 bg-gray-50 rounded-lg border border-border">
+                    <label className="block text-xs text-gray-500 mb-1">Presentación</label>
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => updateItemFields(idx, { presentationId: undefined, unitMultiplier: undefined })}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                          !item.presentationId
+                            ? 'bg-white text-gray-900 shadow-sm border border-primary/30'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        Producto base (1 unidad)
+                      </button>
+                      {presentationsByProduct[item.productId].map((pres) => (
+                        <button
+                          key={pres.id}
+                          type="button"
+                          onClick={() => updateItemFields(idx, {
+                            presentationId: pres.id,
+                            unitMultiplier: pres.unitMultiplier,
+                          })}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                            item.presentationId === pres.id
+                              ? 'bg-white text-gray-900 shadow-sm border border-primary/30'
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          {pres.name} {pres.unitMultiplier > 1 ? `(${pres.unitMultiplier} unid.)` : ''}
+                          {pres.priceUsd > 0 && ` · $${pres.priceUsd.toFixed(2)}`}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 

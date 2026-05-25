@@ -169,6 +169,17 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           gradient="amber"
           onClick={onKpiClick ? () => onKpiClick('ticket') : undefined}
         />
+        <KpiCard
+          label="Descuentos aplicados"
+          value={
+            <div className="flex flex-col leading-tight">
+              <span className="text-xs sm:text-lg font-bold text-danger truncate">-{formatBs(data.totalDiscountBs)}</span>
+              <span className="text-xs sm:text-lg font-semibold text-text-secondary truncate">-{formatUsd(data.totalDiscountUsd)}</span>
+            </div>
+          }
+          icon={<DollarSign size={18} />}
+          gradient="red"
+        />
       </div>
 
       {data.topProductName && (

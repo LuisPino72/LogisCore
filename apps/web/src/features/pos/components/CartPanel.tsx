@@ -3,6 +3,7 @@ import { Button, EmptyState, Modal } from '../../../common/components';
 import { ShoppingCart } from 'lucide-react';
 import { CartItemRow } from './CartItem';
 import { CartSummary } from './CartSummary';
+import { usePosStore } from '../stores/posStore';
 import type { CartItem, PaymentMethod } from '../types';
 
 interface CartPanelProps {
@@ -36,6 +37,10 @@ export const CartPanel = memo(function CartPanel({
   itemCount,
   onMobileToggle,
 }: CartPanelProps) {
+  const discount = usePosStore((s) => s.discount);
+  const setDiscount = usePosStore((s) => s.setDiscount);
+  const clearDiscount = usePosStore((s) => s.clearDiscount);
+
   const renderContent = useCallback(
     () => (
       <div className="flex flex-col h-full">
@@ -75,12 +80,15 @@ export const CartPanel = memo(function CartPanel({
               onPark={onPark}
               isOpen={isOpen}
               loading={loading}
+              discount={discount}
+              onSetDiscount={setDiscount}
+              onClearDiscount={clearDiscount}
             />
           </div>
         )}
       </div>
     ),
-    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onRemoveFromCart, onUpdateQuantity, onPay, isOpen, loading, itemCount],
+    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onRemoveFromCart, onUpdateQuantity, onPay, isOpen, loading, itemCount, discount, setDiscount, clearDiscount],
   );
 
   return (

@@ -5,6 +5,7 @@ import { MAX_RETRIES, BASE_BACKOFF_MS } from './types';
 const TABLE_PRIORITY: Record<string, number> = {
   categories: 90,
   suppliers: 90,
+  product_presentations: 75,
   products: 80,
   purchase_orders: 70,
   sales: 70,

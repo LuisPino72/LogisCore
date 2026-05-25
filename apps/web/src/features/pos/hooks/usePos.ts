@@ -33,6 +33,9 @@ export function usePos(tenantId: string | null) {
   const fetchCashRegister = usePosStore((s) => s.fetchCashRegister);
   const fetchExchangeRate = usePosStore((s) => s.fetchExchangeRate);
   const fetchParkedCarts = usePosStore((s) => s.fetchParkedCarts);
+  const fetchPresentations = usePosStore((s) => s.fetchPresentations);
+  const getPresentations = usePosStore((s) => s.getPresentations);
+  const presentationsMap = usePosStore((s) => s.presentationsMap);
   const setSearchQuery = usePosStore((s) => s.setSearchQuery);
   const reset = usePosStore((s) => s.reset);
 
@@ -46,8 +49,9 @@ export function usePos(tenantId: string | null) {
       fetchProducts(tenantId),
       fetchCashRegister(tenantId),
       fetchExchangeRate(tenantId),
+      fetchPresentations(tenantId),
     ]);
-  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate]);
+  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate, fetchPresentations]);
 
   useEffect(() => {
     if (!tenantId || initialFetchDone.current) return;
@@ -119,7 +123,7 @@ export function usePos(tenantId: string | null) {
     addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     completeSale, openCashRegister, closeCashRegister,
     parkCart, loadParkedCart, deleteParkedCart,
-    toggleFavorite, fetchSalesHistory, reset,
+    toggleFavorite, fetchSalesHistory, fetchPresentations, getPresentations, presentationsMap, reset,
     search,
     refresh: doRefresh,
     userId: session?.userId ?? null,

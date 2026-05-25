@@ -14,7 +14,7 @@ import { KardexView } from './KardexView';
 import { CategoryManager } from './CategoryManager';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
-import type { CreateProductInput, Product, AdjustmentReason } from '../types';
+import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
 
 
 
@@ -31,8 +31,9 @@ interface InventoryPageProps {
 export function InventoryPage({ tenantId }: InventoryPageProps) {
   const {
     products, categories, loading, activeTab, setActiveTab,
-    createProduct, updateProduct, deleteProduct, createCategory, updateCategory, deleteCategory, adjustStock,
+    createProduct, updateProduct, deleteProduct, createCategory, updateCategory, deleteCategory, adjustStock, createProductWithPresentations,
     search, refresh, userId, role, tabStates, saveTabState,
+    presentationsByProduct, allPresentationChildIds, allPresentationParentIds,
   } = useInventory(tenantId);
 
   const { totalLowStock, lowStockProducts } = useStockAlerts(tenantId);
@@ -55,6 +56,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
+  const [viewingPresentationsProductId, setViewingPresentationsProductId] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -81,9 +83,16 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
   const openNewCategory = () => setShowCategoryForm(true);
 
-  const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
+  const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }, imageFile?: File | null) => {
     if (!tenantId || !userId) return false;
-    const product = await createProduct(tenantId, userId, data);
+    let product: Product | null = null;
+
+    if (data.presentations && data.presentations.length > 0 && data.stockType) {
+      product = await createProductWithPresentations(tenantId, userId, data, data.presentations, data.stockType);
+    } else {
+      product = await createProduct(tenantId, userId, data);
+    }
+
     if (product) {
       addToast({ type: 'success', message: 'Producto creado exitosamente.', duration: 3000 });
       if (imageFile) {
@@ -98,7 +107,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     return !!product;
   };
 
-  const handleEditProduct = async (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => {
+  const handleEditProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }, imageFile?: File | null) => {
     if (!editProduct || !tenantId) return false;
     const ok = await updateProduct(editProduct.id, data, tenantId);
     if (!ok) {
@@ -329,6 +338,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
             }}
             onRefresh={refresh}
+            allPresentationChildIds={allPresentationChildIds}
+            allPresentationParentIds={allPresentationParentIds}
+            presentationsByProduct={presentationsByProduct}
+            onViewPresentations={(productId) => setViewingPresentationsProductId(productId)}
           />
         )}
 
@@ -466,6 +479,15 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                   </button>
                 </div>
               </div>
+
+              {adjMode && adjProductId && presentationsByProduct[adjProductId] && presentationsByProduct[adjProductId].length > 0 && (
+                <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-xs text-amber-700">
+                    Este producto tiene {presentationsByProduct[adjProductId].length} presentación(es) compartida(s).
+                    El ajuste afectará al stock base. Las presentaciones se ajustarán proporcionalmente.
+                  </p>
+                </div>
+              )}
 
               {adjMode && (
                 <div className="input-wrapper">
@@ -650,6 +672,54 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 </div>
               );
             })}
+          </div>
+        </Modal>
+      )}
+
+      {viewingPresentationsProductId && presentationsByProduct[viewingPresentationsProductId] && (
+        <Modal
+          isOpen={!!viewingPresentationsProductId}
+          onClose={() => setViewingPresentationsProductId(null)}
+          title="Presentaciones del Producto"
+        >
+          <div className="space-y-3 p-1">
+            <p className="text-xs text-gray-500 mb-2">
+              Variantes y formatos de venta disponibles para este producto.
+            </p>
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+              {presentationsByProduct[viewingPresentationsProductId].map((pres) => (
+                <div
+                  key={pres.id}
+                  className="flex items-center justify-between p-3 rounded-xl border border-border bg-gray-50/50 hover:bg-gray-50 transition-all"
+                >
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900">{pres.name}</h4>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                      <span className="capitalize">
+                        {pres.stockType === 'shared' ? 'Stock compartido' : 'Stock independiente'}
+                      </span>
+                      {pres.unitMultiplier > 1 && (
+                        <>
+                          <span>•</span>
+                          <span>{pres.unitMultiplier} unid.</span>
+                        </>
+                      )}
+                    </div>
+                    {pres.barcode && (
+                      <p className="text-[10px] text-gray-400 mt-1 font-mono">Código: {pres.barcode}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-gray-900">${pres.priceUsd.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end pt-3 border-t border-border mt-4">
+              <Button variant="ghost" onClick={() => setViewingPresentationsProductId(null)}>
+                Cerrar
+              </Button>
+            </div>
           </div>
         </Modal>
       )}

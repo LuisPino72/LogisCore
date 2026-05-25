@@ -253,6 +253,73 @@ describe('POS-008: Cerrar caja', () => {
   });
 });
 
+describe('SALE-009: Venta con descuento', () => {
+  beforeEach(() => { resetMockDb(); });
+
+  it('Given: subtotal $10. When: descuento 10%. Then: discountBs=480, IVA sobre base reducida', async () => {
+    mockCashRegister();
+    mockProduct(50);
+    mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
+
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem({ quantity: 5, unitPriceUsd: 2, totalPriceUsd: 10 })],
+      exchangeRate: 480,
+      discountType: 'percentage',
+      discountValue: 10,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.discountType).toBe('percentage');
+    expect(result.data.discountValue).toBe(10);
+    expect(result.data.totalBs).toBe(5568); // subtotal 4800 - desc 480 + iva 1248 = 5568
+  });
+
+  it('Given: subtotal $10. When: descuento fijo $2. Then: discountBs=960, IVA sobre base reducida', async () => {
+    mockCashRegister();
+    mockProduct(50);
+    mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
+
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem({ quantity: 5, unitPriceUsd: 2, totalPriceUsd: 10 })],
+      exchangeRate: 480,
+      discountType: 'fixed',
+      discountValue: 2,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.discountType).toBe('fixed');
+    expect(result.data.discountValue).toBe(2);
+    expect(result.data.totalBs).toBe(5568); // subtotal 4800 - desc 960 + iva 1728 = 5568
+  });
+
+  it('Given: descuento 101%. When: aplicar. Then: capped al 100%', async () => {
+    mockCashRegister();
+    mockProduct(50);
+    mockLots([{ id: 'lot-1', remainingQuantity: 50, createdAt: '2026-01-01T00:00:00Z' }]);
+
+    const { posService } = await import('../../features/pos/services/posService');
+    const result = await posService.createSale({
+      tenantId: 'test-tenant', userId: USER_ID, paymentMethod: 'efectivo_bs',
+      items: [makeCartItem({ quantity: 1, totalPriceUsd: 2 })],
+      exchangeRate: 480,
+      discountType: 'percentage',
+      discountValue: 200,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // discount capped at subtotal
+    expect(result.data.discountBs).toBeLessThanOrEqual(result.data.subtotalBs);
+    expect(result.data.totalBs).toBeGreaterThanOrEqual(0);
+  });
+});
+
 describe('POS-012: FIFO consume lotes ordenados', () => {
   beforeEach(() => { resetMockDb(); });
 

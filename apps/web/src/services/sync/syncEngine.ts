@@ -27,10 +27,11 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'sales', timeCol: 'updated_at' },
   { name: 'sale_items', timeCol: 'updated_at' },
   { name: 'purchase_order_items', timeCol: 'updated_at' },
+  { name: 'product_presentations', timeCol: 'updated_at' },
 ];
 
 // Tablas de catálogo que se omiten en pull cuando estamos en datos móviles
-const CATALOG_TABLES = new Set(['products', 'categories', 'suppliers', 'purchase_orders', 'purchase_order_items']);
+const CATALOG_TABLES = new Set(['products', 'categories', 'suppliers', 'purchase_orders', 'purchase_order_items', 'product_presentations']);
 
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();

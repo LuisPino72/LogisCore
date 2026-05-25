@@ -1,10 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CreateProductInputSchema } from '../../../specs/inventory';
-import type { ProductFormData, CreateProductInput } from '../types';
+import type { ProductFormData, CreateProductInput, CreatePresentationInput } from '../types';
+import { useInventoryStore } from '../stores/inventoryStore';
 
 interface UseProductFormOptions {
   initialValues?: Partial<ProductFormData>;
-  onSubmit: (data: CreateProductInput & { stockInicial: number }) => Promise<boolean>;
+  editProductId?: string;
+  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }) => Promise<boolean>;
 }
 
 interface UseProductFormReturn {
@@ -14,6 +16,12 @@ interface UseProductFormReturn {
   setField: <K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => void;
   handleSubmit: () => Promise<void>;
   reset: () => void;
+  presentations: CreatePresentationInput[];
+  addPresentation: () => void;
+  removePresentation: (index: number) => void;
+  updatePresentation: (index: number, field: keyof CreatePresentationInput, value: unknown) => void;
+  setStockType: (type: 'shared' | 'independent') => void;
+  stockType: 'shared' | 'independent';
 }
 
 const defaultFormData: ProductFormData = {
@@ -41,6 +49,8 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [presentations, setPresentations] = useState<CreatePresentationInput[]>([]);
+  const [stockType, setStockType] = useState<'shared' | 'independent'>('shared');
 
   const setField = useCallback(<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {
     setFormData((prev) => {
@@ -56,10 +66,53 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     setErrors((prev) => ({ ...prev, [key]: '' }));
   }, []);
 
+  const addPresentation = useCallback(() => {
+    setPresentations(prev => [...prev, {
+      name: '',
+      priceUsd: 0,
+      unitMultiplier: 1,
+      stockType,
+      sortOrder: 0,
+      barcode: undefined,
+    }]);
+  }, [stockType]);
+
+  const removePresentation = useCallback((index: number) => {
+    setPresentations(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updatePresentation = useCallback((index: number, field: keyof CreatePresentationInput, value: unknown) => {
+    setPresentations(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p));
+  }, []);
+
+  useEffect(() => {
+    if (options.editProductId) {
+      const load = async () => {
+        const existing = await useInventoryStore.getState().fetchPresentations(options.editProductId!);
+        if (existing.length > 0) {
+          const mapped = existing.map(p => ({
+            name: p.name,
+            priceUsd: p.priceUsd,
+            unitMultiplier: p.unitMultiplier,
+            stockType: p.stockType,
+            sortOrder: p.sortOrder ?? 0,
+            barcode: p.barcode || undefined,
+            stockInicial: 0,
+          }));
+          setPresentations(mapped);
+          setStockType(existing[0].stockType);
+        }
+      };
+      load();
+    }
+  }, [options.editProductId]);
+
   const reset = useCallback(() => {
     setFormData(defaultFormData);
     setErrors({});
     setIsSubmitting(false);
+    setPresentations([]);
+    setStockType('shared');
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -91,14 +144,34 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     }
 
     const isEditing = options.initialValues !== undefined;
-    const success = await options.onSubmit({
+    const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' } = {
       ...parsed.data,
       stockInicial: isEditing ? 0 : formData.stockInicial,
-    });
+    };
+
+    if (presentations.length > 0) {
+      submitData.presentations = presentations;
+      submitData.stockType = stockType;
+    }
+
+    const success = await options.onSubmit(submitData);
 
     setIsSubmitting(false);
     if (success) reset();
-  }, [formData, options]);
+  }, [formData, options, presentations, stockType]);
 
-  return { formData, errors, isSubmitting, setField, handleSubmit, reset };
+  return {
+    formData,
+    errors,
+    isSubmitting,
+    setField,
+    handleSubmit,
+    reset,
+    presentations,
+    addPresentation,
+    removePresentation,
+    updatePresentation,
+    setStockType,
+    stockType,
+  };
 }

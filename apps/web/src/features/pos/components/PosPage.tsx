@@ -14,6 +14,7 @@ import { ParkCartModal } from './ParkCartModal';
 import { ParkedCartsList } from './ParkedCartsList';
 import { SalesHistory } from './SalesHistory';
 import { StockVerificationModal } from './StockVerificationModal';
+import { PresentationSelector } from './PresentationSelector';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
@@ -34,6 +35,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     completeSale, openCashRegister, closeCashRegister, parkCart, loadParkedCart, deleteParkedCart,
     toggleFavorite, fetchSalesHistory, search, userId, role, exchangeRate,
+    getPresentations,
   } = usePos(tenantId);
 
   const { addToast } = useToastStore();
@@ -60,6 +62,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyCounts, setVerifyCounts] = useState({ sold: 0, lowStock: 0 });
   const [cashError, setCashError] = useState<string | null>(null);
+  const [selectedProductForPres, setSelectedProductForPres] = useState<Product | null>(null);
 
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
@@ -82,10 +85,15 @@ export function PosPage({ tenantId }: PosPageProps) {
         setShowWeightModal(true);
         return;
       }
+      const presList = getPresentations(product.id);
+      if (presList.length > 0) {
+        setSelectedProductForPres(product);
+        return;
+      }
       addToCart(product, 1);
       addToast({ type: 'success', message: `${product.name} agregado`, duration: 1500 });
     },
-    [addToCart, addToast],
+    [addToCart, addToast, getPresentations],
   );
 
   const handleWeightedConfirm = useCallback(() => {
@@ -527,6 +535,18 @@ export function PosPage({ tenantId }: PosPageProps) {
         isOpen={showBarcodeScanner}
         onClose={() => setShowBarcodeScanner(false)}
         onScan={handleBarcodeScan}
+      />
+
+      <PresentationSelector
+        isOpen={selectedProductForPres !== null}
+        onClose={() => setSelectedProductForPres(null)}
+        product={selectedProductForPres}
+        presentations={selectedProductForPres ? getPresentations(selectedProductForPres.id) : []}
+        allProducts={products}
+        onSelect={(_product, selection) => {
+          handleAddToCart(_product);
+          addToCart(_product, 1, selection);
+        }}
       />
 
       <ModuleOnboarding

@@ -1,14 +1,14 @@
 import { useState, useRef } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
-import { ImagePlus, Plus, X, Scan, Package, DollarSign, Layers, Settings } from 'lucide-react';
+import { ImagePlus, Plus, X, Scan, Package, DollarSign, Layers, Settings, Trash2 } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
-import type { Category, CreateProductInput, Product } from '../types';
+import type { Category, CreateProductInput, CreatePresentationInput, Product } from '../types';
 
 interface ProductFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateProductInput & { stockInicial: number }, imageFile?: File | null) => Promise<boolean>;
+  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }, imageFile?: File | null) => Promise<boolean>;
   categories: Category[];
   editProduct?: Product | null;
   onCreateCategory?: (name: string) => Promise<string | null>;
@@ -45,7 +45,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     costPrice: 0,
   } : undefined;
 
-  const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number }): Promise<boolean> => {
+  const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }): Promise<boolean> => {
     const result = await onSubmit(data, imageFile);
     if (result && !imageFile) {
       setImageFile(null);
@@ -54,7 +54,20 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     return result;
   };
 
-  const { formData, errors, isSubmitting, setField, handleSubmit: formSubmit, reset } = useProductForm({ onSubmit: wrappedOnSubmit, initialValues });
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    setField,
+    handleSubmit: formSubmit,
+    reset,
+    presentations,
+    addPresentation,
+    removePresentation,
+    updatePresentation,
+    setStockType,
+    stockType,
+  } = useProductForm({ onSubmit: wrappedOnSubmit, initialValues, editProductId: editProduct?.id });
 
   const revokeBlobUrl = () => {
     if (blobUrlRef.current) {
@@ -115,7 +128,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             Cancelar
           </Button>
           <Button variant="primary" fullWidth onClick={formSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear producto'}
+            {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : presentations.length > 0 ? 'Crear con presentaciones' : 'Crear producto'}
           </Button>
         </div>
       }
@@ -282,6 +295,165 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           />
           {errors.categoryId && <span className="input-error-text">{errors.categoryId}</span>}
         </div>
+
+        {/* === PRESENTACIONES === */}
+        {formData.productType === 'unidad' && (
+          <>
+            <SectionDivider icon={<Layers size={14} className="text-primary" />} title="Presentaciones" />
+
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                Las presentaciones te permiten vender un mismo producto en múltiples formatos
+                (ej: 24 unidades, caja de 12, etc.)
+              </p>
+
+              {presentations.length > 0 && (
+                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setStockType('shared')}
+                    className={`flex-1 py-2 rounded-md text-xs font-medium transition-all ${
+                      stockType === 'shared'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Stock compartido
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockType('independent')}
+                    className={`flex-1 py-2 rounded-md text-xs font-medium transition-all ${
+                      stockType === 'independent'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Stock independiente
+                  </button>
+                </div>
+              )}
+
+              {stockType === 'shared' && presentations.length > 0 && (
+                <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                  Las presentaciones compartirán el stock del producto padre. Usa el multiplicador
+                  para indicar cuántas unidades base contiene cada presentación.
+                </p>
+              )}
+
+              {stockType === 'independent' && presentations.length > 0 && (
+                <p className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
+                  Cada presentación tendrá su propio stock y SKU independiente. Se crearán como
+                  productos separados en el inventario.
+                </p>
+              )}
+
+              {presentations.map((pres, index) => (
+                <div
+                  key={index}
+                  className="border border-border rounded-xl p-3 space-y-2 bg-white"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-500">
+                      Presentación #{index + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePresentation(index)}
+                      className="p-1 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Nombre</label>
+                      <input
+                        type="text"
+                        value={pres.name}
+                        onChange={(e) => updatePresentation(index, 'name', e.target.value)}
+                        placeholder="Ej: Caja de 12, Pack familiar"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Precio USD {pres.priceUsd > 0 ? '' : '(opcional, hereda del padre)'}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={pres.priceUsd || ''}
+                        onChange={(e) => updatePresentation(index, 'priceUsd', parseFloat(e.target.value) || 0)}
+                        placeholder={formData.priceUsd > 0 ? `$${formData.priceUsd}` : '0.00'}
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+
+                    {stockType === 'shared' && (
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Multiplicador (unidades base)
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          value={pres.unitMultiplier}
+                          onChange={(e) => updatePresentation(index, 'unitMultiplier', parseInt(e.target.value) || 1)}
+                          placeholder="12"
+                          className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                    )}
+
+                    {stockType === 'independent' && (
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Stock inicial
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={pres.stockInicial ?? ''}
+                          onChange={(e) => updatePresentation(index, 'stockInicial', parseInt(e.target.value) || 0)}
+                          placeholder="0"
+                          className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Código de barras (opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={pres.barcode || ''}
+                        onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
+                        placeholder="Ej: 123456789012"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addPresentation}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium border-2 border-dashed border-gray-300 text-gray-500 hover:border-primary/40 hover:text-primary transition-colors"
+              >
+                <Plus size={16} />
+                Agregar presentación
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Section: Configuración */}
         <SectionDivider icon={<Settings size={14} className="text-primary" />} title="Configuración" />

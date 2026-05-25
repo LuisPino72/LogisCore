@@ -51,6 +51,8 @@ function toOrderItem(raw: Record<string, unknown>): PurchaseOrderItem {
     id: raw.id as string,
     orderId: raw.orderId as string,
     productId: raw.productId as string,
+    presentationId: raw.presentationId as string | undefined,
+    unitMultiplier: raw.unitMultiplier as number | undefined,
     productName: raw.productName as string,
     quantity: raw.quantity as number,
     costUsdPerUnit: raw.costUsdPerUnit as number,
@@ -213,6 +215,8 @@ export const purchaseService = {
       id: generateId(),
       orderId: id,
       productId: item.productId,
+      presentationId: item.presentationId,
+      unitMultiplier: item.unitMultiplier,
       productName: productMap.get(item.productId) ?? '',
       quantity: item.quantity,
       costUsdPerUnit: preciseRound(item.totalCostUsd / item.quantity, 2),
@@ -275,6 +279,8 @@ export const purchaseService = {
       id: generateId(),
       orderId: id,
       productId: item.productId,
+      presentationId: item.presentationId,
+      unitMultiplier: item.unitMultiplier,
       productName: productMap.get(item.productId) ?? '',
       quantity: item.quantity,
       costUsdPerUnit: preciseRound(item.totalCostUsd / item.quantity, 2),
@@ -439,8 +445,12 @@ export const purchaseService = {
               ? convertToStorage(rec.receivedQuantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
               : rec.receivedQuantity;
 
+            const effectiveQty = item.unitMultiplier && item.unitMultiplier > 1
+              ? storageQty * item.unitMultiplier
+              : storageQty;
+
             const previousStock = product.stock;
-            const newStock = previousStock + storageQty;
+            const newStock = previousStock + effectiveQty;
 
             const movementId = generateId();
             const movement = {
@@ -449,7 +459,7 @@ export const purchaseService = {
               productId: item.productId,
               userId,
               type: 'purchase' as const,
-              quantity: storageQty,
+              quantity: effectiveQty,
               previousStock,
               newStock,
               createdAt: now,
@@ -459,8 +469,8 @@ export const purchaseService = {
               id: generateId(),
               tenantId,
               productId: item.productId,
-              quantityAdded: storageQty,
-              remainingQuantity: storageQty,
+              quantityAdded: effectiveQty,
+              remainingQuantity: effectiveQty,
               costUsdPerUnit: item.costUsdPerUnit,
               sourceMovementId: movementId,
               createdAt: now,

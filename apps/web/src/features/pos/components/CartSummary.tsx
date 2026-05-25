@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { preciseRound, IGTF_RATE } from '@logiscore/shared';
 import { Button } from '../../../common/components';
-import { ShoppingCart, Pause } from 'lucide-react';
+import { ShoppingCart, Pause, Percent, DollarSign, X } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS } from '../../../specs/sales';
 import { formatBs, formatUsd } from '@/lib/formatBs';
@@ -14,6 +15,9 @@ interface CartSummaryProps {
   onPark: () => void;
   isOpen: boolean;
   loading: boolean;
+  discount: { type: 'percentage' | 'fixed'; value: number } | null;
+  onSetDiscount: (type: 'percentage' | 'fixed', value: number) => void;
+  onClearDiscount: () => void;
 }
 
 export function CartSummary({
@@ -25,7 +29,14 @@ export function CartSummary({
   onPark,
   isOpen,
   loading,
+  discount,
+  onSetDiscount,
+  onClearDiscount,
 }: CartSummaryProps) {
+  const [showDiscountInput, setShowDiscountInput] = useState(false);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [discountInput, setDiscountInput] = useState('');
+
   const subtotalUsd = items.reduce(
     (sum, item) => sum + item.totalPriceUsd,
     0,
@@ -39,11 +50,45 @@ export function CartSummary({
     if (item.isTaxable === false) return sum;
     return sum + item.totalPriceUsd * exchangeRateBs;
   }, 0);
-  const ivaBs = preciseRound(subtotalTaxableBs * 0.16, 2);
+
+  let discountBs = 0;
+  let discountUsd = 0;
+  let ivaBase = subtotalTaxableBs;
+
+  if (discount) {
+    if (discount.type === 'percentage') {
+      const pct = Math.min(discount.value, 100);
+      discountBs = preciseRound(subtotalBs * pct / 100, 2);
+      const taxableDiscount = preciseRound(subtotalTaxableBs * pct / 100, 2);
+      ivaBase = subtotalTaxableBs - taxableDiscount;
+    } else {
+      discountBs = preciseRound(discount.value * exchangeRateBs, 2);
+      if (subtotalBs > 0) {
+        const taxableRatio = subtotalTaxableBs / subtotalBs;
+        const taxableDiscount = preciseRound(discountBs * taxableRatio, 2);
+        ivaBase = subtotalTaxableBs - taxableDiscount;
+      }
+    }
+    discountBs = Math.min(discountBs, subtotalBs);
+    ivaBase = Math.max(0, ivaBase);
+    discountUsd = exchangeRateBs > 0 ? preciseRound(discountBs / exchangeRateBs, 2) : 0;
+  }
+
+  const ivaBs = preciseRound(ivaBase * 0.16, 2);
   const ivaUsd = exchangeRateBs > 0 ? preciseRound(ivaBs / exchangeRateBs, 2) : 0;
 
-  const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs, 2);
-  const totalUsd = exchangeRateBs > 0 ? preciseRound(totalBs / exchangeRateBs, 2) : subtotalUsd;
+  const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
+  const totalUsd = exchangeRateBs > 0 ? preciseRound(totalBs / exchangeRateBs, 2) : (subtotalUsd - discountUsd);
+
+  const handleApplyDiscount = () => {
+    const val = parseFloat(discountInput);
+    if (!val || val <= 0) return;
+    if (discountType === 'percentage' && val > 100) return;
+    if (discountType === 'fixed' && val > subtotalUsd) return;
+    onSetDiscount(discountType, val);
+    setShowDiscountInput(false);
+    setDiscountInput('');
+  };
 
   return (
     <div className="border-t border-border pt-3 space-y-2">
@@ -59,10 +104,26 @@ export function CartSummary({
         </div>
       )}
 
-      {subtotalTaxableBs > 0 && (
+      {ivaBase > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
           <span>IVA (16%)</span>
           <span>{formatUsd(ivaUsd)} / {formatBs(ivaBs)}</span>
+        </div>
+      )}
+
+      {discount && discountBs > 0 && (
+        <div className="flex justify-between text-sm text-danger">
+          <span className="flex items-center gap-1">
+            Descuento ({discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`})
+            <button
+              type="button"
+              onClick={onClearDiscount}
+              className="ml-1 p-0.5 rounded hover:bg-danger/10 transition-colors"
+            >
+              <X size={12} />
+            </button>
+          </span>
+          <span>-{formatUsd(discountUsd)} / -{formatBs(discountBs)}</span>
         </div>
       )}
 
@@ -70,6 +131,68 @@ export function CartSummary({
         <span>Total</span>
         <span>{formatUsd(totalUsd)} / {formatBs(totalBs)}</span>
       </div>
+
+      {!discount && items.length > 0 && !showDiscountInput && (
+        <button
+          type="button"
+          onClick={() => setShowDiscountInput(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-primary border border-primary/30 hover:bg-primary/5 transition-colors"
+        >
+          <Percent size={14} />
+          Agregar descuento
+        </button>
+      )}
+
+      {showDiscountInput && (
+        <div className="space-y-2 p-2 rounded-xl bg-gray-50 border border-border">
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setDiscountType('percentage')}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                discountType === 'percentage'
+                  ? 'bg-primary text-white'
+                  : 'bg-white text-gray-600 border border-border'
+              }`}
+            >
+              <Percent size={12} className="inline mr-1" />
+              %
+            </button>
+            <button
+              type="button"
+              onClick={() => setDiscountType('fixed')}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                discountType === 'fixed'
+                  ? 'bg-primary text-white'
+                  : 'bg-white text-gray-600 border border-border'
+              }`}
+            >
+              <DollarSign size={12} className="inline mr-1" />
+              $
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              step={discountType === 'percentage' ? '1' : '0.01'}
+              min="0"
+              max={discountType === 'percentage' ? '100' : String(subtotalUsd)}
+              placeholder={discountType === 'percentage' ? '0%' : '$0.00'}
+              value={discountInput}
+              onChange={(e) => setDiscountInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleApplyDiscount(); }}
+              className="flex-1 px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              autoFocus
+            />
+            <Button variant="primary" size="sm" onClick={handleApplyDiscount}>
+              Aplicar
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowDiscountInput(false); setDiscountInput(''); }}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-1.5">
         {PAYMENT_METHODS.map((m) => {

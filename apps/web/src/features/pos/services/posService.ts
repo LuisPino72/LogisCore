@@ -292,9 +292,37 @@ export const posService = {
       ? preciseRound(subtotalBs * IGTF_RATE, 2)
       : 0;
 
-    const ivaBs = preciseRound(subtotalTaxableBs * IVA_RATE, 2);
+    // Calcular descuento si aplica
+    let discountBs = 0;
+    let discountType: string | undefined;
+    let discountValue: number | undefined;
+    let ivaBase = subtotalTaxableBs;
 
-    const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs, 2);
+    if (input.discountType && input.discountValue != null && input.discountValue > 0) {
+      discountType = input.discountType;
+      discountValue = input.discountValue;
+
+      if (discountType === 'percentage') {
+        const pct = Math.min(discountValue, 100);
+        discountBs = preciseRound(subtotalBs * pct / 100, 2);
+        const taxableDiscount = preciseRound(subtotalTaxableBs * pct / 100, 2);
+        ivaBase = subtotalTaxableBs - taxableDiscount;
+      } else if (discountType === 'fixed') {
+        discountBs = preciseRound(discountValue * rawExchangeRate, 2);
+        if (subtotalBs > 0) {
+          const taxableRatio = subtotalTaxableBs / subtotalBs;
+          const taxableDiscount = preciseRound(discountBs * taxableRatio, 2);
+          ivaBase = subtotalTaxableBs - taxableDiscount;
+        }
+      }
+
+      discountBs = Math.min(discountBs, subtotalBs);
+      ivaBase = Math.max(0, ivaBase);
+    }
+
+    const ivaBs = preciseRound(ivaBase * IVA_RATE, 2);
+
+    const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
 
     const saleId = generateId();
     const now = new Date().toISOString();
@@ -323,9 +351,12 @@ export const posService = {
           exchangeRate: rawExchangeRate,
           status: 'completed',
           createdAt: now,
+          discountType: discountType as 'percentage' | 'fixed' | undefined,
+          discountValue: discountValue ?? undefined,
+          discountBs: discountBs > 0 ? discountBs : undefined,
         });
 
-        await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake({
+        const saleSnakePayload: Record<string, unknown> = {
           id: saleId,
           tenant_id: tenantUuid,
           user_id: userId,
@@ -337,7 +368,11 @@ export const posService = {
           exchange_rate: rawExchangeRate,
           status: 'completed',
           created_at: now,
-        } as unknown as Record<string, unknown>), tenantId);
+        };
+        if (discountType) saleSnakePayload.discount_type = discountType;
+        if (discountValue != null) saleSnakePayload.discount_value = discountValue;
+        if (discountBs > 0) saleSnakePayload.discount_bs = discountBs;
+        await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake(saleSnakePayload), tenantId);
 
         for (const cartItem of items) {
           const product = await db.products.get(cartItem.productId);
@@ -423,6 +458,9 @@ export const posService = {
             costUsdPerUnit,
             isWeighted: product.isWeighted,
             unit: product.unit,
+            presentationId: cartItem.presentationId,
+            presentationName: cartItem.presentationName,
+            unitMultiplier: cartItem.unitMultiplier ?? 1,
             createdAt: now,
           });
 
@@ -492,6 +530,7 @@ export const posService = {
           totalBs,
           paymentMethod,
           itemsCount: items.length,
+          ...(discountBs > 0 && { discountBs, discountType, discountValue }),
         });
       });
 
@@ -522,6 +561,8 @@ export const posService = {
         exchangeRate: rawExchangeRate,
         status: 'completed',
         createdAt: now,
+        discountType: discountType as 'percentage' | 'fixed' | undefined,
+        discountValue: discountValue ?? undefined,
       });
     } catch (err) {
       if (err instanceof AppError) return failure(err);
@@ -820,6 +861,9 @@ export const posService = {
               costUsdPerUnit: item.cost_usd_per_unit as number | undefined,
               isWeighted: item.is_weighted as boolean,
               unit: item.unit as string,
+              presentationId: item.presentation_id as string | undefined,
+              presentationName: item.presentation_name as string | undefined,
+              unitMultiplier: (item.unit_multiplier as number) ?? 1,
               createdAt: item.created_at as string,
             });
           }
@@ -840,6 +884,9 @@ export const posService = {
         costUsdPerUnit: r.costUsdPerUnit,
         isWeighted: r.isWeighted,
         unit: r.unit,
+        presentationId: r.presentationId,
+        presentationName: r.presentationName,
+        unitMultiplier: r.unitMultiplier ?? 1,
         createdAt: r.createdAt,
       })));
     } catch (err) {

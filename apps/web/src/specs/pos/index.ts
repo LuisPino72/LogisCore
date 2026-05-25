@@ -19,6 +19,10 @@ export const CartItemSchema = z.object({
   isTaxable: z.boolean().default(true),
   unit: z.string(),
   stock: z.number().int().min(0),
+  presentationId: z.string().uuid().optional(),
+  presentationName: z.string().optional(),
+  unitMultiplier: z.number().positive().default(1),
+  stockType: z.enum(['shared', 'independent']).optional(),
 });
 
 export type CartItem = z.infer<typeof CartItemSchema>;
@@ -37,6 +41,8 @@ export const SaleSchema = z.object({
   voidedAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
+  discountType: z.enum(['percentage', 'fixed']).optional(),
+  discountValue: z.number().min(0).optional(),
 });
 
 export type Sale = z.infer<typeof SaleSchema>;
@@ -89,6 +95,8 @@ export const CreateSaleInputSchema = z.object({
   paymentMethod: PaymentMethodSchema,
   items: z.array(CartItemSchema).min(1, 'Debe haber al menos un producto'),
   exchangeRate: z.number().positive('Se requiere tasa de cambio'),
+  discountType: z.enum(['percentage', 'fixed']).optional(),
+  discountValue: z.number().min(0).optional(),
 });
 
 export type CreateSaleInput = z.infer<typeof CreateSaleInputSchema>;

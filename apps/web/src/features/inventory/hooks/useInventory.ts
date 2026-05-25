@@ -28,6 +28,7 @@ export function useInventory(tenantId: string | null) {
       store.fetchProducts(tenantId, effectiveFilters, silent),
       store.fetchCategories(tenantId, silent),
       store.fetchLowStock(tenantId, silent),
+      store.fetchAllPresentations(tenantId),
     ]);
   }, [tenantId]);
 

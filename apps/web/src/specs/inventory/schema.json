@@ -36,6 +36,22 @@
         "previousStock": { "type": "integer" },
         "newStock": { "type": "integer" }
       }
+    },
+    "Presentation": {
+      "type": "object",
+      "required": ["id", "productId", "name", "priceUsd", "stockType"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "productId": { "type": "string", "format": "uuid" },
+        "childProductId": { "type": ["string", "null"], "format": "uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "priceUsd": { "type": "number", "minimum": 0.01 },
+        "unitMultiplier": { "type": "number", "minimum": 0.01 },
+        "stockType": { "type": "string", "enum": ["shared", "independent"] },
+        "barcode": { "type": ["string", "null"] },
+        "sortOrder": { "type": "integer" },
+        "deletedAt": { "type": ["string", "null"] }
+      }
     }
   }
 }

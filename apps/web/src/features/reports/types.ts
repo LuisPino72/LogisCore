@@ -36,6 +36,8 @@ export interface ExecutiveSummaryData {
   totalExpensesBs: number;
   netProfitUsd: number;
   netProfitBs: number;
+  totalDiscountBs: number;
+  totalDiscountUsd: number;
 }
 
 export interface DailyProfitPoint {

@@ -1,10 +1,17 @@
 import type { z } from 'zod';
-import type { ProductSchema, CategorySchema, InventoryMovementSchema, CreateProductInputSchema } from '../../../specs/inventory';
+import type { ProductSchema, CategorySchema, InventoryMovementSchema, CreateProductInputSchema, PresentationSchema, CreatePresentationInputSchema } from '../../../specs/inventory';
 
 export type Product = z.infer<typeof ProductSchema>;
 export type Category = z.infer<typeof CategorySchema>;
 export type InventoryMovement = z.infer<typeof InventoryMovementSchema>;
 export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
+
+export type Presentation = z.infer<typeof PresentationSchema>;
+export type CreatePresentationInput = z.infer<typeof CreatePresentationInputSchema>;
+
+export interface PresentationWithProduct extends Presentation {
+  product: Product;
+}
 
 export type AdjustmentReason =
   | 'inventario_inicial'
@@ -14,6 +21,13 @@ export type AdjustmentReason =
   | 'vencido'
   | 'consumo_interno'
   | 'otros';
+
+export interface UpdatePresentationInput {
+  name?: string;
+  priceUsd?: number;
+  unitMultiplier?: number;
+  barcode?: string;
+}
 
 export interface ProductFormData {
   name: string;
@@ -28,6 +42,8 @@ export interface ProductFormData {
   stockInicial: number;
   stockMin?: number;
   costPrice: number;
+  presentations?: CreatePresentationInput[];
+  stockType?: 'shared' | 'independent';
 }
 
 export interface AdjustStockInput {
@@ -77,6 +93,9 @@ export interface InventoryState {
   products: Product[];
   categories: Category[];
   lowStockProducts: Product[];
+  presentationsByProduct: Record<string, PresentationWithProduct[]>;
+  allPresentationChildIds: Set<string>;
+  allPresentationParentIds: Set<string>;
   loading: boolean;
   error: string | null;
   searchQuery: string;

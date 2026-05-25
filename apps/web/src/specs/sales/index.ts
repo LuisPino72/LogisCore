@@ -46,6 +46,9 @@ export const SaleSchema = z.object({
   igtf: z.number().min(0),
   exchangeRate: z.number().positive(),
   createdAt: z.string().datetime(),
+  discountType: z.enum(['percentage', 'fixed']).optional(),
+  discountValue: z.number().min(0).optional(),
+  discountBs: z.number().min(0).optional(),
 });
 
 export type Sale = z.infer<typeof SaleSchema>;

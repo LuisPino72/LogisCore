@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { preciseRound } from '@logiscore/shared';
-import type { PosState, PaymentMethod, ParkedCart } from '../types';
+import type { PosState, PaymentMethod, ParkedCart, PresentationSelection } from '../types';
 import type { Product } from '../../../specs/inventory';
+import type { Presentation } from '../../../specs/inventory';
 import { posService } from '../services/posService';
+import { inventoryService } from '../../../features/inventory/services/inventoryService';
 import { exchangeRateService } from '../../../features/exchange/services/exchangeRateService';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateSaleInput } from '../../../specs/pos';
@@ -10,13 +12,17 @@ import type { CreateSaleInput } from '../../../specs/pos';
 const MAX_PARKED_CARTS = 10;
 
 interface PosStore extends PosState {
+  fetchPresentations: (tenantId: string) => Promise<void>;
+  getPresentations: (productId: string) => Presentation[];
+  setDiscount: (type: 'percentage' | 'fixed', value: number) => void;
+  clearDiscount: () => void;
   setSearchQuery: (query: string) => void;
   fetchProducts: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchCashRegister: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchExchangeRate: (tenantId: string) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
-  addToCart: (product: Product, quantity: number) => void;
+  addToCart: (product: Product, quantity: number, presentation?: PresentationSelection) => void;
   removeFromCart: (productId: string) => void;
   updateCartItemQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -45,6 +51,9 @@ const initialState: PosState = {
   loading: false,
   error: null,
   searchQuery: '',
+  presentationsMap: {},
+  childProductIds: new Set<string>(),
+  discount: null,
 };
 
 export const usePosStore = create<PosStore>((set, get) => ({
@@ -68,6 +77,38 @@ export const usePosStore = create<PosStore>((set, get) => ({
     } else if (!silent) {
       set({ loading: false, error: result.error.message });
     }
+  },
+
+  fetchPresentations: async (tenantId) => {
+    const result = await inventoryService.getAllPresentations(tenantId);
+    if (result.ok) {
+      const map: Record<string, Presentation[]> = {};
+      const childIds = new Set<string>();
+      for (const pres of result.data) {
+        if (!map[pres.productId]) map[pres.productId] = [];
+        map[pres.productId].push(pres);
+        if (pres.stockType === 'independent' && pres.childProductId) {
+          childIds.add(pres.childProductId);
+        }
+      }
+      set((s) => ({
+        presentationsMap: map,
+        childProductIds: childIds,
+        products: s.products.filter((p) => !childIds.has(p.id)),
+      }));
+    }
+  },
+
+  getPresentations: (productId) => {
+    return get().presentationsMap[productId] ?? [];
+  },
+
+  setDiscount: (type, value) => {
+    set({ discount: { type, value } });
+  },
+
+  clearDiscount: () => {
+    set({ discount: null });
   },
 
   fetchCashRegister: async (tenantId, silent = false) => {
@@ -154,8 +195,81 @@ export const usePosStore = create<PosStore>((set, get) => ({
     return get().favoriteProductIds.has(productId);
   },
 
-  addToCart: (product, quantity) => {
+  addToCart: (product, quantity, presentation?) => {
     const { cart } = get();
+
+    if (presentation) {
+      // Global Stock Validation for shared mode
+      if (presentation.stockType === 'shared') {
+        const totalConsumption = cart
+          .filter((item) => item.productId === product.id)
+          .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
+        const requestedConsumption = quantity * (presentation.unitMultiplier || 1);
+        if (totalConsumption + requestedConsumption > product.stock) {
+          const available = Math.floor((product.stock - totalConsumption) / presentation.unitMultiplier);
+          set({ error: `Stock insuficiente. Disponible: ${Math.max(0, available)} unidades.` });
+          return;
+        }
+      }
+
+      // For independent, find child product stock
+      if (presentation.stockType === 'independent' && presentation.childProductId) {
+        const childProduct = get().products.find((p) => p.id === presentation.childProductId);
+        if (!childProduct || childProduct.stock < quantity) {
+          set({ error: `Stock insuficiente para "${presentation.name}".` });
+          return;
+        }
+      }
+
+      const presProductId = presentation.stockType === 'independent' && presentation.childProductId
+        ? presentation.childProductId
+        : product.id;
+      const displayName = `${product.name} - ${presentation.name}`;
+      const presUnitPrice = presentation.priceUsd;
+
+      const existing = cart.find(
+        (item) => item.productId === presProductId && item.presentationId === presentation.id,
+      );
+      if (existing) {
+        const newQty = existing.quantity + quantity;
+        set({
+          cart: cart.map((item) =>
+            item.productId === presProductId && item.presentationId === presentation.id
+              ? {
+                  ...item,
+                  quantity: newQty,
+                  totalPriceUsd: preciseRound(newQty * presUnitPrice, 2),
+                }
+              : item,
+          ),
+        });
+      } else {
+        set({
+          cart: [
+            ...cart,
+            {
+              productId: presProductId,
+              name: displayName,
+              sku: product.sku,
+              quantity,
+              unitPriceUsd: presUnitPrice,
+              totalPriceUsd: preciseRound(quantity * presUnitPrice, 2),
+              isWeighted: false,
+              isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
+              unit: 'unidad',
+              stock: product.stock,
+              presentationId: presentation.id,
+              presentationName: presentation.name,
+              unitMultiplier: presentation.unitMultiplier || 1,
+              stockType: presentation.stockType,
+            },
+          ],
+        });
+      }
+      return;
+    }
+
+    // Original behavior for products without presentations
     const currentQtyInCart = cart.find((item) => item.productId === product.id)?.quantity ?? 0;
     const totalRequested = currentQtyInCart + quantity;
     if (totalRequested > product.stock) {
@@ -194,6 +308,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
             isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
             unit: product.unit,
             stock: product.stock,
+            unitMultiplier: 1,
           },
         ],
       });
@@ -245,12 +360,14 @@ export const usePosStore = create<PosStore>((set, get) => ({
       }
     }
 
+    const { discount } = get();
     const input: CreateSaleInput = {
       tenantId,
       userId,
       paymentMethod,
       items: cart,
       exchangeRate,
+      ...(discount && { discountType: discount.type, discountValue: discount.value }),
     };
 
     set({ loading: true, error: null });
@@ -260,7 +377,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
       if (activeId) {
         await posService.deleteParkedCart(activeId);
       }
-      set({ loading: false, cart: [], activeParkedCartId: null });
+      set({ discount: null, loading: false, cart: [], activeParkedCartId: null });
       if (activeId) {
         const remaining = get().parkedCarts.filter((p) => p.id !== activeId);
         set({ parkedCarts: remaining });

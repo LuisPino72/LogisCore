@@ -24,6 +24,8 @@ export const PurchaseOrderItemSchema = z.object({
   id: z.string().uuid(),
   orderId: z.string().uuid(),
   productId: z.string().uuid(),
+  presentationId: z.string().uuid().optional(),
+  unitMultiplier: z.number().positive().optional(),
   productName: z.string(),
   quantity: z.number().positive(),
   costUsdPerUnit: z.number().positive().max(999999.99),
@@ -69,6 +71,8 @@ export const CreatePurchaseOrderInputSchema = z.object({
   items: z.array(
     z.object({
       productId: z.string().uuid('Selecciona un producto'),
+      presentationId: z.string().uuid().optional(),
+      unitMultiplier: z.number().positive().optional(),
       quantity: z.number().positive('Cantidad debe ser mayor a 0'),
       totalCostUsd: z.number().positive('Costo total debe ser mayor a 0'),
     })

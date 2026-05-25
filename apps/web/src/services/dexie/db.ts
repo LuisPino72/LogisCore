@@ -7,7 +7,21 @@ export interface DexieTenantRef extends TenantInfo {
 import type { SyncQueueItem, SyncMeta } from '../sync/types';
 import type { OutboxEntry } from '@logiscore/core';
 
-// Inventory types (inlined to avoid circular deps)
+export interface DexieProductPresentation {
+  id: string;
+  tenantId: string;
+  productId: string;
+  childProductId?: string;
+  name: string;
+  priceUsd: number;
+  unitMultiplier: number;
+  stockType: 'shared' | 'independent';
+  barcode?: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
 
 export interface DexieProduct {
   id: string;
@@ -78,6 +92,9 @@ export interface DexieSale {
   voidedAt?: string;
   createdAt: string;
   deletedAt?: string;
+  discountType?: 'percentage' | 'fixed';
+  discountValue?: number;
+  discountBs?: number;
 }
 
 export interface DexieSaleItem {
@@ -95,6 +112,9 @@ export interface DexieSaleItem {
   unit: string;
   createdAt: string;
   deletedAt?: string;
+  presentationId?: string;
+  presentationName?: string;
+  unitMultiplier: number;
 }
 
 export interface DexieCashRegister {
@@ -194,6 +214,8 @@ export interface DexiePurchaseOrderItem {
   orderId: string;
   tenantId: string;
   productId: string;
+  presentationId?: string;
+  unitMultiplier?: number;
   productName?: string;
   quantity: number;
   costUsdPerUnit: number;
@@ -209,6 +231,7 @@ export class LogisCoreDB extends Dexie {
   syncMeta!: Table<SyncMeta, string>;
   outbox!: Table<OutboxEntry, number>;
   products!: Table<DexieProduct, string>;
+  productPresentations!: Table<DexieProductPresentation, string>;
   categories!: Table<DexieCategory, string>;
   inventoryMovements!: Table<DexieInventoryMovement, string>;
   inventoryLots!: Table<DexieInventoryLot, string>;
@@ -226,13 +249,14 @@ export class LogisCoreDB extends Dexie {
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(12).stores({
+    this.version(13).stores({
       exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
       syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
       syncMeta: 'table',
       outbox: '++id, event, status, createdAt, nextRetryAt, [status+nextRetryAt]',
       products: 'id, tenantId, sku, categoryId, name, [tenantId+deletedAt]',
+      productPresentations: 'id, tenantId, productId, childProductId, name, [tenantId+deletedAt]',
       categories: 'id, tenantId, [tenantId+deletedAt]',
       inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt]',
       inventoryLots: 'id, tenantId, productId, remainingQuantity, createdAt, [productId+remainingQuantity]',

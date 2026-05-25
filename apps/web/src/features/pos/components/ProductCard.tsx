@@ -11,9 +11,10 @@ interface ProductCardProps {
   onToggleFavorite: (productId: string) => void;
   isFavorite: boolean;
   exchangeRateBs: number;
+  presentationCount?: number;
 }
 
-export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount }: ProductCardProps) {
   const priceBs = exchangeRateBs > 0
     ? formatBs(product.priceUsd * exchangeRateBs)
     : null;
@@ -65,6 +66,12 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
         {product.isTaxable && (
           <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-primary/85 text-white text-[10px] font-semibold leading-none z-10 shadow-xs">
             IVA
+          </span>
+        )}
+
+        {presentationCount != null && presentationCount > 0 && (
+          <span className="absolute top-1.5 right-7 px-1.5 py-0.5 rounded-md bg-accent/85 text-white text-[10px] font-semibold leading-none z-10 shadow-xs">
+            {presentationCount} var.
           </span>
         )}
 
