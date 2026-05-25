@@ -578,7 +578,7 @@ export const inventoryService = {
       return success(undefined);
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en deletePresentation:', err);
-      return failure(new AppError('PRESENTATION_CHILD_HAS_SALES', 'Error al eliminar presentación.'));
+      return failure(new AppError(InventoryErrors.PRESENTATION_NOT_FOUND, 'Error al eliminar presentación.'));
     }
   },
 

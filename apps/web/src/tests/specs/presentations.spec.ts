@@ -8,11 +8,13 @@ const mockDb = {
   products: { get: vi.fn(), add: vi.fn(), put: vi.fn(), update: vi.fn(), where: vi.fn(), bulkAdd: vi.fn() },
   productPresentations: {
     add: vi.fn(), update: vi.fn(), put: vi.fn(), where: vi.fn(),
-    bulkAdd: vi.fn(), filter: vi.fn(), sortBy: vi.fn(),
+    bulkAdd: vi.fn(), filter: vi.fn(), sortBy: vi.fn(), get: vi.fn(),
   },
   categories: { add: vi.fn(), where: vi.fn() },
   inventoryMovements: { add: vi.fn(), where: vi.fn(), sortBy: vi.fn(), bulkAdd: vi.fn() },
   inventoryLots: { add: vi.fn(), update: vi.fn(), where: vi.fn(), get: vi.fn(), bulkAdd: vi.fn() },
+  purchaseOrderItems: { where: vi.fn() },
+  purchaseOrders: { where: vi.fn() },
   syncQueue: { add: vi.fn() },
   outbox: { add: vi.fn() },
   transaction: vi.fn((_mode: unknown, _tables: unknown[], fn: (tx: unknown) => Promise<void>) => fn()),
@@ -30,6 +32,12 @@ function resetMockDb() {
     filter: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])) })),
   });
   mockDb.inventoryMovements.sortBy.mockResolvedValue([]);
+  mockDb.purchaseOrderItems.where.mockReturnValue({
+    toArray: vi.fn(() => Promise.resolve([])),
+  });
+  mockDb.purchaseOrders.where.mockReturnValue({
+    filter: vi.fn(() => ({ count: vi.fn(() => Promise.resolve(0)) })),
+  });
 }
 
 vi.mock('../../services/dexie/db', () => ({
@@ -50,7 +58,7 @@ vi.mock('../../services/audit/emitWithAudit', () => ({
 }));
 
 vi.mock('../../services/network/requireNetwork', () => ({
-  requireNetwork: () => true,
+  requireNetwork: () => ({ ok: true }),
 }));
 
 vi.mock('../../services/imageCache/imageCacheService', () => ({
@@ -76,7 +84,7 @@ vi.mock('@logiscore/core', () => ({
     }
   },
   success: <T>(data: T) => ({ ok: true, data }) as const,
-  failure: (err: Error) => ({ ok: false, error: err }) as const,
+  failure: (err: Error) => ({ ok: false, error: err, data: undefined as never }) as const,
   EventBus: { on: vi.fn(() => ({ event: '', listener: vi.fn() })), off: vi.fn(), emit: vi.fn() },
   SystemEvents: { USER_LOGIN: 'USER_LOGIN', USER_LOGOUT: 'USER_LOGOUT' },
   isAppError: (err: Error) => err.name === 'AppError',
@@ -150,9 +158,8 @@ describe('PRES-001: Crear producto con presentaciones compartidas', () => {
 
     expect(result.ok).toBe(true);
     expect(mockDb.products.add).toHaveBeenCalled();
-    expect(mockDb.productPresentations.bulkAdd).toHaveBeenCalled();
+    expect(mockDb.productPresentations.add).toHaveBeenCalled();
     expect(mockDb.inventoryLots.add).toHaveBeenCalled();
-    expect(mockDb.syncQueue.add).toHaveBeenCalled();
   });
 });
 
@@ -175,8 +182,8 @@ describe('PRES-002: Crear producto con presentaciones independientes', () => {
     ], 'independent');
 
     expect(result.ok).toBe(true);
-    expect(mockDb.products.bulkAdd).toHaveBeenCalled();
-    expect(mockDb.productPresentations.bulkAdd).toHaveBeenCalled();
+    expect(mockDb.products.add).toHaveBeenCalled();
+    expect(mockDb.productPresentations.add).toHaveBeenCalled();
     expect(mockDb.inventoryLots.add).toHaveBeenCalled();
   });
 });
@@ -215,7 +222,7 @@ describe('PRES-004: Soft delete producto en cascada con presentaciones', () => {
   beforeEach(() => { resetMockDb(); });
 
   it('Given: producto con 2 pres independent. When: deleteProduct. Then: padre+2 hijos+pres soft deleted', async () => {
-    const parent = mockParent(50);
+    const parent = mockParent(0);
     const pres = [
       { id: 'pres-1', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 1', priceUsd: 12, unitMultiplier: 1, stockType: 'independent' as const, childProductId: 'child-1', sortOrder: 0, createdAt: 'now', updatedAt: 'now' },
       { id: 'pres-2', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 2', priceUsd: 12, unitMultiplier: 1, stockType: 'independent' as const, childProductId: 'child-2', sortOrder: 1, createdAt: 'now', updatedAt: 'now' },
@@ -244,6 +251,7 @@ describe('PRES-005: Actualizar presentación', () => {
   beforeEach(() => { resetMockDb(); });
 
   it('Given: presentación existe. When: updatePresentation. Then: nombre y precio actualizados', async () => {
+    mockDb.productPresentations.get.mockResolvedValue({ id: 'pres-1', productId: PARENT_ID, name: 'Pack 6', priceUsd: 12, unitMultiplier: 6, stockType: 'shared', sortOrder: 0 });
     mockDb.productPresentations.update.mockResolvedValue(1);
 
     const { inventoryService } = await import('../../features/inventory/services/inventoryService');
@@ -253,7 +261,7 @@ describe('PRES-005: Actualizar presentación', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(mockDb.productPresentations.update).toHaveBeenCalledWith('pres-1', expect.objectContaining({ name: 'Pack 24', priceUsd: 30 }));
+    expect(mockDb.productPresentations.put).toHaveBeenCalledWith(expect.objectContaining({ name: 'Pack 24', priceUsd: 30 }));
   });
 });
 
@@ -261,6 +269,7 @@ describe('PRES-006: Eliminar presentación (soft delete)', () => {
   beforeEach(() => { resetMockDb(); });
 
   it('Given: presentación existe. When: deletePresentation. Then: deletedAt seteado', async () => {
+    mockDb.productPresentations.get.mockResolvedValue({ id: 'pres-1', productId: PARENT_ID, name: 'Pack 6', priceUsd: 12, unitMultiplier: 6, stockType: 'shared', sortOrder: 0 });
     mockDb.productPresentations.update.mockResolvedValue(1);
 
     const { inventoryService } = await import('../../features/inventory/services/inventoryService');

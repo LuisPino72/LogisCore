@@ -23,8 +23,8 @@ interface PosStore extends PosState {
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
   addToCart: (product: Product, quantity: number, presentation?: PresentationSelection) => void;
-  removeFromCart: (productId: string) => void;
-  updateCartItemQuantity: (productId: string, quantity: number) => void;
+  removeFromCart: (productId: string, presentationId?: string) => void;
+  updateCartItemQuantity: (productId: string, quantity: number, presentationId?: string) => void;
   clearCart: () => void;
   parkCart: (tenantId: string, name: string) => Promise<boolean>;
   loadParkedCart: (cart: ParkedCart) => void;
@@ -315,28 +315,46 @@ export const usePosStore = create<PosStore>((set, get) => ({
     }
   },
 
-  removeFromCart: (productId) => {
-    set({ cart: get().cart.filter((item) => item.productId !== productId) });
+  removeFromCart: (productId, presentationId?: string) => {
+    if (presentationId) {
+      set({ cart: get().cart.filter((item) => !(item.productId === productId && item.presentationId === presentationId)) });
+    } else {
+      set({ cart: get().cart.filter((item) => item.productId !== productId) });
+    }
   },
 
-  updateCartItemQuantity: (productId, quantity) => {
-    const product = get().products.find(p => p.id === productId);
-    if (!product) {
-      get().removeFromCart(productId);
-      return;
-    }
+  updateCartItemQuantity: (productId, quantity, presentationId?: string) => {
+    const cartItem = get().cart.find(item => item.productId === productId && (!presentationId || item.presentationId === presentationId));
+    if (!cartItem) return;
 
     if (quantity <= 0) {
-      get().removeFromCart(productId);
+      get().removeFromCart(productId, presentationId);
       return;
     }
 
-    const maxQty = product.isWeighted ? product.stock / 1000 : product.stock;
+    let maxQty: number;
+    if (cartItem.stockType === 'shared') {
+      const product = get().products.find(p => p.id === productId);
+      if (!product) { get().removeFromCart(productId, presentationId); return; }
+      const totalConsumption = get().cart
+        .filter((item) => item.productId === productId && item.presentationId !== presentationId)
+        .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
+      const availableBase = Math.max(0, product.stock - totalConsumption);
+      maxQty = Math.floor(availableBase / (cartItem.unitMultiplier || 1));
+    } else if (cartItem.stockType === 'independent' && cartItem.productId) {
+      const childProduct = get().products.find(p => p.id === cartItem.productId);
+      maxQty = childProduct ? childProduct.stock : 0;
+    } else {
+      const product = get().products.find(p => p.id === productId);
+      if (!product) { get().removeFromCart(productId, presentationId); return; }
+      maxQty = product.isWeighted ? product.stock / 1000 : product.stock;
+    }
+
     const finalQty = Math.min(quantity, maxQty);
 
     set({
       cart: get().cart.map((item) =>
-        item.productId === productId
+        item.productId === productId && (!presentationId || item.presentationId === presentationId)
           ? { ...item, quantity: finalQty, totalPriceUsd: preciseRound(finalQty * item.unitPriceUsd, 2) }
           : item,
       ),

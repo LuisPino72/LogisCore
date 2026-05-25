@@ -7,8 +7,8 @@ import { preciseRound } from '@logiscore/shared';
 
 interface CartItemRowProps {
   item: CartItem;
-  onRemove: (productId: string) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onRemove: (productId: string, presentationId?: string) => void;
+  onUpdateQuantity: (productId: string, quantity: number, presentationId?: string) => void;
 }
 
 const WEIGHABLE_PRESETS = [0.5, 1, 2, 5];
@@ -39,7 +39,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     setLocalQty(null);
     const currentQty = qtyRef.current;
     const next = Math.max(step, parseFloat((currentQty + delta).toFixed(decimals)));
-    onUpdateQuantity(item.productId, next);
+    onUpdateQuantity(item.productId, next, item.presentationId);
   }, [step, decimals, onUpdateQuantity, item.productId]);
 
   const stopRepeat = useCallback(() => {
@@ -80,7 +80,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
       let val = parseFloat(sanitized);
       if (!isNaN(val) && val > 0) {
         if (val > 99999) val = 99999;
-        onUpdateQuantity(item.productId, preciseRound(val, 2));
+        onUpdateQuantity(item.productId, preciseRound(val, 2), item.presentationId);
       }
       return;
     }
@@ -89,7 +89,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     let val = parseFloat(cleaned);
     if (!isNaN(val) && val > 0) {
       if (val > 99999) val = 99999;
-      onUpdateQuantity(item.productId, val);
+      onUpdateQuantity(item.productId, val, item.presentationId);
     }
   };
 
@@ -158,7 +158,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onRemove(item.productId)}
+            onClick={() => onRemove(item.productId, item.presentationId)}
             className="p-2.5 min-w-11 min-h-11 ml-1"
           >
             <Trash2 size={16} className="text-danger" />

@@ -115,6 +115,7 @@ export interface DexieSaleItem {
   presentationId?: string;
   presentationName?: string;
   unitMultiplier: number;
+  stockType?: 'shared' | 'independent';
 }
 
 export interface DexieCashRegister {

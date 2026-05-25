@@ -43,6 +43,7 @@ export const SaleSchema = z.object({
   deletedAt: z.string().datetime().optional(),
   discountType: z.enum(['percentage', 'fixed']).optional(),
   discountValue: z.number().min(0).optional(),
+  discountBs: z.number().min(0).optional(),
 });
 
 export type Sale = z.infer<typeof SaleSchema>;
@@ -60,6 +61,10 @@ export const SaleItemSchema = z.object({
   costUsdPerUnit: z.number().min(0).optional(),
   isWeighted: z.boolean(),
   unit: z.string(),
+  presentationId: z.string().uuid().optional(),
+  presentationName: z.string().optional(),
+  unitMultiplier: z.number().positive().default(1),
+  stockType: z.enum(['shared', 'independent']).optional(),
   createdAt: z.string().datetime(),
 });
 

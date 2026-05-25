@@ -11,8 +11,8 @@ interface CartPanelProps {
   exchangeRateBs: number;
   paymentMethod: PaymentMethod | null;
   onPaymentMethodChange: (method: PaymentMethod) => void;
-  onRemoveFromCart: (productId: string) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onRemoveFromCart: (productId: string, presentationId?: string) => void;
+  onUpdateQuantity: (productId: string, quantity: number, presentationId?: string) => void;
   onPay: () => void;
   onPark: () => void;
   isOpen: boolean;

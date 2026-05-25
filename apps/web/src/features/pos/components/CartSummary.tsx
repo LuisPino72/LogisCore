@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { preciseRound, IGTF_RATE } from '@logiscore/shared';
+import { preciseRound, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
 import { Button } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
@@ -74,7 +74,7 @@ export function CartSummary({
     discountUsd = exchangeRateBs > 0 ? preciseRound(discountBs / exchangeRateBs, 2) : 0;
   }
 
-  const ivaBs = preciseRound(ivaBase * 0.16, 2);
+  const ivaBs = preciseRound(ivaBase * IVA_RATE, 2);
   const ivaUsd = exchangeRateBs > 0 ? preciseRound(ivaBs / exchangeRateBs, 2) : 0;
 
   const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
