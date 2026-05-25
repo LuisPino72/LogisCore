@@ -59,6 +59,23 @@ export function sanitizeNumber(value: string, options?: { decimals?: number; all
   return sanitized;
 }
 
+export function sanitizeValue(value: string, sanitize: 'number' | 'currency' | 'rif' | 'phone' | 'none', options?: { decimals?: number; allowNegative?: boolean }): string {
+  if (!value) return value;
+  switch (sanitize) {
+    case 'number':
+    case 'currency':
+      return sanitizeNumber(value, options);
+    case 'rif': {
+      const s = value.toUpperCase().replace(/[^VJEGP0-9]/g, '');
+      return (s.length > 1 && !/[VJEGP]/.test(s[0])) ? s.slice(1) : s;
+    }
+    case 'phone':
+      return value.replace(/\D/g, '');
+    default:
+      return value;
+  }
+}
+
 export function formatCurrency(value: number, decimals: number = 2): string {
   return value.toFixed(decimals);
 }

@@ -1,7 +1,7 @@
 import { forwardRef, useState, type ReactNode, type ChangeEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { validateValue, sanitizeNumber, type ValidationRule } from '../../lib/validation';
+import { validateValue, type ValidationRule } from '../../lib/validation';
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   label?: string;
