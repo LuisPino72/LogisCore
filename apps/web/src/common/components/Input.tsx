@@ -77,10 +77,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       return;
     }
 
-    Object.defineProperty(e.target, 'value', {
-      writable: true,
-      value: rawValue,
-    });
+    e.target.value = rawValue;
     onChange?.(e);
   };
 
