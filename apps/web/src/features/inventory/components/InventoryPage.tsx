@@ -125,11 +125,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const handleConfirmDelete = async () => {
     if (!confirmDelete || !tenantId) return;
     if (confirmDelete.type === 'product') {
-      await deleteProduct(confirmDelete.id, tenantId);
-      addToast({ type: 'success', message: 'Producto eliminado.', duration: 3000 });
+      const ok = await deleteProduct(confirmDelete.id, tenantId);
+      addToast({ type: ok ? 'success' : 'error', message: ok ? 'Producto eliminado.' : 'No se pudo eliminar el producto. Verifica que el stock esté en 0 y no tenga órdenes de compra activas.', duration: 5000 });
     } else {
-      await deleteCategory(confirmDelete.id, tenantId);
-      addToast({ type: 'success', message: 'Categoría eliminada.', duration: 3000 });
+      const ok = await deleteCategory(confirmDelete.id, tenantId);
+      addToast({ type: ok ? 'success' : 'error', message: ok ? 'Categoría eliminada.' : 'No se pudo eliminar la categoría. Verifica que no tenga productos asociados.', duration: 5000 });
     }
     setConfirmDelete(null);
   };

@@ -195,28 +195,18 @@ export const inventoryService = {
       return failure(new AppError('PRODUCT_HAS_STOCK', `No se puede eliminar: el producto tiene ${product.stock} unidades en inventario. Ajuste el stock a cero primero.`));
     }
 
-    // Validar que no tenga movimientos de inventario
-    const movementsCount = await db.inventoryMovements
-      .where({ productId: id })
-      .count();
-    if (movementsCount > 0) {
-      return failure(new AppError('PRODUCT_HAS_MOVEMENTS', `No se puede eliminar: el producto tiene ${movementsCount} movimiento(s) de inventario registrados.`));
-    }
-
-    // Validar que no tenga ventas asociadas
-    const salesCount = await db.saleItems
-      .where({ productId: id })
-      .count();
-    if (salesCount > 0) {
-      return failure(new AppError('PRODUCT_HAS_SALES', `No se puede eliminar: el producto aparece en ${salesCount} venta(s).`));
-    }
-
-    // Validar que no tenga órdenes de compra activas
-    const activeOrdersCount = await db.purchaseOrderItems
-      .where({ productId: id })
-      .count();
-    if (activeOrdersCount > 0) {
-      return failure(new AppError('PRODUCT_HAS_ORDERS', `No se puede eliminar: el producto está en ${activeOrdersCount} orden(es) de compra.`));
+    // Validar que no tenga órdenes de compra activas (draft, confirmed o partially_received)
+    const orderItems = await db.purchaseOrderItems.where({ productId: id }).toArray();
+    if (orderItems.length > 0) {
+      const orderIds = [...new Set(orderItems.map(i => i.orderId))];
+      const blockingOrders = await db.purchaseOrders
+        .where('id')
+        .anyOf(orderIds)
+        .filter(o => !o.deletedAt && (o.status === 'draft' || o.status === 'confirmed' || o.status === 'partially_received'))
+        .count();
+      if (blockingOrders > 0) {
+        return failure(new AppError('PRODUCT_HAS_ACTIVE_ORDERS', `No se puede eliminar: el producto está en ${blockingOrders} orden(es) de compra activa(s).`));
+      }
     }
 
     const deletedAt = new Date().toISOString();

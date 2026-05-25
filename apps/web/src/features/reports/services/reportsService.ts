@@ -200,7 +200,7 @@ async function getRateForDate(tenantId: string, date: string): Promise<number> {
     return rates[0].rate;
   }
 
-  // Fallback: la tasa más reciente disponible
+  // Fallback: la tasa más reciente disponible en Dexie
   const allRates = await db.exchangeRates
     .where('tenantId')
     .equals(tenantId)
@@ -209,6 +209,36 @@ async function getRateForDate(tenantId: string, date: string): Promise<number> {
   if (allRates.length > 0) {
     allRates.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return allRates[0].rate;
+  }
+
+  // Fallback a Supabase
+  try {
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+    const { data } = await supabase
+      .from('exchange_rates')
+      .select('rate, created_at')
+      .eq('tenant_id', tenantUuid)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data) {
+      const cloudRate = Number(data.rate) || 0;
+      if (cloudRate > 0) {
+        await db.exchangeRates.put({
+          id: crypto.randomUUID(),
+          tenantId,
+          rate: cloudRate,
+          source: 'bcv_api',
+          fetchedAt: null,
+          createdAt: data.created_at,
+        });
+        return cloudRate;
+      }
+    }
+  } catch {
+    // Silencioso: no hay conexión o no existe el tenant en la nube
   }
 
   return 0;
@@ -612,7 +642,9 @@ export const reportsService = {
         // Calculate totalSalesUsd from individual sales' own exchangeRate
         let totalSalesUsd = 0;
         for (const s of regSales) {
-          totalSalesUsd += preciseRound(s.totalBs / s.exchangeRate, 2);
+          if (s.exchangeRate > 0) {
+            totalSalesUsd += preciseRound(s.totalBs / s.exchangeRate, 2);
+          }
         }
         totalSalesUsd = preciseRound(totalSalesUsd, 2);
 
