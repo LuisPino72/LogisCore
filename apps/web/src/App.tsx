@@ -33,6 +33,7 @@ import {
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
+import { useExchangeRateStore } from './features/exchange/stores/exchangeRateStore';
 import { NotificationBell } from './common/components/NotificationBell';
 import { useSystemNotifications } from './features/gastos/hooks/useSystemNotifications';
 
@@ -96,6 +97,16 @@ function useSyncModuleFromRoute() {
   return 'dashboard';
 }
 
+function RateBadgeMobile() {
+  const rate = useExchangeRateStore((s) => s.rate);
+  if (!rate) return null;
+  return (
+    <span className="md:hidden text-xs text-success font-semibold whitespace-nowrap px-1.5 py-0.5 bg-success/10 rounded">
+      ${rate.toFixed(2)}
+    </span>
+  );
+}
+
 function DashboardLayout() {
   const session = useAuthStore((s) => s.session);
   const selectedTenantSlug = useAuthStore((s) => s.selectedTenantSlug);
@@ -157,6 +168,7 @@ function DashboardLayout() {
             Sasa
           </Button>
           {role && <Badge variant="success">{role}</Badge>}
+          {effectiveTenantId && <RateBadgeMobile />}
           {role && role !== 'employee' && <NotificationBell />}
         </>
       }

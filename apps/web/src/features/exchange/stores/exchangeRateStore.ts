@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import type { ExchangeRateState } from '../types';
 import { exchangeRateService } from '../services/exchangeRateService';
 
@@ -50,6 +51,7 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set) => ({
         fetchedAt: result.data.fetched_at ?? new Date().toISOString(),
         isUpdating: false,
       });
+      EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { rate: result.data.rate, source: result.data.source });
     } else {
       set({ isUpdating: false, error: result.error.message });
     }
@@ -67,6 +69,7 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set) => ({
         fetchedAt: result.data.fetched_at ?? new Date().toISOString(),
         isUpdating: false,
       });
+      EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { rate: result.data.rate, source: result.data.source });
     } else {
       set({ isUpdating: false, error: result.error.message });
     }
