@@ -94,6 +94,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     const allItems = await db.saleItems
       .where('saleId')
       .anyOf(saleIds)
+      .filter((i) => !i.deletedAt)
       .toArray();
 
     // Si hay ventas pero NO hay items, es una race condition de sync
@@ -183,6 +184,34 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
 function calcItemCostBs(quantity: number, costUsdPerUnit: number | undefined, exchangeRate: number): number {
   if (!costUsdPerUnit || costUsdPerUnit <= 0) return 0;
   return preciseRound(quantity * costUsdPerUnit * exchangeRate, 2);
+}
+
+/** Busca la tasa de cambio activa más cercana a una fecha dada */
+async function getRateForDate(tenantId: string, date: string): Promise<number> {
+  const db = getDb();
+  const rates = await db.exchangeRates
+    .where('tenantId')
+    .equals(tenantId)
+    .filter((r) => r.createdAt <= date)
+    .toArray();
+
+  if (rates.length > 0) {
+    rates.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return rates[0].rate;
+  }
+
+  // Fallback: la tasa más reciente disponible
+  const allRates = await db.exchangeRates
+    .where('tenantId')
+    .equals(tenantId)
+    .toArray();
+
+  if (allRates.length > 0) {
+    allRates.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return allRates[0].rate;
+  }
+
+  return 0;
 }
 
 export const reportsService = {
@@ -648,26 +677,22 @@ export const reportsService = {
       const nsProductIds = new Set(nsProducts.map((p) => p.id));
       const lots = await db.inventoryLots
         .where({ tenantId })
-        .filter((l) => l.createdAt >= start && l.createdAt <= end)
+        .filter((l) => !l.deletedAt && l.createdAt >= start && l.createdAt <= end)
         .toArray();
 
       let totalUsd = 0;
+      let totalBs = 0;
       for (const lot of lots) {
         if (!nsProductIds.has(lot.productId)) continue;
         const cost = lot.costUsdPerUnit ?? 0;
-        totalUsd += lot.quantityAdded * cost;
+        const lotUsd = lot.quantityAdded * cost;
+        totalUsd += lotUsd;
+
+        const rate = await getRateForDate(tenantId, lot.createdAt);
+        if (rate > 0) totalBs += lotUsd * rate;
       }
       totalUsd = preciseRound(totalUsd, 2);
-
-      // Get exchange rate for the period from the exchangeRates table
-      const nsExchangeRates = await db.exchangeRates
-        .where('tenantId')
-        .equals(tenantId)
-        .reverse()
-        .sortBy('createdAt');
-      const nsPeriodRate = nsExchangeRates.length > 0 ? nsExchangeRates[0].rate : 0;
-
-      const totalBs = nsPeriodRate > 0 ? preciseRound(totalUsd * nsPeriodRate, 2) : 0;
+      totalBs = preciseRound(totalBs, 2);
 
       return success({ totalUsd, totalBs });
     } catch (err) {
@@ -693,37 +718,36 @@ export const reportsService = {
         .toArray();
 
       const LOSING_REASONS = ['perdida', 'robo', 'vencido', 'consumo_interno', 'otros'] as const;
-      const byReason: Record<string, { totalUsd: number; count: number }> = {};
+      const byReason: Record<string, { totalUsd: number; totalBs: number; count: number }> = {};
       for (const reason of LOSING_REASONS) {
-        byReason[reason] = { totalUsd: 0, count: 0 };
+        byReason[reason] = { totalUsd: 0, totalBs: 0, count: 0 };
       }
 
+      let totalBs = 0;
       let totalUsd = 0;
       for (const mov of movements) {
         const reason = mov.reasonType ?? 'otros';
-        if (!byReason[reason]) byReason[reason] = { totalUsd: 0, count: 0 };
+        if (!byReason[reason]) byReason[reason] = { totalUsd: 0, totalBs: 0, count: 0 };
         byReason[reason].totalUsd += mov.costUsd!;
         byReason[reason].count += 1;
         totalUsd += mov.costUsd!;
+
+        const rate = await getRateForDate(tenantId, mov.createdAt);
+        if (rate > 0) {
+          const movBs = preciseRound(mov.costUsd! * rate, 2);
+          byReason[reason].totalBs += movBs;
+          totalBs += movBs;
+        }
       }
       totalUsd = preciseRound(totalUsd, 2);
-
-      // Get exchange rate for the period from the exchangeRates table
-      const adjExchangeRates = await db.exchangeRates
-        .where('tenantId')
-        .equals(tenantId)
-        .reverse()
-        .sortBy('createdAt');
-      const adjPeriodRate = adjExchangeRates.length > 0 ? adjExchangeRates[0].rate : 0;
-
-      const totalBs = adjPeriodRate > 0 ? preciseRound(totalUsd * adjPeriodRate, 2) : 0;
+      totalBs = preciseRound(totalBs, 2);
 
       return success({
-        perdida: byReason['perdida'],
-        robo: byReason['robo'],
-        vencido: byReason['vencido'],
-        consumo_interno: byReason['consumo_interno'],
-        otros: byReason['otros'],
+        perdida: { totalUsd: byReason['perdida'].totalUsd, count: byReason['perdida'].count },
+        robo: { totalUsd: byReason['robo'].totalUsd, count: byReason['robo'].count },
+        vencido: { totalUsd: byReason['vencido'].totalUsd, count: byReason['vencido'].count },
+        consumo_interno: { totalUsd: byReason['consumo_interno'].totalUsd, count: byReason['consumo_interno'].count },
+        otros: { totalUsd: byReason['otros'].totalUsd, count: byReason['otros'].count },
         totalUsd,
         totalBs,
       });
@@ -773,16 +797,6 @@ export const reportsService = {
         }
       }
 
-      const db = getDb();
-      const periodSales = await db.sales
-        .where('[tenantId+createdAt]')
-        .between([tenantId, start], [tenantId, end])
-        .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
-        .toArray();
-      const avgRate = periodSales.length > 0
-        ? periodSales.reduce((sum, s) => sum + s.exchangeRate, 0) / periodSales.length
-        : 0;
-
       const items: ExpenseBreakdownItem[] = [];
 
       if (totalCostUsd > 0) {
@@ -817,10 +831,11 @@ export const reportsService = {
         for (const [reason, val] of Object.entries(reasons)) {
           if (reason === 'totalUsd' || reason === 'totalBs') continue;
           if (val.count > 0) {
+            const ratio = adjResult.data.totalUsd > 0 ? val.totalUsd / adjResult.data.totalUsd : 0;
             items.push({
               type: reason,
               label: REASON_LABELS[reason] ?? reason,
-              amountBs: avgRate > 0 ? preciseRound(val.totalUsd * avgRate, 2) : 0,
+              amountBs: ratio > 0 ? preciseRound(ratio * adjResult.data.totalBs, 2) : 0,
               amountUsd: val.totalUsd,
             });
           }
