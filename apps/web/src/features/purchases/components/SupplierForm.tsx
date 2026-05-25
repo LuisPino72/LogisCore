@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Truck, Phone, Building2 } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
+import { sanitizeValue } from '../../../lib/validation';
 import type { CreateSupplierInput, Supplier } from '../../../specs/purchases';
 
 interface SupplierFormProps {
@@ -101,7 +102,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
               placeholder="Ej: 0412-1234567"
       value={phone}
       sanitize="phone"
-      onChange={(e) => setPhone(e.target.value)}
+      onChange={(e) => setPhone(sanitizeValue(e.target.value, 'phone'))}
       validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
       hint="Formato: 04121234567"
               inputClassName="text-sm pl-10"
