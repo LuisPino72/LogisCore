@@ -26,7 +26,11 @@ function resetMockDb() {
     filter: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])), count: vi.fn(() => Promise.resolve(0)) })),
   });
   mockDb.productPresentations.where.mockReturnValue({
-    filter: vi.fn(() => ({ sortBy: vi.fn(() => Promise.resolve([])), toArray: vi.fn(() => Promise.resolve([])) })),
+    filter: vi.fn(() => ({
+      sortBy: vi.fn(() => Promise.resolve([])),
+      toArray: vi.fn(() => Promise.resolve([])),
+      first: vi.fn(() => Promise.resolve(undefined)),
+    })),
   });
   mockDb.inventoryMovements.where.mockReturnValue({
     filter: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])) })),
@@ -227,8 +231,9 @@ describe('PRES-004: Soft delete producto en cascada con presentaciones', () => {
       { id: 'pres-1', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 1', priceUsd: 12, unitMultiplier: 1, stockType: 'independent' as const, childProductId: 'child-1', sortOrder: 0, createdAt: 'now', updatedAt: 'now' },
       { id: 'pres-2', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 2', priceUsd: 12, unitMultiplier: 1, stockType: 'independent' as const, childProductId: 'child-2', sortOrder: 1, createdAt: 'now', updatedAt: 'now' },
     ];
+    const presChain = vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve(pres)), first: vi.fn(() => Promise.resolve(undefined)) }));
     mockDb.productPresentations.where.mockReturnValue({
-      filter: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve(pres)) })),
+      filter: presChain,
     });
     mockDb.products.get.mockImplementation((id: string) => {
       if (id === PARENT_ID) return Promise.resolve(parent);
