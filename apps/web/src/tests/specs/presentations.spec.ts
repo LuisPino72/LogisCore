@@ -53,6 +53,14 @@ vi.mock('../../services/network/requireNetwork', () => ({
   requireNetwork: () => true,
 }));
 
+vi.mock('../../services/imageCache/imageCacheService', () => ({
+  imageCacheService: {
+    uploadProductImage: vi.fn(() => Promise.resolve({ ok: true, data: { url: '' } })),
+    getCachedUrl: vi.fn(),
+    cacheImage: vi.fn(),
+  },
+}));
+
 vi.mock('../../services/supabase/client', () => ({
   supabase: {
     from: vi.fn(() => ({ select: vi.fn(() => ({ eq: vi.fn(() => ({ is: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: { id: 'test-tenant-uuid' }, error: null })) })) })) })) })),
@@ -290,7 +298,7 @@ describe('PRES-008: Schemas Zod validan presentaciones', () => {
   it('Given: PresentationSchema. When: validar data valida. Then: ok', async () => {
     const { PresentationSchema } = await import('../../specs/inventory/index');
     const result = PresentationSchema.safeParse({
-      productId: 'uuid-test-1234',
+      productId: '550e8400-e29b-41d4-a716-446655440000',
       name: 'Pack 6',
       priceUsd: 12,
       unitMultiplier: 6,
@@ -303,7 +311,7 @@ describe('PRES-008: Schemas Zod validan presentaciones', () => {
   it('Given: PresentationSchema. When: nombre vacio. Then: error', async () => {
     const { PresentationSchema } = await import('../../specs/inventory/index');
     const result = PresentationSchema.safeParse({
-      productId: 'uuid-test-1234',
+      productId: '550e8400-e29b-41d4-a716-446655440000',
       name: '',
       priceUsd: 12,
       unitMultiplier: 6,
@@ -316,7 +324,7 @@ describe('PRES-008: Schemas Zod validan presentaciones', () => {
   it('Given: PresentationSchema. When: precio 0. Then: error', async () => {
     const { PresentationSchema } = await import('../../specs/inventory/index');
     const result = PresentationSchema.safeParse({
-      productId: 'uuid-test-1234',
+      productId: '550e8400-e29b-41d4-a716-446655440000',
       name: 'Pack 6',
       priceUsd: 0,
       unitMultiplier: 6,
@@ -331,7 +339,8 @@ describe('PRES-009: Codigos de error de presentaciones', () => {
   it('Given: inventory errors. When: verificar PRESENTATION_ codes. Then: existen y son descriptivos', async () => {
     const { InventoryErrors } = await import('../../specs/inventory/errors');
     expect(InventoryErrors.PRESENTATION_NOT_FOUND).toBe('PRESENTATION_NOT_FOUND');
-    expect(InventoryErrors.PRESENTATION_INVALID_MULTIPLIER).toBe('PRESENTATION_INVALID_MULTIPLIER');
-    expect(InventoryErrors.PRESENTATION_DUPLICATE_NAME).toBe('PRESENTATION_DUPLICATE_NAME');
+    expect(InventoryErrors.PRESENTATION_MULTIPLIER_INVALID).toBe('PRESENTATION_MULTIPLIER_INVALID');
+    expect(InventoryErrors.PRESENTATION_NAME_REQUIRED).toBe('PRESENTATION_NAME_REQUIRED');
+    expect(InventoryErrors.PRESENTATION_PRICE_INVALID).toBe('PRESENTATION_PRICE_INVALID');
   });
 });
