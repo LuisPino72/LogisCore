@@ -1,7 +1,7 @@
 import { forwardRef, useState, type ReactNode, type ChangeEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { validateValue, type ValidationRule } from '../../lib/validation';
+import { validateValue, sanitizeValue, type ValidationRule } from '../../lib/validation';
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   label?: string;
@@ -48,15 +48,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   const isPassword = props.type === 'password';
   const effectiveType = showPassword && isPassword ? (visible ? 'text' : 'password') : props.type;
 
+  const getSanitized = (v: string) => sanitizeValue(v, sanitize, { decimals, allowNegative });
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (validation && touched) {
+      const err = validateValue(getSanitized(e.target.value), validation);
+      setInternalError(err);
+      onValidate?.(err);
+    }
     onChange?.(e);
   };
-
 
   const handleBlur = () => {
     setTouched(true);
     if (validation && typeof value === 'string') {
-      const err = validateValue(value, validation);
+      const err = validateValue(getSanitized(value), validation);
       setInternalError(err);
       onValidate?.(err);
     }
@@ -109,7 +115,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
               inputClassName
             )}
             maxLength={validation?.maxLength}
-            value={value}
+            value={typeof value === 'string' ? getSanitized(value) : value}
             onChange={handleChange}
             onBlur={handleBlur}
           />
