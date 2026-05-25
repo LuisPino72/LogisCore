@@ -13,7 +13,7 @@ async function checkLowStock(tenantId: string): Promise<void> {
       .toArray();
 
     for (const product of lowStock) {
-      useNotificationStore.getState().addNotification({
+      await useNotificationStore.getState().addNotification({
         type: 'low_stock',
         title: 'Stock crítico',
         message: `${product.name} — ${product.stock} ${product.unit} (mín: ${product.stockMin})`,
@@ -38,7 +38,7 @@ async function checkOpenRegister(tenantId: string): Promise<void> {
       .first();
 
     if (openReg) {
-      useNotificationStore.getState().addNotification({
+      await useNotificationStore.getState().addNotification({
         type: 'open_register',
         title: 'Caja abierta',
         message: `Hay una caja abierta desde las ${new Date(openReg.openedAt!).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}. Ciérrala antes de irte.`,
@@ -55,6 +55,13 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
   useEffect(() => {
     if (!tenantId || !role || role === 'employee') return;
 
+    const store = useNotificationStore.getState();
+    store.setTenantId(tenantId);
+
+    if (!store.loaded) {
+      store.loadNotifications(tenantId);
+    }
+
     checkLowStock(tenantId);
     checkOpenRegister(tenantId);
 
@@ -63,7 +70,7 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
       if (!data.saleId || notifiedSales.current.has(data.saleId)) return;
       notifiedSales.current.add(data.saleId);
 
-      useNotificationStore.getState().addNotification({
+      store.addNotification({
         type: 'sale_voided',
         title: 'Venta anulada',
         message: `Se anuló la venta #${data.saleId.slice(0, 8)}`,

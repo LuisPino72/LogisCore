@@ -2,6 +2,7 @@ import { type Result, success, failure, AppError } from '@logiscore/core';
 import { getDb, type DexieExpense } from '../../../services/dexie/db';
 import { preciseRound, generateId } from '@logiscore/shared';
 import type { Gasto, CreateGastoInput, UpdateGastoInput } from '../types';
+import { useNotificationStore } from '../../../stores/notificationStore';
 
 function mapExpense(e: DexieExpense): Gasto {
   return {
@@ -232,8 +233,9 @@ export const gastosService = {
         .toArray();
 
       for (const tpl of remindingTemplates) {
-        const { useNotificationStore } = await import('../../../stores/notificationStore');
-        useNotificationStore.getState().addNotification({
+        const store = useNotificationStore.getState();
+        store.setTenantId(tenantId);
+        await store.addNotification({
           type: 'recurring_expense_reminder',
           title: 'Gasto recurrente próximo',
           message: `${tpl.category} - ${tpl.description || 'Sin descripción'} vence mañana`,

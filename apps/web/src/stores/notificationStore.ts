@@ -1,8 +1,9 @@
 import { create } from 'zustand';
+import { notificationService } from '../services/notifications/notificationService';
 
 export interface AppNotification {
   id: string;
-  type: 'recurring_expense_reminder' | string;
+  type: string;
   title: string;
   message: string;
   actionLabel?: string;
@@ -13,36 +14,61 @@ export interface AppNotification {
 
 interface NotificationState {
   notifications: AppNotification[];
-  addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => void;
-  markAsRead: (id: string) => void;
-  dismissNotification: (id: string) => void;
-  clearAll: () => void;
+  loaded: boolean;
+  tenantId: string | null;
+  setTenantId: (id: string) => void;
+  loadNotifications: (tenantId: string) => Promise<void>;
+  addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  dismissNotification: (id: string) => Promise<void>;
+  clearAll: () => Promise<void>;
   unreadCount: () => number;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
-  addNotification: (n) => {
-    const id = crypto.randomUUID();
-    set((s) => ({
-      notifications: [
-        { ...n, id, createdAt: new Date().toISOString(), read: false },
-        ...s.notifications,
-      ],
-    }));
+  loaded: false,
+  tenantId: null,
+
+  setTenantId: (id) => set({ tenantId: id }),
+
+  loadNotifications: async (tenantId) => {
+    const result = await notificationService.loadNotifications(tenantId);
+    if (result.ok) {
+      set({ notifications: result.data, loaded: true, tenantId });
+    }
   },
-  markAsRead: (id) => {
+
+  addNotification: async (n) => {
+    const { tenantId } = get();
+    if (!tenantId) return;
+    const result = await notificationService.addNotification({ ...n, tenantId });
+    if (result.ok) {
+      set((s) => ({ notifications: [result.data, ...s.notifications] }));
+    }
+  },
+
+  markAsRead: async (id) => {
+    await notificationService.markAsRead(id);
     set((s) => ({
       notifications: s.notifications.map((n) =>
         n.id === id ? { ...n, read: true } : n
       ),
     }));
   },
-  dismissNotification: (id) => {
+
+  dismissNotification: async (id) => {
+    await notificationService.dismissNotification(id);
     set((s) => ({
       notifications: s.notifications.filter((n) => n.id !== id),
     }));
   },
-  clearAll: () => set({ notifications: [] }),
+
+  clearAll: async () => {
+    const { tenantId } = get();
+    if (tenantId) await notificationService.clearAll(tenantId);
+    set({ notifications: [] });
+  },
+
   unreadCount: () => get().notifications.filter((n) => !n.read).length,
 }));

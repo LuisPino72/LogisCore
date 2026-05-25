@@ -226,6 +226,19 @@ export interface DexiePurchaseOrderItem {
   deletedAt?: string;
 }
 
+export interface DexieNotification {
+  id: string;
+  tenantId: string;
+  type: string;
+  title: string;
+  message: string;
+  actionLabel?: string;
+  actionPayload?: string;
+  read: boolean;
+  createdAt: string;
+  deletedAt?: string;
+}
+
 export interface DexieExpense {
   id: string;
   tenantId: string;
@@ -267,11 +280,12 @@ export class LogisCoreDB extends Dexie {
   purchaseOrderItems!: Table<DexiePurchaseOrderItem, string>;
   exchangeRates!: Table<DexieExchangeRate, string>;
   auditEntries!: Table<DexieAuditEntry, number>;
+  notifications!: Table<DexieNotification, string>;
   expenses!: Table<DexieExpense, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(14).stores({
+    this.version(15).stores({
       expenses: 'id, tenantId, category, date, status, nextDueDate, isRecurring, parentExpenseId, [tenantId+date], [tenantId+status], [tenantId+deletedAt], [tenantId+isRecurring]',
       exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
@@ -293,6 +307,7 @@ export class LogisCoreDB extends Dexie {
       purchaseOrders: 'id, tenantId, supplierId, status, [tenantId+status], [tenantId+deletedAt]',
       purchaseOrderItems: 'id, orderId, productId, [orderId]',
       auditEntries: '++id, eventName, status, createdAt, [status+createdAt]',
+      notifications: 'id, tenantId, type, read, createdAt, [tenantId+read], [tenantId+deletedAt]',
     });
   }
 }
