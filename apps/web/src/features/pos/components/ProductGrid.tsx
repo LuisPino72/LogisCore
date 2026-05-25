@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from 'react';
 import { SearchInput, EmptyState, Skeleton, Modal, Button, Pagination } from '../../../common/components';
 import { Package, ListTree } from 'lucide-react';
 import { ProductCard } from './ProductCard';
+import { useFuzzySearch } from '@/lib/useFuzzySearch';
 import type { Product } from '../../../specs/inventory';
 import type { Category } from '../../../specs/inventory';
 import type { UserRole } from '@logiscore/core';
@@ -47,13 +48,14 @@ export const ProductGrid = memo(function ProductGrid({
     setPage(1);
   }, [searchQuery, selectedCategory]);
 
+  const fuzzyResults = useFuzzySearch(products, searchQuery, {
+    keys: ['name', 'sku'],
+    threshold: 0.4,
+    minMatchCharLength: 2,
+  });
+
   let filtered = searchQuery
-    ? products.filter(
-        (p) =>
-          (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.sku.toLowerCase().includes(searchQuery.toLowerCase())) &&
-          p.stock > 0,
-      )
+    ? fuzzyResults.filter((p) => p.stock > 0)
     : products.filter((p) => p.stock > 0);
 
   if (selectedCategory) {

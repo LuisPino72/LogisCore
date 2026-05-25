@@ -127,8 +127,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <Button variant="ghost" fullWidth onClick={handleClose}>
             Cancelar
           </Button>
-          <Button variant="primary" fullWidth onClick={formSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : presentations.length > 0 ? 'Crear con presentaciones' : 'Crear producto'}
+          <Button variant="primary" fullWidth onClick={formSubmit} loading={isSubmitting}>
+            {isEditing ? 'Guardar cambios' : presentations.length > 0 ? 'Crear con presentaciones' : 'Crear producto'}
           </Button>
         </div>
       }
@@ -497,8 +497,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowCreateCategory(false)}>Cancelar</Button>
-            <Button variant="primary" onClick={handleCreateCategory} disabled={categorySubmitting}>
-              {categorySubmitting ? 'Creando...' : 'Crear'}
+            <Button variant="primary" onClick={handleCreateCategory} loading={categorySubmitting}>
+              Crear
             </Button>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, Mor
 import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
+import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
 import type { Product, Category, TabState, StockFilter, PresentationWithProduct } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
@@ -96,15 +97,17 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
     { value: 'out_of_stock', label: 'Sin stock' },
   ];
 
+  const fuzzyResults = useProductFuzzySearch(products, searchQuery);
+
   const filteredByStock = useMemo(() => {
-    let result = products;
+    let result = searchQuery ? fuzzyResults : products;
 
     if (productScope === 'parents_only' && allPresentationChildIds) {
       result = result.filter((p) => !allPresentationChildIds.has(p.id));
     }
 
     return result.filter((p) => applyStockFilter(p, stockFilter));
-  }, [products, stockFilter, productScope, allPresentationChildIds]);
+  }, [searchQuery, fuzzyResults, products, stockFilter, productScope, allPresentationChildIds]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [

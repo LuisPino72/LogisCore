@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { preciseRound } from '@logiscore/shared';
 import type { PosState, PaymentMethod, ParkedCart, PresentationSelection } from '../types';
 import type { Product } from '../../../specs/inventory';
@@ -56,8 +57,10 @@ const initialState: PosState = {
   discount: null,
 };
 
-export const usePosStore = create<PosStore>((set, get) => ({
-  ...initialState,
+export const usePosStore = create<PosStore>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
 
   setSearchQuery: (query) => set({ searchQuery: query }),
 
@@ -441,4 +444,15 @@ export const usePosStore = create<PosStore>((set, get) => ({
   },
 
   reset: () => set(initialState),
-}));
+    }),
+    {
+      name: 'logiscore-pos-cart',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        cart: state.cart,
+        activeParkedCartId: state.activeParkedCartId,
+        discount: state.discount,
+      }),
+    },
+  ),
+);
