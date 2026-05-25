@@ -107,11 +107,12 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             value={createForm.tenant.rif}
             sanitize="rif"
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: e.target.value } }))}
-            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 10 }}
+            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 12 }}
           />
           <Input
             placeholder="Teléfono (04121234567)"
             value={createForm.tenant.telefono}
+            sanitize="phone"
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: e.target.value } }))}
             validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
           />

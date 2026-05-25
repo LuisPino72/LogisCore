@@ -14,7 +14,7 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
   inputClassName?: string;
   validation?: ValidationRule;
   onValidate?: (error: string | null) => void;
-  sanitize?: 'number' | 'currency' | 'rif' | 'none';
+  sanitize?: 'number' | 'currency' | 'rif' | 'phone' | 'none';
   decimals?: number;
   allowNegative?: boolean;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -58,6 +58,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       if (rawValue.length > 1 && !/[VJEGP]/.test(rawValue[0])) {
         rawValue = rawValue.slice(1);
       }
+    } else if (sanitize === 'phone') {
+      rawValue = rawValue.replace(/\D/g, '');
     }
 
     if (validation?.maxLength && rawValue.length > validation.maxLength) {
