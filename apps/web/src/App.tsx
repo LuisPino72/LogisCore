@@ -47,9 +47,9 @@ const GastosPage = lazy(() => import('./features/gastos').then((m) => ({ default
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
-  { id: 'gastos', label: 'Gastos', icon: <Receipt size={20} /> },
   { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
   { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
+  { id: 'gastos', label: 'Gastos', icon: <Receipt size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
 ];
 
