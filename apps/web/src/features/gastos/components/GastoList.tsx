@@ -30,7 +30,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggleStatus }: GastoListProps) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
 
   const sorted = [...gastos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -48,8 +48,8 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
     return (
       <EmptyState
         icon={<Receipt size={32} />}
-        title="Sin gastos"
-        description="No hay gastos registrados para este período."
+        title="Todavía no hay gastos"
+        description="Lleva el control de tus gastos fijos y variables del negocio."
       />
     );
   }
@@ -66,6 +66,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
               <th className="py-3 px-3 font-semibold">Fecha</th>
               <th className="py-3 px-3 font-semibold">Estado</th>
               <th className="py-3 px-3 font-semibold text-center">Recurrente</th>
+              <th className="py-3 px-3 font-semibold">Descripción</th>
               <th className="py-3 px-3 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
@@ -87,6 +88,9 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
                   ) : (
                     <span className="text-xs text-text-secondary">—</span>
                   )}
+                </td>
+                <td className="py-3 px-3 max-w-[200px]">
+                  <span className="text-xs text-text-secondary truncate block">{gasto.description || '—'}</span>
                 </td>
                 <td className="py-3 px-3">
                   <div className="flex items-center justify-end gap-1">
@@ -112,7 +116,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
                         </button>
                         <button
                           type="button"
-                          onClick={() => setDeleteId(gasto.id)}
+                          onClick={() => setDeleteTarget({ id: gasto.id, category: gasto.category })}
                           className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors"
                           title="Eliminar"
                         >
@@ -170,7 +174,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
                   <Button variant="ghost" size="sm" onClick={() => onEdit(gasto)}>
                     <Edit2 size="14" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setDeleteId(gasto.id)} className="text-danger">
+                  <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: gasto.id, category: gasto.category })} className="text-danger">
                     <Trash2 size="14" />
                   </Button>
                 </>
@@ -180,23 +184,23 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
         ))}
       </div>
 
-      {deleteId && (
-        <Modal isOpen={true} onClose={() => setDeleteId(null)} title="Eliminar gasto">
+      {deleteTarget && (
+        <Modal isOpen={true} onClose={() => setDeleteTarget(null)} title="Eliminar gasto">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
                 <AlertCircle size={20} className="text-danger" />
               </div>
               <div>
-                <p className="text-sm font-semibold">¿Eliminar este gasto?</p>
+                <p className="text-sm font-semibold">¿Eliminar gasto de {deleteTarget.category}?</p>
                 <p className="text-xs text-gray-500">El gasto se ocultará de la lista.</p>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
-              <Button variant="ghost" fullWidth onClick={() => setDeleteId(null)}>
+              <Button variant="ghost" fullWidth onClick={() => setDeleteTarget(null)}>
                 Cancelar
               </Button>
-              <Button variant="danger" fullWidth onClick={() => { onDelete(deleteId); setDeleteId(null); }}>
+              <Button variant="danger" fullWidth onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }}>
                 Eliminar
               </Button>
             </div>

@@ -104,7 +104,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
         <Card>
           <div className="p-8 text-center text-text-secondary">
             <Receipt size={48} className="mx-auto mb-3 opacity-40" />
-            <p className="text-sm font-medium">Selecciona un tenant para gestionar gastos</p>
+            <p className="text-sm font-medium">Selecciona un pasivo para gestionar gastos</p>
           </div>
         </Card>
       </div>
