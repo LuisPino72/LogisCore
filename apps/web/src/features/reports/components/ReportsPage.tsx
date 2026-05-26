@@ -1,7 +1,7 @@
 import { useState, Suspense, lazy, useRef, useCallback } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip, DrillDownModal } from '@/common/components';
 import type { Column } from '@/common/components';
-import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan } from 'lucide-react';
+import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { useToastStore } from '../../../stores/toastStore';
@@ -548,11 +548,16 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
 
       {isGeneratingPdf && (
         <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-xl border border-gray-100">
-            <Spinner size="lg" />
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-2xl border border-gray-100 animate-slide-down">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+              <Printer size={28} className="text-primary" />
+            </div>
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-900">Generando PDF</p>
               <p className="text-xs text-text-secondary mt-1">Esto puede tomar unos segundos...</p>
+            </div>
+            <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full animate-shimmer" style={{ width: '40%', backgroundSize: '200px 100%' }} />
             </div>
           </div>
         </div>
