@@ -185,8 +185,8 @@ export const ProductGrid = memo(function ProductGrid({
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Package size={40} />}
-          title="Sin productos"
-          description={searchQuery || selectedCategory ? 'No se encontraron resultados.' : role === 'employee' ? 'No hay productos disponibles.' : 'Agrega productos desde el módulo de Inventario.'}
+          title={searchQuery || selectedCategory ? 'Sin resultados' : 'Aún no hay productos'}
+          description={searchQuery || selectedCategory ? 'No encontramos productos con ese nombre o categoría.' : role === 'employee' ? 'No hay productos disponibles para la venta.' : 'Agrega productos desde el módulo de Inventario para empezar a vender.'}
           action={!searchQuery && !selectedCategory && role !== 'employee' ? (
             <Button variant="primary" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { module: 'inventory' } }))}>
               Ir a Inventario

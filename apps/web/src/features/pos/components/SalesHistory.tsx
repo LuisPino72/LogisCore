@@ -157,8 +157,8 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         <div className="flex-1 flex items-center justify-center">
           <EmptyState
             icon={<Calendar size={40} />}
-            title="Sin ventas"
-            description={startDate || endDate ? 'No hay ventas en este rango de fechas.' : 'Aún no hay ventas registradas.'}
+            title={startDate || endDate ? 'Sin ventas en este período' : 'Aún no hay ventas'}
+            description={startDate || endDate ? 'No se encontraron ventas en las fechas seleccionadas. Intenta con otro rango.' : 'Cuando realices tu primera venta, aparecerá aquí.'}
           />
         </div>
       ) : (

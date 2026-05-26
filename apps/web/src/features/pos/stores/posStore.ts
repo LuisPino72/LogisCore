@@ -200,6 +200,7 @@ export const usePosStore = create<PosStore>()(
 
   addToCart: (product, quantity, presentation?) => {
     const { cart } = get();
+    set({ error: null });
 
     if (presentation) {
       // Global Stock Validation for shared mode
@@ -376,11 +377,16 @@ export const usePosStore = create<PosStore>()(
     }
 
     let exchangeRate = cachedRate ?? 0;
-    if (!exchangeRate) {
+    if (!exchangeRate || exchangeRate <= 0) {
       const exchangeRateResult = await exchangeRateService.fetchLatest(tenantId);
       if (exchangeRateResult.ok && exchangeRateResult.data?.rate) {
         exchangeRate = exchangeRateResult.data.rate;
       }
+    }
+
+    if (!exchangeRate || exchangeRate <= 0) {
+      set({ error: 'No hay tasa de cambio disponible. Configúrala antes de vender.', loading: false });
+      return false;
     }
 
     const { discount } = get();

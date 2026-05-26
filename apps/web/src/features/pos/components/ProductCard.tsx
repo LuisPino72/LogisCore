@@ -27,17 +27,18 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
     ? (product.unit === 'kg' || product.unit === 'lt' ? product.stock / 1000 : product.stock)
     : product.stock;
   const isLowStock = stockInDisplay <= (product.stockMin ?? 5);
+  const isOutOfStock = stockInDisplay <= 0;
 
   return (
     <Card
-      interactive
-      onClick={() => onAdd(product)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(product); } }}
+      interactive={!isOutOfStock}
+      onClick={() => !isOutOfStock && onAdd(product)}
+      onKeyDown={(e) => { if (!isOutOfStock && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onAdd(product); } }}
       role="button"
-      tabIndex={0}
-      aria-label={`Agregar ${product.name} al carrito`}
+      tabIndex={isOutOfStock ? -1 : 0}
+      aria-label={isOutOfStock ? `${product.name} sin stock` : `Agregar ${product.name} al carrito`}
       bodyClassName="p-0"
-      className="relative flex flex-col gap-0 overflow-hidden active:scale-[0.97] transition-transform"
+      className={`relative flex flex-col gap-0 overflow-hidden transition-transform ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.97] cursor-pointer'}`}
     >
       <button
         type="button"
@@ -79,6 +80,14 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
           <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-accent/85 text-white text-[10px] font-semibold leading-none z-10 shadow-xs">
             {product.unit}
           </span>
+        )}
+
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+            <span className="px-2.5 py-1 rounded-lg bg-gray-900/70 text-white text-xs font-semibold shadow-sm">
+              Sin stock
+            </span>
+          </div>
         )}
       </div>
 

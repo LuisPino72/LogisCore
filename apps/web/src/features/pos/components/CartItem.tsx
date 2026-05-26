@@ -2,8 +2,9 @@ import { memo, useState, useRef, useCallback } from 'react';
 import { Button, Input } from '../../../common/components';
 import { Trash2, Minus, Plus } from 'lucide-react';
 import type { CartItem } from '../types';
-import { formatUsd } from '@/lib/formatBs';
+import { formatUsd, formatBs } from '@/lib/formatBs';
 import { preciseRound } from '@logiscore/shared';
+import { usePosStore } from '../stores/posStore';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -23,6 +24,8 @@ function getAcceleration(elapsed: number): { mult: number; interval: number } {
 export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
   const step = item.isWeighted ? 0.01 : 1;
   const decimals = item.isWeighted ? 2 : 0;
+  const exchangeRate = usePosStore((s) => s.exchangeRate);
+  const priceBs = exchangeRate && exchangeRate > 0 ? formatBs(item.totalPriceUsd * exchangeRate) : null;
 
   const [localQty, setLocalQty] = useState<string | null>(null);
   const [isRepeating, setIsRepeating] = useState<'plus' | 'minus' | null>(null);
@@ -108,7 +111,10 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
             <span className="text-[11px] text-text-muted">{item.presentationName}</span>
           )}
         </div>
-        <p className="text-sm font-semibold text-gray-900 shrink-0">{formatUsd(item.totalPriceUsd)}</p>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-semibold text-gray-900">{formatUsd(item.totalPriceUsd)}</p>
+          {priceBs && <p className="text-[10px] text-text-muted">{priceBs}</p>}
+        </div>
       </div>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-500 shrink-0">

@@ -105,12 +105,15 @@ export function usePos(tenantId: string | null) {
     return () => subs.forEach((s) => EventBus.off(s));
   }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate]);
 
+  const searchRef = useRef(0);
+
   const search = useCallback(
     (query: string) => {
       setSearchQuery(query);
       if (searchTimer.current) clearTimeout(searchTimer.current);
+      const seq = ++searchRef.current;
       searchTimer.current = setTimeout(() => {
-        if (tenantId) fetchProducts(tenantId);
+        if (tenantId && searchRef.current === seq) fetchProducts(tenantId);
       }, 300);
     },
     [tenantId, setSearchQuery, fetchProducts],

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosStore } from '../stores/posStore';
 import { useCashRegister } from '../hooks/useCashRegister';
@@ -23,6 +23,9 @@ import { inventoryService } from '../../inventory/services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
 import { isSameDayVzla } from '../../../lib/date';
+import { preciseRound } from '@logiscore/shared';
+import { METADATA_PAGOS } from '../../../specs/sales';
+import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface PosPageProps {
   tenantId: string | null;
@@ -63,9 +66,21 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [verifyCounts, setVerifyCounts] = useState({ sold: 0, lowStock: 0 });
   const [cashError, setCashError] = useState<string | null>(null);
   const [selectedProductForPres, setSelectedProductForPres] = useState<Product | null>(null);
+  const [completedSale, setCompletedSale] = useState<{ totalUsd: number; totalBs: number; paymentMethod: PaymentMethod } | null>(null);
 
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
+
+  // Confirmar si el usuario intenta recargar con productos en el carrito
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (cart.length > 0) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [cart.length]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -113,10 +128,12 @@ export function PosPage({ tenantId }: PosPageProps) {
     try {
       const ok = await completeSale(tenantId, paymentMethod, userId);
       if (ok) {
+        const totalUsd = cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
+        const totalBs = exchangeRateBs > 0 ? preciseRound(totalUsd * exchangeRateBs, 2) : 0;
+        setCompletedSale({ totalUsd, totalBs, paymentMethod });
         setPaymentMethod(null);
         clearCart();
         setMobileCartOpen(false);
-        addToast({ type: 'success', message: 'Venta completada exitosamente.', duration: 4000 });
       } else {
         const store = usePosStore.getState();
         addToast({ type: 'error', message: store.error || 'Error al completar la venta.', duration: 5000 });
@@ -536,6 +553,29 @@ export function PosPage({ tenantId }: PosPageProps) {
         onClose={() => setShowBarcodeScanner(false)}
         onScan={handleBarcodeScan}
       />
+
+      <Modal
+        isOpen={completedSale !== null}
+        onClose={() => setCompletedSale(null)}
+        title="Venta completada"
+        size="sm"
+      >
+        {completedSale && (
+          <div className="flex flex-col items-center gap-4 py-2">
+            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
+              <CheckCircle2 size={32} className="text-success" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{formatUsd(completedSale.totalUsd)}</p>
+            <p className="text-sm text-text-secondary -mt-2">{formatBs(completedSale.totalBs)}</p>
+            <Badge variant="success" className="text-xs">
+              {METADATA_PAGOS[completedSale.paymentMethod]?.label ?? completedSale.paymentMethod}
+            </Badge>
+            <Button variant="primary" fullWidth onClick={() => setCompletedSale(null)}>
+              Nueva venta
+            </Button>
+          </div>
+        )}
+      </Modal>
 
       <PresentationSelector
         isOpen={selectedProductForPres !== null}

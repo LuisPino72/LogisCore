@@ -54,7 +54,7 @@ export const CartPanel = memo(function CartPanel({
               <EmptyState
                 icon={<ShoppingCart size={32} />}
                 title="Carrito vacío"
-                description="Toca un producto para agregarlo."
+                description="Selecciona productos para agregar al carrito."
               />
             </div>
           ) : (
