@@ -113,6 +113,10 @@
   cursor: pointer;
 }
 .select:focus { @apply bg-white border-primary ring-4 ring-primary/15; }
+.select option { padding: 0.375rem 0.75rem; }
+@media (max-width: 639px) {
+  .select { font-size: 16px; }
+}
 .select-wrapper { @apply relative; }
 .select-arrow { @apply absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none; }
 
@@ -250,14 +254,12 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
   padding-left: var(--sidebar-width);
   transition: padding-left 300ms ease;
 }
-.app-shell-content { @apply flex-1 pb-4 sm:pb-0; }
+.app-shell-content { @apply flex-1 pb-4 sm:pb-0 overflow-y-auto overflow-x-hidden; }
 .app-shell-content--with-bottom-nav { padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px)); }
-.app-topbar { @apply sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 h-14 flex items-center gap-3 shrink-0; padding-top: env(safe-area-inset-top, 0px); }
+.app-topbar { @apply sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 px-2 sm:px-4 h-14 flex items-center gap-2 sm:gap-3 shrink-0 overflow-hidden; padding-top: env(safe-area-inset-top, 0px); }
 
 @media (min-width: 768px) {
   .app-shell-main--with-sidebar { padding-left: var(--sidebar-width-md); }

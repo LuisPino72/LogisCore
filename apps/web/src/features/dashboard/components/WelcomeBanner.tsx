@@ -1,5 +1,6 @@
 import { type FC } from 'react';
 import { Sun, Sunset, Moon, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
+import { startOfDayVzla } from '@/lib/date';
 import type { SubscriptionResponse } from '../types';
 
 interface WelcomeBannerProps {
@@ -28,7 +29,7 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ userName, tenantName, su
   const GreetingIcon = greeting.icon;
 
   const daysRemaining = subscription?.expires_at
-    ? Math.ceil((new Date(subscription.expires_at).getTime() - Date.now()) / 86400000)
+    ? Math.round((new Date(startOfDayVzla(new Date(subscription.expires_at))).getTime() - new Date(startOfDayVzla()).getTime()) / 86400000)
     : null;
 
   const expiryUrgency = daysRemaining !== null && daysRemaining <= 0

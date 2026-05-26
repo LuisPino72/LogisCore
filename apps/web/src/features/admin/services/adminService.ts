@@ -1,5 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
+import { startOfDayVzla } from '../../../lib/date';
 import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory, CreateGlobalCategoryInput } from '../types';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
@@ -305,7 +306,7 @@ export const adminService = {
       const subs = (t.subscriptions as Record<string, unknown>[] | undefined)?.[0];
       const expiresAt = (subs?.expires_at as string) ?? null;
       const daysRemaining = expiresAt
-        ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000)
+        ? Math.round((new Date(startOfDayVzla(new Date(expiresAt))).getTime() - new Date(startOfDayVzla()).getTime()) / 86400000)
         : -999;
 
       return {

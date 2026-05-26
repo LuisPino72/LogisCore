@@ -102,7 +102,7 @@ function RateBadgeMobile() {
   const rate = useExchangeRateStore((s) => s.rate);
   if (!rate) return null;
   return (
-    <div className="md:hidden flex items-center gap-1 px-2 py-0.5 bg-success/10 border border-success/20 rounded-full shadow-sm active:scale-95 transition-transform cursor-help">
+    <div className="md:hidden flex items-center gap-1 px-2 py-0.5 bg-success/10 border border-success/20 rounded-full shadow-sm active:scale-95 transition-transform cursor-help shrink-0">
       <DollarSign size={10} className="text-success" />
       <span className="text-xs text-success font-bold whitespace-nowrap">
         {rate.toFixed(2)}
@@ -155,21 +155,21 @@ function DashboardLayout() {
   return (
     <AppShell
       topBar={
-        <div className="flex items-center gap-3 px-2 h-full">
-          {isAdminViewingTenant && (
-            <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)} className="active:scale-95 transition-transform">
-              <ArrowLeft size={18} />
-              <span className="hidden sm:inline">Volver al Panel</span>
-            </Button>
-          )}
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer active:scale-95" onClick={() => handleNavigate('dashboard')}>
-            <Store size={20} className="text-primary shrink-0" />
-            <span className="font-title font-semibold text-sm text-primary">Sasa</span>
-          </div>
-          <div className="flex-1" />
-          {role && <Badge variant="success" className="active:scale-95 cursor-pointer transition-transform">{role}</Badge>}
-          {effectiveTenantId && <RateBadgeMobile />}
-          {role && role !== 'employee' && <NotificationBell />}
+    <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-full overflow-hidden">
+      {isAdminViewingTenant && (
+        <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)} className="active:scale-95 transition-transform shrink-0">
+          <ArrowLeft size={18} />
+          <span className="hidden sm:inline">Volver al Panel</span>
+        </Button>
+      )}
+      <div className="flex items-center gap-2 bg-primary/10 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer active:scale-95 shrink-0" onClick={() => handleNavigate('dashboard')}>
+        <Store size={20} className="text-primary shrink-0" />
+        <span className="font-title font-semibold text-sm text-primary">Sasa</span>
+      </div>
+      <div className="flex-1 min-w-0" />
+      {role && <Badge variant="success" className="hidden! sm:inline-flex! active:scale-95 cursor-pointer transition-transform">{role === 'owner' ? 'Dueño' : role === 'employee' ? 'Empleado' : role}</Badge>}
+      {effectiveTenantId && <RateBadgeMobile />}
+      {role && role !== 'employee' && <NotificationBell />}
         </div>
       }
       sidebar={

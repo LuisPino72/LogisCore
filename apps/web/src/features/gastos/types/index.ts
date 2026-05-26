@@ -1,7 +1,7 @@
 export const EXPENSE_CATEGORIES = [
-  'LUZ', 'AGUA', 'GAS', 'INTERNET', 'TELEFONIA',
-  'ALQUILER', 'NOMINA', 'PUBLICIDAD', 'MANTENIMIENTO',
-  'IMPUESTOS', 'SEGUROS', 'TRANSPORTE', 'OTROS'
+  'LUZ', 'AGUA', 'GAS', 'INTERNET',
+  'ALQUILER', 'NOMINA',
+  'IMPUESTOS', 'OTROS'
 ] as const;
 
 export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];

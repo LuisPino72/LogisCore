@@ -26,7 +26,7 @@ export function NotificationBell() {
   };
  
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative shrink-0">
       <button
         onClick={() => setOpen(!open)}
         className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-all active:scale-95"

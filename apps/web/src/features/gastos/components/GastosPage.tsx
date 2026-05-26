@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Plus, Receipt, RotateCcw } from 'lucide-react';
-import { Button, Card, BottomNav, type BottomNavItem } from '@/common/components';
+import { Plus, Receipt, RotateCcw, DollarSign } from 'lucide-react';
+import { Button, Card, BottomNav, ModuleOnboarding, type BottomNavItem } from '@/common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { useGastos } from '../hooks/useGastos';
@@ -123,9 +123,9 @@ export function GastosPage({ tenantId }: GastosPageProps) {
             <p className="text-[11px] text-text-secondary hidden sm:block">Gestiona gastos operativos y recurrentes</p>
           </div>
         </div>
-        <Button variant="primary" size="sm" onClick={handleOpenNew} disabled={!isOnline} className="hidden sm:inline-flex">
+        <Button variant="primary" size="sm" onClick={handleOpenNew} disabled={!isOnline}>
           <Plus size={16} />
-          <span className="ml-1">Nuevo gasto</span>
+          <span className="ml-1 hidden sm:inline">Nuevo gasto</span>
         </Button>
       </div>
 
@@ -177,14 +177,36 @@ export function GastosPage({ tenantId }: GastosPageProps) {
         <Plus size={24} />
       </button>
 
-      {showForm && (
-        <GastoForm
-          isOpen={showForm}
-          onClose={() => { setShowForm(false); setEditingGasto(null); }}
-          onSubmit={handleSubmit}
-          editGasto={editingGasto}
-        />
-      )}
-    </div>
+    {showForm && (
+      <GastoForm
+        isOpen={showForm}
+        onClose={() => { setShowForm(false); setEditingGasto(null); }}
+        onSubmit={handleSubmit}
+        editGasto={editingGasto}
+      />
+    )}
+
+    <ModuleOnboarding
+      moduleId="gastos"
+      steps={[
+        {
+          title: 'Gestiona tus Gastos',
+          description: 'Aquí registras los gastos operativos de tu negocio: servicios, nómina, alquiler, etc. Lleva control de cada bolívar que sale.',
+          icon: <Receipt size={24} className="text-white" />,
+        },
+        {
+          title: 'Categorías de Gasto',
+          description: 'Cada gasto tiene una categoría (luz, agua, internet, nómina...). Filtra por categoría para ver dónde gastas más.',
+          icon: <DollarSign size={24} className="text-white" />,
+        },
+        {
+          title: 'Gastos Recurrentes',
+          description: 'Marca un gasto como recurrente (mensual o anual) y el sistema te recordará cuando toque pagarlo.',
+          icon: <RotateCcw size={24} className="text-white" />,
+        },
+      ]}
+      onComplete={() => {}}
+    />
+  </div>
   );
 }
