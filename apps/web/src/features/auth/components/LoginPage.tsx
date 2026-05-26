@@ -100,7 +100,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="text-center">
-            <h1 className="text-xl sm:text-2xl font-title font-bold text-gray-900 tracking-tight">Sasa</h1>
+            <h1 className="text-2xl sm:text-3xl font-title font-bold text-primary tracking-tight">Sasa</h1>
             <p className="text-xs sm:text-sm text-gray-800 mt-1 font-sans">Bienvenido de vuelta. Ingresa a tu cuenta.</p>
           </div>
         </div>
