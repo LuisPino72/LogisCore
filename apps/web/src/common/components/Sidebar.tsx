@@ -42,11 +42,11 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
         id="app-sidebar"
       >
         <div className="flex items-center h-14 border-b border-gray-100/80 shrink-0 bg-linear-to-r from-primary/5 to-transparent">
-          <div className="hidden md:flex items-center gap-2.5 px-3 w-full">
-            <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
+          <div className="hidden md:flex items-center px-3 w-full">
+            <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm shrink-0">
               <img src="/Sasa.png" alt="Sasa" className="h-4 w-4" />
             </div>
-            <span className="font-title font-bold text-sm bg-linear-to-r from-primary-dark to-primary bg-clip-text text-transparent tracking-tight">Sasa</span>
+            <span className="flex-1 text-center font-title font-bold text-lg bg-linear-to-r from-primary-dark to-primary bg-clip-text text-transparent tracking-tight">Sasa</span>
           </div>
 
           <div className="md:hidden flex items-center justify-center w-full h-full">
@@ -67,7 +67,7 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
                 <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm shrink-0">
                   <img src="/Sasa.png" alt="Sasa" className="h-4 w-4" />
                 </div>
-                <span className="font-title font-bold text-sm bg-linear-to-r from-primary-dark to-primary bg-clip-text text-transparent tracking-tight flex-1">Sasa</span>
+                <span className="flex-1 text-center font-title font-bold text-lg bg-linear-to-r from-primary-dark to-primary bg-clip-text text-transparent tracking-tight">Sasa</span>
                 <Button
                   variant="ghost"
                   size="sm"
