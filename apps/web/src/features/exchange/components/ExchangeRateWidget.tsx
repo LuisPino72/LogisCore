@@ -56,92 +56,94 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
     }
   };
 
-  return (
-    <>
-      <div className="flex flex-col items-center w-full">
-        <div className="flex items-center gap-1.5">
-          <DollarSign size={16} className="text-success" />
-          <span className="text-base font-title font-bold text-success">
-            {loading ? '-' : formatRate(rate)}
-          </span>
-        </div>
-
-        {error && (
-          <div className="flex items-start gap-1 text-[10px] text-danger">
-            <AlertCircle size={10} className="mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <div className="text-[14px]">
-          {source === 'bcv_api' ? 'BCV' : source === 'manual' ? 'Manual' : ''}
-          {fetchedAt && ` ${formatDate(fetchedAt)}`}
-        </div>
-
-        {isOwner && (
-          <div className="flex flex-col gap-0.5 w-full pt-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleUpdate}
-              disabled={isUpdating || !tenantId || !isOnline}
-              className="min-h-9 px-2 w-full"
-            >
-              {isUpdating ? (
-                <Spinner size="sm" />
-              ) : (
-                <RefreshCw size={14} />
-              )}
-              Actualizar
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowModal(true)}
-              disabled={isUpdating || !tenantId}
-              className="min-h-9 px-2 w-full"
-            >
-              <Settings size={14} />
-              Manual
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setManualRate(''); setManualError(''); }} title="Configurar tasa manual">
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Ingresa la tasa de cambio manualmente si la API del BCV no está disponible.
-            </p>
-
-            <div className="input-wrapper">
-              <label className="input-label">Tasa (Bs por $)</label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="68.45"
-                value={manualRate}
-                onChange={(e) => setManualRate(e.target.value)}
-                error={manualError}
-                validation={{ required: true, min: 0.01, max: 9999 }}
-              />
+    return (
+      <>
+        <div className="flex flex-col items-center w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center ring-1 ring-success/20">
+              <DollarSign size={14} className="text-success" />
             </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="ghost" onClick={() => setShowModal(false)}>
-                Cancelar
+            <span className="text-base font-title font-bold text-success">
+              {loading ? '-' : formatRate(rate)}
+            </span>
+          </div>
+ 
+          {error && (
+            <div className="flex items-start gap-1 text-[10px] text-danger">
+              <AlertCircle size={10} className="mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+ 
+          <div className="text-[12px] text-text-secondary opacity-80">
+            {source === 'bcv_api' ? 'BCV' : source === 'manual' ? 'Manual' : ''}
+            {fetchedAt && ` ${formatDate(fetchedAt)}`}
+          </div>
+ 
+          {isOwner && (
+            <div className="flex flex-col gap-1 w-full pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleUpdate}
+                disabled={isUpdating || !tenantId || !isOnline}
+                className="min-h-9 px-2 w-full active:scale-95 transition-transform"
+              >
+                {isUpdating ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <RefreshCw size={14} />
+                )}
+                Actualizar
               </Button>
               <Button
-                variant="primary"
-                onClick={handleManualSubmit}
-                disabled={isUpdating || !isOnline}
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowModal(true)}
+                disabled={isUpdating || !tenantId}
+                className="min-h-9 px-2 w-full active:scale-95 transition-transform"
               >
-                {isUpdating ? 'Guardando...' : 'Guardar tasa'}
+                <Settings size={14} />
+                Manual
               </Button>
             </div>
-          </div>
-        </Modal>
-    </>
-  );
+          )}
+        </div>
+ 
+        <Modal isOpen={showModal} onClose={() => { setShowModal(false); setManualRate(''); setManualError(''); }} title="Configurar tasa manual">
+            <div className="space-y-4 animate-slide-down">
+              <p className="text-sm text-gray-600">
+                Ingresa la tasa de cambio manualmente si la API del BCV no está disponible.
+              </p>
+ 
+              <div className="input-wrapper">
+                <label className="input-label">Tasa (Bs por $)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="68.45"
+                  value={manualRate}
+                  onChange={(e) => setManualRate(e.target.value)}
+                  error={manualError}
+                  validation={{ required: true, min: 0.01, max: 9999 }}
+                />
+              </div>
+ 
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowModal(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleManualSubmit}
+                  disabled={isUpdating || !isOnline}
+                >
+                  {isUpdating ? 'Guardando...' : 'Guardar tasa'}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+      </>
+    );
 };
