@@ -176,7 +176,7 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
           </Select>
 
           <Input
-            label="Monto (USD)"
+            label="Monto ($)"
             type="number"
             step="0.01"
             min="0"
@@ -187,7 +187,7 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
           />
 
           <Input
-            label="Tasa de cambio (Bs/USD)"
+            label="Tasa de cambio (Bs/$)"
             type="number"
             step="0.01"
             min="0"

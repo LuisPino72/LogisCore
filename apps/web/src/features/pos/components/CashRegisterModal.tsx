@@ -69,7 +69,7 @@ export function CashRegisterModal({
               <div className="bg-surface-alt rounded-lg p-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Tasa de cambio actual</span>
-                  <span className="font-semibold">Bs {exchangeRate.toFixed(2)} / USD</span>
+                  <span className="font-semibold">Bs {exchangeRate.toFixed(2)} / $</span>
                 </div>
               </div>
             )}

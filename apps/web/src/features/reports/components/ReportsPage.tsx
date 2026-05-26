@@ -86,7 +86,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     efectivo_bs: 'Efectivo Bs',
     pago_movil: 'Pago Móvil',
     tarjeta_bs: 'Tarjeta Bs',
-    efectivo_usd: 'Efectivo USD',
+    efectivo_usd: 'Efectivo $',
   };
 
   const drillDownConfigs: Record<DrillDownType, {
@@ -101,7 +101,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         { key: 'time', header: 'Hora', hideOnMobile: true },
         { key: 'itemCount', header: 'Items', className: 'text-center' },
         { key: 'totalBs', header: 'Total Bs', render: (item) => formatBs(item.totalBs as number) },
-        { key: 'totalUsd', header: 'Total USD', render: (item) => formatUsd(item.totalUsd as number) },
+        { key: 'totalUsd', header: 'Total $', render: (item) => formatUsd(item.totalUsd as number) },
         { key: 'paymentMethod', header: 'Pago', render: (item) => PAYMENT_LABELS[item.paymentMethod as string] ?? item.paymentMethod as string, hideOnMobile: true },
       ],
       footerSummary: (data) => {
@@ -109,7 +109,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         const totalUsd = data.reduce((s, d) => s + (d.totalUsd as number), 0);
         return [
           { label: 'Total Bs', value: formatBs(totalBs) },
-          { label: 'Total USD', value: formatUsd(totalUsd) },
+          { label: 'Total $', value: formatUsd(totalUsd) },
           { label: 'Transacciones', value: String(data.length) },
         ];
       },
@@ -146,14 +146,14 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       columns: [
         { key: 'label', header: 'Tipo de Gasto' },
         { key: 'amountBs', header: 'Monto Bs', render: (item) => formatBs(item.amountBs as number) },
-        { key: 'amountUsd', header: 'Monto USD', render: (item) => formatUsd(item.amountUsd as number) },
+        { key: 'amountUsd', header: 'Monto $', render: (item) => formatUsd(item.amountUsd as number) },
       ],
       footerSummary: (data) => {
         const totalBs = data.reduce((s, d) => s + (d.amountBs as number), 0);
         const totalUsd = data.reduce((s, d) => s + (d.amountUsd as number), 0);
         return [
           { label: 'Total Bs', value: formatBs(totalBs) },
-          { label: 'Total USD', value: formatUsd(totalUsd) },
+          { label: 'Total $', value: formatUsd(totalUsd) },
         ];
       },
     },

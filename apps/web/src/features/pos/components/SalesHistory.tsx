@@ -205,7 +205,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             <div className="text-sm text-gray-600 space-y-1">
               <p><strong>Fecha:</strong> {new Date(selectedSale.createdAt).toLocaleString('es-VE')}</p>
               <p><strong>Método:</strong> {METADATA_PAGOS[selectedSale.paymentMethod as PaymentMethod]?.label ?? selectedSale.paymentMethod}</p>
-              <p><strong>Tasa:</strong> {selectedSale.exchangeRate.toFixed(4)} Bs/USD</p>
+              <p><strong>Tasa:</strong> {selectedSale.exchangeRate.toFixed(4)} Bs/$</p>
             </div>
 
             <div className="border-t border-border pt-2">

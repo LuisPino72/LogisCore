@@ -62,7 +62,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
           <thead>
             <tr className="border-b border-border text-left text-xs text-text-secondary uppercase tracking-wider">
               <th className="py-3 px-3 font-semibold">Categoría</th>
-              <th className="py-3 px-3 font-semibold text-right">Monto USD</th>
+              <th className="py-3 px-3 font-semibold text-right">Monto $</th>
               <th className="py-3 px-3 font-semibold">Fecha</th>
               <th className="py-3 px-3 font-semibold">Estado</th>
               <th className="py-3 px-3 font-semibold text-center">Recurrente</th>

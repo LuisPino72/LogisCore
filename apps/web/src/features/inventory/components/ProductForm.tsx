@@ -400,7 +400,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
-                        Precio USD {pres.priceUsd > 0 ? '' : '(opcional, hereda del padre)'}
+                        Precio $ {pres.priceUsd > 0 ? '' : '(opcional, hereda del padre)'}
                       </label>
                       <Input
                         sanitize="currency"
