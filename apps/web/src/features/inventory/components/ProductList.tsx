@@ -228,7 +228,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
     }
 
     return cols;
-  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots]);
+  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots, allPresentationParentIds, allPresentationChildIds, presentationsByProduct, onViewPresentations]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (
@@ -331,6 +331,86 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         rowClassName={(p: Product) => p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined}
         emptyMessage="No encontramos productos con ese nombre o filtro"
         renderCardOnMobile
+        renderCard={(product: Product) => (
+          <div className="card-body">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="w-28 h-28 mx-auto rounded-lg overflow-hidden bg-gray-100 *:w-full *:h-full">
+                <ImageWithFallback
+                  productId={product.id}
+                  imageUrl={product.imageUrl}
+                  alt={product.name}
+                  className="shrink-0 rounded-lg object-cover w-full h-full"
+                />
+              </div>
+              <div className="text-sm font-semibold text-gray-900 text-center w-full wrap-break-word">
+                {product.name}
+              </div>
+              <div className="text-[10px] text-text-secondary font-mono text-center">
+                {product.sku}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                {allPresentationParentIds?.has(product.id) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewPresentations?.(product.id);
+                    }}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <Layers size={10} />
+                    {presentationsByProduct?.[product.id]?.length || 0} var.
+                  </button>
+                )}
+                {allPresentationChildIds?.has(product.id) && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-600 border border-border">
+                    variante
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 text-xs text-gray-600 space-y-1 flex flex-col items-center">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-gray-500">Precio</span>
+                  <span className="text-gray-800 text-sm font-semibold">{formatUsd(product.priceUsd)}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-gray-500">Total</span>
+                  <Badge variant={getStockVariant(product)}>{getStockBadgeContent(product)}</Badge>
+                </div>
+                {isOwner && (
+                  <div className="mt-2 flex items-center justify-center gap-0.5">
+                    <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
+                      <Edit3 size={15} />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
+                      <Trash2 size={15} className="text-danger" />
+                    </Button>
+                    <Dropdown
+                      align="right"
+                      trigger={
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                          <MoreVertical size={15} className="text-gray-600" />
+                        </div>
+                      }
+                      items={
+                        isOnline
+                          ? [
+                            { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                            { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
+                            { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
+                          ]
+                          : [
+                            { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                            { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
+                          ]
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         page={page}
         onPageChange={(newPage) => {
           setPage(newPage);

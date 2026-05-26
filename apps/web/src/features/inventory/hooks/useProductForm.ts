@@ -91,6 +91,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
         const existing = await useInventoryStore.getState().fetchPresentations(options.editProductId!);
         if (existing.length > 0) {
           const mapped = existing.map(p => ({
+            id: p.id,
             name: p.name,
             priceUsd: p.priceUsd,
             unitMultiplier: p.unitMultiplier,

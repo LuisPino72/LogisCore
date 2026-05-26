@@ -471,13 +471,146 @@ export const inventoryService = {
       }
 
       // Eliminar campos que no existen en la tabla products de Supabase
-      const safeInput = { ...input as Record<string, unknown> };
+      const rawInput = input as Record<string, unknown>;
+      const presentationsInput = rawInput.presentations as CreatePresentationInput[] | undefined;
+      const stockTypeInput = rawInput.stockType as string | undefined;
+
+      const safeInput = { ...rawInput };
       delete safeInput.stockInicial;
+      delete safeInput.presentations;
+      delete safeInput.stockType;
       const updated = { ...existing, ...safeInput };
-      await db.transaction('rw', [db.products, db.syncQueue, db.outbox], async () => {
+
+      await db.transaction('rw', [
+        db.products,
+        db.productPresentations,
+        db.inventoryLots,
+        db.inventoryMovements,
+        db.syncQueue,
+        db.outbox,
+      ], async () => {
         await db.products.put(updated);
         await syncQueue.enqueue('products', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
         await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { productId: id, changes: Object.keys(input) });
+
+        // Sincronizar presentaciones si el input las incluye
+        if (presentationsInput) {
+          const existingPres = await db.productPresentations
+            .where({ productId: id })
+            .filter((p) => !p.deletedAt)
+            .toArray();
+
+          const existingPresMap = new Map(existingPres.map((p) => [p.id, p]));
+          const submittedIds = new Set(
+            presentationsInput
+              .filter((p) => !!(p as Record<string, unknown>).id)
+              .map((p) => (p as Record<string, unknown>).id as string),
+          );
+
+          // Eliminar presentaciones que ya no están en la lista
+          const deletedAt = new Date().toISOString();
+          for (const existingPresItem of existingPres) {
+            if (!submittedIds.has(existingPresItem.id)) {
+              if (existingPresItem.stockType === 'independent' && existingPresItem.childProductId) {
+                await db.products.update(existingPresItem.childProductId, { deletedAt });
+                await syncQueue.enqueue('products', 'DELETE', existingPresItem.childProductId, { id: existingPresItem.childProductId, deleted_at: deletedAt }, tenantId);
+              }
+              await db.productPresentations.update(existingPresItem.id, { deletedAt });
+              await syncQueue.enqueue('product_presentations', 'DELETE', existingPresItem.id, { id: existingPresItem.id, deleted_at: deletedAt }, tenantId);
+            }
+          }
+
+          // Crear o actualizar presentaciones
+          const now = new Date().toISOString();
+          for (let i = 0; i < presentationsInput.length; i++) {
+            const pres = presentationsInput[i];
+            const presRaw = pres as Record<string, unknown>;
+            const existingId = presRaw.id as string | undefined;
+
+            if (existingId && existingPresMap.has(existingId)) {
+              // Actualizar presentación existente
+              const existingPresItem = existingPresMap.get(existingId)!;
+              const patchData: Record<string, unknown> = {
+                name: pres.name,
+                priceUsd: pres.priceUsd,
+                unitMultiplier: pres.unitMultiplier ?? 1,
+                barcode: pres.barcode,
+                sortOrder: i,
+                updatedAt: now,
+              };
+              await db.productPresentations.update(existingId, patchData as any);
+              await syncQueue.enqueue('product_presentations', 'UPDATE', existingId, toSnake({ ...existingPresItem, ...patchData } as unknown as Record<string, unknown>), tenantId);
+
+              // Actualizar child product si es independiente
+              if (existingPresItem.stockType === 'independent' && existingPresItem.childProductId) {
+                await db.products.update(existingPresItem.childProductId, {
+                  name: `${updated.name} - ${pres.name}`,
+                  sku: pres.barcode || existingPresItem.barcode,
+                  priceUsd: pres.priceUsd,
+                } as any);
+                await syncQueue.enqueue('products', 'UPDATE', existingPresItem.childProductId, toSnake({
+                  name: `${updated.name} - ${pres.name}`,
+                  sku: pres.barcode || existingPresItem.barcode,
+                  price_usd: pres.priceUsd,
+                } as Record<string, unknown>), tenantId);
+              }
+            } else {
+              // Crear nueva presentación
+              const presId = generateId();
+              const record: Record<string, unknown> = {
+                id: presId,
+                tenantId,
+                productId: id,
+                name: pres.name,
+                priceUsd: pres.priceUsd,
+                unitMultiplier: pres.unitMultiplier ?? 1,
+                stockType: stockTypeInput || 'shared',
+                barcode: pres.barcode,
+                sortOrder: i,
+                createdAt: now,
+                updatedAt: now,
+              };
+
+              if ((stockTypeInput || 'shared') === 'independent') {
+                const childId = generateId();
+                const childSku = pres.barcode || `${updated.sku}-${i + 1}`;
+                record.childProductId = childId;
+
+                await db.products.add({
+                  id: childId,
+                  tenantId,
+                  name: `${updated.name} - ${pres.name}`,
+                  sku: childSku,
+                  priceUsd: pres.priceUsd,
+                  categoryId: updated.categoryId,
+                  isWeighted: false,
+                  isTaxable: updated.isTaxable ?? true,
+                  isSellable: true,
+                  unit: 'unidad',
+                  stock: 0,
+                  stockMin: updated.stockMin,
+                });
+                await syncQueue.enqueue('products', 'CREATE', childId, toSnake({
+                  id: childId,
+                  tenant_id: tenantId,
+                  name: `${updated.name} - ${pres.name}`,
+                  sku: childSku,
+                  price_usd: pres.priceUsd,
+                  category_id: updated.categoryId,
+                  is_weighted: false,
+                  is_taxable: updated.isTaxable ?? true,
+                  is_sellable: true,
+                  unit: 'unidad',
+                  stock: 0,
+                  stock_min: updated.stockMin,
+                } as Record<string, unknown>), tenantId);
+              }
+
+              await db.productPresentations.add(record as any);
+              await syncQueue.enqueue('product_presentations', 'CREATE', presId, toSnake(record), tenantId);
+            }
+          }
+        }
       });
       await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { productId: id, changes: Object.keys(input) }, { tenantId });
       return success(toProduct(updated as unknown as Record<string, unknown>));

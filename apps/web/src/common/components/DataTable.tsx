@@ -29,6 +29,7 @@ interface DataTableProps<T> {
   className?: string;
   stickyHeader?: boolean;
   renderCardOnMobile?: boolean;
+  renderCard?: (item: T) => ReactNode;
   page?: number;
   pageSize?: number;
   total?: number;
@@ -88,6 +89,7 @@ export function DataTable<T>({
   className,
   stickyHeader,
   renderCardOnMobile,
+  renderCard,
   page = 1,
   pageSize,
   total,
@@ -178,6 +180,9 @@ export function DataTable<T>({
       {renderCardOnMobile && (
         <div className="sm:hidden pb-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
         {paged.map((item) => {
+          if (renderCard) {
+            return <Card key={keyExtractor(item)} className={cn('mb-3', rowClassName?.(item))}>{renderCard(item)}</Card>;
+          }
           const imageCol = columns.find(col => col.key === 'image');
           const nameCol = columns.find(col => col.key === 'name');
           const imageContent = imageCol?.render ? imageCol.render(item) : null;
