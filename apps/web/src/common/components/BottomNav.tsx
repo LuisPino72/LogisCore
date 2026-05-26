@@ -23,7 +23,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
   return (
     <nav
       className={cn(
-        'sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]',
+        'sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)] bottom-nav-mobile',
         className,
       )}
       style={{

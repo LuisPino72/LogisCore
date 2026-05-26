@@ -112,7 +112,8 @@ export function GastosPage({ tenantId }: GastosPageProps) {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
+    <>
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6 pb-14">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -165,6 +166,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
           />
         </div>
       </Card>
+      </div>
 
       <BottomNav items={bottomNavItems} activeId={activeTab} className="sm:hidden" />
 
@@ -207,6 +209,6 @@ export function GastosPage({ tenantId }: GastosPageProps) {
       ]}
       onComplete={() => {}}
     />
-  </div>
+  </>
   );
 }

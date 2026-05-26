@@ -277,6 +277,9 @@ aside img[alt="Emblema"] { width: 20px; height: 20px; }
 /* ───────────────────── SIDEBAR ───────────────────── */
 .sidebar-backdrop { @apply fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden; }
 
+/* Hide bottom nav when sidebar is expanded on mobile */
+html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important; }
+
 /* ───────────────────── SEARCH INPUT ───────────────────── */
 .search-input-wrapper { @apply relative; }
 .search-input-icon { @apply absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4; }

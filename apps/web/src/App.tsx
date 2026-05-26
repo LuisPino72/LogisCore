@@ -140,6 +140,10 @@ function DashboardLayout() {
 
   useSystemNotifications(effectiveTenantId, role);
 
+  useEffect(() => {
+    document.documentElement.dataset.sidebarExpanded = String(sidebarExpanded);
+  }, [sidebarExpanded]);
+
   const handleNavigate = useCallback((moduleId: string) => {
     const route = MODULE_ROUTE_MAP[moduleId] ?? '/dashboard';
     navigate(route);
@@ -153,8 +157,9 @@ function DashboardLayout() {
   }, []);
 
   return (
-    <AppShell
-      topBar={
+    <>
+      <AppShell
+        topBar={
     <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-full overflow-hidden">
       {isAdminViewingTenant && (
         <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)} className="active:scale-95 transition-transform shrink-0">
@@ -169,7 +174,6 @@ function DashboardLayout() {
       <div className="flex-1 min-w-0" />
       {role && <Badge variant="success" className="hidden! sm:inline-flex! active:scale-95 cursor-pointer transition-transform">{role === 'owner' ? 'Dueño' : role === 'employee' ? 'Empleado' : role}</Badge>}
       {effectiveTenantId && <RateBadgeMobile />}
-      {role && role !== 'employee' && <NotificationBell />}
         </div>
       }
       sidebar={
@@ -228,6 +232,13 @@ function DashboardLayout() {
         </div>
       </ErrorBoundary>
     </AppShell>
+
+    {role && role !== 'employee' && (
+      <div className="fixed top-2 right-2 sm:top-3 sm:right-3 z-50">
+        <NotificationBell />
+      </div>
+    )}
+    </>
   );
 }
 
