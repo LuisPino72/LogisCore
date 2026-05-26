@@ -1,4 +1,4 @@
-import { SearchInput, Select } from '@/common/components';
+import { Input, SearchInput, Select } from '@/common/components';
 import { EXPENSE_CATEGORIES, type GastoFiltersState } from '../types';
 
 interface GastoFiltersProps {
@@ -29,11 +29,10 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
         </Select>
       </div>
       <div className="w-full sm:w-40">
-        <input
+        <Input
           type="month"
           value={filters.month ?? ''}
           onChange={(e) => onChange({ month: e.target.value })}
-          className="input"
         />
       </div>
       <div className="w-full sm:w-36">

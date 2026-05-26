@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Button, Input, Modal, Select, Textarea, Toggle } from '@/common/components';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { CreateGastoInputSchema } from '../../../specs/gastos';
@@ -197,7 +198,7 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
           />
 
           {bsPreview !== null && (
-            <div className="flex items-center justify-between bg-accent/5 border border-accent/10 p-3 rounded-lg">
+            <div className="flex items-center justify-between bg-accent/5 border border-accent/10 p-3 rounded-lg shadow-sm">
               <span className="text-xs font-medium text-text-secondary">Total en Bs:</span>
               <span className="text-base font-bold text-accent">{formatBs(bsPreview)}</span>
             </div>
@@ -257,11 +258,14 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
       </Modal>
 
       <Modal isOpen={confirmClose} onClose={() => setConfirmClose(false)} title="Descartar cambios">
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+        <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
+            <AlertTriangle size={24} className="text-danger" />
+          </div>
+          <p className="text-sm text-gray-600 text-center">
             Tienes cambios sin guardar. ¿Seguro que quieres salir?
           </p>
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 w-full pt-1">
             <Button variant="ghost" fullWidth onClick={() => setConfirmClose(false)}>
               Seguir editando
             </Button>

@@ -72,7 +72,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
           </thead>
           <tbody>
             {sorted.map((gasto) => (
-              <tr key={gasto.id} className="border-b border-border/50 hover:bg-surface-alt/50 transition-colors">
+              <tr key={gasto.id} className="border-b border-border/50 hover:bg-surface-alt/80 transition-colors">
                 <td className="py-3 px-3 font-medium text-gray-800">{gasto.category}</td>
                 <td className="py-3 px-3 text-right font-semibold text-primary">{formatUsd(gasto.amountUsd)}</td>
                 <td className="py-3 px-3 text-text-secondary whitespace-nowrap">{formatDate(gasto.date)}</td>
@@ -98,7 +98,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
                       <button
                         type="button"
                         onClick={() => onToggleStatus(gasto.id, gasto.status === 'paid' ? 'pending' : 'paid')}
-                        className="p-1.5 rounded-lg text-text-secondary hover:text-accent hover:bg-accent/5 transition-colors"
+                        className="p-1.5 rounded-lg text-text-secondary hover:text-accent hover:bg-accent/5 transition-colors active:scale-90"
                         title={gasto.status === 'paid' ? 'Marcar pendiente' : 'Marcar pagado'}
                       >
                         <AlertCircle size="16" />
@@ -109,7 +109,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
                         <button
                           type="button"
                           onClick={() => onEdit(gasto)}
-                          className="p-1.5 rounded-lg text-text-secondary hover:text-primary hover:bg-primary/5 transition-colors"
+                          className="p-1.5 rounded-lg text-text-secondary hover:text-primary hover:bg-primary/5 transition-colors active:scale-90"
                           title="Editar"
                         >
                           <Edit2 size="16" />
@@ -117,7 +117,7 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
                         <button
                           type="button"
                           onClick={() => setDeleteTarget({ id: gasto.id, category: gasto.category })}
-                          className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors"
+                          className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors active:scale-90"
                           title="Eliminar"
                         >
                           <Trash2 size="16" />
@@ -186,17 +186,15 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
 
       {deleteTarget && (
         <Modal isOpen={true} onClose={() => setDeleteTarget(null)} title="Eliminar gasto">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
-                <AlertCircle size={20} className="text-danger" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">¿Eliminar gasto de {deleteTarget.category}?</p>
-                <p className="text-xs text-gray-500">El gasto se ocultará de la lista.</p>
-              </div>
+          <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
+              <AlertCircle size={24} className="text-danger" />
             </div>
-            <div className="flex gap-3 pt-2">
+            <div className="text-center">
+              <p className="text-sm font-semibold">¿Eliminar gasto de {deleteTarget.category}?</p>
+              <p className="text-xs text-gray-500 mt-1">El gasto se ocultará de la lista.</p>
+            </div>
+            <div className="flex gap-3 w-full pt-1">
               <Button variant="ghost" fullWidth onClick={() => setDeleteTarget(null)}>
                 Cancelar
               </Button>
