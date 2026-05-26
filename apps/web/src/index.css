@@ -463,3 +463,13 @@ aside img[alt="Emblema"] { width: 20px; height: 20px; }
   flex-shrink: 0;
   box-shadow: 0 2px 4px rgba(0,0,0,0.12);
 }
+
+/* ───────────────────── POS ───────────────────── */
+@keyframes checkPop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-check-pop {
+  animation: checkPop 0.4s ease-out;
+}

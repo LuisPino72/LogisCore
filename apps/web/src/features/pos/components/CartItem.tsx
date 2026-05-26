@@ -98,8 +98,8 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
 
   const displayQty = localQty ?? (item.isWeighted ? item.quantity.toFixed(2) : item.quantity.toString());
 
-  const btnBase = 'w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs';
-  const btnIdle = 'bg-surface-alt hover:bg-gray-200 active:bg-gray-300';
+  const btnBase = 'w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs hover:shadow-sm';
+  const btnIdle = 'bg-surface-alt hover:bg-gray-200/80 active:bg-gray-300';
   const btnActive = 'bg-primary/20 scale-95';
 
   return (

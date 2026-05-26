@@ -317,7 +317,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               <button
                 type="button"
                 onClick={() => setActiveTab('sell')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95 ${
                   activeTab === 'sell'
                     ? 'bg-white text-primary shadow-sm'
                     : 'text-text-secondary hover:text-gray-700'
@@ -331,7 +331,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               <button
                 type="button"
                 onClick={() => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95 ${
                   activeTab === 'history'
                     ? 'bg-white text-primary shadow-sm'
                     : 'text-text-secondary hover:text-gray-700'
@@ -379,8 +379,8 @@ export function PosPage({ tenantId }: PosPageProps) {
             />
             <div className="flex-1 overflow-hidden relative">
               {(!isOpen || isFromPreviousDay) && (
-                <div className="absolute inset-0 z-30 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-                  <div className="bg-white p-6 rounded-2xl shadow-xl border border-border max-w-xs flex flex-col items-center gap-3">
+                <div className="absolute inset-0 z-30 bg-linear-to-br from-white/90 via-white/95 to-gray-100/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+                  <div className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-2xl border border-white/50 max-w-xs flex flex-col items-center gap-3">
                     <div className="p-3 bg-warning/10 rounded-full text-warning">
                       <AlertTriangle size={32} />
                     </div>
@@ -507,16 +507,21 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Spinner />
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-gray-600">
-              Hay <strong>{verifyCounts.sold + verifyCounts.lowStock}</strong> producto{(verifyCounts.sold + verifyCounts.lowStock) > 1 ? 's' : ''} para verificar
-              {verifyCounts.sold > 0 && <> (<strong>{verifyCounts.sold}</strong> vendido{verifyCounts.sold > 1 ? 's' : ''} hoy</>}
-              {verifyCounts.sold > 0 && verifyCounts.lowStock > 0 ? <>, </> : null}
-              {verifyCounts.lowStock > 0 ? <><strong>{verifyCounts.lowStock}</strong> con bajo stock</> : null}
-              {verifyCounts.sold > 0 ? <> )</> : null}.
-              ¿Deseas verificar el stock físico antes de cerrar caja?
-            </p>
-            <div className="flex gap-2 justify-end">
+          <div className="flex flex-col gap-4 animate-slide-down">
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-primary/20 bg-primary/10">
+                <Package size={24} className="text-primary" />
+              </div>
+              <p className="text-sm text-gray-600 text-center">
+                Hay <strong>{verifyCounts.sold + verifyCounts.lowStock}</strong> producto{(verifyCounts.sold + verifyCounts.lowStock) > 1 ? 's' : ''} para verificar
+                {verifyCounts.sold > 0 && <> (<strong>{verifyCounts.sold}</strong> vendido{verifyCounts.sold > 1 ? 's' : ''} hoy</>}
+                {verifyCounts.sold > 0 && verifyCounts.lowStock > 0 ? <>, </> : null}
+                {verifyCounts.lowStock > 0 ? <><strong>{verifyCounts.lowStock}</strong> con bajo stock</> : null}
+                {verifyCounts.sold > 0 ? <> )</> : null}.
+                ¿Deseas verificar el stock físico antes de cerrar caja?
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end pt-1">
               <Button variant="ghost" onClick={handleVerifyNo}>Solo cerrar</Button>
               <Button variant="primary" onClick={handleVerifyYes}>Verificar</Button>
             </div>
@@ -543,9 +548,14 @@ export function PosPage({ tenantId }: PosPageProps) {
           </div>
         }
       >
-        <p className="text-sm text-gray-600">
-          Se restaurará el stock de todos los productos de esta venta. Esta acción no se puede deshacer.
-        </p>
+        <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
+            <AlertTriangle size={24} className="text-danger" />
+          </div>
+          <p className="text-sm text-gray-600 text-center">
+            Se restaurará el stock de todos los productos de esta venta. Esta acción no se puede deshacer.
+          </p>
+        </div>
       </Modal>
 
       <BarcodeScannerModal
@@ -561,8 +571,8 @@ export function PosPage({ tenantId }: PosPageProps) {
         size="sm"
       >
         {completedSale && (
-          <div className="flex flex-col items-center gap-4 py-2">
-            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 py-2 animate-slide-down">
+            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center animate-check-pop">
               <CheckCircle2 size={32} className="text-success" />
             </div>
             <p className="text-2xl font-bold text-gray-900">{formatUsd(completedSale.totalUsd)}</p>

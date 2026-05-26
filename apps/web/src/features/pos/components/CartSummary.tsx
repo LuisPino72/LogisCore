@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { preciseRound, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
-import { Button } from '../../../common/components';
+import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS } from '../../../specs/sales';
@@ -144,15 +144,15 @@ export function CartSummary({
       )}
 
       {showDiscountInput && (
-        <div className="space-y-2 p-2 rounded-xl bg-gray-50 border border-border">
+        <div className="space-y-2 p-2 rounded-xl bg-surface-alt border border-border shadow-sm">
           <div className="flex gap-1">
             <button
               type="button"
               onClick={() => setDiscountType('percentage')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 ${
                 discountType === 'percentage'
-                  ? 'bg-primary text-white'
-                  : 'bg-white text-gray-600 border border-border'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-gray-600 border border-border hover:border-primary/30'
               }`}
             >
               <Percent size={12} className="inline mr-1" />
@@ -161,10 +161,10 @@ export function CartSummary({
             <button
               type="button"
               onClick={() => setDiscountType('fixed')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 ${
                 discountType === 'fixed'
-                  ? 'bg-primary text-white'
-                  : 'bg-white text-gray-600 border border-border'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-gray-600 border border-border hover:border-primary/30'
               }`}
             >
               <DollarSign size={12} className="inline mr-1" />
@@ -172,16 +172,13 @@ export function CartSummary({
             </button>
           </div>
           <div className="flex gap-2">
-            <input
-              type="number"
-              step={discountType === 'percentage' ? '1' : '0.01'}
-              min="0"
-              max={discountType === 'percentage' ? '100' : String(subtotalUsd)}
+            <Input
+              sanitize="number"
               placeholder={discountType === 'percentage' ? '0%' : '$0.00'}
               value={discountInput}
               onChange={(e) => setDiscountInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleApplyDiscount(); }}
-              className="flex-1 px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="flex-1"
               autoFocus
             />
             <Button variant="primary" size="sm" onClick={handleApplyDiscount}>
@@ -203,9 +200,9 @@ export function CartSummary({
               key={m}
               type="button"
               onClick={() => onPaymentMethodChange(m)}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.97] ${
                 selected
-                  ? 'bg-primary text-white border-primary shadow-sm'
+                  ? 'bg-primary text-white border-primary shadow-sm ring-1 ring-primary/30'
                   : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
               }`}
             >
