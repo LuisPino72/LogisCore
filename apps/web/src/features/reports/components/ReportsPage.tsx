@@ -257,6 +257,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     const range = value as ReportTimeRange;
     if (range === 'custom') {
       setShowCustomDate(true);
+      setFilters({ timeRange: 'custom' });
     } else {
       setShowCustomDate(false);
       setFilters({ timeRange: range });
@@ -422,7 +423,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowCustomDate(false)}
+              onClick={() => { setShowCustomDate(false); setFilters({ timeRange: 'thisMonth' }); }}
             >
               Cerrar
             </Button>
@@ -431,8 +432,12 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       )}
 
       {error && (
-        <Card className="p-4 bg-danger/5 border-danger/20">
-          <p className="text-sm text-danger">{error}</p>
+        <Card>
+          <EmptyState
+            icon={<BarChart3 size={32} />}
+            title="No se pudieron cargar los reportes"
+            description={error}
+          />
         </Card>
       )}
 

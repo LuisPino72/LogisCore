@@ -31,7 +31,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-text-secondary">No hay datos de pagos para el periodo seleccionado.</p>
+        <p className="text-sm text-text-secondary">Aún no hay datos de pagos para este período.</p>
       </Card>
     );
   }

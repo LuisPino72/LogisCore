@@ -1,5 +1,5 @@
-import { Card, Badge, Tooltip } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight } from 'lucide-react';
+import { Card, Badge, Tooltip, EmptyState } from '@/common/components';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight, BarChart3 } from 'lucide-react';
 import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
@@ -112,7 +112,17 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <Card className="p-8">
+        <EmptyState
+          icon={<BarChart3 size={32} />}
+          title="Aún no hay datos para este período"
+          description="Selecciona otro período o espera a tener ventas registradas."
+        />
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">

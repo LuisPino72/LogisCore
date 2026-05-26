@@ -12,11 +12,11 @@ interface SlideView {
 }
 
 const SLIDES: SlideView[] = [
-  { id: 'top-cats', title: 'Top 5 Categorías', type: 'category', emptyMessage: 'No hay categorías con ventas en este periodo.' },
+  { id: 'top-cats', title: 'Top 5 Categorías', type: 'category', emptyMessage: 'Aún no hay categorías con ventas en este período.' },
   { id: 'worst-cats', title: 'Peores 5 Categorías', type: 'category', emptyMessage: 'Todas las categorías dieron ganancia.' },
-  { id: 'top-prods', title: 'Top 5 Productos', type: 'product', emptyMessage: 'No hay productos con ventas en este periodo.' },
+  { id: 'top-prods', title: 'Top 5 Productos', type: 'product', emptyMessage: 'Aún no hay productos con ventas en este período.' },
   { id: 'worst-prods', title: 'Peores 5 Productos', type: 'product', emptyMessage: 'Todos los productos dieron ganancia.' },
-  { id: 'by-volume', title: 'Top 5 por Volumen', type: 'volume', emptyMessage: 'No hay ventas en este periodo.' },
+  { id: 'by-volume', title: 'Top 5 por Volumen', type: 'volume', emptyMessage: 'Aún no hay ventas en este período.' },
 ];
 
 interface InsightsCarouselProps {
@@ -116,7 +116,7 @@ export function InsightsCarousel({
   if (!hasData) {
     return (
       <Card className="p-4 sm:p-6">
-        <p className="text-sm text-text-secondary text-center">No hay suficientes datos para mostrar análisis en este periodo.</p>
+        <p className="text-sm text-text-secondary text-center">Aún no hay suficientes datos para mostrar análisis en este período.</p>
       </Card>
     );
   }

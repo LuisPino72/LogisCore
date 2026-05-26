@@ -34,7 +34,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-text-secondary">No hay datos de productos para el periodo seleccionado.</p>
+        <p className="text-sm text-text-secondary">Aún no hay datos de productos para este período.</p>
       </Card>
     );
   }
