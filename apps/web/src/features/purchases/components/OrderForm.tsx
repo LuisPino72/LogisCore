@@ -5,6 +5,7 @@ import { inventoryService } from '../../inventory/services/inventoryService';
 import type { Product, PresentationWithProduct } from '../../inventory/types';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
 import { formatUsd } from '@/lib/formatBs';
+import { CreatePurchaseOrderInputSchema } from '../../../specs/purchases';
 
 interface OrderFormProps {
   isOpen: boolean;
@@ -146,9 +147,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
       return;
     }
 
-    setSubmitting(true);
-    setError('');
-    const ok = await onSubmit({
+    const payload = {
       supplierId,
       notes: notes.trim() || undefined,
       items: validItems.map((i) => ({
@@ -158,7 +157,17 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
         quantity: i.quantity,
         totalCostUsd: i.totalCostUsd,
       })),
-    });
+    };
+
+    const parsed = CreatePurchaseOrderInputSchema.safeParse(payload);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message || 'Revisa los datos ingresados');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    const ok = await onSubmit(payload);
     setSubmitting(false);
 
     if (ok) {
@@ -167,7 +176,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
       setItems([{ productId: '', quantity: 1, totalCostUsd: 0 }]);
       onClose();
     } else {
-      setError('Error al guardar orden');
+      setError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.');
     }
   };
 

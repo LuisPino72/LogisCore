@@ -99,7 +99,7 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
               <div key={item.id} className="flex justify-between items-center text-sm bg-surface-alt rounded-lg p-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-800 truncate">{item.productName || item.productId.slice(0, 8)}</p>
-                  <p className="text-xs text-text-secondary">x{item.quantity} — {formatUsd(item.costUsdPerUnit)} c/u</p>
+                  <p className="text-xs text-text-secondary">{item.quantity} × {formatUsd(item.costUsdPerUnit)}</p>
                 </div>
                 <span className="font-semibold text-primary shrink-0 ml-2">{formatUsd(item.totalUsd)}</span>
               </div>
@@ -176,8 +176,8 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
     return (
       <EmptyState
         icon={<ShoppingCart size={32} />}
-        title="Sin órdenes"
-        description="Crea tu primera orden de compra."
+        title="Todavía no hay órdenes"
+        description="Crea una orden de compra para empezar a controlar tus pedidos."
       />
     );
   }
@@ -303,6 +303,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
           onClose={() => setReceiveOrderId(null)}
           onSubmit={handleReceive}
           order={receivingOrder}
+          tenantId={tenantId}
         />
       )}
 

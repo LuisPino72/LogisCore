@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, Package, Truck } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
+import { inventoryService } from '../../inventory/services/inventoryService';
 import type { PurchaseOrderWithItems } from '../../../specs/purchases';
+import type { Product } from '../../../specs/inventory';
 import { formatUsd } from '@/lib/formatBs';
 
 interface OrderReceiveProps {
@@ -9,9 +11,11 @@ interface OrderReceiveProps {
   onClose: () => void;
   onSubmit: (items: { itemId: string; receivedQuantity: number }[]) => Promise<boolean>;
   order: PurchaseOrderWithItems;
+  tenantId: string;
 }
 
-export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveProps) {
+export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: OrderReceiveProps) {
+  const [products, setProducts] = useState<Map<string, Product>>(new Map());
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     const map: Record<string, number> = {};
     for (const item of order.items) {
@@ -23,10 +27,34 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const productIds = order.items.map((i) => i.productId);
+    inventoryService.getProducts(tenantId).then((res) => {
+      if (res.ok) {
+        const map = new Map<string, Product>();
+        for (const p of res.data) {
+          if (productIds.includes(p.id)) map.set(p.id, p);
+        }
+        setProducts(map);
+      }
+    });
+  }, [isOpen, order.items]);
+
+  const getProductInfo = (productId: string) => {
+    const p = products.get(productId);
+    if (!p) return { isWeighted: false, unit: 'Und' };
+    if (p.isWeighted) return { isWeighted: true, unit: p.unit === 'lt' ? 'Lt' : 'Kg' };
+    return { isWeighted: false, unit: 'Und' };
+  };
+
   const handleQtyChange = (itemId: string, val: number) => {
     const item = order.items.find((i) => i.id === itemId);
-    const pending = item ? item.quantity - item.receivedQuantity : 0;
-    setQuantities({ ...quantities, [itemId]: Math.max(0, Math.min(val, pending)) });
+    if (!item) return;
+    const pending = item.quantity - item.receivedQuantity;
+    const info = getProductInfo(item.productId);
+    const rounded = info.isWeighted ? Math.round(val * 100) / 100 : Math.round(val);
+    setQuantities({ ...quantities, [itemId]: Math.max(0, Math.min(rounded, pending)) });
   };
 
   const receiveAll = () => {
@@ -37,6 +65,8 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
     }
     setQuantities(next);
   };
+
+  const canReceive = order.items.some((i) => (i.quantity - i.receivedQuantity) > 0);
 
   const handleSubmit = async () => {
     const items = Object.entries(quantities)
@@ -62,7 +92,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
     const ok = await onSubmit(items);
     setSubmitting(false);
     if (!ok) {
-      setError('Error al recibir mercancía');
+      setError('No se pudo registrar la recepción. Revisa tu conexión e intenta de nuevo.');
     }
   };
 
@@ -117,13 +147,20 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
             const received = quantities[item.id] ?? 0;
             const pct = pending > 0 ? Math.round((received / pending) * 100) : 100;
             const isComplete = received >= pending && pending > 0;
+            const info = getProductInfo(item.productId);
+            const hasDecimals = info.isWeighted;
 
             return (
               <div key={item.id} className={`rounded-lg border p-3 space-y-2 transition-colors ${isComplete ? 'border-success/30 bg-success/5' : 'border-border bg-surface-alt'}`}>
                 <div className="flex justify-between items-start">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{item.productName || item.productId.slice(0, 8)}</p>
-                    <p className="text-xs text-text-secondary">Pendiente: {pending} unidades</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{item.productName || item.productId.slice(0, 8)}</p>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded-full shrink-0">
+                        {info.unit}
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-secondary">Pendiente: {hasDecimals ? pending.toFixed(2) : pending} {info.unit}</p>
                   </div>
                   {isComplete && (
                     <CheckCircle size={16} className="text-success shrink-0 ml-2" />
@@ -147,14 +184,14 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
                   <div className="flex-1">
                     <Input
                       sanitize="number"
-                      decimals={0}
+                      decimals={hasDecimals ? 2 : 0}
                       value={received}
-                      onChange={(e) => handleQtyChange(item.id, parseInt(e.target.value) || 0)}
+                      onChange={(e) => handleQtyChange(item.id, hasDecimals ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0)}
                       validation={{ required: true, min: 0 }}
                       inputClassName="text-sm"
                     />
                   </div>
-                  <span className="text-xs text-text-secondary whitespace-nowrap shrink-0">/ {item.quantity}</span>
+                  <span className="text-xs text-text-secondary whitespace-nowrap shrink-0">/ {hasDecimals ? pending.toFixed(2) : pending} {info.unit}</span>
                   {pending > 0 && received < pending && (
                     <button
                       type="button"
@@ -170,7 +207,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order }: OrderReceiveP
           })}
         </div>
 
-        {order.items.some((i) => (i.quantity - i.receivedQuantity) > 0) && (
+        {canReceive && (
           <button
             type="button"
             onClick={receiveAll}

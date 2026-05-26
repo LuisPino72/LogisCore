@@ -177,7 +177,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   ], [pendingOrdersCount, setActiveTab]);
 
   if (!tenantId) {
-    return <EmptyState icon={<ShoppingCart size={48} />} title="Selecciona un tenant" description="No hay tenant activo" />;
+    return <EmptyState icon={<ShoppingCart size={48} />} title="Selecciona un negocio" description="Elige o crea un negocio para empezar a usar Compras." />;
   }
 
   return (

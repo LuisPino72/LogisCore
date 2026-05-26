@@ -54,8 +54,8 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
     return (
       <EmptyState
         icon={<Truck size={32} />}
-        title="Sin proveedores"
-        description="Agrega tu primer proveedor para crear órdenes de compra."
+        title="Todavía no hay proveedores"
+        description="Agrega tu primer proveedor. Así podrás crear órdenes de compra rápido."
       />
     );
   }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Truck, Phone, Building2 } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
+import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import type { CreateSupplierInput, Supplier } from '../../../specs/purchases';
 
 interface SupplierFormProps {
@@ -26,20 +27,22 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
   }, [isOpen, editSupplier]);
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      setError('Nombre es obligatorio');
+    const payload = { name: name.trim(), phone: phone.trim() || undefined };
+    const parsed = CreateSupplierInputSchema.safeParse(payload);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message || 'Revisa los datos ingresados');
       return;
     }
     setSubmitting(true);
     setError('');
-    const ok = await onSubmit({ name: name.trim(), phone: phone.trim() || undefined });
+    const ok = await onSubmit(payload);
     setSubmitting(false);
     if (ok) {
       setName('');
       setPhone('');
       onClose();
     } else {
-      setError('Error al guardar proveedor');
+      setError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.');
     }
   };
 
@@ -103,7 +106,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
       value={phone}
       sanitize="phone"
       onChange={(e) => setPhone(sanitizeValue(e.target.value, 'phone'))}
-      validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
+      validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
       hint="Formato: 04121234567"
               inputClassName="text-sm pl-10"
             />
