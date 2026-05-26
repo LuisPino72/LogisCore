@@ -92,7 +92,7 @@ export function LoginPage() {
           </div>
           <div className="text-center">
             <h1 className="text-xl sm:text-2xl font-title font-bold text-gray-900 tracking-tight">Sasa</h1>
-            <p className="text-xs text-gray-500 mt-1 font-sans">Tu negocio, siempre bajo control</p>
+            <p className="text-xs text-gray-500 mt-1 font-sans">Bienvenido de vuelta. Ingresa a tu cuenta.</p>
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export function LoginPage() {
           <Input
             label="Email"
             type="email"
-            placeholder="tu@email.com"
+            placeholder="correo@negocio.com"
             value={email}
             onChange={(e) => { setEmail(e.target.value); clearLoginError(); }}
             error={fieldErrors.email}
@@ -151,7 +151,7 @@ export function LoginPage() {
               background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)',
             }}
           >
-            Iniciar Sesión
+            Entrar
           </Button>
         </form>
       </div>
