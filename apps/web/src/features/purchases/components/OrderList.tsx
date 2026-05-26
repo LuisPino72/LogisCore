@@ -122,7 +122,7 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-300"
+                className="h-full rounded-full transition-all duration-300 progress-fill"
                 style={{
                   width: `${Math.min(progress.pct, 100)}%`,
                   backgroundColor: progress.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)',
@@ -236,7 +236,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-300"
+                      className="h-full rounded-full transition-all duration-300 progress-fill"
                       style={{
                         width: `${Math.min(progress.pct, 100)}%`,
                         backgroundColor: progress.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)',
@@ -247,15 +247,17 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
               )}
 
               {/* Items preview */}
-              <div className="space-y-1 bg-gray-50 rounded-lg p-2">
+              <div className="space-y-1.5 bg-gray-50/80 rounded-lg border border-gray-100 p-2.5">
                 {order.items.slice(0, 3).map((item: PurchaseOrderItem) => (
                   <div key={item.id} className="flex justify-between text-xs text-gray-600">
-                    <span className="truncate flex-1 mr-2">{item.productName || item.productId.slice(0, 8)}</span>
-                    <span className="shrink-0">x{item.quantity} — {formatUsd(item.totalUsd)}</span>
+                    <span className="truncate flex-1 mr-2 font-medium">{item.productName || item.productId.slice(0, 8)}</span>
+                    <span className="shrink-0 text-text-secondary">x{item.quantity} · {formatUsd(item.totalUsd)}</span>
                   </div>
                 ))}
                 {order.items.length > 3 && (
-                  <p className="text-xs text-text-secondary text-center">+{order.items.length - 3} items más</p>
+                  <div className="text-[11px] text-text-secondary text-center pt-1 border-t border-gray-100/80 mt-1">
+                    +{order.items.length - 3} items más
+                  </div>
                 )}
               </div>
 

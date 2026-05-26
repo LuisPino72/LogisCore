@@ -231,7 +231,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
       <Card>
         {activeTab === 'ordenes' && (
-          <div className="p-4 space-y-4">
+          <div key="ordenes" className="p-4 space-y-4 animate-fade-in">
             <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
               {statusOptions.map((opt) => (
                 <button
@@ -239,7 +239,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
                   type="button"
                   onClick={(e) => handleStatusFilter(opt.value, e.currentTarget)}
                   className={cn(
-                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap',
+                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-95',
                     tabState.statusFilter === opt.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
@@ -306,7 +306,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
         )}
 
         {activeTab === 'proveedores' && (
-          <div className="p-4 space-y-4">
+          <div key="proveedores" className="p-4 space-y-4 animate-fade-in">
             <SearchInput
               maxLength={20}
               placeholder="Buscar proveedor..."
@@ -358,83 +358,77 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
         />
       )}
 
-      {confirmDeleteSupplier && (
-        <Modal isOpen={true} onClose={() => setConfirmDeleteSupplier(null)} title="Confirmar eliminación">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-danger" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">¿Eliminar proveedor {confirmDeleteSupplier.name}?</p>
-                <p className="text-xs text-gray-500">
-                  El proveedor se borrará definitivamente.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="ghost" fullWidth onClick={() => setConfirmDeleteSupplier(null)}>
-                Cancelar
-              </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmDeleteSupplier} disabled={!isOnline}>
-                Eliminar
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+{confirmDeleteSupplier && (
+  <Modal isOpen={true} onClose={() => setConfirmDeleteSupplier(null)} title="Confirmar eliminación">
+    <div className="space-y-4 animate-slide-down">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center shrink-0 ring-1 ring-danger/20">
+          <AlertTriangle size={24} className="text-danger" />
+        </div>
+        <div className="pt-1">
+          <p className="text-sm font-semibold text-gray-900">¿Eliminar proveedor {confirmDeleteSupplier.name}?</p>
+          <p className="text-xs text-gray-500 mt-1">El proveedor se borrará definitivamente. Esta acción no se puede deshacer.</p>
+        </div>
+      </div>
+      <div className="flex gap-3 pt-2">
+        <Button variant="ghost" fullWidth onClick={() => setConfirmDeleteSupplier(null)}>
+          Cancelar
+        </Button>
+        <Button variant="danger" fullWidth onClick={handleConfirmDeleteSupplier} disabled={!isOnline}>
+          Eliminar
+        </Button>
+      </div>
+    </div>
+  </Modal>
+)}
 
-      {confirmCancelOrder && (
-        <Modal isOpen={true} onClose={() => setConfirmCancelOrder(null)} title="Cancelar orden">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-danger" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">¿Cancelar orden de {confirmCancelOrder.name}?</p>
-                <p className="text-xs text-gray-500">
-                  La orden quedará marcada como cancelada y no podrá recibirse.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="ghost" fullWidth onClick={() => setConfirmCancelOrder(null)}>
-                Volver
-              </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmCancelOrder} disabled={!isOnline}>
-                Cancelar orden
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+{confirmCancelOrder && (
+  <Modal isOpen={true} onClose={() => setConfirmCancelOrder(null)} title="Cancelar orden">
+    <div className="space-y-4 animate-slide-down">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center shrink-0 ring-1 ring-danger/20">
+          <AlertTriangle size={24} className="text-danger" />
+        </div>
+        <div className="pt-1">
+          <p className="text-sm font-semibold text-gray-900">¿Cancelar orden de {confirmCancelOrder.name}?</p>
+          <p className="text-xs text-gray-500 mt-1">La orden quedará marcada como cancelada y no podrá recibirse.</p>
+        </div>
+      </div>
+      <div className="flex gap-3 pt-2">
+        <Button variant="ghost" fullWidth onClick={() => setConfirmCancelOrder(null)}>
+          Volver
+        </Button>
+        <Button variant="danger" fullWidth onClick={handleConfirmCancelOrder} disabled={!isOnline}>
+          Cancelar orden
+        </Button>
+      </div>
+    </div>
+  </Modal>
+)}
 
-      {confirmDeleteOrder && (
-        <Modal isOpen={true} onClose={() => setConfirmDeleteOrder(null)} title="Eliminar orden">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-danger" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">¿Eliminar orden de {confirmDeleteOrder.name}?</p>
-                <p className="text-xs text-gray-500">
-                  La orden se ocultará de la lista.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="ghost" fullWidth onClick={() => setConfirmDeleteOrder(null)}>
-                Volver
-              </Button>
-              <Button variant="danger" fullWidth onClick={handleConfirmDeleteOrder} disabled={!isOnline}>
-                Eliminar
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+{confirmDeleteOrder && (
+  <Modal isOpen={true} onClose={() => setConfirmDeleteOrder(null)} title="Eliminar orden">
+    <div className="space-y-4 animate-slide-down">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center shrink-0 ring-1 ring-danger/20">
+          <AlertTriangle size={24} className="text-danger" />
+        </div>
+        <div className="pt-1">
+          <p className="text-sm font-semibold text-gray-900">¿Eliminar orden de {confirmDeleteOrder.name}?</p>
+          <p className="text-xs text-gray-500 mt-1">La orden se ocultará de la lista. Esta acción no se puede deshacer.</p>
+        </div>
+      </div>
+      <div className="flex gap-3 pt-2">
+        <Button variant="ghost" fullWidth onClick={() => setConfirmDeleteOrder(null)}>
+          Volver
+        </Button>
+        <Button variant="danger" fullWidth onClick={handleConfirmDeleteOrder} disabled={!isOnline}>
+          Eliminar
+        </Button>
+      </div>
+    </div>
+  </Modal>
+)}
 
       <ModuleOnboarding
         moduleId="purchases"

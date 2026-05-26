@@ -69,9 +69,10 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
         return (
           <div
             key={s.id}
-            className="flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-xl border border-gray-100 bg-white sm:hover:shadow-sm sm:hover:border-primary/20 sm:group transition-all"
+            className="flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-xl border border-gray-100 bg-white sm:hover:shadow-sm sm:hover:border-primary/20 sm:group transition-all duration-200 sm:hover:border-l-primary sm:hover:border-l-3"
+            style={{ borderLeft: s.phone ? '3px solid transparent' : undefined }}
           >
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
               <span className="text-xs font-bold text-primary">{initials}</span>
             </div>
             <div className="min-w-0 flex-1 w-full text-center sm:text-left">
