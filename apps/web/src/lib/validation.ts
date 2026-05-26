@@ -46,6 +46,7 @@ export function sanitizeNumber(value: string, options?: { decimals?: number; all
   if (!allowNegative) {
     sanitized = sanitized.replace(/-/g, '');
   }
+  sanitized = sanitized.replace(/,/g, '.');
   sanitized = sanitized.replace(/[^0-9.]/g, '');
   const parts = sanitized.split('.');
   if (parts.length > 2) {

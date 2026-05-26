@@ -61,14 +61,14 @@ const DataRow = <T,>(props: DataRowProps<T>): ReactNode => {
         className,
       )}
       onClick={() => onRowClick?.(item)}
-      role={onRowClick ? 'button' : undefined}
+      role={onRowClick ? 'button' : 'row'}
       tabIndex={onRowClick ? 0 : undefined}
       onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(item); } : undefined}
     >
       {columns.map((col) => {
         const content = col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? '');
         return (
-          <div key={col.key} className={cn('data-table-cell', col.hideOnMobile && 'hidden sm:flex', col.className)}>
+          <div key={col.key} role="cell" className={cn('data-table-cell', col.hideOnMobile && 'hidden sm:flex', col.className)}>
             {content}
           </div>
         );
@@ -136,11 +136,11 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn('data-table', className)} style={{ ['--cols' as unknown as string]: `repeat(${columns.length}, minmax(0,1fr))` } as React.CSSProperties}>
+    <div role="table" className={cn('data-table', className)} style={{ ['--cols' as unknown as string]: `repeat(${columns.length}, minmax(0,1fr))` } as React.CSSProperties}>
       {/* Desktop / Tablet header */}
-      <div className={cn('data-table-header hidden sm:grid', stickyHeader && 'sticky top-0 z-10')}>
+      <div role="rowgroup" className={cn('data-table-header hidden sm:grid', stickyHeader && 'sticky top-0 z-10')}>
         {columns.map((col) => (
-          <div key={col.key} className={cn('data-table-cell font-semibold', col.className)}>
+          <div key={col.key} role="columnheader" className={cn('data-table-cell font-semibold', col.className)}>
             {col.sortable ? (
               <button
                 className="flex items-center gap-1 hover:text-gray-700 transition-colors"
@@ -161,7 +161,7 @@ export function DataTable<T>({
       </div>
 
        {/* Desktop / Tablet rows */}
-      <div className="hidden sm:block">
+      <div role="rowgroup" className="hidden sm:block">
         {paged.map((item, index) => (
           <DataRow
             key={keyExtractor(item)}

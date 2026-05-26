@@ -1,4 +1,4 @@
-import { forwardRef, useState, type ReactNode, type ChangeEvent } from 'react';
+import { forwardRef, useState, useRef, useEffect, type ReactNode, type ChangeEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { validateValue, sanitizeValue, type ValidationRule } from '../../lib/validation';
@@ -19,6 +19,12 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
   allowNegative?: boolean;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   showPassword?: boolean;
+}
+
+function valueToDisplay(v: unknown, getSanitized: (s: string) => string): string {
+  if (typeof v === 'string') return getSanitized(v);
+  if (v != null) return String(v);
+  return '';
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(({
@@ -43,24 +49,62 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   const [internalError, setInternalError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const [visible, setVisible] = useState(false);
+  const isInternalRef = useRef(false);
+
+  const getSanitized = (v: string) => sanitizeValue(v, sanitize, { decimals, allowNegative });
+
+  const initDisplay = () => valueToDisplay(value, getSanitized);
+  const [displayValue, setDisplayValue] = useState(initDisplay);
+
+  useEffect(() => {
+    if (isInternalRef.current) {
+      isInternalRef.current = false;
+      return;
+    }
+    const propStr = valueToDisplay(value, getSanitized);
+    const currentSanitized = getSanitized(displayValue);
+    if (propStr !== currentSanitized) {
+      setDisplayValue(propStr);
+    }
+  }, [value, sanitize, decimals, allowNegative]);
 
   const displayError = externalError || (touched ? internalError : null);
   const isPassword = props.type === 'password';
   const effectiveType = showPassword && isPassword ? (visible ? 'text' : 'password') : props.type;
 
-  const getSanitized = (v: string) => sanitizeValue(v, sanitize, { decimals, allowNegative });
-
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const sanitized = sanitize !== 'none' ? getSanitized(raw) : raw;
+
+    setDisplayValue(sanitized);
+    isInternalRef.current = true;
+
+    const sanitizedEvent = {
+      ...e,
+      target: { ...e.target, value: sanitized },
+    } as ChangeEvent<HTMLInputElement>;
+
     if (validation && touched) {
-      const err = validateValue(getSanitized(e.target.value), validation);
+      const err = validateValue(sanitized, validation);
       setInternalError(err);
       onValidate?.(err);
     }
-    onChange?.(e);
+
+    onChange?.(sanitizedEvent);
   };
 
   const handleBlur = () => {
     setTouched(true);
+    if (sanitize === 'currency' || sanitize === 'number') {
+      const num = parseFloat(displayValue);
+      if (!isNaN(num)) {
+        const formatted = num.toFixed(decimals);
+        if (formatted !== displayValue) {
+          isInternalRef.current = true;
+          setDisplayValue(formatted);
+        }
+      }
+    }
     if (validation && typeof value === 'string') {
       const err = validateValue(getSanitized(value), validation);
       setInternalError(err);
@@ -114,7 +158,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
               inputClassName
             )}
             maxLength={validation?.maxLength}
-            value={typeof value === 'string' ? getSanitized(value) : value}
+            value={displayValue}
             onChange={handleChange}
             onBlur={handleBlur}
           />

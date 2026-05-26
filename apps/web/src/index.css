@@ -10,7 +10,7 @@
   --color-accent-dark: #D97706;
   --color-success: #059669;
   --color-danger: #DC2626;
-  --color-warning: #D97706;
+  --color-warning: #B45309;
   --color-info: #0284C7;
 
   --color-surface: #f8fafc;
@@ -41,6 +41,8 @@
   --animate-fade-in: fadeIn 0.2s ease-out;
   --animate-slide-up: slideUp 0.3s ease-out;
   --animate-slide-down: slideDown 0.3s ease-out;
+  --animate-fade-out: fadeOut 0.2s ease-in;
+  --animate-slide-out-down: slideOutDown 0.2s ease-in;
   --animate-shimmer: shimmer 2s infinite linear;
 }
 
@@ -48,6 +50,8 @@
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes slideOutDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }
 @keyframes shimmer { 
   0% { background-position: -200px 0; } 
   100% { background-position: calc(200px + 100%) 0; } 
@@ -136,7 +140,7 @@
 
 /* ───────────────────── CARD ───────────────────── */
 .card { @apply bg-white border border-gray-200 rounded-xl shadow-sm transition-all duration-150; }
-.card-header { @apply px-4 py-3 border-b border-gray-100 font-semibold text-gray-900; font-size: var(--text-fluid-sm); }
+.card-header { @apply px-4 py-3 border-b border-gray-100 font-semibold text-gray-900; font-family: var(--font-title); font-size: var(--text-fluid-sm); }
 .card-body { @apply p-4; }
 .card-footer { @apply px-4 py-3 border-t border-gray-100 bg-gray-50/30 rounded-b-xl; }
 .card-interactive { 
@@ -165,7 +169,7 @@
 .modal-content-lg { @apply sm:max-w-2xl; }
 .modal-content-full { @apply sm:max-w-full sm:m-4; }
 .modal-header { @apply flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-10 shrink-0; }
-.modal-title { @apply font-semibold text-gray-900; font-size: var(--text-fluid-lg); }
+.modal-title { @apply font-semibold text-gray-900; font-family: var(--font-title); font-size: var(--text-fluid-lg); }
 .modal-close { @apply p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-500; }
 .modal-body { @apply p-4 flex-1 min-h-0; }
 .modal-footer { @apply flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/30 sticky bottom-0 shrink-0; }
@@ -207,7 +211,7 @@
 /* ───────────────────── EMPTY STATE ───────────────────── */
 .empty-state { @apply flex flex-col items-center justify-center py-12 px-4 text-center; }
 .empty-state-icon { @apply text-gray-300 mb-4 transition-transform duration-500 hover:scale-110; }
-.empty-state-title { @apply font-semibold text-gray-700 mb-1; font-size: var(--text-fluid-sm); }
+.empty-state-title { @apply font-semibold text-gray-700 mb-1; font-family: var(--font-title); font-size: var(--text-fluid-sm); }
 .empty-state-desc { @apply text-gray-500 mb-4 max-w-xs; font-size: var(--text-fluid-xs); }
 
 /* ───────────────────── DATATABLE ───────────────────── */
@@ -351,11 +355,6 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   --text-fluid-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
   --text-fluid-xl: clamp(1.25rem, 1rem + 1.25vw, 1.5rem);
   --text-fluid-2xl: clamp(1.5rem, 1.25rem + 1.25vw, 2rem);
-  --space-fluid-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
-  --space-fluid-sm: clamp(0.5rem, 0.4rem + 0.5vw, 0.75rem);
-  --space-fluid-md: clamp(1rem, 0.8rem + 1vw, 1.5rem);
-  --space-fluid-lg: clamp(1.5rem, 1.2rem + 1.5vw, 2.5rem);
-  --space-fluid-xl: clamp(2rem, 1.5rem + 2.5vw, 4rem);
 }
 
 /* ───────────────────── LOGIN PAGE ───────────────────── */

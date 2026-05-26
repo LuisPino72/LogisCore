@@ -19,8 +19,10 @@ export function Tooltip({
   delay = 200,
 }: TooltipProps) {
   const [visible, setVisible] = useState(false);
+  const [closing, setClosing] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const tooltipId = useId();
 
@@ -35,7 +37,11 @@ export function Tooltip({
 
   const hide = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    setVisible(false);
+    setClosing(true);
+    closingTimerRef.current = setTimeout(() => {
+      setVisible(false);
+      setClosing(false);
+    }, 150);
   };
 
   const toggle = () => {
@@ -61,6 +67,7 @@ export function Tooltip({
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
     };
   }, []);
 
@@ -98,12 +105,13 @@ export function Tooltip({
       aria-describedby={visible ? tooltipId : undefined}
     >
       {children}
-      {visible && content && (
+      {(visible || closing) && content && (
         <div
           id={tooltipId}
           role="tooltip"
           className={cn(
-            'absolute z-100 px-2.5 py-1.5 text-xs font-medium rounded-md whitespace-nowrap max-w-[200px] text-center pointer-events-none animate-fade-in shadow-lg',
+            'absolute z-100 px-2.5 py-1.5 text-xs font-medium rounded-md whitespace-nowrap max-w-[200px] text-center pointer-events-none shadow-lg',
+            closing ? 'animate-fade-out' : 'animate-fade-in',
             positionClasses[position],
             variantClasses[variant],
             className,

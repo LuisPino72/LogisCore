@@ -213,8 +213,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               sanitize="currency"
               step="0.01"
               placeholder="2.50"
-              value={formData.priceUsd || ''}
-              onChange={(e) => setField('priceUsd', parseFloat(e.target.value) || 0)}
+              value={formData.priceUsd != null ? String(formData.priceUsd) : ''}
+              onChange={(e) => setField('priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
               error={errors.priceUsd}
               validation={{ required: true, min: 0.05, max: 9999 }}
               inputClassName="text-sm"
@@ -229,8 +229,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               sanitize="currency"
               step="0.01"
               placeholder="0.00"
-              value={formData.costPrice || ''}
-              onChange={(e) => setField('costPrice', parseFloat(e.target.value) || 0)}
+              value={formData.costPrice != null ? String(formData.costPrice) : ''}
+              onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
               validation={{ min: 0, max: 999999 }}
               inputClassName="text-sm"
             />
@@ -406,8 +406,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         sanitize="currency"
                         step="0.01"
                         placeholder={formData.priceUsd > 0 ? `$${formData.priceUsd}` : '0.00'}
-                        value={pres.priceUsd || ''}
-                        onChange={(e) => updatePresentation(index, 'priceUsd', parseFloat(e.target.value) || 0)}
+                        value={pres.priceUsd != null ? String(pres.priceUsd) : ''}
+                        onChange={(e) => updatePresentation(index, 'priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         inputClassName="text-sm"
                       />
                     </div>
@@ -421,8 +421,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                           sanitize="number"
                           decimals={0}
                           placeholder="12"
-                          value={pres.unitMultiplier?.toString() || '1'}
-                          onChange={(e) => updatePresentation(index, 'unitMultiplier', parseInt(e.target.value) || 1)}
+                        value={pres.unitMultiplier?.toString() || ''}
+                        onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
                           inputClassName="text-sm"
                         />
                       </div>
