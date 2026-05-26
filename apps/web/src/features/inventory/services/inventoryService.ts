@@ -329,10 +329,12 @@ export const inventoryService = {
         db.outbox,
       ], async () => {
         await db.products.add(createdProduct);
+        // CRITICAL: Enqueue parent product first to ensure it exists in Supabase before dependents
+        await syncQueue.enqueue('products', 'CREATE', productId, toSnake(createdProduct as unknown as Record<string, unknown>), tenantId);
 
         if (stockType === 'independent') {
           for (const child of childrenToCreate) {
-            await db.products.add({
+            const childProduct = {
               id: child.id,
               tenantId,
               name: child.name,
@@ -342,10 +344,14 @@ export const inventoryService = {
               isWeighted: false,
               isTaxable: input.isTaxable,
               isSellable: true,
-              unit: 'unidad',
+              unit: 'unidad' as const,
               stock: child.stock,
               stockMin: input.stockMin,
-            });
+            };
+            await db.products.add(childProduct);
+
+            // CRITICAL: Enqueue child product for sync BEFORE its dependencies
+            await syncQueue.enqueue('products', 'CREATE', child.id, toSnake(childProduct as unknown as Record<string, unknown>), tenantId);
 
             if (child.stock > 0) {
               const movementId = generateId();
@@ -362,13 +368,17 @@ export const inventoryService = {
               };
               await db.inventoryMovements.add(movement);
 
+              const costPerUnit = input.costPrice != null && input.costPrice > 0
+                ? preciseRound(input.costPrice / childrenToCreate.reduce((sum, c) => sum + c.stock, 0), 4)
+                : 0;
+
               const lot = {
                 id: generateId(),
                 tenantId,
                 productId: child.id,
                 quantityAdded: child.stock,
                 remainingQuantity: child.stock,
-                costUsdPerUnit: 0,
+                costUsdPerUnit: costPerUnit,
                 sourceMovementId: movementId,
                 createdAt: now,
                 updatedAt: now,
@@ -422,7 +432,6 @@ export const inventoryService = {
           createdPresentations.push(toPresentation(pres as unknown as Record<string, unknown>));
         }
 
-        await syncQueue.enqueue('products', 'CREATE', productId, toSnake(createdProduct as unknown as Record<string, unknown>), tenantId);
         await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, {
           productId,
           name: input.name,
