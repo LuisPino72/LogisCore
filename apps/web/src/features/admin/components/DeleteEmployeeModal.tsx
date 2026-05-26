@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Alert, Modal, Button } from '../../../common/components';
+import { AlertTriangle } from 'lucide-react';
+import { Modal, Button } from '../../../common/components';
 
 interface DeleteEmployeeModalProps {
   isOpen: boolean;
@@ -40,13 +41,16 @@ export function DeleteEmployeeModal({ isOpen, onClose, employeeName, onConfirm }
         </div>
       }
     >
-      <div className="space-y-4">
-        <Alert variant="warning">
-          ¿Estás seguro de que quieres eliminar a <strong>{employeeName}</strong>?
-        </Alert>
-        <p className="text-sm text-gray-600">
-          Esta acción desactivará al empleado. No podrá acceder al sistema hasta que un administrador lo reactive.
-        </p>
+      <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
+          <AlertTriangle size={24} className="text-danger" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-semibold">¿Eliminar a <strong>{employeeName}</strong>?</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Esta acción desactivará al empleado. No podrá acceder al sistema hasta que un administrador lo reactive.
+          </p>
+        </div>
       </div>
     </Modal>
   );

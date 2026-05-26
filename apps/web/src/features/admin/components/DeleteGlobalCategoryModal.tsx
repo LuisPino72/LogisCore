@@ -48,11 +48,11 @@ export function DeleteGlobalCategoryModal({ isOpen, onClose, categoryName, onCon
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4 animate-slide-down">
         <Alert variant="error">
           ¡ATENCIÓN! Esta acción eliminará la categoría global. Los locales que ya la tienen como predefinida conservarán su copia local, pero dejará de estar disponible para nuevos locales.
         </Alert>
-        <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+        <div className="bg-surface-alt rounded-lg p-3 text-sm space-y-1">
           <p><span className="font-medium text-gray-700">Categoría:</span> {categoryName}</p>
         </div>
         <div>

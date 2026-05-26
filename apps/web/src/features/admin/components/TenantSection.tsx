@@ -9,6 +9,7 @@ import {
   RotateCcw,
   BarChart3,
   Users as UsersIcon,
+  Edit2,
 } from 'lucide-react';
 import {
   Badge,
@@ -171,8 +172,8 @@ export function TenantSection({
           </Tooltip>
           <Tooltip content="Editar local" position="top">
             <Button variant="ghost" size="sm" onClick={() => setEditTarget(t)}>
+              <Edit2 size={16} />
               <span className="hidden sm:inline">Editar</span>
-              <span className="sm:hidden">✎</span>
             </Button>
           </Tooltip>
           <Dropdown

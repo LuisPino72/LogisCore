@@ -65,7 +65,7 @@ export function DeleteTenantModal({ isOpen, onClose, tenant, onSoftDelete, onHar
       }
     >
       {isHardDelete ? (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-slide-down">
           <Alert variant="error">
             ¡ATENCIÓN! Esta acción <strong>NO se puede deshacer</strong>. Se borrarán <strong>todos los datos</strong> del local en cascada:
           </Alert>
@@ -77,7 +77,7 @@ export function DeleteTenantModal({ isOpen, onClose, tenant, onSoftDelete, onHar
             <li>Usuarios y roles del local</li>
             <li>Suscripciones y tasas de cambio</li>
           </ul>
-          <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+          <div className="bg-surface-alt rounded-lg p-3 text-sm space-y-1">
             <p><span className="font-medium text-gray-700">Local:</span> {tenant.name}</p>
             <p><span className="font-medium text-gray-700">Slug:</span> {tenant.slug}</p>
           </div>
@@ -94,11 +94,11 @@ export function DeleteTenantModal({ isOpen, onClose, tenant, onSoftDelete, onHar
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-slide-down">
           <Alert variant="warning">
             Esto desactivará el local y ocultará todos sus datos. Podrás reactivarlo después si es necesario.
           </Alert>
-          <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+          <div className="bg-surface-alt rounded-lg p-3 text-sm space-y-1">
             <p><span className="font-medium text-gray-700">Local:</span> {tenant.name}</p>
             <p><span className="font-medium text-gray-700">Slug:</span> {tenant.slug}</p>
             <p><span className="font-medium text-gray-700">RIF:</span> {tenant.rif}</p>

@@ -55,9 +55,9 @@ export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, onRes
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4 animate-slide-down">
         {error && <Alert variant="error">{error}</Alert>}
-        <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+        <div className="bg-surface-alt rounded-lg p-3 text-sm space-y-1">
           <p><span className="font-medium text-gray-700">Email:</span> {userEmail}</p>
           <p><span className="font-medium text-gray-700">Usuario:</span> {userName}</p>
         </div>

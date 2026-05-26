@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { Modal, Button } from '../../../common/components';
 
 interface RenewSubscriptionModalProps {
@@ -41,13 +42,17 @@ export function RenewSubscriptionModal({ isOpen, onClose, tenantName, expiresAt,
         </div>
       }
     >
-      <div className="space-y-3">
-        <p className="text-sm text-gray-600">
-          ¿Estás seguro de que quieres renovar la suscripción de{' '}
-          <strong>{tenantName}</strong> por 30 días?
-        </p>
+      <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-primary/20 bg-primary/10">
+          <RefreshCw size={24} className="text-primary" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            ¿Renovar la suscripción de <strong>{tenantName}</strong> por 30 días?
+          </p>
+        </div>
         {expiresAt && (
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+          <div className="w-full bg-surface-alt border border-border rounded-lg p-3 text-sm text-gray-600">
             <span className="font-medium">Vencimiento actual:</span>{' '}
             {new Date(expiresAt).toLocaleDateString('es-ES')}
           </div>

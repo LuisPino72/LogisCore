@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Trash2, Tags } from 'lucide-react';
+import { Edit2, Trash2, Tags } from 'lucide-react';
 import { Button, Card, DataTable, Pagination, SearchInput } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
@@ -59,8 +59,8 @@ export function GlobalCategorySection({
       render: (c: GlobalCategory) => (
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
+            <Edit2 size={16} />
             <span className="hidden sm:inline">Editar</span>
-            <span className="sm:hidden">✎</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)}>
             <Trash2 size={16} className="text-gray-400 hover:text-danger" />
