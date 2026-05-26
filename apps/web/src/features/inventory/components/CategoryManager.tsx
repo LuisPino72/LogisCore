@@ -68,14 +68,25 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
       setFormError('Ingresa un nombre');
       return;
     }
+
+    // Validar nombre duplicado
+    const trimmedName = formName.trim();
+    const duplicate = categories.some(
+      (c) => c.name.toLowerCase() === trimmedName.toLowerCase() && c.id !== editingId
+    );
+    if (duplicate) {
+      setFormError('Ya existe una categoría con ese nombre');
+      return;
+    }
+
     setSubmitting(true);
     setFormError('');
 
     let ok = false;
     if (modalMode === 'create') {
-      ok = await onCreate(formName.trim());
+      ok = await onCreate(trimmedName);
     } else if (editingId) {
-      ok = await onUpdate(editingId, formName.trim());
+      ok = await onUpdate(editingId, trimmedName);
     }
 
     setSubmitting(false);
@@ -99,8 +110,8 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
       {paginated.length === 0 ? (
         <EmptyState
           icon={<ListTree size={32} />}
-          title={search ? 'Sin resultados' : 'Sin categorías'}
-          description={search ? 'No se encontraron categorías con ese nombre' : 'Crea tu primera categoría'}
+          title={search ? 'Sin resultados' : 'Todavía no hay categorías'}
+          description={search ? 'No encontramos categorías con ese nombre. Intenta con otro término.' : 'Organiza tus productos creando tu primera categoría.'}
         />
       ) : (
         <>

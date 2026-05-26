@@ -224,11 +224,15 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     return <EmptyState icon={<Package size={48} />} title="Selecciona un tenant" description="No hay tenant activo" />;
   }
 
-  if (loading && products.length === 0 && !hasLoadedOnce) {
+  if (!hasLoadedOnce) {
     return (
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Inventario</h1>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-text-secondary mb-3">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          Cargando productos...
         </div>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -252,7 +256,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
             </h1>
             <p className="text-[14px] text-text-secondary hidden sm:block">
-              {activeTab === 'categorias' ? 'Gestiona tus categorías. Aquí puedes crear, editar y eliminar categorías para tus productos.' : activeTab === 'historial' ? 'Acá puedes ver todos los movimientos de tus productos (ventas, compras, pérdidas...)' : 'Gestiona productos, crea edita y elimina. También puedes hacer ajustes de invnetario y ver movimientos de los productos '}
+              {activeTab === 'categorias' ? 'Organiza tus productos por categorías para encontrarlos más rápido al vender.' : activeTab === 'historial' ? 'Revisa todos los movimientos de tus productos: ventas, compras, ajustes y más.' : 'Administra tu inventario: crea, edita y organiza tus productos. También puedes ajustar el stock y revisar el historial de movimientos.'}
             </p>
             {totalLowStock > 0 && activeTab === 'productos' && (
               <div className="mt-0.5">
@@ -350,8 +354,18 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <CategoryManager
               categories={categories}
               isOwner={isOwner}
-              onCreate={async (name) => { if (!tenantId) return false; return !!(await createCategory(name, tenantId)); }}
-              onUpdate={async (id, name) => { if (!tenantId) return false; return updateCategory(id, name, tenantId); }}
+              onCreate={async (name) => {
+                if (!tenantId) return false;
+                const newId = await createCategory(name, tenantId);
+                if (newId) addToast({ type: 'success', message: 'Categoría creada exitosamente.', duration: 3000 });
+                return !!newId;
+              }}
+              onUpdate={async (id, name) => {
+                if (!tenantId) return false;
+                const ok = await updateCategory(id, name, tenantId);
+                if (ok) addToast({ type: 'success', message: 'Categoría actualizada exitosamente.', duration: 3000 });
+                return ok;
+              }}
               onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
               isOpen={showCategoryForm}
               onClose={() => setShowCategoryForm(false)}

@@ -67,7 +67,7 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
       <EmptyState
         icon={<Layers size={32} />}
         title="Sin lotes activos"
-        description="No hay lotes con stock disponible para este producto"
+        description="No hay lotes con stock disponible. Los lotes se crean al registrar entradas de inventario."
       />
     );
   }

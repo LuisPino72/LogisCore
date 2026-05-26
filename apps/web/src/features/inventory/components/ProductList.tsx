@@ -235,8 +235,8 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
       <div className="p-4">
         <EmptyState
           icon={<Package size={40} />}
-          title="Sin productos"
-          description="Agrega tu primer producto para comenzar"
+          title="Aún no tienes productos"
+          description="Agrega tu primer producto al inventario para empezar a controlar tu stock."
           action={
             isOwner ? (
               <Button variant="primary" size="sm" onClick={onNewProduct}>
@@ -329,7 +329,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
         rowClassName={(p: Product) => p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined}
-        emptyMessage="No se encontraron productos"
+        emptyMessage="No encontramos productos con ese nombre o filtro"
         renderCardOnMobile
         page={page}
         onPageChange={(newPage) => {

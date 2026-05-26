@@ -225,7 +225,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
         )}
         {showDropdown && filteredProducts.length === 0 && (
           <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-4 text-sm text-gray-400 text-center">
-            No se encontraron productos
+            No encontramos productos con ese nombre o código
           </div>
         )}
       </div>
@@ -235,8 +235,8 @@ export function MovementHistory({ products }: MovementHistoryProps) {
           <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
             <History size={28} className="text-gray-300" />
           </div>
-          <p className="text-sm font-medium text-gray-500">Selecciona un producto</p>
-          <p className="text-xs text-text-secondary mt-1">para ver su historial de movimientos</p>
+          <p className="text-sm font-medium text-gray-500">Elige un producto</p>
+          <p className="text-xs text-text-secondary mt-1">Selecciona un producto de la lista para ver su historial de movimientos</p>
         </Card>
       )}
 
@@ -247,7 +247,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
             data={visibleMovements}
             loading={loading}
             keyExtractor={(m: InventoryMovement) => m.id}
-            emptyMessage="Sin movimientos"
+            emptyMessage="Sin movimientos aún"
             emptyIcon={<History size={32} />}
             renderCardOnMobile
           />

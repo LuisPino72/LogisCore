@@ -101,8 +101,8 @@ export function KardexView({ productId, productName, unit }: KardexViewProps) {
     return (
       <EmptyState
         icon={<TrendingUp size={32} />}
-        title="Sin movimientos"
-        description={`No hay movimientos registrados para ${productName}`}
+        title="Sin movimientos aún"
+        description={`Todavía no hay movimientos registrados para ${productName}`}
       />
     );
   }
@@ -183,7 +183,7 @@ export function KardexView({ productId, productName, unit }: KardexViewProps) {
         columns={columns}
         data={movements}
         keyExtractor={(item: MovementRow) => item.date + item.type}
-        emptyMessage="Sin movimientos"
+        emptyMessage="Sin movimientos aún"
       />
     </div>
   );

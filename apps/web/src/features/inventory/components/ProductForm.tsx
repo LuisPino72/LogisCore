@@ -34,6 +34,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const [categoryName, setCategoryName] = useState('');
   const [categoryError, setCategoryError] = useState('');
   const [categorySubmitting, setCategorySubmitting] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const initialValues = editProduct ? {
     name: editProduct.name,
     sku: editProduct.sku,
@@ -76,12 +77,30 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     }
   };
 
-  const handleClose = () => {
+  const hasUnsavedChanges = (): boolean => {
+    if (isEditing) return true;
+    return !!(
+      formData.name || formData.sku || formData.priceUsd > 0 ||
+      formData.stockInicial > 0 || formData.stockMin ||
+      presentations.length > 0 || imageFile || imagePreview
+    );
+  };
+
+  const performClose = () => {
     revokeBlobUrl();
     reset();
     setImageFile(null);
     setImagePreview(null);
+    setShowDiscardConfirm(false);
     onClose();
+  };
+
+  const handleClose = () => {
+    if (hasUnsavedChanges()) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    performClose();
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,7 +216,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               value={formData.priceUsd || ''}
               onChange={(e) => setField('priceUsd', parseFloat(e.target.value) || 0)}
               error={errors.priceUsd}
-              validation={{ required: true, min: 0.01, max: 9999 }}
+              validation={{ required: true, min: 0.05, max: 9999 }}
               inputClassName="text-sm"
             />
           </div>
@@ -499,6 +518,24 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             <Button variant="ghost" onClick={() => setShowCreateCategory(false)}>Cancelar</Button>
             <Button variant="primary" onClick={handleCreateCategory} loading={categorySubmitting}>
               Crear
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showDiscardConfirm} onClose={() => setShowDiscardConfirm(false)} title="¿Descartar cambios?" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            {isEditing
+              ? 'Los cambios que hiciste no se guardarán. ¿Estás seguro?'
+              : 'El producto no se ha guardado. ¿Estás seguro de que quieres salir?'}
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setShowDiscardConfirm(false)}>
+              Seguir editando
+            </Button>
+            <Button variant="danger" onClick={performClose}>
+              Descartar
             </Button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { CreateProductInputSchema } from '../../../specs/inventory';
+import { CreateProductInputSchema, CreatePresentationInputSchema } from '../../../specs/inventory';
 import type { ProductFormData, CreateProductInput, CreatePresentationInput } from '../types';
 import { useInventoryStore } from '../stores/inventoryStore';
 
@@ -143,7 +143,42 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       return;
     }
 
-    // Validar nombres duplicados en presentaciones
+    // Validar precio mínimo razonable
+    if (formData.priceUsd > 0 && formData.priceUsd < 0.05) {
+      setErrors({ priceUsd: 'El precio parece muy bajo. ¿Estás seguro?' });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validar stock inicial
+    const isEditing = options.initialValues !== undefined;
+    if (!isEditing) {
+      if (formData.stockInicial < 0) {
+        setErrors({ stockInicial: 'El stock inicial no puede ser negativo' });
+        setIsSubmitting(false);
+        return;
+      }
+      if (formData.productType === 'unidad' && !Number.isInteger(formData.stockInicial)) {
+        setErrors({ stockInicial: 'Los productos por unidad deben tener stock entero' });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Validar SKU duplicado contra productos existentes
+    if (formData.sku.trim()) {
+      const existingProducts = useInventoryStore.getState().products;
+      const skuExists = existingProducts.some(
+        (p) => p.sku.toLowerCase() === formData.sku.trim().toLowerCase() && (!options.editProductId || p.id !== options.editProductId)
+      );
+      if (skuExists) {
+        setErrors({ sku: 'Ya existe un producto con este código SKU' });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Validar presentaciones con Zod
     if (presentations.length > 0) {
       const names = presentations.map((p) => p.name.trim().toLowerCase());
       if (new Set(names).size !== names.length) {
@@ -151,9 +186,19 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
         setIsSubmitting(false);
         return;
       }
+
+      for (let i = 0; i < presentations.length; i++) {
+        const pres = presentations[i];
+        const presParsed = CreatePresentationInputSchema.safeParse(pres);
+        if (!presParsed.success) {
+          const firstIssue = presParsed.error.issues[0];
+          setErrors({ presentations: `Presentación #${i + 1}: ${firstIssue.message}` });
+          setIsSubmitting(false);
+          return;
+        }
+      }
     }
 
-    const isEditing = options.initialValues !== undefined;
     const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' } = {
       ...parsed.data,
       stockInicial: isEditing ? 0 : formData.stockInicial,
