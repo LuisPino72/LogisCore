@@ -40,53 +40,61 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ userName, tenantName, su
         : 'ok';
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-linear-to-br from-amber-50 to-orange-100 border border-amber-200">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full -translate-y-1/2 translate-x-1/4" />
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-accent/5 rounded-full translate-y-1/2 -translate-x-1/4" />
-      <div className="relative p-5 pb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-            <GreetingIcon size={18} className="text-accent-dark" />
+    <div className="relative overflow-hidden rounded-xl bg-linear-to-br from-amber-50 via-amber-50/80 to-orange-100 border border-amber-200/60 animate-slide-up">
+      {/* Decorative dot pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 25px 25px, rgba(245,158,11,0.3) 1px, transparent 0)',
+          backgroundSize: '50px 50px',
+        }}
+      />
+      <div className="absolute -top-6 -right-6 w-28 h-28 bg-accent/8 rounded-full blur-2xl" />
+      <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-accent/5 rounded-full blur-xl" />
+
+      <div className="relative p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 shadow-sm">
+            <GreetingIcon size={20} className="text-accent-dark" />
           </div>
-          <div>
-            <span className="text-xs font-medium text-accent-dark uppercase tracking-wider">
-              {tenantName ?? 'Cargando...'}
-            </span>
-            <p className="text-xs text-accent-dark/70">{greeting.text}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-semibold text-accent-dark uppercase tracking-wider">
+                {tenantName ?? 'Cargando...'}
+              </span>
+              {daysRemaining !== null && expiryUrgency === 'ok' && daysRemaining > 7 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100/70 border border-teal-200/50 text-[10px] font-medium text-teal-700">
+                  <CheckCircle size={10} />
+                  {daysRemaining} días
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-accent-dark/60 mt-0.5">{greeting.text}</p>
           </div>
         </div>
-        <h1 className="text-xl font-title font-bold text-gray-900 mt-2 truncate">
+
+        <h1 className="text-xl sm:text-2xl font-title font-bold text-gray-900 mt-3 truncate">
           ¡Hola, {name}!
         </h1>
-        <p className="text-sm text-gray-600 mt-0.5 capitalize">{today}</p>
+        <p className="text-sm text-gray-500 mt-0.5 capitalize">{today}</p>
       </div>
 
       {daysRemaining !== null && expiryUrgency !== 'ok' && (
-        <div className={
-          `mx-4 mb-4 px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-medium ${
-            expiryUrgency === 'expired'
-              ? 'bg-danger/10 text-danger border border-danger/20'
-              : 'bg-warning/10 text-warning border border-warning/20'
-          }`
-        }>
-          {expiryUrgency === 'expired' ? (
-            <AlertTriangle size={14} className="shrink-0" />
-          ) : (
-            <Calendar size={14} className="shrink-0" />
-          )}
+        <div className={`mx-5 sm:mx-6 mb-5 px-3.5 py-2.5 rounded-lg flex items-center gap-2 text-xs font-medium ${
+          expiryUrgency === 'expired'
+            ? 'bg-danger/10 text-danger border border-danger/20'
+            : 'bg-warning/10 text-warning border border-warning/20'
+        }`}>
+          {expiryUrgency === 'expired'
+            ? <AlertTriangle size={14} className="shrink-0" />
+            : <Calendar size={14} className="shrink-0" />
+          }
           <span className="flex-1">
             {expiryUrgency === 'expired'
               ? 'Suscripción vencida — contacta al 04145180265'
-              : `Suscripción vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} — contacta al 04145180265`
+              : `Suscripción vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''}`
             }
           </span>
-        </div>
-      )}
-
-      {daysRemaining !== null && expiryUrgency === 'ok' && daysRemaining > 7 && (
-        <div className="mx-4 mb-4 px-3 py-1.5 rounded-lg bg-teal-100/60 border border-teal-200/40 flex items-center gap-1.5 text-[11px] text-teal-700 w-fit">
-          <CheckCircle size={12} />
-          <span>Al día — {daysRemaining} días restantes</span>
         </div>
       )}
     </div>

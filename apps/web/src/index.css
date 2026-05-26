@@ -302,6 +302,7 @@ aside img[alt="Emblema"] { width: 20px; height: 20px; }
 /* ───────────────────── SCROLLBAR HIDE ───────────────────── */
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
+.wrap-break-word { overflow-wrap: break-word; word-wrap: break-word; }
 
 /* ───────────────────── MOBILE TOUCH TARGETS ───────────────────── */
 @media (max-width: 639px) {
@@ -413,3 +414,52 @@ aside img[alt="Emblema"] { width: 20px; height: 20px; }
 .login-orb { animation: meshDrift 18s ease-in-out infinite; }
 .login-orb-2 { animation: meshDrift2 22s ease-in-out infinite; }
 .login-orb-3 { animation: meshDrift3 25s ease-in-out infinite; }
+
+/* ───────────────────── DASHBOARD ───────────────────── */
+@keyframes cardEntrance {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dashboard-card-entrance {
+  animation: cardEntrance 0.4s ease-out both;
+}
+
+@keyframes progressFill {
+  from { width: 0 !important; }
+}
+.progress-fill {
+  animation: progressFill 0.6s ease-out forwards;
+}
+
+.low-stock-card {
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+}
+.low-stock-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+.low-stock-card--danger {
+  border-left: 3px solid var(--color-danger);
+  background: rgba(220, 38, 38, 0.03);
+  border-color: rgba(220, 38, 38, 0.15);
+}
+.low-stock-card--warning {
+  border-left: 3px solid var(--color-warning);
+  background: var(--color-surface-alt);
+}
+
+.rank-badge {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+}
