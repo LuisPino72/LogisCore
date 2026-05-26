@@ -56,8 +56,9 @@ export const notificationService = {
     try {
       const db = getDb();
       const rows = await db.notifications
-        .where('[tenantId+deletedAt]')
-        .equals([tenantId, undefined as unknown as string])
+        .where('tenantId')
+        .equals(tenantId)
+        .filter((n) => !n.deletedAt)
         .reverse()
         .sortBy('createdAt');
       return success(rows.map(mapNotification));
@@ -91,8 +92,9 @@ export const notificationService = {
       const db = getDb();
       const now = new Date().toISOString();
       const rows = await db.notifications
-        .where('[tenantId+deletedAt]')
-        .equals([tenantId, undefined as unknown as string])
+        .where('tenantId')
+        .equals(tenantId)
+        .filter((n) => !n.deletedAt)
         .toArray();
       for (const row of rows) {
         await db.notifications.update(row.id, { deletedAt: now });
