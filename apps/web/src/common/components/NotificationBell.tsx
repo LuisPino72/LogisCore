@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, X, Check, AlertTriangle } from 'lucide-react';
 import { useNotificationStore } from '../../stores/notificationStore';
+import type { AppNotification } from '../../stores/notificationStore';
 import { Modal } from './Modal';
 import { Button } from './Button';
 
@@ -22,7 +23,7 @@ export function NotificationBell() {
 
   const count = unreadCount();
  
-  const isCritical = (n: any) => {
+  const isCritical = (n: AppNotification) => {
     const criticalWords = ['stock', 'error', 'vencido', 'peligro', 'urgente', 'fallo'];
     const text = `${n.title} ${n.message}`.toLowerCase();
     return criticalWords.some(word => text.includes(word));
