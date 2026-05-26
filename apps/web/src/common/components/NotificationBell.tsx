@@ -18,7 +18,13 @@ export function NotificationBell() {
   }, []);
 
   const count = unreadCount();
-
+ 
+  const isCritical = (n: any) => {
+    const criticalWords = ['stock', 'error', 'vencido', 'peligro', 'urgente', 'fallo'];
+    const text = `${n.title} ${n.message}`.toLowerCase();
+    return criticalWords.some(word => text.includes(word));
+  };
+ 
   return (
     <div ref={ref} className="relative">
       <button
@@ -40,8 +46,8 @@ export function NotificationBell() {
             <h3 className="text-sm font-semibold text-gray-900">Notificaciones</h3>
             {notifications.length > 0 && (
               <button
-                onClick={() => { useNotificationStore.getState().clearAll(); setOpen(false); }}
-                className="text-xs text-text-secondary hover:text-gray-900 transition-colors"
+                onClick={() => { if(confirm('¿Estás seguro de que quieres borrar todas las notificaciones?')) { useNotificationStore.getState().clearAll(); setOpen(false); } }}
+                className="text-xs text-danger hover:text-danger-dark font-medium transition-colors"
               >
                 Limpiar todo
               </button>
@@ -56,11 +62,11 @@ export function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-all active:scale-[0.99] cursor-pointer ${n.read ? 'opacity-60' : ''}`}
+                  className={`px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-all active:scale-[0.99] cursor-pointer ${n.read ? 'opacity-60' : ''} ${isCritical(n) ? 'border-l-4 border-l-danger' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-900 truncate">{n.title}</p>
+                      <p className={`text-xs font-semibold ${isCritical(n) ? 'text-danger' : 'text-gray-900'} truncate`}>{n.title}</p>
                       <p className="text-xs text-text-secondary mt-0.5">{n.message}</p>
                       {n.actionLabel && (
                         <button

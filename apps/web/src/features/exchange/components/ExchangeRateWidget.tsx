@@ -4,6 +4,7 @@ import { Button, Input, Modal, Spinner } from '../../../common/components';
 import { useExchangeRate } from '../hooks/useExchangeRate';
 import { formatBs } from '@/lib/formatBs';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
+import { useToastStore } from '../../../stores/toastStore';
 
 interface ExchangeRateWidgetProps {
   tenantId: string | null;
@@ -13,6 +14,7 @@ interface ExchangeRateWidgetProps {
 export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role }) => {
   const { rate, source, fetchedAt, loading, isUpdating, error, updateFromBcv, setManual } =
     useExchangeRate(tenantId);
+  const { addToast } = useToastStore();
   const [showModal, setShowModal] = useState(false);
   const [manualRate, setManualRate] = useState('');
   const isOnline = useOnlineStatus();
@@ -32,8 +34,14 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
       setManualError('Ingresa una tasa válida mayor a 0');
       return;
     }
+    if (parsed < 10 || parsed > 200) {
+      if (!confirm('La tasa ingresada es inusual. ¿Estás seguro de que es correcta?')) {
+        return;
+      }
+    }
     if (!tenantId) return;
     await setManual(tenantId, parsed);
+    addToast({ type: 'success', message: `Tasa actualizada a ${formatBs(parsed)} Bs`, duration: 3000 });
     setShowModal(false);
     setManualRate('');
   };
@@ -110,19 +118,19 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
           )}
         </div>
  
-        <Modal isOpen={showModal} onClose={() => { setShowModal(false); setManualRate(''); setManualError(''); }} title="Configurar tasa manual">
+        <Modal isOpen={showModal} onClose={() => { setShowModal(false); setManualRate(''); setManualError(''); }} title="Ajustar precio del dólar manualmente">
             <div className="space-y-4 animate-slide-down">
-              <p className="text-sm text-gray-600">
-                Ingresa la tasa de cambio manualmente si la API del BCV no está disponible.
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Si la tasa automática del BCV no es la que usas en tu local, o no tienes internet, puedes escribir el valor del dólar aquí para que el sistema haga las cuentas exactas por ti.
               </p>
  
               <div className="input-wrapper">
-                <label className="input-label">Tasa (Bs por $)</label>
+                <label className="input-label font-semibold text-gray-700">Valor del dólar en Bolívares (Bs)</label>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="68.45"
+                  placeholder="65.50"
                   value={manualRate}
                   onChange={(e) => setManualRate(e.target.value)}
                   error={manualError}

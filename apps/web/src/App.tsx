@@ -29,6 +29,7 @@ import {
   FileText,
   Truck,
   Receipt,
+  DollarSign,
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
@@ -101,9 +102,12 @@ function RateBadgeMobile() {
   const rate = useExchangeRateStore((s) => s.rate);
   if (!rate) return null;
   return (
-    <span className="md:hidden text-xs text-success font-semibold whitespace-nowrap px-1.5 py-0.5 bg-success/10 rounded">
-      ${rate.toFixed(2)}
-    </span>
+    <div className="md:hidden flex items-center gap-1 px-2 py-0.5 bg-success/10 border border-success/20 rounded-full shadow-sm active:scale-95 transition-transform cursor-help">
+      <DollarSign size={10} className="text-success" />
+      <span className="text-xs text-success font-bold whitespace-nowrap">
+        {rate.toFixed(2)}
+      </span>
+    </div>
   );
 }
 
@@ -151,26 +155,22 @@ function DashboardLayout() {
   return (
     <AppShell
       topBar={
-        <>
+        <div className="flex items-center gap-3 px-2 h-full">
           {isAdminViewingTenant && (
-            <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}>
+            <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)} className="active:scale-95 transition-transform">
               <ArrowLeft size={18} />
               <span className="hidden sm:inline">Volver al Panel</span>
             </Button>
           )}
-          <Store size={20} className="text-primary shrink-0" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleNavigate('dashboard')}
-            className="font-semibold text-sm flex-1 text-left"
-          >
-            Sasa
-          </Button>
-          {role && <Badge variant="success">{role}</Badge>}
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer active:scale-95" onClick={() => handleNavigate('dashboard')}>
+            <Store size={20} className="text-primary shrink-0" />
+            <span className="font-title font-semibold text-sm text-primary">Sasa</span>
+          </div>
+          <div className="flex-1" />
+          {role && <Badge variant="success" className="active:scale-95 cursor-pointer transition-transform">{role}</Badge>}
           {effectiveTenantId && <RateBadgeMobile />}
           {role && role !== 'employee' && <NotificationBell />}
-        </>
+        </div>
       }
       sidebar={
         <Sidebar
@@ -193,6 +193,7 @@ function DashboardLayout() {
       sidebarOpen={sidebarOpen}
       sidebarExpanded={sidebarExpanded}
     >
+
       <ErrorBoundary moduleName="Dashboard">
         {/* KeepAlive: todos los módulos siempre en DOM, solo cambia visibilidad */}
         <div className={`${activeModule !== 'dashboard' ? 'hidden' : ''} animate-fade-in`}>
