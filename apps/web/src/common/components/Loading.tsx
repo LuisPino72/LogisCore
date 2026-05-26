@@ -26,13 +26,13 @@ export const Spinner: FC<SpinnerProps> = ({ size = 'md', className }) => {
 };
 
 export const Skeleton: FC<SkeletonProps> = ({ variant = 'shimmer', count = 1, className }) => {
-  const shimmerBase = 'bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer rounded';
+  const shimmerBase = 'bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200px_100%] animate-shimmer';
 
   const variants: Record<SkeletonVariant, string> = {
-    text: 'skeleton-text',
-    title: 'skeleton-title',
-    avatar: 'skeleton-avatar',
-    shimmer: `${shimmerBase} h-4 w-full`,
+    text: `${shimmerBase} rounded h-4 w-full`,
+    title: `${shimmerBase} rounded h-6 w-2/3`,
+    avatar: `${shimmerBase} rounded-full h-10 w-10`,
+    shimmer: `${shimmerBase} rounded h-4 w-full`,
   };
 
   if (count === 1) {

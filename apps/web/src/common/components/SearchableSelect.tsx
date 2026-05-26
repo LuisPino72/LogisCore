@@ -98,14 +98,14 @@ export function SearchableSelect({
       >
         {selectedOption ? selectedOption.label : placeholder}
       </button>
-      <div className="select-arrow">
+      <div className={cn('select-arrow', isOpen && 'select-arrow-open')}>
         <ChevronDown size={16} />
       </div>
 
       {isOpen && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg"
+          className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg animate-slide-down"
           style={{
             top: wrapperRef.current ? wrapperRef.current.getBoundingClientRect().bottom + 4 : 0,
             left: wrapperRef.current ? (() => {

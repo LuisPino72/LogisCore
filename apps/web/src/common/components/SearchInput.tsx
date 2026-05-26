@@ -82,7 +82,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(({
         <button
           type="button"
           onClick={handleClear}
-          className="search-input-clear"
+          className="search-input-clear animate-fade-in"
           aria-label="Limpiar búsqueda"
         >
           <X size={16} />

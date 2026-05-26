@@ -98,6 +98,7 @@
   @apply w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-surface-alt outline-none transition-all duration-150 placeholder:text-text-muted; font-size: var(--text-fluid-sm);
 }
 .input:focus { @apply bg-white border-primary ring-4 ring-primary/15; }
+.input:hover { border-color: #b8bfc6; }
 .input-error { @apply border-danger bg-red-50/30 ring-1 ring-danger/20; }
 .input-error:focus { @apply border-danger ring-4 ring-danger/10; }
 .input-hint { @apply text-xs text-gray-600; }
@@ -113,12 +114,15 @@
   cursor: pointer;
 }
 .select:focus { @apply bg-white border-primary ring-4 ring-primary/15; }
+.select:hover { border-color: #b8bfc6; }
 .select option { padding: 0.375rem 0.75rem; }
 @media (max-width: 639px) {
   .select { font-size: 16px; }
 }
 .select-wrapper { @apply relative; }
-.select-arrow { @apply absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none; }
+.select-arrow { @apply absolute right-3 top-1/2 text-gray-400 pointer-events-none; transform: translateY(-50%); transition: transform 200ms ease; }
+.select-wrapper:focus-within .select-arrow,
+.select-arrow-open { transform: translateY(-50%) rotate(180deg); }
 
 /* ───────────────────── TEXTAREA ───────────────────── */
 .textarea {
@@ -128,6 +132,7 @@
   min-height: 80px;
 }
 .textarea:focus { @apply bg-white border-primary ring-4 ring-primary/15; }
+.textarea:hover { border-color: #b8bfc6; }
 
 /* ───────────────────── CARD ───────────────────── */
 .card { @apply bg-white border border-gray-200 rounded-xl shadow-sm transition-all duration-150; }
@@ -269,8 +274,7 @@
 .sidebar-collapsed { width: 2.5rem; }
 .sidebar-expanded { width: 12rem; }
 
-/* Smooth width transition for sidebar */
-aside { transition: width 200ms ease; }
+/* Sidebar transition is handled by the component's inline classes */
 
 /* Emblema sizing */
 aside img[alt="Emblema"] { width: 20px; height: 20px; }
@@ -286,6 +290,7 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
 .search-input-icon { @apply absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4; }
 .search-input { @apply w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white outline-none transition-all duration-150 placeholder:text-text-muted pl-10 pr-10; font-size: var(--text-fluid-sm); }
 .search-input:focus { @apply border-primary ring-4 ring-primary/15; }
+.search-input:hover { border-color: #b8bfc6; }
 .search-input-clear { @apply absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors; }
 
 /* ───────────────────── TAB BAR ───────────────────── */
@@ -296,19 +301,33 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
 
 /* ───────────────────── CHECKBOX / RADIO ───────────────────── */
 .checkbox-wrapper { @apply flex items-center gap-2 cursor-pointer select-none; }
-.checkbox { @apply h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30 accent-primary transition-all duration-150; }
+.checkbox { @apply h-4 w-4 rounded border-gray-300 text-primary accent-primary transition-all duration-150; }
 .checkbox-label { @apply text-sm text-gray-700; }
 
 .radio-group { @apply flex flex-col gap-2; }
 .radio-group-horizontal { @apply flex-row gap-4; }
 .radio-wrapper { @apply flex items-center gap-2 cursor-pointer select-none; }
-.radio { @apply h-4 w-4 border-gray-300 text-primary focus:ring-primary/30 accent-primary transition-all duration-150; }
+.radio { @apply h-4 w-4 border-gray-300 text-primary accent-primary transition-all duration-150; }
 .radio-label { @apply text-sm text-gray-700; }
 
 /* ───────────────────── SCROLLBAR HIDE ───────────────────── */
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .wrap-break-word { overflow-wrap: break-word; word-wrap: break-word; }
+
+/* ───────────────────── FOCUS VISIBLE ───────────────────── */
+.btn:focus-visible,
+.modal-close:focus-visible,
+.toast-close:focus-visible,
+.search-input-clear:focus-visible,
+[role="button"]:focus-visible,
+[role="menuitem"]:focus-visible,
+[role="tab"]:focus-visible,
+.checkbox:focus-visible,
+.radio:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
 
 /* ───────────────────── MOBILE TOUCH TARGETS ───────────────────── */
 @media (max-width: 639px) {
@@ -317,7 +336,7 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   .btn-icon { min-height: 44px; min-width: 44px; }
   .checkbox-wrapper, .radio-wrapper { min-height: 44px; }
   .toast-container { left: 1rem; right: 1rem; max-width: none; width: auto; }
-  .input, .select, .textarea { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+  .input, .select, .textarea { padding-top: 0.75rem; padding-bottom: 0.75rem; font-size: 16px; }
   .search-input-clear { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
   .toast-close { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
   .modal-close { min-height: 44px; min-width: 44px; }

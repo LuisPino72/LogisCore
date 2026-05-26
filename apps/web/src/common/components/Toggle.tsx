@@ -22,7 +22,7 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
           {...props}
         />
         <div className={cn(
-          'rounded-full bg-border peer-checked:bg-primary transition-colors',
+          'rounded-full bg-border peer-checked:bg-primary transition-colors peer-focus-visible:ring-4 peer-focus-visible:ring-primary/15',
           size === 'sm' ? 'w-9 h-5' : 'w-11 h-6',
         )}>
           <div className={cn(

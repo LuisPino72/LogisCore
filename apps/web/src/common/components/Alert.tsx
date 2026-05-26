@@ -22,7 +22,7 @@ export const Alert: FC<AlertProps> = ({
   onClose,
 }) => {
   return (
-    <div className={cn('alert', 'alert-' + variant, className)} role="alert">
+    <div className={cn('alert alert-animate', 'alert-' + variant, className)} role="alert">
       {icon && <div className="mt-0.5">{icon}</div>}
       <div className="flex-1 min-w-0">
         {title && <p className="font-semibold text-sm mb-0.5">{title}</p>}

@@ -40,10 +40,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="p-4 flex items-center justify-center min-h-[200px]">
+        <div className="p-4 flex items-center justify-center min-h-[200px] animate-slide-up">
           <Card className="max-w-md w-full p-6">
             <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-danger/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-danger/10 flex items-center justify-center" aria-hidden="true">
                 <AlertTriangle size={24} className="text-danger" />
               </div>
               <div>

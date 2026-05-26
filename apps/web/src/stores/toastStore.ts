@@ -16,17 +16,13 @@ interface ToastState {
   clearAll: () => void;
 }
 
-export const useToastStore = create<ToastState>((set, get) => ({
+export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
   addToast: (toast) => {
     const id = crypto.randomUUID();
     const duration = toast.duration ?? (toast.type === 'error' || toast.type === 'warning' ? 6000 : 4000);
     set((state) => ({ toasts: [...state.toasts, { ...toast, id, duration }] }));
-
-    if (duration > 0) {
-      setTimeout(() => get().removeToast(id), duration);
-    }
     return id;
   },
 

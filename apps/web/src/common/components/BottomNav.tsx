@@ -23,7 +23,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
   return (
     <nav
       className={cn(
-        'sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)] bottom-nav-mobile',
+        'sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/80 backdrop-blur-md shadow-[0_-4px_12px_rgba(0,0,0,0.08)] bottom-nav-mobile',
         className,
       )}
       style={{
@@ -50,7 +50,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
             >
               {isActive && (
                 <span
-                  className="absolute top-0 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-primary"
+                  className="absolute top-0 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-primary animate-fade-in"
                   aria-hidden
                 />
               )}

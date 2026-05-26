@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useState, useRef, useEffect, useId, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 export interface TooltipProps {
@@ -22,6 +22,7 @@ export function Tooltip({
   const triggerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const tooltipId = useId();
 
   useEffect(() => {
     setIsMobile(window.matchMedia('(hover: none)').matches);
@@ -94,12 +95,12 @@ export function Tooltip({
       onClick={isMobile ? toggle : undefined}
       role={isMobile ? 'button' : undefined}
       tabIndex={isMobile ? 0 : undefined}
-      aria-describedby={visible ? 'tooltip-content' : undefined}
+      aria-describedby={visible ? tooltipId : undefined}
     >
       {children}
       {visible && content && (
         <div
-          id="tooltip-content"
+          id={tooltipId}
           role="tooltip"
           className={cn(
             'absolute z-100 px-2.5 py-1.5 text-xs font-medium rounded-md whitespace-nowrap max-w-[200px] text-center pointer-events-none animate-fade-in shadow-lg',

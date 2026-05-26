@@ -93,7 +93,7 @@ export function ImageWithFallback({
   if (error || (!src && !loading)) {
     return (
       <div className={cn('flex items-center justify-center bg-surface-alt', className)}>
-        <Package size={24} className="text-gray-300" />
+        <Package size={24} className="text-gray-300" aria-hidden="true" />
       </div>
     );
   }
@@ -108,6 +108,7 @@ export function ImageWithFallback({
             'absolute inset-0 bg-linear-to-r from-gray-200 via-gray-100 to-gray-200 bg-size-[200px_100%] animate-shimmer z-10',
             skeletonClassName,
           )}
+          aria-hidden="true"
         />
       )}
       {src && (

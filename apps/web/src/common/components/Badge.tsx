@@ -12,7 +12,7 @@ interface BadgeProps {
 
 export const Badge: FC<BadgeProps> = ({ variant = 'neutral', children, dot, className }) => {
   return (
-    <span className={cn('badge', 'badge-' + variant, className)}>
+    <span className={cn('badge', 'badge-' + variant, 'animate-fade-in', className)}>
       {dot && <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-60" />}
       {children}
     </span>

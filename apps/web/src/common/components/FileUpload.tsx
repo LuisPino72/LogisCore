@@ -26,11 +26,17 @@ export function FileUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [sizeError, setSizeError] = useState<string | null>(null);
 
   const handleFiles = (fileList: FileList) => {
     const files = Array.from(fileList);
-    const valid = files.filter((f) => f.size <= maxSize);
-    if (valid.length === 0) return;
+    const oversized = files.filter((f) => f.size > maxSize);
+    if (oversized.length > 0) {
+      setSizeError(`Archivo(s) exceden el tamaño máximo de ${Math.round(maxSize / 1024 / 1024)}MB`);
+      return;
+    }
+    setSizeError(null);
+    const valid = files;
 
     if (preview) {
       const urls = valid.map((f) => URL.createObjectURL(f));
@@ -57,7 +63,7 @@ export function FileUpload({
         className={cn(
           'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
           dragOver ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400',
-          error && 'border-red-400',
+          error && 'border-danger',
         )}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -85,7 +91,7 @@ export function FileUpload({
         onChange={(e) => { if (e.target.files) handleFiles(e.target.files); }}
       />
 
-      {error && <span className="input-error-text">{error}</span>}
+      {(error || sizeError) && <span className="input-error-text">{error || sizeError}</span>}
 
       {preview && previews.length > 0 && (
         <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
@@ -97,7 +103,7 @@ export function FileUpload({
                   URL.revokeObjectURL(url);
                   setPreviews((p) => p.filter((_, j) => j !== i));
                 }}
-                className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm min-w-[44px] min-h-[44px]"
+                className="absolute -top-2 -right-2 w-8 h-8 bg-danger text-white rounded-full flex items-center justify-center shadow-sm min-w-[44px] min-h-[44px]"
                 aria-label="Eliminar"
               >
                 <X size={14} />
@@ -105,7 +111,7 @@ export function FileUpload({
             </div>
           ))}
           {previews.length > 1 && (
-            <button onClick={clearPreviews} className="text-xs text-red-600 hover:underline self-center">
+            <button onClick={clearPreviews} className="text-xs text-danger hover:underline self-center">
               Limpiar todo
             </button>
           )}

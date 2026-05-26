@@ -73,10 +73,7 @@ export function NotificationBell() {
                       <p className="text-xs text-text-secondary mt-0.5">{n.message}</p>
                       {n.actionLabel && (
                         <button
-                          onClick={() => {
-                            if (n.actionPayload) {
-                              console.log('Action:', n.actionPayload);
-                            }
+                            onClick={() => {
                             dismissNotification(n.id);
                           }}
                           className="mt-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"

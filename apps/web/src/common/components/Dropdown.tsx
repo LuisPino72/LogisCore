@@ -85,7 +85,7 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
         <div
           ref={menuRef}
           className={cn(
-            'fixed z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-y-auto',
+            'fixed z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-y-auto animate-slide-down',
           )}
           role="menu"
           style={(() => {
