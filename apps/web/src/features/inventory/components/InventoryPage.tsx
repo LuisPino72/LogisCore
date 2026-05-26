@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, ListTree, History, AlertTriangle, Plus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
+import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
@@ -255,8 +255,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>
               {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
             </h1>
-            <p className="text-[14px] text-text-secondary hidden sm:block">
-              {activeTab === 'categorias' ? 'Organiza tus productos por categorías para encontrarlos más rápido al vender.' : activeTab === 'historial' ? 'Revisa todos los movimientos de tus productos: ventas, compras, ajustes y más.' : 'Administra tu inventario: crea, edita y organiza tus productos. También puedes ajustar el stock y revisar el historial de movimientos.'}
+            <p className="text-[13px] text-text-secondary hidden sm:block truncate max-w-md">
+              {activeTab === 'categorias' ? 'Organiza tus productos por categorías para encontrarlos más rápido al vender.' : activeTab === 'historial' ? 'Revisa todos los movimientos de tus productos: ventas, compras, ajustes y más.' : 'Administra tu inventario: crea, edita y organiza tus productos.'}
             </p>
             {totalLowStock > 0 && activeTab === 'productos' && (
               <div className="mt-0.5">
@@ -323,69 +323,75 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
       <Card>
         {activeTab === 'productos' && (
-          <ProductList
-            products={products}
-            categories={categories}
-            onSearch={search}
-            initialTabState={tabStates.productos}
-            onSaveTabState={(state) => saveTabState('productos', state)}
-            isOwner={isOwner}
-            isOnline={isOnline}
-            totalLowStock={totalLowStock}
-            onNewProduct={openNewProduct}
-            onEditProduct={openEditProduct}
-            onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
-            onAdjust={async (id) => { setAdjProductId(id); setShowAdjustment(true); setAdjMode(''); setAdjReasonType(''); setAdjQuantity(''); await checkProductCost(id); }}
-            onViewLots={(id) => setSelectedProductLotsId(id)}
-            onViewKardex={(id) => {
-              const product = products.find((p) => p.id === id);
-              if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
-            }}
-            onRefresh={refresh}
-            allPresentationChildIds={allPresentationChildIds}
-            allPresentationParentIds={allPresentationParentIds}
-            presentationsByProduct={presentationsByProduct}
-            onViewPresentations={(productId) => setViewingPresentationsProductId(productId)}
-          />
-        )}
-
-        {activeTab === 'categorias' && (
-          <div className="p-4">
-            <CategoryManager
+          <div key="productos" className="animate-fade-in">
+            <ProductList
+              products={products}
               categories={categories}
+              onSearch={search}
+              initialTabState={tabStates.productos}
+              onSaveTabState={(state) => saveTabState('productos', state)}
               isOwner={isOwner}
-              onCreate={async (name) => {
-                if (!tenantId) return false;
-                const newId = await createCategory(name, tenantId);
-                if (newId) addToast({ type: 'success', message: 'Categoría creada exitosamente.', duration: 3000 });
-                return !!newId;
+              isOnline={isOnline}
+              totalLowStock={totalLowStock}
+              onNewProduct={openNewProduct}
+              onEditProduct={openEditProduct}
+              onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
+              onAdjust={async (id) => { setAdjProductId(id); setShowAdjustment(true); setAdjMode(''); setAdjReasonType(''); setAdjQuantity(''); await checkProductCost(id); }}
+              onViewLots={(id) => setSelectedProductLotsId(id)}
+              onViewKardex={(id) => {
+                const product = products.find((p) => p.id === id);
+                if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
               }}
-              onUpdate={async (id, name) => {
-                if (!tenantId) return false;
-                const ok = await updateCategory(id, name, tenantId);
-                if (ok) addToast({ type: 'success', message: 'Categoría actualizada exitosamente.', duration: 3000 });
-                return ok;
-              }}
-              onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
-              isOpen={showCategoryForm}
-              onClose={() => setShowCategoryForm(false)}
+              onRefresh={refresh}
+              allPresentationChildIds={allPresentationChildIds}
+              allPresentationParentIds={allPresentationParentIds}
+              presentationsByProduct={presentationsByProduct}
+              onViewPresentations={(productId) => setViewingPresentationsProductId(productId)}
             />
           </div>
         )}
 
-        {activeTab === 'historial' && (
-          <div className="p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <History size={16} className="text-primary" />
-              </div>
-              <h2 className="text-sm font-title font-bold text-gray-900">Historial de movimientos</h2>
+        {activeTab === 'categorias' && (
+          <div key="categorias" className="animate-fade-in">
+            <div className="p-4">
+              <CategoryManager
+                categories={categories}
+                isOwner={isOwner}
+                onCreate={async (name) => {
+                  if (!tenantId) return false;
+                  const newId = await createCategory(name, tenantId);
+                  if (newId) addToast({ type: 'success', message: 'Categoría creada exitosamente.', duration: 3000 });
+                  return !!newId;
+                }}
+                onUpdate={async (id, name) => {
+                  if (!tenantId) return false;
+                  const ok = await updateCategory(id, name, tenantId);
+                  if (ok) addToast({ type: 'success', message: 'Categoría actualizada exitosamente.', duration: 3000 });
+                  return ok;
+                }}
+                onRequestDelete={(id, name) => setConfirmDelete({ type: 'category', id, name })}
+                isOpen={showCategoryForm}
+                onClose={() => setShowCategoryForm(false)}
+              />
             </div>
-            {!isOwner ? (
-              <p className="text-sm text-text-secondary text-center py-4">Solo el propietario puede ver el historial.</p>
-            ) : (
-              <MovementHistory products={products} />
-            )}
+          </div>
+        )}
+
+        {activeTab === 'historial' && (
+          <div key="historial" className="animate-fade-in">
+            <div className="p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <History size={16} className="text-primary" />
+                </div>
+                <h2 className="text-sm font-title font-bold text-gray-900">Historial de movimientos</h2>
+              </div>
+              {!isOwner ? (
+                <p className="text-sm text-text-secondary text-center py-4">Solo el propietario puede ver el historial.</p>
+              ) : (
+                <MovementHistory products={products} />
+              )}
+            </div>
           </div>
         )}
       </Card>
@@ -448,11 +454,20 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           >
             <div className="space-y-4">
               {product && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-900">{product.name}</p>
-                  <p className="text-xs text-text-secondary">
-                    Stock actual: <strong>{displayStockValue} {unitLabel}</strong>
-                  </p>
+                <div className="bg-linear-to-br from-primary/4 to-primary/2 border border-primary/10 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Package size={18} className="text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{product.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-medium text-primary">
+                          Stock: {displayStockValue} {unitLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -473,7 +488,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                         : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
                     }`}
                   >
-                    ➕ Sumar stock
+                    <Plus size={16} />
+                    Sumar stock
                   </button>
                   <button
                     type="button"
@@ -489,7 +505,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                         : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
                     }`}
                   >
-                    ➖ Restar stock
+                    <Minus size={16} />
+                    Restar stock
                   </button>
                 </div>
               </div>
@@ -587,17 +604,17 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             </div>
           }
         >
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-danger" />
+          <div className="space-y-4 animate-slide-down">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center shrink-0 ring-1 ring-danger/20">
+                <AlertTriangle size={24} className="text-danger" />
               </div>
-              <div>
-                <p className="text-sm font-semibold">¿Eliminar {confirmDelete.name}?</p>
-                <p className="text-xs text-gray-500">
+              <div className="pt-1">
+                <p className="text-sm font-semibold text-gray-900">¿Eliminar {confirmDelete.name}?</p>
+                <p className="text-xs text-gray-500 mt-1">
                   {confirmDelete.type === 'product'
-                    ? 'El producto se borrará definitivamente.'
-                    : 'La categoría se borrará definitivamente.'}
+                    ? 'El producto se borrará definitivamente. Esta acción no se puede deshacer.'
+                    : 'La categoría se borrará definitivamente. Esta acción no se puede deshacer.'}
                 </p>
               </div>
             </div>
@@ -652,7 +669,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         >
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {lowStockProducts.map((product) => {
-              const displayStock = product.unit === 'kg' || product.unit === 'lt'
+              const displayStock_val = product.unit === 'kg' || product.unit === 'lt'
                 ? (product.stock / 1000).toFixed(2)
                 : product.stock.toString();
               const displayMin = product.unit === 'kg' || product.unit === 'lt'
@@ -660,29 +677,38 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 : (product.stockMin ?? 0).toString();
               const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : '';
               const isSelected = selectedForOrder.has(product.id);
+              const isZero = product.stock <= 0;
 
               return (
                 <div
                   key={product.id}
                   onClick={() => handleToggleProduct(product.id)}
-                  className={`flex items-center gap-3 bg-surface-alt rounded-lg p-3 border cursor-pointer transition-all ${
-                    isSelected ? 'border-primary ring-1 ring-primary/30' : 'border-border'
-                  }`}
+                  className={`rounded-lg p-3 border cursor-pointer transition-all duration-200 ${
+                    isSelected
+                      ? 'border-primary ring-1 ring-primary/30 bg-primary/2'
+                      : 'border-border hover:border-primary/30 hover:bg-gray-50/50'
+                  } ${isZero ? 'border-l-3 border-l-danger' : 'border-l-3 border-l-warning'}`}
+                  style={!isSelected && !isZero ? { borderLeftColor: 'var(--color-warning)' } : undefined}
                 >
-                  <div className="shrink-0">
-                    {isSelected ? (
-                      <CheckCircle2 size={20} className="text-primary" />
-                    ) : (
-                      <Circle size={20} className="text-gray-300" />
-                    )}
+                  <div className="flex items-center gap-3">
+                    <div className="shrink-0">
+                      {isSelected ? (
+                        <CheckCircle2 size={20} className="text-primary" />
+                      ) : (
+                        <Circle size={20} className="text-gray-300" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-800 wrap-break-word">{product.name}</p>
+                      <p className="text-xs text-text-secondary mt-0.5">
+                        Stock: <span className={`font-medium ${isZero ? 'text-danger' : ''}`}>{displayStock_val} {unitLabel}</span>
+                        {' / '}Mín: {displayMin} {unitLabel}
+                      </p>
+                    </div>
+                    <div className={`p-1.5 rounded-lg shrink-0 ${isZero ? 'bg-danger/10' : 'bg-warning/10'}`}>
+                      <AlertTriangle size={16} className={isZero ? 'text-danger' : 'text-warning'} />
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-800 wrap-break-word">{product.name}</p>
-                    <p className="text-xs text-text-secondary">
-                      Stock: {displayStock} {unitLabel} / Mín: {displayMin} {unitLabel}
-                    </p>
-                  </div>
-                  <AlertTriangle size={16} className="text-danger shrink-0" />
                 </div>
               );
             })}

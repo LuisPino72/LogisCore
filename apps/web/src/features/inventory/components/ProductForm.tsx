@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
-import { ImagePlus, Plus, X, Scan, Package, DollarSign, Layers, Settings, Trash2 } from 'lucide-react';
+import { ImagePlus, Plus, X, Scan, Package, DollarSign, Layers, Settings, Trash2, Share2, FolderOpen } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Category, CreateProductInput, CreatePresentationInput, Product } from '../types';
@@ -331,23 +331,25 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   <button
                     type="button"
                     onClick={() => setStockType('shared')}
-                    className={`flex-1 py-2 rounded-md text-xs font-medium transition-all ${
+                    className={`flex-1 py-2 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
                       stockType === 'shared'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
+                    <Share2 size={14} />
                     Stock compartido
                   </button>
                   <button
                     type="button"
                     onClick={() => setStockType('independent')}
-                    className={`flex-1 py-2 rounded-md text-xs font-medium transition-all ${
+                    className={`flex-1 py-2 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
                       stockType === 'independent'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
+                    <FolderOpen size={14} />
                     Stock independiente
                   </button>
                 </div>
@@ -370,7 +372,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               {presentations.map((pres, index) => (
                 <div
                   key={index}
-                  className="border border-border rounded-xl p-3 space-y-2 bg-white"
+                  className="border border-border rounded-xl p-4 space-y-3 bg-white hover:border-primary/20 hover:shadow-sm transition-all duration-200"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-gray-500">
@@ -388,12 +390,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Nombre</label>
-                      <input
-                        type="text"
+                      <Input
+                        placeholder="Ej: Caja de 12, Pack familiar"
                         value={pres.name}
                         onChange={(e) => updatePresentation(index, 'name', e.target.value)}
-                        placeholder="Ej: Caja de 12, Pack familiar"
-                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        inputClassName="text-sm"
                       />
                     </div>
 
@@ -401,14 +402,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                       <label className="block text-xs text-gray-500 mb-1">
                         Precio USD {pres.priceUsd > 0 ? '' : '(opcional, hereda del padre)'}
                       </label>
-                      <input
-                        type="number"
+                      <Input
+                        sanitize="currency"
                         step="0.01"
-                        min="0"
+                        placeholder={formData.priceUsd > 0 ? `$${formData.priceUsd}` : '0.00'}
                         value={pres.priceUsd || ''}
                         onChange={(e) => updatePresentation(index, 'priceUsd', parseFloat(e.target.value) || 0)}
-                        placeholder={formData.priceUsd > 0 ? `$${formData.priceUsd}` : '0.00'}
-                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        inputClassName="text-sm"
                       />
                     </div>
 
@@ -417,14 +417,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         <label className="block text-xs text-gray-500 mb-1">
                           Multiplicador (unidades base)
                         </label>
-                        <input
-                          type="number"
-                          step="1"
-                          min="1"
-                          value={pres.unitMultiplier}
-                          onChange={(e) => updatePresentation(index, 'unitMultiplier', parseInt(e.target.value) || 1)}
+                        <Input
+                          sanitize="number"
+                          decimals={0}
                           placeholder="12"
-                          className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          value={pres.unitMultiplier?.toString() || '1'}
+                          onChange={(e) => updatePresentation(index, 'unitMultiplier', parseInt(e.target.value) || 1)}
+                          inputClassName="text-sm"
                         />
                       </div>
                     )}
@@ -434,14 +433,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         <label className="block text-xs text-gray-500 mb-1">
                           Stock inicial
                         </label>
-                        <input
-                          type="number"
-                          step="1"
-                          min="0"
-                          value={pres.stockInicial ?? ''}
-                          onChange={(e) => updatePresentation(index, 'stockInicial', parseInt(e.target.value) || 0)}
+                        <Input
+                          sanitize="number"
+                          decimals={0}
                           placeholder="0"
-                          className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          value={pres.stockInicial?.toString() || ''}
+                          onChange={(e) => updatePresentation(index, 'stockInicial', parseInt(e.target.value) || 0)}
+                          inputClassName="text-sm"
                         />
                       </div>
                     )}
@@ -450,12 +448,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                       <label className="block text-xs text-gray-500 mb-1">
                         Código de barras (opcional)
                       </label>
-                      <input
-                        type="text"
+                      <Input
+                        placeholder="Ej: 123456789012"
                         value={pres.barcode || ''}
                         onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
-                        placeholder="Ej: 123456789012"
-                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        inputClassName="text-sm"
                       />
                     </div>
                   </div>

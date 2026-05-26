@@ -301,10 +301,10 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
               key={opt.value}
               type="button"
               onClick={(e) => handleStockFilter(opt.value, e.currentTarget)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-95 ${
                 stockFilter === opt.value
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary hover:bg-primary/2'
               }`}
             >
               {opt.label}
