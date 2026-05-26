@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, X, Check } from 'lucide-react';
+import { Bell, X, Check, AlertTriangle } from 'lucide-react';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { Modal } from './Modal';
+import { Button } from './Button';
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, markAsRead, dismissNotification } = useNotificationStore();
 
@@ -46,7 +49,7 @@ export function NotificationBell() {
             <h3 className="text-sm font-semibold text-gray-900">Notificaciones</h3>
             {notifications.length > 0 && (
               <button
-                onClick={() => { if(confirm('¿Estás seguro de que quieres borrar todas las notificaciones?')) { useNotificationStore.getState().clearAll(); setOpen(false); } }}
+                onClick={() => setConfirmClear(true)}
                 className="text-xs text-danger hover:text-danger-dark font-medium transition-colors"
               >
                 Limpiar todo
@@ -96,6 +99,25 @@ export function NotificationBell() {
           </div>
         </div>
       )}
+
+      <Modal isOpen={confirmClear} onClose={() => setConfirmClear(false)} title="Limpiar notificaciones" size="sm">
+        <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
+            <AlertTriangle size={24} className="text-danger" />
+          </div>
+          <p className="text-sm text-gray-600 text-center">
+            ¿Seguro que quieres borrar todas las notificaciones?
+          </p>
+          <div className="flex gap-3 w-full pt-1">
+            <Button variant="ghost" fullWidth onClick={() => setConfirmClear(false)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" fullWidth onClick={() => { useNotificationStore.getState().clearAll(); setConfirmClear(false); setOpen(false); }}>
+              Limpiar todo
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

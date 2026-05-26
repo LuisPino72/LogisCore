@@ -19,7 +19,7 @@ const initialState: ExchangeRateState = {
   error: null,
 };
 
-export const useExchangeRateStore = create<ExchangeRateStore>((set) => ({
+export const useExchangeRateStore = create<ExchangeRateStore>((set, get) => ({
   ...initialState,
 
   fetchLatest: async (tenantId: string) => {
@@ -45,13 +45,16 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set) => ({
     const result = await exchangeRateService.triggerBcvFetch(tenantId);
 
     if (result.ok) {
+      const prevRate = get().rate;
       set({
         rate: result.data.rate,
         source: result.data.source,
         fetchedAt: result.data.fetched_at ?? new Date().toISOString(),
         isUpdating: false,
       });
-      EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { rate: result.data.rate, source: result.data.source });
+      if (result.data.rate !== prevRate) {
+        EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { rate: result.data.rate, source: result.data.source });
+      }
     } else {
       set({ isUpdating: false, error: result.error.message });
     }
@@ -63,13 +66,16 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set) => ({
     const result = await exchangeRateService.setManualRate(tenantId, rate);
 
     if (result.ok) {
+      const prevRate = get().rate;
       set({
         rate: result.data.rate,
         source: result.data.source,
         fetchedAt: result.data.fetched_at ?? new Date().toISOString(),
         isUpdating: false,
       });
-      EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { rate: result.data.rate, source: result.data.source });
+      if (result.data.rate !== prevRate) {
+        EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { rate: result.data.rate, source: result.data.source });
+      }
     } else {
       set({ isUpdating: false, error: result.error.message });
     }

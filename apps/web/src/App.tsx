@@ -101,9 +101,11 @@ function useSyncModuleFromRoute() {
 function RateBadgeMobile() {
   const rate = useExchangeRateStore((s) => s.rate);
   if (!rate) return null;
+
   return (
-    <div className="md:hidden flex items-center gap-1 px-2 py-0.5 bg-success/10 border border-success/20 rounded-full shadow-sm active:scale-95 transition-transform cursor-help shrink-0">
-      <DollarSign size={10} className="text-success" />
+    <div className="md:hidden flex items-center gap-1.5 px-2 py-0.5 bg-success/10 border border-success/20 rounded-full shadow-sm shrink-0">
+      <DollarSign size={10} className="text-success shrink-0" />
+      <span className="text-[10px] text-success/70 font-medium whitespace-nowrap">Tasa Bs</span>
       <span className="text-xs text-success font-bold whitespace-nowrap">
         {rate.toFixed(2)}
       </span>

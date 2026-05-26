@@ -41,10 +41,12 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
         aria-expanded={expanded}
         id="app-sidebar"
       >
-        <div className="flex items-center h-12 border-b border-gray-100 shrink-0">
-          <div className="hidden md:flex items-center gap-2 px-3 w-full">
-            <img src="/Sasa.png" alt="Sasa" className="h-5 w-5" />
-            <span className="font-title font-bold text-sm text-gray-900">Sasa</span>
+        <div className="flex items-center h-14 border-b border-gray-100/80 shrink-0 bg-linear-to-r from-primary/5 to-transparent">
+          <div className="hidden md:flex items-center gap-2.5 px-3 w-full">
+            <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
+              <img src="/Sasa.png" alt="Sasa" className="h-4 w-4" />
+            </div>
+            <span className="font-title font-bold text-sm bg-linear-to-r from-primary-dark to-primary bg-clip-text text-transparent tracking-tight">Sasa</span>
           </div>
 
           <div className="md:hidden flex items-center justify-center w-full h-full">
@@ -56,25 +58,27 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
                 aria-label="Abrir sidebar"
                 aria-controls="app-sidebar"
                 title="Abrir sidebar"
+                className="w-8 h-8 p-0"
               >
                 <MenuIcon size={16} />
               </Button>
             ) : (
-              <div className="flex items-center gap-2 px-3 w-full h-full">
-                <img src="/Sasa.png" alt="Sasa" className="h-5 w-5" />
-                <span className="font-title font-bold text-sm text-gray-900">Sasa</span>
-                <div className="ml-auto">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onToggleExpanded?.(false)}
-                    aria-label="Cerrar sidebar"
-                    aria-controls="app-sidebar"
-                    title="Cerrar sidebar"
-                  >
-                    <MenuIcon size={16} />
-                  </Button>
+              <div className="flex items-center gap-2.5 px-3 w-full h-full">
+                <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm shrink-0">
+                  <img src="/Sasa.png" alt="Sasa" className="h-4 w-4" />
                 </div>
+                <span className="font-title font-bold text-sm bg-linear-to-r from-primary-dark to-primary bg-clip-text text-transparent tracking-tight flex-1">Sasa</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onToggleExpanded?.(false)}
+                  aria-label="Cerrar sidebar"
+                  aria-controls="app-sidebar"
+                  title="Cerrar sidebar"
+                  className="w-8 h-8 p-0"
+                >
+                  <MenuIcon size={16} />
+                </Button>
               </div>
             )}
           </div>
