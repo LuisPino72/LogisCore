@@ -249,7 +249,7 @@ export function TenantSection({
           <DataTable
             columns={columns}
             data={paginated}
-            emptyMessage="No hay locales que coincidan con los filtros."
+            emptyMessage="Aún no hay locales que coincidan con los filtros."
             keyExtractor={(t: Tenant) => t.id}
             renderCardOnMobile
           />

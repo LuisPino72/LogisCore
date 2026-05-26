@@ -117,7 +117,7 @@ export function UserSection({
           <DataTable
             columns={columns}
             data={paginated}
-            emptyMessage="No hay usuarios en este local."
+            emptyMessage="Aún no hay usuarios registrados en este local."
             keyExtractor={(u: UserRole) => u.id}
             renderCardOnMobile
           />

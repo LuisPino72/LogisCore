@@ -3,7 +3,7 @@ import { type Result, type AppError } from '@logiscore/core';
 import { UserPlus } from 'lucide-react';
 import { Modal, Input, Button } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
-import type { Tenant } from '../types';
+import { CreateTenantInputSchema, type Tenant } from '../types';
 
 interface EditForm {
   name: string;
@@ -39,6 +39,11 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
 
   const handleSave = async () => {
     if (!tenant) return;
+    const parsed = CreateTenantInputSchema.safeParse(editForm);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Revisa los datos ingresados');
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     const result = await onSave(tenant.id, editForm);
@@ -46,7 +51,7 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
     if (result.ok) {
       onClose();
     } else {
-      setError(result.error.message);
+      setError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.');
     }
   };
 

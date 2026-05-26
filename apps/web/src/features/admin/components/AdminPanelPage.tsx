@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { useTenantFilters } from '../hooks/useTenantFilters';
 import { ArrowLeft, Building2, CreditCard, Plus, Store, Tags, UsersRound } from 'lucide-react';
-import { AppShell, BottomNav, Button, Card, Spinner, LogoutButton } from '../../../common/components';
+import { AppShell, BottomNav, Button, Card, EmptyState, Spinner, LogoutButton } from '../../../common/components';
 import { TenantSection } from './TenantSection';
 import { UserSection } from './UserSection';
 import { AllUsersSection } from './AllUsersSection';
@@ -100,14 +100,13 @@ export function AdminPanelPage() {
 
   if (error && tenants.length === 0) {
     return (
-      <div className="min-h-screen bg-surface p-8 flex items-center justify-center">
-        <Card className="max-w-md text-center">
-          <p className="text-danger text-sm">{error}</p>
-          <Button variant="primary" fullWidth className="mt-4" onClick={fetchTenants}>
-            Reintentar
-          </Button>
-        </Card>
-      </div>
+      <Card>
+        <EmptyState
+          icon={<Building2 size={32} />}
+          title="No se pudieron cargar los datos"
+          description={error}
+        />
+      </Card>
     );
   }
 
