@@ -515,6 +515,9 @@ export const inventoryService = {
             .toArray();
 
           const existingPresMap = new Map(existingPres.map((p) => [p.id, p]));
+          const effectiveStockType = existingPres.length > 0
+            ? existingPres[0].stockType
+            : (stockTypeInput || 'shared');
           const submittedIds = new Set(
             presentationsInput
               .filter((p) => !!(p as Record<string, unknown>).id)
@@ -547,7 +550,6 @@ export const inventoryService = {
               const patchData: Record<string, unknown> = {
                 name: pres.name,
                 priceUsd: pres.priceUsd,
-                unitMultiplier: pres.unitMultiplier ?? 1,
                 barcode: pres.barcode,
                 sortOrder: i,
                 updatedAt: now,
@@ -578,18 +580,19 @@ export const inventoryService = {
                 name: pres.name,
                 priceUsd: pres.priceUsd,
                 unitMultiplier: pres.unitMultiplier ?? 1,
-                stockType: stockTypeInput || 'shared',
+                stockType: effectiveStockType,
                 barcode: pres.barcode,
                 sortOrder: i,
                 createdAt: now,
                 updatedAt: now,
               };
 
-              if ((stockTypeInput || 'shared') === 'independent') {
+              if (effectiveStockType === 'independent') {
                 const childId = generateId();
                 const childSku = pres.barcode || `${updated.sku}-${i + 1}`;
                 record.childProductId = childId;
 
+                const childStock = pres.stockInicial && pres.stockInicial > 0 ? convertToStorage(pres.stockInicial, 'unidad') : 0;
                 await db.products.add({
                   id: childId,
                   tenantId,
@@ -601,7 +604,7 @@ export const inventoryService = {
                   isTaxable: updated.isTaxable ?? true,
                   isSellable: true,
                   unit: 'unidad',
-                  stock: 0,
+                  stock: childStock,
                   stockMin: updated.stockMin,
                 });
                 await syncQueue.enqueue('products', 'CREATE', childId, toSnake({

@@ -696,8 +696,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       <div className="space-y-3">
         <p className="text-xs text-gray-500">
           Define las variantes o formatos de venta de este producto
-          {stockType === 'shared' ? '. Compartirán el stock del producto base.' : '. Cada una tendrá su propio stock independiente.'}
+          {stockType === 'shared' ? '. Comparten el stock del producto base.' : '. Cada una tiene su propio stock independiente.'}
         </p>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-500">
+            Tipo de stock definido al crear las variantes. No se puede cambiar.
+          </p>
+        </div>
 
         {stockType === 'shared' && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -762,11 +767,25 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 </div>
               )}
 
-              {stockType === 'independent' && pres.stockInicial !== undefined && (
-                <div className="bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-xs text-gray-500">Stock inicial: </span>
-                  <span className="text-sm font-medium text-gray-700">{pres.stockInicial} unid.</span>
-                </div>
+              {stockType === 'independent' && (
+                (pres as Record<string, unknown>).id ? (
+                  <div className="bg-gray-50 rounded-lg px-3 py-2">
+                    <span className="text-xs text-gray-500">Stock inicial: </span>
+                    <span className="text-sm font-medium text-gray-700">{pres.stockInicial ?? 0} unid.</span>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Stock inicial</label>
+                    <Input
+                      sanitize="number"
+                      decimals={0}
+                      placeholder="0"
+                      value={pres.stockInicial?.toString() || ''}
+                      onChange={(e) => updatePresentation(index, 'stockInicial', parseInt(e.target.value) || 0)}
+                      inputClassName="text-sm"
+                    />
+                  </div>
+                )
               )}
 
               <div>

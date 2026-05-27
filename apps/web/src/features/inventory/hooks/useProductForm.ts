@@ -100,6 +100,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       stockType,
       sortOrder: 0,
       barcode: undefined,
+      stockInicial: 0,
     }]);
   }, [stockType]);
 
