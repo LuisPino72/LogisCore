@@ -37,6 +37,7 @@ export interface DexieProduct {
   stock: number;
   stockMin?: number;
   imageUrl?: string;
+  costPrice?: number;
   deletedAt?: string;
 }
 

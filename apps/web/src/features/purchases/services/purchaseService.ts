@@ -452,6 +452,11 @@ export const purchaseService = {
             const previousStock = product.stock;
             const newStock = previousStock + effectiveQty;
 
+            // Calcular Costo Promedio Ponderado (WAC)
+            const previousCost = product.costPrice ?? 0;
+            const totalLotCost = (previousStock * previousCost) + (effectiveQty * item.costUsdPerUnit);
+            const newCostPrice = newStock > 0 ? preciseRound(totalLotCost / newStock, 4) : item.costUsdPerUnit;
+
             const movementId = generateId();
             const movement = {
               id: movementId,
@@ -464,7 +469,6 @@ export const purchaseService = {
               newStock,
               createdAt: now,
             };
-
             const lot = {
               id: generateId(),
               tenantId,
@@ -476,16 +480,15 @@ export const purchaseService = {
               createdAt: now,
               updatedAt: now,
             };
-
-            await db.products.update(item.productId, { stock: newStock });
+            await db.products.update(item.productId, { stock: newStock, costPrice: newCostPrice });
             await db.inventoryMovements.add(movement);
             await db.inventoryLots.add(lot);
-
             await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
             await syncQueue.enqueue('inventory_lots', 'CREATE', lot.id, toSnake(lot as unknown as Record<string, unknown>), tenantId);
             await syncQueue.enqueue('products', 'UPDATE', item.productId, toSnake({
               ...product,
               stock: newStock,
+              costPrice: newCostPrice,
             } as unknown as Record<string, unknown>), tenantId);
           }
         }

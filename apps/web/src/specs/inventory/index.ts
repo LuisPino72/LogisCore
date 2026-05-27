@@ -18,6 +18,7 @@ export const ProductSchema = z.object({
   stock: z.number().int().min(0),
   stockMin: z.number().int().min(0).optional(),
   imageUrl: z.string().optional(),
+  costPrice: z.number().min(0).optional(),
   deletedAt: z.string().datetime().optional(),
 });
 

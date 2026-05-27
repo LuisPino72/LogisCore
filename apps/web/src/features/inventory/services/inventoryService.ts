@@ -55,6 +55,7 @@ function toProduct(raw: Record<string, unknown>): Product {
     stock: raw.stock as number,
     stockMin: raw.stockMin as number | undefined,
     imageUrl: raw.imageUrl as string | undefined,
+    costPrice: raw.costPrice as number | undefined,
     deletedAt: raw.deletedAt as string | undefined,
   };
 }
@@ -131,6 +132,9 @@ export const inventoryService = {
       ? convertToStorage(input.stockInicial, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
       : 0;
 
+    const costPerUnit = input.costPrice != null && input.costPrice > 0
+      ? preciseRound(input.costPrice / stockInicial, 4)
+      : 0;
     const product: Product = {
       id,
       name: input.name,
@@ -143,6 +147,7 @@ export const inventoryService = {
       unit: input.unit,
       stock: stockInicial,
       stockMin: input.stockMin,
+      costPrice: costPerUnit,
     };
 
     try {
@@ -892,6 +897,7 @@ export const inventoryService = {
                   stock: prod.stock,
                   stockMin: prod.stock_min,
                   imageUrl: prod.image_url,
+                  costPrice: prod.cost_price,
                 });
               }
 

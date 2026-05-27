@@ -50,7 +50,7 @@ interface ProductFormProps {
   onClose: () => void;
   onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }, imageFile?: File | null) => Promise<boolean>;
   categories: { id: string; name: string; isPredefined?: boolean }[];
-  editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string } | null;
+  editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string; costPrice?: number } | null;
   onCreateCategory?: (name: string) => Promise<string | null>;
 }
 
@@ -80,7 +80,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     isWeighted: editProduct.isWeighted,
     unit: editProduct.unit,
     stockMin: editProduct.stockMin,
-    costPrice: 0,
+    costPrice: editProduct.costPrice ?? 0,
   } : undefined;
 
   const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }): Promise<boolean> => {
@@ -424,18 +424,18 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 />
               </div>
 
-<div className="input-wrapper">
-              <label className="input-label">Costo total del lote inicial ($)</label>
-              <Input
-                sanitize="currency"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.costPrice != null && formData.costPrice > 0 ? String(formData.costPrice) : ''}
-                onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                inputClassName="text-sm"
-              />
-              <p className="text-[10px] text-gray-400 mt-0.5">Costo total pagado por la primera entrada de stock.</p>
-            </div>
+              <div className="input-wrapper">
+                <label className="input-label">Costo total del lote inicial ($)</label>
+                <Input
+                  sanitize="currency"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.costPrice != null && formData.costPrice > 0 ? String(formData.costPrice) : ''}
+                  onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                  inputClassName="text-sm"
+                />
+                <p className="text-[10px] text-gray-400 mt-0.5">Costo total pagado por la primera entrada de stock. Se divide entre el stock para calcular el costo por unidad.</p>
+              </div>
 
               <div className="input-wrapper">
                 <label className="input-label">
@@ -550,6 +550,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 </div>
               </div>
             )}
+
 
             {stockType === 'independent' && (
               <div className="input-wrapper">
