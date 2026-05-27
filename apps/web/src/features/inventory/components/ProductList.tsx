@@ -8,10 +8,12 @@ import type { Product, Category, TabState, StockFilter } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 import { getDb } from '../../../services/dexie/db';
+import { supabase } from '../../../services/supabase/client';
 
 interface ProductListProps {
   products: Product[];
   categories: Category[];
+  tenantId: string;
   onSearch: (query: string, categoryId?: string) => void;
   initialTabState: TabState;
   onSaveTabState: (state: Partial<TabState>) => void;
@@ -58,7 +60,7 @@ function getStockVariant(stock: number, product: { stockMin?: number; isWeighted
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
+export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
@@ -96,13 +98,47 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         const pres = await db.productPresentations
           .filter(p => !p.deletedAt)
           .toArray();
-        setProductIdsWithVariants(new Set(pres.map(p => p.productId)));
+        
+        if (pres.length > 0) {
+          setProductIdsWithVariants(new Set(pres.map(p => p.productId)));
+          return;
+        }
+
+        // Fallback: si Dexie está vacío, intentar desde Supabase
+        if (products.length > 0) {
+          const { data: remotePres } = await supabase
+            .from('product_presentations')
+            .select('id, product_id')
+            .is('deleted_at', null)
+            .eq('tenant_id', tenantId);
+
+          if (remotePres && remotePres.length > 0) {
+            const ids = new Set(remotePres.map(p => p.product_id));
+            setProductIdsWithVariants(ids);
+            
+            // Sembrar en Dexie para que no vuelva a ocurrir
+            for (const p of remotePres) {
+              await db.productPresentations.put({
+                id: p.id,
+                tenantId,
+                productId: p.product_id,
+                name: '',
+                priceUsd: 0,
+                unitMultiplier: 1,
+                stockType: 'shared',
+                sortOrder: 0,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          }
+        }
       } catch {
         // silent
       }
     };
     load();
-  }, [products]);
+  }, [products, tenantId]);
 
   useEffect(() => {
     setPage(1);
@@ -135,8 +171,8 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
 
   const fuzzyResults = useProductFuzzySearch(products, searchQuery);
 
-  const filteredByStock = useMemo(() => {
-    let result = searchQuery ? fuzzyResults : products;
+    const filteredByStock = useMemo(() => {
+      const result = searchQuery ? fuzzyResults : products;
 
     return result.filter((p) => applyStockFilter(p.stock, p, stockFilter));
   }, [searchQuery, fuzzyResults, products, stockFilter]);

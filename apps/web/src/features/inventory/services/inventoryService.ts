@@ -663,13 +663,11 @@ export const inventoryService = {
       const authIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
       const needsMigration = allLocal.some(r => !r.deletedAt && r.tenantId && r.tenantId !== tenantId);
       if (needsMigration) {
-        const migratedIds: string[] = [];
         for (const r of allLocal) {
           if (r.deletedAt || !r.tenantId || r.tenantId === tenantId) continue;
           const otherIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.tenantId as string);
           if (authIsUuid !== otherIsUuid) {
             await db.products.update(r.id!, { tenantId });
-            migratedIds.push(r.id!);
           }
         }
       }
@@ -690,8 +688,15 @@ export const inventoryService = {
           .is('deleted_at', null);
 
         if (!error && data && data.length > 0) {
-          // Wrap bulk seed en transacción para evitar estado parcial si la DB se cierra
           try {
+            const [lotsResponse, presResponse] = await Promise.all([
+              supabase.from('inventory_lots').select('*').in('product_id', data.map((p: Record<string, unknown>) => p.id)),
+              supabase.from('product_presentations').select('*').in('product_id', data.map((p: Record<string, unknown>) => p.id)).is('deleted_at', null)
+            ]);
+
+            const lots = lotsResponse.data;
+            const presData = presResponse.data;
+
             await db.transaction('rw', [db.products, db.inventoryLots, db.productPresentations], async () => {
               for (const prod of data) {
                 await db.products.put({
@@ -712,11 +717,6 @@ export const inventoryService = {
 
               if (isDbClosing()) return;
 
-              const { data: lots } = await supabase
-                .from('inventory_lots')
-                .select('*')
-                .in('product_id', data.map((p: Record<string, unknown>) => p.id));
-
               if (lots && lots.length > 0) {
                 for (const lot of lots) {
                   if (isDbClosing()) return;
@@ -734,12 +734,6 @@ export const inventoryService = {
               }
 
               if (isDbClosing()) return;
-
-              const { data: presData } = await supabase
-                .from('product_presentations')
-                .select('*')
-                .in('product_id', data.map((p: Record<string, unknown>) => p.id))
-                .is('deleted_at', null);
 
               if (presData && presData.length > 0) {
                 for (const pres of presData) {
@@ -760,26 +754,23 @@ export const inventoryService = {
                 }
               }
             });
-          } catch {
-            // Si la transacción falla (ej. DB cerrada), simplemente retornamos vacío
+          } catch (err) {
+            logger.error(INVENTORY_MODULE, 'Error during seed:', err);
             return success([]);
           }
-
-          // re-query Dexie after population
-          rows = await db.products
-            .where({ tenantId })
-            .filter((p) => !p.deletedAt)
-            .toArray();
         }
       }
+
+      rows = await db.products
+        .where({ tenantId })
+        .filter((p) => !p.deletedAt)
+        .toArray();
 
       let products = rows.map((r) => toProduct(r as unknown as Record<string, unknown>));
 
       if (filters?.query) {
         const q = filters.query.toLowerCase();
-        products = products.filter(
-          (p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q),
-        );
+        products = products.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
       }
 
       if (filters?.categoryId) {

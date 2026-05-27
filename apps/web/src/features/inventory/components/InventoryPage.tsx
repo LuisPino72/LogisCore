@@ -325,6 +325,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <ProductList
               products={products}
               categories={categories}
+              tenantId={tenantId || ''}
               onSearch={search}
               initialTabState={tabStates.productos}
               onSaveTabState={(state) => saveTabState('productos', state)}

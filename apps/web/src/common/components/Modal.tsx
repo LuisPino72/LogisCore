@@ -73,6 +73,9 @@ export function Modal({
       const timer = setTimeout(() => setClosing(false), 200);
       return () => clearTimeout(timer);
     }
+    if (isOpen) {
+      setClosing(false);
+    }
     prevOpenRef.current = isOpen;
   }, [isOpen]);
 
