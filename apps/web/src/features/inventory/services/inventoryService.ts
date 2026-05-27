@@ -881,6 +881,20 @@ export const inventoryService = {
         await db.products.clear();
       }
 
+      const authIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
+      const needsMigration = allLocal.some(r => !r.deletedAt && r.tenantId && r.tenantId !== tenantId);
+      if (needsMigration) {
+        const migratedIds: string[] = [];
+        for (const r of allLocal) {
+          if (r.deletedAt || !r.tenantId || r.tenantId === tenantId) continue;
+          const otherIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.tenantId as string);
+          if (authIsUuid !== otherIsUuid) {
+            await db.products.update(r.id!, { tenantId });
+            migratedIds.push(r.id!);
+          }
+        }
+      }
+
       let rows = await db.products
         .where({ tenantId })
         .filter((p) => !p.deletedAt)

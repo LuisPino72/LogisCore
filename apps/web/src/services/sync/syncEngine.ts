@@ -75,7 +75,7 @@ export class SyncEngine {
         if (items.length === 0) break;
 
         for (const item of items) {
-          try {
+           try {
             await this.pushItem(item);
             await syncQueue.markSuccess(item.id!);
             result.pushed++;
@@ -290,16 +290,7 @@ export class SyncEngine {
     }
     if (record.tenant_id) {
       const tid = record.tenant_id as string;
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tid)) {
-        try {
-          local.tenantId = await TenantTranslator.uuidToSlug(tid);
-        } catch {
-          logger.warn('Sync', `No se pudo resolver tenant_id UUID: ${tid}. Omitiendo actualización local.`);
-          return;
-        }
-      } else {
-        local.tenantId = tid;
-      }
+      local.tenantId = tid;
     }
     await db.table(tableName).put(local);
   }
