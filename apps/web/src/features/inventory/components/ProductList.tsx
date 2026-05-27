@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, MoreVertical } from 'lucide-react';
-import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect } from '../../../common/components';
+import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect, Modal } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
@@ -64,6 +64,30 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
   const [page, setPage] = useState(initialTabState.page);
   const [productIdsWithVariants, setProductIdsWithVariants] = useState<Set<string>>(new Set());
+  const [variantModalProductId, setVariantModalProductId] = useState<string | null>(null);
+  const [variantModalData, setVariantModalData] = useState<{ name: string; priceUsd: number }[]>([]);
+  const [variantModalLoading, setVariantModalLoading] = useState(false);
+
+  const openVariantModal = async (productId: string) => {
+    setVariantModalProductId(productId);
+    setVariantModalLoading(true);
+    try {
+      const db = getDb();
+      const pres = await db.productPresentations
+        .where({ productId })
+        .filter(p => !p.deletedAt)
+        .sortBy('sortOrder');
+      setVariantModalData(pres.map(p => ({ name: p.name, priceUsd: p.priceUsd })));
+    } catch {
+      setVariantModalData([]);
+    } finally {
+      setVariantModalLoading(false);
+    }
+  };
+
+  const variantModalProduct = variantModalProductId
+    ? products.find(p => p.id === variantModalProductId)
+    : null;
 
   useEffect(() => {
     const load = async () => {
@@ -141,12 +165,25 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-medium text-gray-900">{product.name}</span>
               {productIdsWithVariants.has(product.id) && (
-                <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                <span
+                  className="hidden md:inline-flex text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); openVariantModal(product.id); }}
+                >
                   Variantes
                 </span>
               )}
             </div>
             <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
+            {productIdsWithVariants.has(product.id) && (
+              <div className="flex md:hidden mt-1">
+                <span
+                  className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); openVariantModal(product.id); }}
+                >
+                  Variantes
+                </span>
+              </div>
+            )}
           </div>
         ),
       },
@@ -322,6 +359,14 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
               <div className="text-[10px] text-text-secondary font-mono text-center">
                 {product.sku}
               </div>
+              {productIdsWithVariants.has(product.id) && (
+                <span
+                  className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                  onClick={() => openVariantModal(product.id)}
+                >
+                  Variantes
+                </span>
+              )}
               <div className="mt-1 text-xs text-gray-600 space-y-1 flex flex-col items-center">
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-gray-500">Precio</span>
@@ -374,6 +419,30 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         }}
         total={filteredByStock.length}
       />
+
+      <Modal
+        isOpen={!!variantModalProductId}
+        onClose={() => setVariantModalProductId(null)}
+        title={variantModalProduct ? `Variantes de ${variantModalProduct.name}` : 'Variantes'}
+        size="sm"
+      >
+        {variantModalLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : variantModalData.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No hay variantes</p>
+        ) : (
+          <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+            {variantModalData.map((v, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-gray-800">{v.name}</span>
+                <span className="text-sm font-semibold text-primary ml-4 shrink-0">{formatUsd(v.priceUsd)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
