@@ -61,6 +61,7 @@ export interface ActiveLot {
   quantityAdded: number;
   remainingQuantity: number;
   costUsdPerUnit?: number;
+  productLabel?: string;
 }
 
 export interface MovementRow {

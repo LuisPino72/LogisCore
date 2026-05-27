@@ -30,19 +30,19 @@ interface ProductListProps {
   onViewPresentations: (productId: string) => void;
 }
 
-function getStockLabel(product: Product): string {
-  if (product.isWeighted) return product.unit === 'lt' ? 'Lt' : 'Kg';
+function getStockLabel(isWeighted: boolean, unit: string): string {
+  if (isWeighted) return unit === 'lt' ? 'Lt' : 'Kg';
   return 'Total';
 }
 
-function getStockBadgeContent(product: Product): string {
-  const display = displayStock(product.stock, product.unit);
-  const label = getStockLabel(product);
+function getStockBadgeContent(stock: number, unit: string, isWeighted: boolean): string {
+  const display = displayStock(stock, unit);
+  const label = getStockLabel(isWeighted, unit);
   return `${display} ${label}`;
 }
 
-function applyStockFilter(product: Product, filter: StockFilter): boolean {
-  const displayStock = product.isWeighted ? (product.unit === 'kg' || product.unit === 'lt' ? product.stock / 1000 : product.stock) : product.stock;
+function applyStockFilter(stock: number, product: { stockMin?: number; isWeighted: boolean; unit: string }, filter: StockFilter): boolean {
+  const displayStock = product.isWeighted ? (product.unit === 'kg' || product.unit === 'lt' ? stock / 1000 : stock) : stock;
   const threshold = product.stockMin ?? 5;
   switch (filter) {
     case 'all': return true;
@@ -52,10 +52,10 @@ function applyStockFilter(product: Product, filter: StockFilter): boolean {
   }
 }
 
-function getStockVariant(product: Product): 'success' | 'warning' | 'danger' {
+function getStockVariant(stock: number, product: { stockMin?: number; isWeighted: boolean; unit: string }): 'success' | 'warning' | 'danger' {
   const displayStock = product.isWeighted && (product.unit === 'kg' || product.unit === 'lt')
-    ? product.stock / 1000
-    : product.stock;
+    ? stock / 1000
+    : stock;
   if (product.stockMin && displayStock <= product.stockMin) return 'danger';
   if (product.stockMin && displayStock <= product.stockMin * 2) return 'warning';
   return 'success';
@@ -98,15 +98,35 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
 
   const fuzzyResults = useProductFuzzySearch(products, searchQuery);
 
+  const effectiveStockMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of products) {
+      const presList = presentationsByProduct[p.id];
+      if (presList?.some(pres => pres.stockType === 'independent')) {
+        const total = presList.reduce((sum, pres) => {
+          if (pres.stockType === 'independent' && pres.childProductId) {
+            const child = products.find(c => c.id === pres.childProductId);
+            return sum + (child?.stock ?? 0);
+          }
+          return sum;
+        }, 0);
+        map.set(p.id, total);
+      } else {
+        map.set(p.id, p.stock);
+      }
+    }
+    return map;
+  }, [products, presentationsByProduct]);
+
   const filteredByStock = useMemo(() => {
     let result = searchQuery ? fuzzyResults : products;
 
-    if (allPresentationChildIds) {
+    if (allPresentationChildIds.size > 0) {
       result = result.filter((p) => !allPresentationChildIds.has(p.id));
     }
 
-    return result.filter((p) => applyStockFilter(p, stockFilter));
-  }, [searchQuery, fuzzyResults, products, stockFilter, allPresentationChildIds]);
+    return result.filter((p) => applyStockFilter(effectiveStockMap.get(p.id) ?? p.stock, p, stockFilter));
+  }, [searchQuery, fuzzyResults, products, stockFilter, allPresentationChildIds, effectiveStockMap]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [
@@ -166,16 +186,19 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         key: 'stock',
         header: 'Total',
         hideLabelOnMobile: true,
-        render: (product) => (
-          <div className="flex items-center gap-2">
-            <Badge variant={getStockVariant(product)}>
-              {getStockBadgeContent(product)}
-            </Badge>
-            {product.stockMin && parseFloat(displayStock(product.stock, product.unit)) <= product.stockMin && (
-              <AlertTriangle size={12} className="text-danger shrink-0" />
-            )}
-          </div>
-        ),
+        render: (product) => {
+          const effStock = effectiveStockMap.get(product.id) ?? product.stock;
+          return (
+            <div className="flex items-center gap-2">
+              <Badge variant={getStockVariant(effStock, product)}>
+                {getStockBadgeContent(effStock, product.unit, product.isWeighted)}
+              </Badge>
+              {product.stockMin && parseFloat(displayStock(effStock, product.unit)) <= product.stockMin && (
+                <AlertTriangle size={12} className="text-danger shrink-0" />
+              )}
+            </div>
+          );
+        },
       },
       {
         key: 'category',
@@ -227,7 +250,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
     }
 
     return cols;
-  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots, allPresentationParentIds, allPresentationChildIds, presentationsByProduct, onViewPresentations]);
+  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots, allPresentationParentIds, allPresentationChildIds, presentationsByProduct, onViewPresentations, effectiveStockMap]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (
@@ -302,7 +325,10 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         columns={columns}
         data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
-        rowClassName={(p: Product) => p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined}
+        rowClassName={(p: Product) => {
+          const effStock = effectiveStockMap.get(p.id) ?? p.stock;
+          return p.stockMin && parseFloat(displayStock(effStock, p.unit)) <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
+        }}
         emptyMessage="No encontramos productos con ese nombre o filtro"
         renderCardOnMobile
         renderCard={(product: Product) => (
@@ -349,7 +375,9 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-gray-500">Total</span>
-                  <Badge variant={getStockVariant(product)}>{getStockBadgeContent(product)}</Badge>
+                  <Badge variant={getStockVariant(effectiveStockMap.get(product.id) ?? product.stock, product)}>
+                    {getStockBadgeContent(effectiveStockMap.get(product.id) ?? product.stock, product.unit, product.isWeighted)}
+                  </Badge>
                 </div>
                 {isOwner && (
                   <div className="mt-2 flex items-center justify-center gap-0.5">

@@ -83,9 +83,12 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
         return (
           <Card key={lot.id} className={`p-4 transition-shadow hover:shadow-md ${isFirst ? 'border-l-4 border-l-accent' : ''}`}>
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {isFirst && (
                   <Badge variant="warning" className="text-[10px]">FIFO — Activo</Badge>
+                )}
+                {lot.productLabel && (
+                  <Badge variant="neutral" className="text-[10px]">{lot.productLabel}</Badge>
                 )}
               </div>
               <Badge variant={lot.remainingQuantity > 0 ? 'success' : 'neutral'}>

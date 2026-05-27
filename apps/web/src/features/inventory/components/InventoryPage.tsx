@@ -342,7 +342,28 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               onNewProduct={openNewProduct}
               onEditProduct={openEditProduct}
               onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
-              onAdjust={async (id) => { setAdjProductId(id); setShowAdjustment(true); setAdjMode(''); setAdjReasonType(''); setAdjQuantity(''); setAdjSelectedPresId(null); await checkProductCost(id); }}
+              onAdjust={async (id) => {
+                setAdjProductId(id);
+                setAdjMode('');
+                setAdjReasonType('');
+                setAdjQuantity('');
+                const presList = presentationsByProduct[id] ?? [];
+                const hasIndependentPres = presList.some(p => p.stockType === 'independent');
+                if (hasIndependentPres) {
+                  const firstVariant = presList.find(p => p.stockType === 'independent' && p.childProductId);
+                  if (firstVariant && firstVariant.id) {
+                    setAdjSelectedPresId(firstVariant.id);
+                    if (firstVariant.childProductId) await checkProductCost(firstVariant.childProductId);
+                  } else {
+                    setAdjSelectedPresId(null);
+                    await checkProductCost(id);
+                  }
+                } else {
+                  setAdjSelectedPresId(null);
+                  await checkProductCost(id);
+                }
+                setShowAdjustment(true);
+              }}
               onViewLots={(id) => setSelectedProductLotsId(id)}
               onViewKardex={(id) => {
                 const product = products.find((p) => p.id === id);
@@ -497,8 +518,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-medium text-primary">
                           Stock: {displayStockValue} {unitLabel}
                         </span>
-                        {selectedPres && (
+                        {selectedPres && selectedPres.stockType === 'shared' && (
                           <span className="text-[10px] text-gray-400">del producto base</span>
+                        )}
+                        {selectedPres && selectedPres.stockType === 'independent' && (
+                          <span className="text-[10px] text-gray-400">variante independiente</span>
                         )}
                       </div>
                     </div>
@@ -510,17 +534,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 <div className="space-y-2">
                   <label className="input-label">Seleccionar variante</label>
                   <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handlePresSelect(null)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        !adjSelectedPresId
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      Producto base
-                    </button>
                     {presList.map((pres) => (
                       pres.id && (
                         <button

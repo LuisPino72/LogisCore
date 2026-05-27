@@ -82,10 +82,15 @@ export const adminService = {
     }
 
     // Clean up Storage images for this tenant (fire-and-forget, non-critical)
-    try {
-      await supabase.rpc('hard_delete_tenant_storage', { p_tenant_id: id });
-    } catch {
-      // Non-critical: storage cleanup failure should not block tenant deletion
+    try { await supabase.rpc('hard_delete_tenant_storage', { p_tenant_id: id }); } catch {
+      // Fallback: delete via Storage API (admin has DELETE RLS on bucket)
+      try {
+        const { data: files } = await supabase.storage.from('Products').list(id);
+        if (files && files.length > 0) {
+          const paths = files.map((f) => `${id}/${f.name}`);
+          await supabase.storage.from('Products').remove(paths);
+        }
+      } catch { /* non-critical */ }
     }
 
     try {

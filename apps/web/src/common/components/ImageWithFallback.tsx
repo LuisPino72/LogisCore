@@ -59,15 +59,24 @@ export function ImageWithFallback({
 
     let isActive = true;
 
+    // Timeout: si acquireImageUrl tarda > 3s, usa la URL original como fallback
+    const timeoutId = setTimeout(() => {
+      if (!isActive) return;
+      setSrc(currentEffectiveImageUrl);
+      setLoading(false);
+    }, 3000);
+
     (async () => {
       const result = await imageCacheService.acquireImageUrl(productId, currentEffectiveImageUrl);
       if (!isActive) return;
+      clearTimeout(timeoutId);
       setSrc(result);
       setLoading(false);
     })();
 
     return () => {
       isActive = false;
+      clearTimeout(timeoutId);
     };
   }, [productId, imageUrl]);
 

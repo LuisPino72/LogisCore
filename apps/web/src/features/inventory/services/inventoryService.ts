@@ -352,6 +352,11 @@ export const inventoryService = {
         await syncQueue.enqueue('products', 'CREATE', productId, toSnake(createdProduct as unknown as Record<string, unknown>), tenantId);
 
         if (stockType === 'independent') {
+          const totalChildStock = childrenToCreate.reduce((sum, c) => sum + c.stock, 0);
+          const childCostPerUnit = input.costPrice != null && input.costPrice > 0 && totalChildStock > 0
+            ? preciseRound(input.costPrice / totalChildStock, 4)
+            : 0;
+
           for (const child of childrenToCreate) {
             const childProduct = {
               id: child.id,
@@ -366,6 +371,7 @@ export const inventoryService = {
               unit: 'unidad' as const,
               stock: child.stock,
               stockMin: input.stockMin,
+              costPrice: childCostPerUnit > 0 ? childCostPerUnit : undefined,
             };
             await db.products.add(childProduct);
 
@@ -387,17 +393,13 @@ export const inventoryService = {
               };
               await db.inventoryMovements.add(movement);
 
-              const costPerUnit = input.costPrice != null && input.costPrice > 0
-                ? preciseRound(input.costPrice / childrenToCreate.reduce((sum, c) => sum + c.stock, 0), 4)
-                : 0;
-
               const lot = {
                 id: generateId(),
                 tenantId,
                 productId: child.id,
                 quantityAdded: child.stock,
                 remainingQuantity: child.stock,
-                costUsdPerUnit: costPerUnit,
+                costUsdPerUnit: childCostPerUnit > 0 ? childCostPerUnit : undefined,
                 sourceMovementId: movementId,
                 createdAt: now,
                 updatedAt: now,
@@ -1192,10 +1194,31 @@ export const inventoryService = {
 
   async getProductLots(productId: string): Promise<Result<ActiveLot[], AppError>> {
     const db = getDb();
-    const lots = await db.inventoryLots
+
+    // Check if this product has independent presentations → aggregate lots from children
+    const presentations = await db.productPresentations
       .where({ productId })
+      .filter((p) => !p.deletedAt && p.stockType === 'independent' && !!p.childProductId)
+      .toArray();
+
+    let productIds: string[];
+    if (presentations.length > 0) {
+      productIds = [productId, ...presentations.map(p => p.childProductId!)];
+    } else {
+      productIds = [productId];
+    }
+
+    const lots = await db.inventoryLots
+      .where('productId')
+      .anyOf(productIds)
       .filter((l) => l.remainingQuantity > 0)
       .sortBy('createdAt');
+
+    // Build a map of childProductId → presentation name for labeling
+    const childLabelMap = new Map<string, string>();
+    for (const pres of presentations) {
+      if (pres.childProductId) childLabelMap.set(pres.childProductId, pres.name ?? '');
+    }
 
     return success(lots.map((l) => ({
       id: l.id,
@@ -1203,6 +1226,7 @@ export const inventoryService = {
       quantityAdded: toNumber(l.quantityAdded),
       remainingQuantity: toNumber(l.remainingQuantity),
       costUsdPerUnit: l.costUsdPerUnit != null ? toNumber(l.costUsdPerUnit) : undefined,
+      productLabel: childLabelMap.get(l.productId),
     })));
   },
 

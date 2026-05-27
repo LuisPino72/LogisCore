@@ -235,6 +235,8 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
         allPresentationChildIds: childIds,
         allPresentationParentIds: parentIds,
       });
+    } else {
+      console.error('[inventoryStore] fetchAllPresentations falló:', allPres.error);
     }
   },
 
@@ -278,6 +280,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   },
 
   refresh: async (tenantId, _userId) => {
+    await get().fetchAllPresentations(tenantId);
     await Promise.all([
       get().fetchProducts(tenantId),
       get().fetchCategories(tenantId),

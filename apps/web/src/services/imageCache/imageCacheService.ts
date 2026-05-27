@@ -1,5 +1,3 @@
-import { networkAware } from '../network/networkAwareService';
-
 const CACHE_NAME = 'logiscore-product-images';
 const MAX_CACHE_SIZE = 100;
 
@@ -89,10 +87,7 @@ export const imageCacheService = {
     }
   },
 
-  async preloadAll(products: { imageUrl?: string | null }[], force = false): Promise<void> {
-    // En datos móviles, NO precargamos imágenes (protege el plan de megas del bodeguero)
-    // Forzar con force=true para precargar incluso en datos móviles si es necesario
-    if (!force && !networkAware.shouldPreloadImages()) return;
+  async preloadAll(products: { imageUrl?: string | null }[], _force = false): Promise<void> {
     const urls = Array.from(new Set(products.filter((p) => p.imageUrl).map((p) => p.imageUrl!)));
     if (urls.length === 0) return;
 
