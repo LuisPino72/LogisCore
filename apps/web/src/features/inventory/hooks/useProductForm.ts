@@ -3,6 +3,19 @@ import { CreateProductInputSchema, CreatePresentationInputSchema } from '../../.
 import type { ProductFormData, CreateProductInput, CreatePresentationInput } from '../types';
 import { useInventoryStore } from '../stores/inventoryStore';
 
+// Utility for auto-generating SKU
+const generateAutoSku = (name: string, existingSkus: string[]) => {
+  const base = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+  let counter = 1;
+  while (true) {
+    const sku = `${base}-${String(counter).padStart(3, '0')}`;
+    if (!existingSkus.map(s => s.toLowerCase()).includes(sku.toLowerCase())) {
+      return sku;
+    }
+    counter++;
+  }
+};
+
 interface UseProductFormOptions {
   initialValues?: Partial<ProductFormData>;
   editProductId?: string;
@@ -14,7 +27,8 @@ interface UseProductFormReturn {
   errors: Record<string, string>;
   isSubmitting: boolean;
   setField: <K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => void;
-  handleSubmit: () => Promise<void>;
+  setFormErrors: (errors: Record<string, string>) => void;
+  handleSubmit: () => Promise<{ success: boolean; errors?: Record<string, string> }>;
   reset: () => void;
   presentations: CreatePresentationInput[];
   addPresentation: () => void;
@@ -22,6 +36,7 @@ interface UseProductFormReturn {
   updatePresentation: (index: number, field: keyof CreatePresentationInput, value: unknown) => void;
   setStockType: (type: 'shared' | 'independent') => void;
   stockType: 'shared' | 'independent';
+  generateSku: () => void;
 }
 
 const defaultFormData: ProductFormData = {
@@ -65,6 +80,17 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     });
     setErrors((prev) => ({ ...prev, [key]: '' }));
   }, []);
+
+  const setFormErrors = useCallback((newErrors: Record<string, string>) => {
+    setErrors((prev) => ({ ...prev, ...newErrors }));
+  }, []);
+
+  const generateSku = useCallback(() => {
+    if (!formData.name.trim()) return;
+    const existing = useInventoryStore.getState().products.map(p => p.sku);
+    const newSku = generateAutoSku(formData.name, existing);
+    setField('sku', newSku);
+  }, [formData.name, setField]);
 
   const addPresentation = useCallback(() => {
     setPresentations(prev => [...prev, {
@@ -116,24 +142,21 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     setStockType('shared');
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (): Promise<{ success: boolean; errors?: Record<string, string> }> => {
     setErrors({});
     setIsSubmitting(true);
 
-    const parsed = CreateProductInputSchema.safeParse({
-      name: formData.name,
-      sku: formData.sku,
-      priceUsd: formData.priceUsd,
-      categoryId: formData.categoryId,
-      isWeighted: formData.isWeighted,
-      isTaxable: formData.isTaxable,
-      isSellable: formData.isSellable,
-      unit: formData.unit,
-      stockMin: formData.stockMin || undefined,
-      costPrice: formData.costPrice || undefined,
-    });
+    const { productType, stockInicial, ...validationData } = formData;
+
+    // Si tiene variantes, el precio base se hereda de la primera variante para pasar Zod
+    if (presentations.length > 0 && validationData.priceUsd <= 0) {
+      validationData.priceUsd = presentations[0]?.priceUsd || 0.05;
+    }
+
+    const parsed = CreateProductInputSchema.safeParse(validationData);
 
     if (!parsed.success) {
+      console.error('[ProductForm Validation Error]:', parsed.error.format());
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const field = issue.path[0] as string;
@@ -141,51 +164,52 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       }
       setErrors(fieldErrors);
       setIsSubmitting(false);
-      return;
+      return { success: false, errors: fieldErrors };
     }
 
-    // Validar precio mínimo razonable
-    if (formData.priceUsd > 0 && formData.priceUsd < 0.05) {
-      setErrors({ priceUsd: 'El precio parece muy bajo. ¿Estás seguro?' });
+    if (validationData.priceUsd > 0 && validationData.priceUsd < 0.05) {
+      const errs = { priceUsd: 'El precio parece muy bajo. ¿Estás seguro?' };
+      setErrors(errs);
       setIsSubmitting(false);
-      return;
+      return { success: false, errors: errs };
     }
 
-    // Validar stock inicial
     const isEditing = options.initialValues !== undefined;
     if (!isEditing) {
       if (formData.stockInicial < 0) {
-        setErrors({ stockInicial: 'El stock inicial no puede ser negativo' });
+        const errs = { stockInicial: 'El stock inicial no puede ser negativo' };
+        setErrors(errs);
         setIsSubmitting(false);
-        return;
+        return { success: false, errors: errs };
       }
       if (formData.productType === 'unidad' && !Number.isInteger(formData.stockInicial)) {
-        setErrors({ stockInicial: 'Los productos por unidad deben tener stock entero' });
+        const errs = { stockInicial: 'Los productos por unidad deben tener stock entero' };
+        setErrors(errs);
         setIsSubmitting(false);
-        return;
+        return { success: false, errors: errs };
       }
     }
 
-    // Validar SKU duplicado contra productos existentes
     if (formData.sku.trim()) {
       const existingProducts = useInventoryStore.getState().products;
       const skuExists = existingProducts.some(
         (p) => p.sku.toLowerCase() === formData.sku.trim().toLowerCase() && (!options.editProductId || p.id !== options.editProductId)
       );
       if (skuExists) {
-        setErrors({ sku: 'Ya existe un producto con este código SKU' });
+        const errs = { sku: 'Ya existe un producto con este código SKU' };
+        setErrors(errs);
         setIsSubmitting(false);
-        return;
+        return { success: false, errors: errs };
       }
     }
 
-    // Validar presentaciones con Zod
     if (presentations.length > 0) {
       const names = presentations.map((p) => p.name.trim().toLowerCase());
       if (new Set(names).size !== names.length) {
-        setErrors({ presentations: 'No puede haber dos presentaciones con el mismo nombre.' });
+        const errs = { presentations: 'No puede haber dos presentaciones con el mismo nombre.' };
+        setErrors(errs);
         setIsSubmitting(false);
-        return;
+        return { success: false, errors: errs };
       }
 
       for (let i = 0; i < presentations.length; i++) {
@@ -193,16 +217,17 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
         const presParsed = CreatePresentationInputSchema.safeParse(pres);
         if (!presParsed.success) {
           const firstIssue = presParsed.error.issues[0];
-          setErrors({ presentations: `Presentación #${i + 1}: ${firstIssue.message}` });
+          const errs = { presentations: `Presentación #${i + 1}: ${firstIssue.message}` };
+          setErrors(errs);
           setIsSubmitting(false);
-          return;
+          return { success: false, errors: errs };
         }
       }
     }
 
     const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' } = {
       ...parsed.data,
-      stockInicial: isEditing ? 0 : formData.stockInicial,
+      stockInicial: isEditing ? 0 : (presentations.length > 0 && stockType === 'independent' ? 0 : formData.stockInicial),
     };
 
     if (presentations.length > 0) {
@@ -214,6 +239,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
     setIsSubmitting(false);
     if (success) reset();
+    return { success };
   }, [formData, options, presentations, stockType]);
 
   return {
@@ -221,6 +247,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     errors,
     isSubmitting,
     setField,
+    setFormErrors,
     handleSubmit,
     reset,
     presentations,
@@ -229,5 +256,6 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     updatePresentation,
     setStockType,
     stockType,
+    generateSku,
   };
 }

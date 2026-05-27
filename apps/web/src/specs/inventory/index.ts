@@ -29,7 +29,7 @@ export const CreateProductInputSchema = ProductSchema.omit({
   deletedAt: true,
 }).extend({
   categoryId: z.string().uuid('Selecciona una categoría'),
-  costPrice: z.number().positive().optional(),
+  costPrice: z.number().min(0, 'El costo no puede ser negativo').optional(),
 }).strict();
 
 export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;

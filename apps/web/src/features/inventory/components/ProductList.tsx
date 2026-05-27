@@ -65,7 +65,6 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
-  const [productScope, setProductScope] = useState<'all' | 'parents_only'>('parents_only');
   const [page, setPage] = useState(initialTabState.page);
 
   useEffect(() => {
@@ -102,12 +101,12 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
   const filteredByStock = useMemo(() => {
     let result = searchQuery ? fuzzyResults : products;
 
-    if (productScope === 'parents_only' && allPresentationChildIds) {
+    if (allPresentationChildIds) {
       result = result.filter((p) => !allPresentationChildIds.has(p.id));
     }
 
     return result.filter((p) => applyStockFilter(p, stockFilter));
-  }, [searchQuery, fuzzyResults, products, stockFilter, productScope, allPresentationChildIds]);
+  }, [searchQuery, fuzzyResults, products, stockFilter, allPresentationChildIds]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [
@@ -269,33 +268,8 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <div className="flex gap-1 bg-gray-50 p-0.5 rounded-xl border border-border">
-          <button
-            type="button"
-            onClick={() => setProductScope('parents_only')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              productScope === 'parents_only'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Solo padres
-          </button>
-          <button
-            type="button"
-            onClick={() => setProductScope('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              productScope === 'all'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Mostrar todo
-          </button>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+       <div className="flex flex-wrap gap-2">
+         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           {stockOptions.map((opt) => (
             <button
               key={opt.value}

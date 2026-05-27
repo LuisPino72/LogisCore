@@ -10,9 +10,9 @@ const TABLE_PRIORITY: Record<string, number> = {
   // Other core entities
   categories: 85,
   suppliers: 85,
-  // Depends on products
-  inventory_lots: 70,
-  inventory_movements: 65,
+  // Depends on products; inventory_movements must sync BEFORE inventory_lots (FK source_movement_id)
+  inventory_movements: 70,
+  inventory_lots: 65,
   purchase_orders: 60,
   sales: 60,
   cash_registers: 60,
