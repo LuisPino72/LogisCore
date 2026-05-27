@@ -452,10 +452,22 @@ export const purchaseService = {
             const previousStock = product.stock;
             const newStock = previousStock + effectiveQty;
 
-            // Calcular Costo Promedio Ponderado (WAC)
-            const previousCost = product.costPrice ?? 0;
-            const totalLotCost = (previousStock * previousCost) + (effectiveQty * item.costUsdPerUnit);
-            const newCostPrice = newStock > 0 ? preciseRound(totalLotCost / newStock, 4) : item.costUsdPerUnit;
+            // Convertir $/display-unit a $/storage-unit para consistencia con stock (gramos/ml)
+            const previousCostStorage = product.isWeighted
+              ? (product.costPrice ?? 0) / 1000
+              : (product.costPrice ?? 0);
+            const itemCostStorage = product.isWeighted
+              ? (item.costUsdPerUnit || 0) / 1000
+              : (item.costUsdPerUnit || 0);
+
+            // Calcular Costo Promedio Ponderado (WAC) en storage units ($/g)
+            const totalLotCost = (previousStock * previousCostStorage) + (effectiveQty * itemCostStorage);
+            const newCostPriceStorage = newStock > 0 ? preciseRound(totalLotCost / newStock, 4) : itemCostStorage;
+
+            // Convertir a $/display-unit para product.costPrice ($/kg, $/lt, $/unidad)
+            const newCostPrice = product.isWeighted
+              ? preciseRound(newCostPriceStorage * 1000, 4)
+              : newCostPriceStorage;
 
             const movementId = generateId();
             const movement = {
@@ -475,7 +487,7 @@ export const purchaseService = {
               productId: item.productId,
               quantityAdded: effectiveQty,
               remainingQuantity: effectiveQty,
-              costUsdPerUnit: item.costUsdPerUnit,
+              costUsdPerUnit: itemCostStorage,
               sourceMovementId: movementId,
               createdAt: now,
               updatedAt: now,

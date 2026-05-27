@@ -102,7 +102,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           addToast({ type: 'warning', message: `Producto creado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
         }
       }
-      refresh();
     }
     if (product) setShowProductForm(false);
     return !!product;
@@ -122,7 +121,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         addToast({ type: 'warning', message: `Producto actualizado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
       }
     }
-    refresh();
     setShowProductForm(false);
     return true;
   };

@@ -294,7 +294,8 @@ export class SyncEngine {
         try {
           local.tenantId = await TenantTranslator.uuidToSlug(tid);
         } catch {
-          local.tenantId = tid;
+          logger.warn('Sync', `No se pudo resolver tenant_id UUID: ${tid}. Omitiendo actualización local.`);
+          return;
         }
       } else {
         local.tenantId = tid;

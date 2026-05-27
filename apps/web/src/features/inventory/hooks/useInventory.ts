@@ -71,7 +71,7 @@ export function useInventory(tenantId: string | null) {
 
   const refresh = useCallback(() => {
     initialFetchDone.current = false;
-    doFetch();
+    doFetch(undefined, true);
   }, [doFetch]);
 
   return {

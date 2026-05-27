@@ -405,7 +405,7 @@ export const posService = {
               productId: cartItem.productId,
               quantityAdded: product.stock,
               remainingQuantity: product.stock,
-              costUsdPerUnit: product.priceUsd,
+              costUsdPerUnit: product.costPrice ?? 0,
               createdAt: now,
               updatedAt: now,
             };

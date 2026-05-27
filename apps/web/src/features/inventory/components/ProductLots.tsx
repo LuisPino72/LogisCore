@@ -124,7 +124,9 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
                 <div>
                   <p className="text-text-secondary">Costo unitario</p>
                   <p className="font-semibold text-gray-800">
-                    {lot.costUsdPerUnit ? `$${lot.costUsdPerUnit.toFixed(4)}` : '-'}
+                    {typeof lot.costUsdPerUnit === 'number' && lot.costUsdPerUnit > 0
+                      ? `$${(unit === 'kg' || unit === 'lt' ? lot.costUsdPerUnit * 1000 : lot.costUsdPerUnit).toFixed(4)}`
+                      : '-'}
                   </p>
                 </div>
               </div>

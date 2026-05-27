@@ -106,13 +106,15 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   },
 
   updateProduct: async (id, input, tenantId) => {
-    set({ loading: true, error: null });
+    set({ error: null });
     const result = await inventoryService.updateProduct(id, input, tenantId);
     if (result.ok) {
-      set({ loading: false });
+      set((s) => ({
+        products: s.products.map((p) => p.id === id ? { ...p, ...result.data } : p),
+      }));
       return true;
     }
-    set({ loading: false, error: result.error.message });
+    set({ error: result.error.message });
     return false;
   },
 
@@ -160,14 +162,20 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   },
 
   adjustStock: async (input) => {
-    set({ loading: true, error: null });
+    set({ error: null });
     const result = await inventoryService.adjustStock(input);
     if (result.ok) {
-      await get().fetchProducts(input.tenantId);
-      await get().fetchLowStock(input.tenantId);
+      set((s) => ({
+        products: s.products.map((p) =>
+          p.id === input.productId
+            ? { ...p, stock: p.stock + input.quantity }
+            : p
+        ),
+      }));
+      await get().fetchLowStock(input.tenantId, true);
       return true;
     }
-    set({ loading: false, error: result.error.message });
+    set({ error: result.error.message });
     return false;
   },
 

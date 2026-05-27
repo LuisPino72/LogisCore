@@ -65,6 +65,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
     const currentSanitized = getSanitized(displayValue);
     if (propStr !== currentSanitized) {
       setDisplayValue(propStr);
+      setInternalError(null);
     }
   }, [value, sanitize, decimals, allowNegative]);
 

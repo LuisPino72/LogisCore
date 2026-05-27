@@ -41,21 +41,28 @@ async function deleteStorageImage(imageUrl: string, token?: string): Promise<voi
   }
 }
 
+function toNumber(val: unknown): number {
+  if (val == null) return 0;
+  if (typeof val === 'number') return val;
+  const n = Number(val);
+  return isNaN(n) ? 0 : n;
+}
+
 function toProduct(raw: Record<string, unknown>): Product {
   return {
     id: raw.id as string,
     name: raw.name as string,
     sku: raw.sku as string,
-    priceUsd: raw.priceUsd as number,
+    priceUsd: toNumber(raw.priceUsd),
     categoryId: raw.categoryId as string | undefined,
     isWeighted: raw.isWeighted as boolean,
     isTaxable: raw.isTaxable !== undefined ? !!raw.isTaxable : true,
     isSellable: raw.isSellable !== undefined ? !!raw.isSellable : true,
     unit: raw.unit as Product['unit'],
-    stock: raw.stock as number,
-    stockMin: raw.stockMin as number | undefined,
+    stock: toNumber(raw.stock),
+    stockMin: raw.stockMin != null ? toNumber(raw.stockMin) : undefined,
     imageUrl: raw.imageUrl as string | undefined,
-    costPrice: raw.costPrice as number | undefined,
+    costPrice: raw.costPrice != null ? toNumber(raw.costPrice) : undefined,
     deletedAt: raw.deletedAt as string | undefined,
   };
 }
@@ -132,7 +139,10 @@ export const inventoryService = {
       ? convertToStorage(input.stockInicial, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
       : 0;
 
-    const costPerUnit = input.costPrice != null && input.costPrice > 0
+    const costPerDisplayUnit = input.costPrice != null && (input.stockInicial ?? 0) > 0
+      ? preciseRound(input.costPrice / (input.stockInicial ?? 0), 4)
+      : 0;
+    const costPerStorageUnit = input.costPrice != null && stockInicial > 0
       ? preciseRound(input.costPrice / stockInicial, 4)
       : 0;
     const product: Product = {
@@ -147,12 +157,13 @@ export const inventoryService = {
       unit: input.unit,
       stock: stockInicial,
       stockMin: input.stockMin,
-      costPrice: costPerUnit,
+      costPrice: costPerDisplayUnit,
     };
 
     try {
       await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
         await db.products.add({ ...product, tenantId });
+        await syncQueue.enqueue('products', 'CREATE', id, toSnake(product as unknown as Record<string, unknown>), tenantId);
 
         if (stockInicial > 0) {
           const movementId = generateId();
@@ -169,23 +180,19 @@ export const inventoryService = {
           };
           await db.inventoryMovements.add(movement);
 
-          const costPerUnit = input.costPrice != null && input.costPrice > 0
-            ? preciseRound(input.costPrice / stockInicial, 4)
-            : 0;
           const lot = {
             id: generateId(),
             tenantId,
             productId: id,
             quantityAdded: stockInicial,
             remainingQuantity: stockInicial,
-            costUsdPerUnit: costPerUnit,
+            costUsdPerUnit: costPerStorageUnit,
             sourceMovementId: movementId,
             createdAt: now,
             updatedAt: now,
           };
           await db.inventoryLots.add(lot);
 
-          await syncQueue.enqueue('products', 'CREATE', id, toSnake(product as unknown as Record<string, unknown>), tenantId);
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
           await syncQueue.enqueue('inventory_lots', 'CREATE', lot.id, toSnake(lot as unknown as Record<string, unknown>), tenantId);
         }
@@ -310,6 +317,12 @@ export const inventoryService = {
 
     try {
       const createdPresentations: Presentation[] = [];
+      const costPerDisplayUnit = input.costPrice != null && input.stockInicial && input.stockInicial > 0
+        ? preciseRound(input.costPrice / input.stockInicial, 4)
+        : 0;
+      const costPerStorageUnit = input.costPrice != null && parentStock > 0
+        ? preciseRound(input.costPrice / parentStock, 4)
+        : 0;
       const createdProduct = {
         id: productId,
         tenantId: tenantId,
@@ -323,6 +336,7 @@ export const inventoryService = {
         unit: input.unit,
         stock: parentStock,
         stockMin: input.stockMin,
+        costPrice: costPerDisplayUnit,
       };
 
       await db.transaction('rw', [
@@ -411,16 +425,13 @@ export const inventoryService = {
           };
           await db.inventoryMovements.add(movement);
 
-          const costPerUnit = input.costPrice != null && input.costPrice > 0
-            ? preciseRound(input.costPrice / parentStock, 4)
-            : 0;
           const lot = {
             id: generateId(),
             tenantId,
             productId,
             quantityAdded: parentStock,
             remainingQuantity: parentStock,
-            costUsdPerUnit: costPerUnit,
+            costUsdPerUnit: costPerStorageUnit,
             sourceMovementId: movementId,
             createdAt: now,
             updatedAt: now,
@@ -1189,9 +1200,9 @@ export const inventoryService = {
     return success(lots.map((l) => ({
       id: l.id,
       createdAt: l.createdAt,
-      quantityAdded: l.quantityAdded,
-      remainingQuantity: l.remainingQuantity,
-      costUsdPerUnit: l.costUsdPerUnit,
+      quantityAdded: toNumber(l.quantityAdded),
+      remainingQuantity: toNumber(l.remainingQuantity),
+      costUsdPerUnit: l.costUsdPerUnit != null ? toNumber(l.costUsdPerUnit) : undefined,
     })));
   },
 
