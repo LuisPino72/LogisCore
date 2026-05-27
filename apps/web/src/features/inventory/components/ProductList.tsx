@@ -7,6 +7,7 @@ import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
 import type { Product, Category, TabState, StockFilter } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
+import { getDb } from '../../../services/dexie/db';
 
 interface ProductListProps {
   products: Product[];
@@ -62,6 +63,22 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
   const [page, setPage] = useState(initialTabState.page);
+  const [productIdsWithVariants, setProductIdsWithVariants] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const db = getDb();
+        const pres = await db.productPresentations
+          .filter(p => !p.deletedAt)
+          .toArray();
+        setProductIdsWithVariants(new Set(pres.map(p => p.productId)));
+      } catch {
+        // silent
+      }
+    };
+    load();
+  }, [products]);
 
   useEffect(() => {
     setPage(1);
@@ -123,6 +140,11 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-medium text-gray-900">{product.name}</span>
+              {productIdsWithVariants.has(product.id) && (
+                <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  Variantes
+                </span>
+              )}
             </div>
             <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
           </div>

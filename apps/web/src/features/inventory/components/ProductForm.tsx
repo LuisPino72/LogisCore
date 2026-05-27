@@ -81,6 +81,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     unit: editProduct.unit,
     stockMin: editProduct.stockMin,
     costPrice: editProduct.costPrice ?? 0,
+    imageUrl: editProduct.imageUrl,
   } : undefined;
 
   const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }): Promise<boolean> => {
@@ -101,6 +102,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     handleSubmit: formSubmit,
     reset,
     presentations,
+    presentationsLoading,
     addPresentation,
     removePresentation,
     updatePresentation,
@@ -499,7 +501,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
         {isVariants && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="input-wrapper">
                 <label className="input-label">Stock general (unidades base)</label>
                 <Input
@@ -521,6 +523,17 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   validation={{ min: 0, max: 999999 }}
                   inputClassName="text-sm"
+                />
+              </div>
+              <div className="input-wrapper">
+                <label className="input-label">Stock mínimo (alerta)</label>
+                <Input
+                  sanitize="number"
+                  decimals={0}
+                  placeholder="0"
+                  value={formData.stockMin || ''}
+                  onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+                  validation={{ min: 0, max: 999 }}
                 />
               </div>
             </div>
@@ -633,10 +646,23 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         <div className="flex-1 h-px bg-gray-100" />
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div className="input-wrapper">
+          <label className="input-label">Stock mínimo (alerta)</label>
+          <Input
+            sanitize="number"
+            decimals={0}
+            placeholder="0"
+            value={formData.stockMin || ''}
+            onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+            validation={{ min: 0, max: 999 }}
+          />
+        </div>
+      </div>
+
       <div className="space-y-3">
         <p className="text-xs text-gray-500">
-          Define las variantes o formatos de venta de este producto
-          . Comparten el stock del producto base.
+          Las variantes comparten el stock del producto base.
         </p>
 
         {presentations.map((pres, index) => (
@@ -729,6 +755,17 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   );
 
   const renderStepContent = () => {
+    if (isEditing && presentationsLoading) {
+      return (
+        <div className="flex items-center justify-center py-12 animate-fade-in">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-gray-500">Cargando variantes...</p>
+          </div>
+        </div>
+      );
+    }
+
     if (isEditing) {
       if (currentStep === 0) return renderBasicInfoStep();
       if (currentStep === 1 && hasPresentations) return renderEditVariantsStep();
@@ -770,6 +807,16 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       );
     }
 
+    if (isEditing && presentationsLoading) {
+      return (
+        <div className="flex w-full">
+          <Button variant="ghost" fullWidth disabled>
+            Cargando...
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex gap-3 w-full">
         <Button variant="outline" fullWidth={false} onClick={goBack}>
@@ -800,7 +847,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       footer={renderFooter()}
     >
       <div className="space-y-4">
-        <StepIndicator current={currentStep} steps={steps} />
+        {(!isEditing || !presentationsLoading) && (
+          <StepIndicator current={currentStep} steps={steps} />
+        )}
         <div key={currentStep} className="animate-fade-in">
           {renderStepContent()}
         </div>

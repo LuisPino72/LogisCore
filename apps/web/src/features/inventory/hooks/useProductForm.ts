@@ -31,6 +31,7 @@ interface UseProductFormReturn {
   handleSubmit: () => Promise<{ success: boolean; errors?: Record<string, string> }>;
   reset: () => void;
   presentations: CreatePresentationInput[];
+  presentationsLoading: boolean;
   addPresentation: () => void;
   removePresentation: (index: number) => void;
   updatePresentation: (index: number, field: keyof CreatePresentationInput, value: unknown) => void;
@@ -63,6 +64,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [presentations, setPresentations] = useState<CreatePresentationInput[]>([]);
+  const [presentationsLoading, setPresentationsLoading] = useState(!!options.editProductId);
 
   const setField = useCallback(<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {
     if (options.editProductId && key === 'productType') return;
@@ -112,23 +114,30 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
   useEffect(() => {
     if (options.editProductId) {
+      setPresentationsLoading(true);
       const load = async () => {
-        const existing = await useInventoryStore.getState().fetchPresentations(options.editProductId!);
-        if (existing.length > 0) {
-          const mapped = existing.map(p => ({
-            id: p.id,
-            name: p.name,
-            priceUsd: p.priceUsd,
-            unitMultiplier: p.unitMultiplier,
-            stockType: 'shared' as const,
-            sortOrder: p.sortOrder ?? 0,
-            barcode: p.barcode || undefined,
-            stockInicial: 0,
-          }));
-          setPresentations(mapped);
+        try {
+          const existing = await useInventoryStore.getState().fetchPresentations(options.editProductId!);
+          if (existing.length > 0) {
+            const mapped = existing.map(p => ({
+              id: p.id,
+              name: p.name,
+              priceUsd: p.priceUsd,
+              unitMultiplier: p.unitMultiplier,
+              stockType: 'shared' as const,
+              sortOrder: p.sortOrder ?? 0,
+              barcode: p.barcode || undefined,
+              stockInicial: 0,
+            }));
+            setPresentations(mapped);
+          }
+        } finally {
+          setPresentationsLoading(false);
         }
       };
       load();
+    } else {
+      setPresentationsLoading(false);
     }
   }, [options.editProductId]);
 
@@ -137,6 +146,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     setErrors({});
     setIsSubmitting(false);
     setPresentations([]);
+    setPresentationsLoading(false);
   }, []);
 
   const handleSubmit = useCallback(async (): Promise<{ success: boolean; errors?: Record<string, string> }> => {
@@ -274,6 +284,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     handleSubmit,
     reset,
     presentations,
+    presentationsLoading,
     addPresentation,
     removePresentation,
     updatePresentation,

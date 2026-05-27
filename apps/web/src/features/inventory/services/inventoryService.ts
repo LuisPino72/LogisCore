@@ -397,6 +397,10 @@ export const inventoryService = {
       delete safeInput.stockInicial;
       delete safeInput.presentations;
       delete safeInput.stockType;
+      // Preservar imageUrl existente si no viene explícitamente en el input
+      if (safeInput.imageUrl === undefined && existing.imageUrl) {
+        delete safeInput.imageUrl;
+      }
       const updated = { ...existing, ...safeInput };
 
       await db.transaction('rw', [
