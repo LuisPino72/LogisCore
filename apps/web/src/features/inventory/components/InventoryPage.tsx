@@ -33,7 +33,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     products, categories, loading, activeTab, setActiveTab,
     createProduct, updateProduct, deleteProduct, createCategory, updateCategory, deleteCategory, adjustStock, createProductWithPresentations,
     search, refresh, userId, role, tabStates, saveTabState,
-    presentationsByProduct, allPresentationChildIds, allPresentationParentIds,
   } = useInventory(tenantId);
 
   const { totalLowStock, lowStockProducts } = useStockAlerts(tenantId);
@@ -51,13 +50,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [adjHasCost, setAdjHasCost] = useState(true);
   const [adjError, setAdjError] = useState('');
   const [adjSubmitting, setAdjSubmitting] = useState(false);
-  const [adjSelectedPresId, setAdjSelectedPresId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
   const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
-  const [viewingPresentationsProductId, setViewingPresentationsProductId] = useState<string | null>(null);
+  
 
   const navigate = useNavigate();
 
@@ -84,12 +82,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
   const openNewCategory = () => setShowCategoryForm(true);
 
-  const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }, imageFile?: File | null) => {
+  const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => {
     if (!tenantId || !userId) return false;
     let product: Product | null = null;
 
-    if (data.presentations && data.presentations.length > 0 && data.stockType) {
-      product = await createProductWithPresentations(tenantId, userId, data, data.presentations, data.stockType);
+    if (data.presentations && data.presentations.length > 0) {
+      product = await createProductWithPresentations(tenantId, userId, data, data.presentations);
     } else {
       product = await createProduct(tenantId, userId, data);
     }
@@ -107,7 +105,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     return !!product;
   };
 
-  const handleEditProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }, imageFile?: File | null) => {
+  const handleEditProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => {
     if (!editProduct || !tenantId) return false;
     const ok = await updateProduct(editProduct.id, data, tenantId);
     if (!ok) {
@@ -158,13 +156,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (isNaN(rawQty) || rawQty <= 0) { setAdjError('Ingresa una cantidad válida mayor a 0'); return; }
     if (!adjReasonType) { setAdjError('Selecciona un motivo para el ajuste'); return; }
 
-    const presList = adjProductId ? (presentationsByProduct[adjProductId] ?? []) : [];
-    const selectedPres = adjSelectedPresId ? presList.find(p => p.id === adjSelectedPresId) : null;
-    const effectiveProductId = selectedPres?.stockType === 'independent' && selectedPres.childProductId
-      ? selectedPres.childProductId
-      : adjProductId;
-
-    const product = products.find((p) => p.id === effectiveProductId);
+    const product = products.find((p) => p.id === adjProductId);
     if (product && !product.isWeighted && rawQty !== Math.floor(rawQty)) {
       setAdjError('Los productos por unidad solo aceptan números enteros');
       return;
@@ -191,7 +183,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     setAdjSubmitting(true);
     setAdjError('');
     const ok = await handleAdjustStock(
-      effectiveProductId,
+      adjProductId,
       qty,
       adjReasonType as AdjustmentReason,
       adjShowCostInput && adjCostTotal ? parseFloat(adjCostTotal) : undefined,
@@ -207,7 +199,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       setAdjHasCost(true);
       setAdjMode('');
       setAdjProductId('');
-      setAdjSelectedPresId(null);
       setShowAdjustment(false);
     } else {
       setAdjError('Error al ajustar stock. Verifica el stock disponible.');
@@ -347,21 +338,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 setAdjMode('');
                 setAdjReasonType('');
                 setAdjQuantity('');
-                const presList = presentationsByProduct[id] ?? [];
-                const hasIndependentPres = presList.some(p => p.stockType === 'independent');
-                if (hasIndependentPres) {
-                  const firstVariant = presList.find(p => p.stockType === 'independent' && p.childProductId);
-                  if (firstVariant && firstVariant.id) {
-                    setAdjSelectedPresId(firstVariant.id);
-                    if (firstVariant.childProductId) await checkProductCost(firstVariant.childProductId);
-                  } else {
-                    setAdjSelectedPresId(null);
-                    await checkProductCost(id);
-                  }
-                } else {
-                  setAdjSelectedPresId(null);
-                  await checkProductCost(id);
-                }
+                await checkProductCost(id);
                 setShowAdjustment(true);
               }}
               onViewLots={(id) => setSelectedProductLotsId(id)}
@@ -370,10 +347,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
               }}
               onRefresh={refresh}
-              allPresentationChildIds={allPresentationChildIds}
-              allPresentationParentIds={allPresentationParentIds}
-              presentationsByProduct={presentationsByProduct}
-              onViewPresentations={(productId) => setViewingPresentationsProductId(productId)}
             />
           </div>
         )}
@@ -450,13 +423,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       )}
 
       {showAdjustment && (() => {
-        const presList = adjProductId ? presentationsByProduct[adjProductId] ?? [] : [];
-        const selectedPres = adjSelectedPresId ? presList.find(p => p.id === adjSelectedPresId) : null;
-        const effectiveProductId = selectedPres?.stockType === 'independent' && selectedPres.childProductId
-          ? selectedPres.childProductId
-          : adjProductId;
-        const product = products.find((p) => p.id === effectiveProductId);
-        const hasIndependentPres = presList.some(p => p.stockType === 'independent');
+        const product = products.find((p) => p.id === adjProductId);
         const displayStockValue = product ? (() => {
           if (product.unit === 'kg') return (product.stock / 1000).toFixed(2);
           if (product.unit === 'lt') return (product.stock / 1000).toFixed(2);
@@ -478,17 +445,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           setAdjProductId('');
           setAdjHasCost(true);
           setAdjMode('');
-          setAdjSelectedPresId(null);
-        };
-
-        const handlePresSelect = async (presId: string | null) => {
-          setAdjSelectedPresId(presId);
-          const pres = presList.find(p => p.id === presId);
-          if (pres?.stockType === 'independent' && pres.childProductId) {
-            await checkProductCost(pres.childProductId);
-          } else {
-            await checkProductCost(adjProductId);
-          }
         };
 
         return (
@@ -512,44 +468,14 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">
-                        {selectedPres ? `${selectedPres.name}` : product.name}
+                        {product.name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-medium text-primary">
                           Stock: {displayStockValue} {unitLabel}
                         </span>
-                        {selectedPres && selectedPres.stockType === 'shared' && (
-                          <span className="text-[10px] text-gray-400">del producto base</span>
-                        )}
-                        {selectedPres && selectedPres.stockType === 'independent' && (
-                          <span className="text-[10px] text-gray-400">variante independiente</span>
-                        )}
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {hasIndependentPres && presList.length > 0 && (
-                <div className="space-y-2">
-                  <label className="input-label">Seleccionar variante</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {presList.map((pres) => (
-                      pres.id && (
-                        <button
-                          key={pres.id}
-                          type="button"
-                          onClick={() => handlePresSelect(pres.id ?? null)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                            adjSelectedPresId === pres.id
-                              ? 'bg-primary text-white shadow-sm'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {pres.name}
-                        </button>
-                      )
-                    ))}
                   </div>
                 </div>
               )}
@@ -593,15 +519,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                   </button>
                 </div>
               </div>
-
-              {adjMode && !hasIndependentPres && adjProductId && presList.length > 0 && (
-                <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-xs text-amber-700">
-                    Este producto tiene {presList.length} presentación(es) compartida(s).
-                    El ajuste afectará al stock base. Las presentaciones se ajustarán proporcionalmente.
-                  </p>
-                </div>
-              )}
 
               {adjMode && (
                 <div className="input-wrapper">
@@ -799,53 +716,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         </Modal>
       )}
 
-      {viewingPresentationsProductId && presentationsByProduct[viewingPresentationsProductId] && (
-        <Modal
-          isOpen={!!viewingPresentationsProductId}
-          onClose={() => setViewingPresentationsProductId(null)}
-          title="Presentaciones del Producto"
-        >
-          <div className="space-y-3 p-1">
-            <p className="text-xs text-gray-500 mb-2">
-              Variantes y formatos de venta disponibles para este producto.
-            </p>
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-              {presentationsByProduct[viewingPresentationsProductId].map((pres) => (
-                <div
-                  key={pres.id}
-                  className="flex items-center justify-between p-3 rounded-xl border border-border bg-gray-50/50 hover:bg-gray-50 transition-all"
-                >
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900">{pres.name}</h4>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                      <span className="capitalize">
-                        {pres.stockType === 'shared' ? 'Stock compartido' : 'Stock independiente'}
-                      </span>
-                      {pres.unitMultiplier > 1 && (
-                        <>
-                          <span>•</span>
-                          <span>{pres.unitMultiplier} unid.</span>
-                        </>
-                      )}
-                    </div>
-                    {pres.barcode && (
-                      <p className="text-[10px] text-gray-400 mt-1 font-mono">Código: {pres.barcode}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-bold text-gray-900">${pres.priceUsd.toFixed(2)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end pt-3 border-t border-border mt-4">
-              <Button variant="ghost" onClick={() => setViewingPresentationsProductId(null)}>
-                Cerrar
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      
 
       <ModuleOnboarding
         moduleId="inventory"

@@ -9,10 +9,6 @@ export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
 export type Presentation = z.infer<typeof PresentationSchema>;
 export type CreatePresentationInput = z.infer<typeof CreatePresentationInputSchema>;
 
-export interface PresentationWithProduct extends Presentation {
-  product: Product;
-}
-
 export type AdjustmentReason =
   | 'inventario_inicial'
   | 'ajuste_manual'
@@ -43,7 +39,7 @@ export interface ProductFormData {
   stockMin?: number;
   costPrice: number;
   presentations?: CreatePresentationInput[];
-  stockType?: 'shared' | 'independent';
+  stockType?: 'shared';
 }
 
 export interface AdjustStockInput {
@@ -94,9 +90,6 @@ export interface InventoryState {
   products: Product[];
   categories: Category[];
   lowStockProducts: Product[];
-  presentationsByProduct: Record<string, PresentationWithProduct[]>;
-  allPresentationChildIds: Set<string>;
-  allPresentationParentIds: Set<string>;
   loading: boolean;
   error: string | null;
   searchQuery: string;

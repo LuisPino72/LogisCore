@@ -10,8 +10,6 @@ export interface PresentationSelection {
   name: string;
   priceUsd: number;
   unitMultiplier: number;
-  stockType: 'shared' | 'independent';
-  childProductId?: string;
 }
 
 export interface ParkedCart {
@@ -37,6 +35,5 @@ export interface PosState {
   error: string | null;
   searchQuery: string;
   presentationsMap: Record<string, Presentation[]>;
-  childProductIds: Set<string>;
   discount: { type: 'percentage' | 'fixed'; value: number } | null;
 }

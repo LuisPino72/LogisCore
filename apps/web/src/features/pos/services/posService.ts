@@ -383,9 +383,7 @@ export const posService = {
           const baseQuantity = product.isWeighted
             ? convertToStorage(cartItem.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
             : Math.round(cartItem.quantity);
-          const storageQuantity = cartItem.stockType === 'shared'
-            ? baseQuantity * (cartItem.unitMultiplier || 1)
-            : baseQuantity;
+          const storageQuantity = baseQuantity * (cartItem.unitMultiplier || 1);
 
           if (product.stock < storageQuantity) {
             throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}". Disponible: ${product.stock}.`);
@@ -464,7 +462,6 @@ export const posService = {
             presentationId: cartItem.presentationId,
             presentationName: cartItem.presentationName,
             unitMultiplier: cartItem.unitMultiplier ?? 1,
-            stockType: cartItem.stockType,
             createdAt: now,
           });
 
@@ -868,7 +865,6 @@ export const posService = {
               presentationId: item.presentation_id as string | undefined,
               presentationName: item.presentation_name as string | undefined,
               unitMultiplier: (item.unit_multiplier as number) ?? 1,
-              stockType: item.stock_type as 'shared' | 'independent' | undefined,
               createdAt: item.created_at as string,
             });
           }
@@ -935,9 +931,7 @@ export const posService = {
           const baseQty = product.isWeighted
             ? convertToStorage(item.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
             : Math.round(item.quantity);
-          const storageQty = item.stockType === 'shared' && item.unitMultiplier > 1
-            ? baseQty * (item.unitMultiplier || 1)
-            : baseQty;
+          const storageQty = baseQty * (item.unitMultiplier || 1);
           const newStock = previousStock + storageQty;
           await db.products.update(item.productId, { stock: newStock });
 

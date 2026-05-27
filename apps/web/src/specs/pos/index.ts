@@ -22,7 +22,7 @@ export const CartItemSchema = z.object({
   presentationId: z.string().uuid().optional(),
   presentationName: z.string().optional(),
   unitMultiplier: z.number().positive().default(1),
-  stockType: z.enum(['shared', 'independent']).optional(),
+  stockType: z.literal('shared').optional(),
 });
 
 export type CartItem = z.infer<typeof CartItemSchema>;
@@ -64,7 +64,7 @@ export const SaleItemSchema = z.object({
   presentationId: z.string().uuid().optional(),
   presentationName: z.string().optional(),
   unitMultiplier: z.number().positive().default(1),
-  stockType: z.enum(['shared', 'independent']).optional(),
+  stockType: z.literal('shared').optional(),
   createdAt: z.string().datetime(),
 });
 

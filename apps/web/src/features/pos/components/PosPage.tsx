@@ -592,7 +592,6 @@ export function PosPage({ tenantId }: PosPageProps) {
         onClose={() => setSelectedProductForPres(null)}
         product={selectedProductForPres}
         presentations={selectedProductForPres ? getPresentations(selectedProductForPres.id) : []}
-        allProducts={products}
         onSelect={(_product, selection) => {
           handleAddToCart(_product);
           addToCart(_product, 1, selection);

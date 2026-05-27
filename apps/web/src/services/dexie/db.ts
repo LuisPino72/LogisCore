@@ -11,11 +11,10 @@ export interface DexieProductPresentation {
   id: string;
   tenantId: string;
   productId: string;
-  childProductId?: string;
   name: string;
   priceUsd: number;
   unitMultiplier: number;
-  stockType: 'shared' | 'independent';
+  stockType: 'shared';
   barcode?: string;
   sortOrder: number;
   createdAt: string;
@@ -116,7 +115,6 @@ export interface DexieSaleItem {
   presentationId?: string;
   presentationName?: string;
   unitMultiplier: number;
-  stockType?: 'shared' | 'independent';
 }
 
 export interface DexieCashRegister {
@@ -294,7 +292,7 @@ export class LogisCoreDB extends Dexie {
       syncMeta: 'table',
       outbox: '++id, event, status, createdAt, nextRetryAt, [status+nextRetryAt]',
       products: 'id, tenantId, sku, categoryId, name, [tenantId+deletedAt]',
-      productPresentations: 'id, tenantId, productId, childProductId, name, [tenantId+deletedAt]',
+      productPresentations: 'id, tenantId, productId, name, [tenantId+deletedAt]',
       categories: 'id, tenantId, [tenantId+deletedAt]',
       inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt]',
       inventoryLots: 'id, tenantId, productId, remainingQuantity, createdAt, [productId+remainingQuantity]',

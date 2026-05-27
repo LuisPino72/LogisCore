@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Product, ProductFilters, InventoryState, TabKey, TabState, CreatePresentationInput, PresentationWithProduct, UpdatePresentationInput } from '../types';
+import type { Product, ProductFilters, InventoryState, TabKey, TabState, CreatePresentationInput, Presentation, UpdatePresentationInput } from '../types';
 import { inventoryService } from '../services/inventoryService';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateProductInput, AdjustStockInput } from '../types';
@@ -25,10 +25,8 @@ interface InventoryStore extends InventoryState {
     userId: string,
     input: CreateProductInput & { stockInicial?: number },
     presentations: CreatePresentationInput[],
-    stockType: 'shared' | 'independent',
   ) => Promise<Product | null>;
-  fetchPresentations: (productId: string) => Promise<PresentationWithProduct[]>;
-  fetchAllPresentations: (tenantId: string) => Promise<void>;
+  fetchPresentations: (productId: string) => Promise<Presentation[]>;
   updatePresentation: (tenantId: string, presentationId: string, input: UpdatePresentationInput) => Promise<boolean>;
   deletePresentation: (tenantId: string, presentationId: string) => Promise<boolean>;
   refresh: (tenantId: string, userId: string) => Promise<void>;
@@ -39,9 +37,6 @@ const initialState: InventoryState = {
   products: [],
   categories: [],
   lowStockProducts: [],
-  presentationsByProduct: {},
-  allPresentationChildIds: new Set<string>(),
-  allPresentationParentIds: new Set<string>(),
   loading: false,
   error: null,
   searchQuery: '',
@@ -189,19 +184,12 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     }
   },
 
-  createProductWithPresentations: async (tenantId, userId, input, presentations, stockType) => {
+  createProductWithPresentations: async (tenantId, userId, input, presentations) => {
     set({ loading: true, error: null });
-    const result = await inventoryService.createProductWithPresentations(tenantId, userId, input, presentations, stockType);
+    const result = await inventoryService.createProductWithPresentations(tenantId, userId, input, presentations);
     if (result.ok) {
       set((s) => ({
         products: [result.data.product, ...s.products],
-        presentationsByProduct: {
-          ...s.presentationsByProduct,
-          [result.data.product.id]: result.data.presentations.map((p) => ({
-            ...p,
-            product: result.data.product,
-          })),
-        },
         loading: false,
       }));
       return result.data.product;
@@ -213,31 +201,10 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   fetchPresentations: async (productId) => {
     const result = await inventoryService.getPresentationsForProduct(productId);
     if (result.ok) {
-      set((s) => ({
-        presentationsByProduct: { ...s.presentationsByProduct, [productId]: result.data },
-      }));
       return result.data;
     }
     set({ error: result.error.message });
     return [];
-  },
-
-  fetchAllPresentations: async (tenantId) => {
-    const allPres = await inventoryService.getAllPresentations(tenantId);
-    if (allPres.ok) {
-      const childIds = new Set<string>();
-      const parentIds = new Set<string>();
-      for (const p of allPres.data) {
-        if (p.childProductId) childIds.add(p.childProductId);
-        parentIds.add(p.productId);
-      }
-      set({
-        allPresentationChildIds: childIds,
-        allPresentationParentIds: parentIds,
-      });
-    } else {
-      console.error('[inventoryStore] fetchAllPresentations falló:', allPres.error);
-    }
   },
 
   updatePresentation: async (tenantId, presentationId, input) => {
@@ -245,17 +212,6 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     const result = await inventoryService.updatePresentation(tenantId, presentationId, input);
     if (result.ok) {
       set({ loading: false });
-      const { presentationsByProduct } = get();
-      for (const [pid, presList] of Object.entries(presentationsByProduct)) {
-        const idx = presList.findIndex((p) => p.id != null && p.id === presentationId);
-        if (idx !== -1) {
-          const updated = { ...presList[idx], ...result.data };
-          const newList = [...presList];
-          newList[idx] = updated;
-          set({ presentationsByProduct: { ...presentationsByProduct, [pid]: newList } });
-          break;
-        }
-      }
       return true;
     }
     set({ loading: false, error: result.error.message });
@@ -266,13 +222,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     set({ loading: true, error: null });
     const result = await inventoryService.deletePresentation(tenantId, presentationId);
     if (result.ok) {
-      set((s) => {
-        const updated: Record<string, PresentationWithProduct[]> = {};
-        for (const [pid, presList] of Object.entries(s.presentationsByProduct)) {
-          updated[pid] = presList.filter((p) => p.id != null && p.id !== presentationId);
-        }
-        return { presentationsByProduct: updated, loading: false };
-      });
+      set({ loading: false });
       return true;
     }
     set({ loading: false, error: result.error.message });
@@ -280,7 +230,6 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   },
 
   refresh: async (tenantId, _userId) => {
-    await get().fetchAllPresentations(tenantId);
     await Promise.all([
       get().fetchProducts(tenantId),
       get().fetchCategories(tenantId),

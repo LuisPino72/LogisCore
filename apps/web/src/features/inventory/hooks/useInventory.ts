@@ -24,8 +24,6 @@ export function useInventory(tenantId: string | null) {
   const doFetch = useCallback(async (filters?: ProductFilters, silent = false) => {
     if (!tenantId) return;
     const effectiveFilters = buildFilters(useInventoryStore.getState(), filters);
-    // Load presentations first so child product filter is ready before products render
-    await store.fetchAllPresentations(tenantId);
     await Promise.all([
       store.fetchProducts(tenantId, effectiveFilters, silent),
       store.fetchCategories(tenantId, silent),

@@ -53,7 +53,6 @@ const initialState: PosState = {
   error: null,
   searchQuery: '',
   presentationsMap: {},
-  childProductIds: new Set<string>(),
   discount: null,
 };
 
@@ -86,19 +85,11 @@ export const usePosStore = create<PosStore>()(
     const result = await inventoryService.getAllPresentations(tenantId);
     if (result.ok) {
       const map: Record<string, Presentation[]> = {};
-      const childIds = new Set<string>();
       for (const pres of result.data) {
         if (!map[pres.productId]) map[pres.productId] = [];
         map[pres.productId].push(pres);
-        if (pres.stockType === 'independent' && pres.childProductId) {
-          childIds.add(pres.childProductId);
-        }
       }
-      set((s) => ({
-        presentationsMap: map,
-        childProductIds: childIds,
-        products: s.products.filter((p) => !childIds.has(p.id)),
-      }));
+      set({ presentationsMap: map });
     }
   },
 
@@ -203,42 +194,27 @@ export const usePosStore = create<PosStore>()(
     set({ error: null });
 
     if (presentation) {
-      // Global Stock Validation for shared mode
-      if (presentation.stockType === 'shared') {
-        const totalConsumption = cart
-          .filter((item) => item.productId === product.id)
-          .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
-        const requestedConsumption = quantity * (presentation.unitMultiplier || 1);
-        if (totalConsumption + requestedConsumption > product.stock) {
-          const available = Math.floor((product.stock - totalConsumption) / presentation.unitMultiplier);
-          set({ error: `Stock insuficiente. Disponible: ${Math.max(0, available)} unidades.` });
-          return;
-        }
+      const totalConsumption = cart
+        .filter((item) => item.productId === product.id)
+        .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
+      const requestedConsumption = quantity * (presentation.unitMultiplier || 1);
+      if (totalConsumption + requestedConsumption > product.stock) {
+        const available = Math.floor((product.stock - totalConsumption) / presentation.unitMultiplier);
+        set({ error: `Stock insuficiente. Disponible: ${Math.max(0, available)} unidades.` });
+        return;
       }
 
-      // For independent, find child product stock
-      if (presentation.stockType === 'independent' && presentation.childProductId) {
-        const childProduct = get().products.find((p) => p.id === presentation.childProductId);
-        if (!childProduct || childProduct.stock < quantity) {
-          set({ error: `Stock insuficiente para "${presentation.name}".` });
-          return;
-        }
-      }
-
-      const presProductId = presentation.stockType === 'independent' && presentation.childProductId
-        ? presentation.childProductId
-        : product.id;
       const displayName = `${product.name} - ${presentation.name}`;
       const presUnitPrice = presentation.priceUsd;
 
       const existing = cart.find(
-        (item) => item.productId === presProductId && item.presentationId === presentation.id,
+        (item) => item.productId === product.id && item.presentationId === presentation.id,
       );
       if (existing) {
         const newQty = existing.quantity + quantity;
         set({
           cart: cart.map((item) =>
-            item.productId === presProductId && item.presentationId === presentation.id
+            item.productId === product.id && item.presentationId === presentation.id
               ? {
                   ...item,
                   quantity: newQty,
@@ -252,7 +228,7 @@ export const usePosStore = create<PosStore>()(
           cart: [
             ...cart,
             {
-              productId: presProductId,
+              productId: product.id,
               name: displayName,
               sku: product.sku,
               quantity,
@@ -261,13 +237,10 @@ export const usePosStore = create<PosStore>()(
               isWeighted: false,
               isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
               unit: 'unidad',
-              stock: presentation.stockType === 'independent' && presentation.childProductId
-                ? (get().products.find(p => p.id === presentation.childProductId)?.stock ?? 0)
-                : product.stock,
+              stock: product.stock,
               presentationId: presentation.id,
               presentationName: presentation.name,
               unitMultiplier: presentation.unitMultiplier || 1,
-              stockType: presentation.stockType,
             },
           ],
         });
@@ -339,7 +312,7 @@ export const usePosStore = create<PosStore>()(
     }
 
     let maxQty: number;
-    if (cartItem.stockType === 'shared') {
+    if (cartItem.presentationId) {
       const product = get().products.find(p => p.id === productId);
       if (!product) { get().removeFromCart(productId, presentationId); return; }
       const totalConsumption = get().cart
@@ -347,9 +320,6 @@ export const usePosStore = create<PosStore>()(
         .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
       const availableBase = Math.max(0, product.stock - totalConsumption);
       maxQty = Math.floor(availableBase / (cartItem.unitMultiplier || 1));
-    } else if (cartItem.stockType === 'independent' && cartItem.productId) {
-      const childProduct = get().products.find(p => p.id === cartItem.productId);
-      maxQty = childProduct ? childProduct.stock : 0;
     } else {
       const product = get().products.find(p => p.id === productId);
       if (!product) { get().removeFromCart(productId, presentationId); return; }

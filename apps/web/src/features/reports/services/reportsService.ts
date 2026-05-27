@@ -6,7 +6,6 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import { logger } from '../../../lib/logger';
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
-import { inventoryService } from '../../inventory/services/inventoryService';
 import type {
   ReportFilters,
   ExecutiveSummaryData,
@@ -436,28 +435,11 @@ export const reportsService = {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
 
-      // Construir mapa de child product → parent info para agrupar por familia
-      const childToParent = new Map<string, { parentId: string; parentName: string }>();
-      const allPres = await inventoryService.getAllPresentations(tenantId);
-      if (allPres.ok) {
-        const db = getDb();
-        const products = await db.products.toArray();
-        const productNameMap = new Map(products.map((p) => [p.id, p.name]));
-        for (const p of allPres.data) {
-          if (p.stockType === 'independent' && p.childProductId) {
-            childToParent.set(p.childProductId, {
-              parentId: p.productId,
-              parentName: productNameMap.get(p.productId) || p.name,
-            });
-          }
-        }
-      }
-
       const map = new Map<string, TopProductData>();
       for (const { sale, items } of data) {
         for (const item of items) {
-          const effectiveId = childToParent.get(item.productId)?.parentId || item.productId;
-          const effectiveName = childToParent.get(item.productId)?.parentName || item.productName;
+          const effectiveId = item.productId;
+          const effectiveName = item.productName;
           const existing = map.get(effectiveId);
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);

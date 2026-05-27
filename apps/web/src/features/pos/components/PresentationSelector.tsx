@@ -10,7 +10,6 @@ interface PresentationSelectorProps {
   onClose: () => void;
   product: Product | null;
   presentations: Presentation[];
-  allProducts: Product[];
   onSelect: (product: Product, selection: PresentationSelection) => void;
 }
 
@@ -19,7 +18,6 @@ export function PresentationSelector({
   onClose,
   product,
   presentations,
-  allProducts,
   onSelect,
 }: PresentationSelectorProps) {
   const sorted = useMemo(
@@ -40,16 +38,11 @@ export function PresentationSelector({
           let stockDisplay = '—';
           let hasStock = true;
 
-          if (pres.stockType === 'shared' && product) {
+          if (product) {
             const perUnit = pres.unitMultiplier || 1;
             const available = Math.floor(product.stock / perUnit);
             stockDisplay = `${available} und.`;
             hasStock = available > 0;
-          } else if (pres.stockType === 'independent' && pres.childProductId) {
-            const child = allProducts.find((p) => p.id === pres.childProductId);
-            const childStock = child?.stock ?? 0;
-            stockDisplay = `${childStock} und.`;
-            hasStock = childStock > 0;
           }
 
           return (
@@ -65,8 +58,6 @@ export function PresentationSelector({
                     name: pres.name,
                     priceUsd: pres.priceUsd,
                     unitMultiplier: pres.unitMultiplier,
-                    stockType: pres.stockType,
-                    childProductId: pres.childProductId,
                   });
                   onClose();
                 }
@@ -94,7 +85,7 @@ export function PresentationSelector({
                     Sin stock
                   </Badge>
                 )}
-                {pres.stockType === 'shared' && (
+                {pres.unitMultiplier > 1 && (
                   <Badge variant="neutral" className="text-[10px] px-1.5 py-0.5">
                     x{pres.unitMultiplier}
                   </Badge>

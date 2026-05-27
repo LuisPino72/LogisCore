@@ -4,7 +4,7 @@ import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, Sear
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
-import type { Product, Category, TabState, StockFilter, PresentationWithProduct } from '../types';
+import type { Product, Category, TabState, StockFilter } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -24,10 +24,6 @@ interface ProductListProps {
   onViewLots: (productId: string) => void;
   onViewKardex: (productId: string) => void;
   onRefresh: () => void;
-  allPresentationChildIds: Set<string>;
-  allPresentationParentIds: Set<string>;
-  presentationsByProduct: Record<string, PresentationWithProduct[]>;
-  onViewPresentations: (productId: string) => void;
 }
 
 function getStockLabel(isWeighted: boolean, unit: string): string {
@@ -61,7 +57,7 @@ function getStockVariant(stock: number, product: { stockMin?: number; isWeighted
   return 'success';
 }
 
-export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex, allPresentationChildIds, allPresentationParentIds, presentationsByProduct, onViewPresentations }: ProductListProps) {
+export function ProductList({ products, categories, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
@@ -98,35 +94,11 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
 
   const fuzzyResults = useProductFuzzySearch(products, searchQuery);
 
-  const effectiveStockMap = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const p of products) {
-      const presList = presentationsByProduct[p.id];
-      if (presList?.some(pres => pres.stockType === 'independent')) {
-        const total = presList.reduce((sum, pres) => {
-          if (pres.stockType === 'independent' && pres.childProductId) {
-            const child = products.find(c => c.id === pres.childProductId);
-            return sum + (child?.stock ?? 0);
-          }
-          return sum;
-        }, 0);
-        map.set(p.id, total);
-      } else {
-        map.set(p.id, p.stock);
-      }
-    }
-    return map;
-  }, [products, presentationsByProduct]);
-
   const filteredByStock = useMemo(() => {
     let result = searchQuery ? fuzzyResults : products;
 
-    if (allPresentationChildIds.size > 0) {
-      result = result.filter((p) => !allPresentationChildIds.has(p.id));
-    }
-
-    return result.filter((p) => applyStockFilter(effectiveStockMap.get(p.id) ?? p.stock, p, stockFilter));
-  }, [searchQuery, fuzzyResults, products, stockFilter, allPresentationChildIds, effectiveStockMap]);
+    return result.filter((p) => applyStockFilter(p.stock, p, stockFilter));
+  }, [searchQuery, fuzzyResults, products, stockFilter]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [
@@ -151,24 +123,6 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-medium text-gray-900">{product.name}</span>
-              {allPresentationParentIds?.has(product.id) && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewPresentations?.(product.id);
-                  }}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                >
-                  <Layers size={10} />
-                  {presentationsByProduct?.[product.id]?.length || 0} var.
-                </button>
-              )}
-              {allPresentationChildIds?.has(product.id) && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-600 border border-border">
-                  variante
-                </span>
-              )}
             </div>
             <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
           </div>
@@ -187,13 +141,12 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         header: 'Total',
         hideLabelOnMobile: true,
         render: (product) => {
-          const effStock = effectiveStockMap.get(product.id) ?? product.stock;
           return (
             <div className="flex items-center gap-2">
-              <Badge variant={getStockVariant(effStock, product)}>
-                {getStockBadgeContent(effStock, product.unit, product.isWeighted)}
+              <Badge variant={getStockVariant(product.stock, product)}>
+                {getStockBadgeContent(product.stock, product.unit, product.isWeighted)}
               </Badge>
-              {product.stockMin && parseFloat(displayStock(effStock, product.unit)) <= product.stockMin && (
+              {product.stockMin && parseFloat(displayStock(product.stock, product.unit)) <= product.stockMin && (
                 <AlertTriangle size={12} className="text-danger shrink-0" />
               )}
             </div>
@@ -250,7 +203,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
     }
 
     return cols;
-  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots, allPresentationParentIds, allPresentationChildIds, presentationsByProduct, onViewPresentations, effectiveStockMap]);
+  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (
@@ -326,8 +279,7 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
         data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
         rowClassName={(p: Product) => {
-          const effStock = effectiveStockMap.get(p.id) ?? p.stock;
-          return p.stockMin && parseFloat(displayStock(effStock, p.unit)) <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
+          return p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= p.stockMin ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
         }}
         emptyMessage="No encontramos productos con ese nombre o filtro"
         renderCardOnMobile
@@ -348,26 +300,6 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
               <div className="text-[10px] text-text-secondary font-mono text-center">
                 {product.sku}
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                {allPresentationParentIds?.has(product.id) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewPresentations?.(product.id);
-                    }}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                  >
-                    <Layers size={10} />
-                    {presentationsByProduct?.[product.id]?.length || 0} var.
-                  </button>
-                )}
-                {allPresentationChildIds?.has(product.id) && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-600 border border-border">
-                    variante
-                  </span>
-                )}
-              </div>
               <div className="mt-1 text-xs text-gray-600 space-y-1 flex flex-col items-center">
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-gray-500">Precio</span>
@@ -375,8 +307,8 @@ export function ProductList({ products, categories, onSearch, initialTabState, o
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-gray-500">Total</span>
-                  <Badge variant={getStockVariant(effectiveStockMap.get(product.id) ?? product.stock, product)}>
-                    {getStockBadgeContent(effectiveStockMap.get(product.id) ?? product.stock, product.unit, product.isWeighted)}
+                  <Badge variant={getStockVariant(product.stock, product)}>
+                    {getStockBadgeContent(product.stock, product.unit, product.isWeighted)}
                   </Badge>
                 </div>
                 {isOwner && (

@@ -11,7 +11,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
-import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, MovementRow, Presentation, CreatePresentationInput, PresentationWithProduct, UpdatePresentationInput } from '../types';
+import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, MovementRow, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage } from '../types';
 
 const INVENTORY_MODULE = 'INVENTORY';
@@ -95,11 +95,10 @@ function toPresentation(raw: Record<string, unknown>): Presentation {
   return {
     id: raw.id as string,
     productId: raw.productId as string,
-    childProductId: raw.childProductId as string | undefined,
     name: raw.name as string,
     priceUsd: raw.priceUsd as number,
     unitMultiplier: raw.unitMultiplier as number,
-    stockType: raw.stockType as 'shared' | 'independent',
+    stockType: 'shared',
     barcode: raw.barcode as string | undefined,
     sortOrder: raw.sortOrder as number,
     createdAt: raw.createdAt as string,
@@ -214,7 +213,6 @@ export const inventoryService = {
     userId: string,
     input: CreateProductInput & { stockInicial?: number },
     presentations: CreatePresentationInput[],
-    stockType: 'shared' | 'independent',
   ): Promise<Result<{ product: Product; presentations: Presentation[] }, AppError>> {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -233,86 +231,42 @@ export const inventoryService = {
     const productId = generateId();
     const now = new Date().toISOString();
 
+    const parentStock = input.stockInicial && input.stockInicial > 0
+      ? convertToStorage(input.stockInicial, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
+      : 0;
+
     const presentationRecords: Array<{
       id: string;
       tenantId: string;
       productId: string;
-      childProductId?: string;
       name: string;
       priceUsd: number;
       unitMultiplier: number;
-      stockType: 'shared' | 'independent';
+      stockType: 'shared';
       barcode?: string;
       sortOrder: number;
       createdAt: string;
       updatedAt: string;
     }> = [];
 
-    interface ChildToCreate {
-      id: string;
-      name: string;
-      sku: string;
-      stock: number;
-      presentationIndex: number;
-    }
-    const childrenToCreate: ChildToCreate[] = [];
-
-    const parentStock = stockType === 'shared'
-      ? (input.stockInicial && input.stockInicial > 0 ? convertToStorage(input.stockInicial, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad') : 0)
-      : 0;
-
-    if (stockType === 'independent') {
-      for (let i = 0; i < presentations.length; i++) {
-        const pres = presentations[i];
-        const childId = generateId();
-        const childSku = pres.barcode ?? `${input.sku}-${i + 1}`;
-        const childName = `${input.name} - ${pres.name}`;
-        const childStock = pres.stockInicial && pres.stockInicial > 0 ? convertToStorage(pres.stockInicial, 'unidad') : 0;
-
-        childrenToCreate.push({
-          id: childId,
-          name: childName,
-          sku: childSku,
-          stock: childStock,
-          presentationIndex: i,
-        });
-
-        presentationRecords.push({
-          id: generateId(),
-          tenantId,
-          productId,
-          childProductId: childId,
-          name: pres.name,
-          priceUsd: pres.priceUsd,
-          unitMultiplier: 1,
-          stockType: 'independent',
-          barcode: childSku,
-          sortOrder: i,
-          createdAt: now,
-          updatedAt: now,
-        });
+    for (let i = 0; i < presentations.length; i++) {
+      const pres = presentations[i];
+      if (!pres.unitMultiplier || pres.unitMultiplier <= 0) {
+        return failure(new AppError(InventoryErrors.PRESENTATION_MULTIPLIER_INVALID, `"${pres.name}" debe tener un multiplicador mayor a 0.`));
       }
-    } else {
-      for (let i = 0; i < presentations.length; i++) {
-        const pres = presentations[i];
-        if (!pres.unitMultiplier || pres.unitMultiplier <= 0) {
-          return failure(new AppError(InventoryErrors.PRESENTATION_MULTIPLIER_INVALID, `"${pres.name}" debe tener un multiplicador mayor a 0.`));
-        }
-        presentationRecords.push({
-          id: generateId(),
-          tenantId,
-          productId,
-          childProductId: undefined,
-          name: pres.name,
-          priceUsd: pres.priceUsd,
-          unitMultiplier: pres.unitMultiplier,
-          stockType: 'shared',
-          barcode: pres.barcode,
-          sortOrder: i,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+      presentationRecords.push({
+        id: generateId(),
+        tenantId,
+        productId,
+        name: pres.name,
+        priceUsd: pres.priceUsd,
+        unitMultiplier: pres.unitMultiplier,
+        stockType: 'shared',
+        barcode: pres.barcode,
+        sortOrder: i,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
 
     try {
@@ -351,68 +305,7 @@ export const inventoryService = {
         // CRITICAL: Enqueue parent product first to ensure it exists in Supabase before dependents
         await syncQueue.enqueue('products', 'CREATE', productId, toSnake(createdProduct as unknown as Record<string, unknown>), tenantId);
 
-        if (stockType === 'independent') {
-          const totalChildStock = childrenToCreate.reduce((sum, c) => sum + c.stock, 0);
-          const childCostPerUnit = input.costPrice != null && input.costPrice > 0 && totalChildStock > 0
-            ? preciseRound(input.costPrice / totalChildStock, 4)
-            : 0;
-
-          for (const child of childrenToCreate) {
-            const childProduct = {
-              id: child.id,
-              tenantId,
-              name: child.name,
-              sku: child.sku,
-              priceUsd: presentations[child.presentationIndex].priceUsd,
-              categoryId: input.categoryId,
-              isWeighted: false,
-              isTaxable: input.isTaxable,
-              isSellable: true,
-              unit: 'unidad' as const,
-              stock: child.stock,
-              stockMin: input.stockMin,
-              costPrice: childCostPerUnit > 0 ? childCostPerUnit : undefined,
-            };
-            await db.products.add(childProduct);
-
-            // CRITICAL: Enqueue child product for sync BEFORE its dependencies
-            await syncQueue.enqueue('products', 'CREATE', child.id, toSnake(childProduct as unknown as Record<string, unknown>), tenantId);
-
-            if (child.stock > 0) {
-              const movementId = generateId();
-              const movement = {
-                id: movementId,
-                tenantId,
-                productId: child.id,
-                userId,
-                type: 'purchase' as const,
-                quantity: child.stock,
-                previousStock: 0,
-                newStock: child.stock,
-                createdAt: now,
-              };
-              await db.inventoryMovements.add(movement);
-
-              const lot = {
-                id: generateId(),
-                tenantId,
-                productId: child.id,
-                quantityAdded: child.stock,
-                remainingQuantity: child.stock,
-                costUsdPerUnit: childCostPerUnit > 0 ? childCostPerUnit : undefined,
-                sourceMovementId: movementId,
-                createdAt: now,
-                updatedAt: now,
-              };
-              await db.inventoryLots.add(lot);
-
-              await syncQueue.enqueue('inventory_lots', 'CREATE', lot.id, toSnake(lot as unknown as Record<string, unknown>), tenantId);
-              await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
-            }
-          }
-        }
-
-        if (stockType === 'shared' && parentStock > 0) {
+        if (parentStock > 0) {
           const movementId = generateId();
           const movement = {
             id: movementId,
@@ -456,13 +349,12 @@ export const inventoryService = {
           sku: input.sku,
           stockInicial: parentStock,
           presentationCount: presentations.length,
-          stockType,
         });
       });
 
       await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, {
         productId, name: input.name, sku: input.sku,
-        stockInicial: parentStock, presentationCount: presentations.length, stockType,
+        stockInicial: parentStock, presentationCount: presentations.length,
       }, { userId, tenantId });
 
       return success({
@@ -500,7 +392,6 @@ export const inventoryService = {
       // Eliminar campos que no existen en la tabla products de Supabase
       const rawInput = input as Record<string, unknown>;
       const presentationsInput = rawInput.presentations as CreatePresentationInput[] | undefined;
-      const stockTypeInput = rawInput.stockType as string | undefined;
 
       const safeInput = { ...rawInput };
       delete safeInput.stockInicial;
@@ -528,9 +419,6 @@ export const inventoryService = {
             .toArray();
 
           const existingPresMap = new Map(existingPres.map((p) => [p.id, p]));
-          const effectiveStockType = existingPres.length > 0
-            ? existingPres[0].stockType
-            : (stockTypeInput || 'shared');
           const submittedIds = new Set(
             presentationsInput
               .filter((p) => !!(p as Record<string, unknown>).id)
@@ -541,10 +429,6 @@ export const inventoryService = {
           const deletedAt = new Date().toISOString();
           for (const existingPresItem of existingPres) {
             if (!submittedIds.has(existingPresItem.id)) {
-              if (existingPresItem.stockType === 'independent' && existingPresItem.childProductId) {
-                await db.products.update(existingPresItem.childProductId, { deletedAt });
-                await syncQueue.enqueue('products', 'DELETE', existingPresItem.childProductId, { id: existingPresItem.childProductId, deleted_at: deletedAt }, tenantId);
-              }
               await db.productPresentations.update(existingPresItem.id, { deletedAt });
               await syncQueue.enqueue('product_presentations', 'DELETE', existingPresItem.id, { id: existingPresItem.id, deleted_at: deletedAt }, tenantId);
             }
@@ -559,7 +443,6 @@ export const inventoryService = {
 
             if (existingId && existingPresMap.has(existingId)) {
               // Actualizar presentación existente
-              const existingPresItem = existingPresMap.get(existingId)!;
               const patchData: Record<string, unknown> = {
                 name: pres.name,
                 priceUsd: pres.priceUsd,
@@ -568,21 +451,7 @@ export const inventoryService = {
                 updatedAt: now,
               };
               await db.productPresentations.update(existingId, patchData as any);
-              await syncQueue.enqueue('product_presentations', 'UPDATE', existingId, toSnake({ ...existingPresItem, ...patchData } as unknown as Record<string, unknown>), tenantId);
-
-              // Actualizar child product si es independiente
-              if (existingPresItem.stockType === 'independent' && existingPresItem.childProductId) {
-                await db.products.update(existingPresItem.childProductId, {
-                  name: `${updated.name} - ${pres.name}`,
-                  sku: pres.barcode || existingPresItem.barcode,
-                  priceUsd: pres.priceUsd,
-                } as any);
-                await syncQueue.enqueue('products', 'UPDATE', existingPresItem.childProductId, toSnake({
-                  name: `${updated.name} - ${pres.name}`,
-                  sku: pres.barcode || existingPresItem.barcode,
-                  price_usd: pres.priceUsd,
-                } as Record<string, unknown>), tenantId);
-              }
+              await syncQueue.enqueue('product_presentations', 'UPDATE', existingId, toSnake(patchData as unknown as Record<string, unknown>), tenantId);
             } else {
               // Crear nueva presentación
               const presId = generateId();
@@ -593,48 +462,12 @@ export const inventoryService = {
                 name: pres.name,
                 priceUsd: pres.priceUsd,
                 unitMultiplier: pres.unitMultiplier ?? 1,
-                stockType: effectiveStockType,
+                stockType: 'shared',
                 barcode: pres.barcode,
                 sortOrder: i,
                 createdAt: now,
                 updatedAt: now,
               };
-
-              if (effectiveStockType === 'independent') {
-                const childId = generateId();
-                const childSku = pres.barcode || `${updated.sku}-${i + 1}`;
-                record.childProductId = childId;
-
-                const childStock = pres.stockInicial && pres.stockInicial > 0 ? convertToStorage(pres.stockInicial, 'unidad') : 0;
-                await db.products.add({
-                  id: childId,
-                  tenantId,
-                  name: `${updated.name} - ${pres.name}`,
-                  sku: childSku,
-                  priceUsd: pres.priceUsd,
-                  categoryId: updated.categoryId,
-                  isWeighted: false,
-                  isTaxable: updated.isTaxable ?? true,
-                  isSellable: true,
-                  unit: 'unidad',
-                  stock: childStock,
-                  stockMin: updated.stockMin,
-                });
-                await syncQueue.enqueue('products', 'CREATE', childId, toSnake({
-                  id: childId,
-                  tenant_id: tenantId,
-                  name: `${updated.name} - ${pres.name}`,
-                  sku: childSku,
-                  price_usd: pres.priceUsd,
-                  category_id: updated.categoryId,
-                  is_weighted: false,
-                  is_taxable: updated.isTaxable ?? true,
-                  is_sellable: true,
-                  unit: 'unidad',
-                  stock: 0,
-                  stock_min: updated.stockMin,
-                } as Record<string, unknown>), tenantId);
-              }
 
               await db.productPresentations.add(record as any);
               await syncQueue.enqueue('product_presentations', 'CREATE', presId, toSnake(record), tenantId);
@@ -650,7 +483,7 @@ export const inventoryService = {
     }
   },
 
-  async getPresentationsForProduct(productId: string): Promise<Result<PresentationWithProduct[], AppError>> {
+  async getPresentationsForProduct(productId: string): Promise<Result<Presentation[], AppError>> {
     const db = getDb();
     try {
       const rows = await db.productPresentations
@@ -658,28 +491,7 @@ export const inventoryService = {
         .filter((p) => !p.deletedAt)
         .sortBy('sortOrder');
 
-      const result: PresentationWithProduct[] = [];
-      for (const row of rows) {
-        let product: Product | null = null;
-        if (row.stockType === 'independent' && row.childProductId) {
-          const child = await db.products.get(row.childProductId);
-          if (child) {
-            product = toProduct(child as unknown as Record<string, unknown>);
-          }
-        } else {
-          const parent = await db.products.get(row.productId);
-          if (parent) {
-            product = toProduct(parent as unknown as Record<string, unknown>);
-          }
-        }
-        if (product) {
-          result.push({
-            ...toPresentation(row as unknown as Record<string, unknown>),
-            product,
-          });
-        }
-      }
-      return success(result);
+      return success(rows.map((r) => toPresentation(r as unknown as Record<string, unknown>)));
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en getPresentationsForProduct:', err);
       return failure(new AppError(InventoryErrors.PRESENTATION_NOT_FOUND, 'Error al cargar presentaciones.'));
@@ -707,7 +519,7 @@ export const inventoryService = {
         return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, 'El nombre de la presentación no puede estar vacío.'));
       }
 
-      if (existing.stockType === 'shared' && input.unitMultiplier !== undefined && input.unitMultiplier <= 0) {
+      if (input.unitMultiplier !== undefined && input.unitMultiplier <= 0) {
         return failure(new AppError(InventoryErrors.PRESENTATION_MULTIPLIER_INVALID, 'El multiplicador debe ser mayor a 0.'));
       }
 
@@ -735,23 +547,6 @@ export const inventoryService = {
 
       await db.transaction('rw', [db.productPresentations, db.products, db.syncQueue, db.outbox], async () => {
         await db.productPresentations.put(updated);
-
-        if (existing.stockType === 'independent' && existing.childProductId) {
-          const childProduct = await db.products.get(existing.childProductId);
-          if (childProduct) {
-            const childUpdates: Record<string, unknown> = {};
-            if (input.priceUsd !== undefined) childUpdates.priceUsd = input.priceUsd;
-            if (input.name !== undefined) childUpdates.name = `${childProduct.name.split(' - ')[0]} - ${input.name}`;
-            if (Object.keys(childUpdates).length > 0) {
-              await db.products.update(existing.childProductId, childUpdates);
-              const updatedChild = await db.products.get(existing.childProductId);
-              if (updatedChild) {
-                await syncQueue.enqueue('products', 'UPDATE', existing.childProductId, toSnake(updatedChild as unknown as Record<string, unknown>), tenantId);
-              }
-            }
-          }
-        }
-
         await syncQueue.enqueue('product_presentations', 'UPDATE', presentationId, toSnake(updated as unknown as Record<string, unknown>), tenantId);
         await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, changes: Object.keys(input) });
       });
@@ -780,10 +575,6 @@ export const inventoryService = {
 
       const deletedAt = new Date().toISOString();
       await db.transaction('rw', [db.productPresentations, db.products, db.syncQueue, db.outbox], async () => {
-        if (existing.stockType === 'independent' && existing.childProductId) {
-          await db.products.update(existing.childProductId, { deletedAt });
-          await syncQueue.enqueue('products', 'DELETE', existing.childProductId, { id: existing.childProductId, deleted_at: deletedAt }, tenantId);
-        }
         await db.productPresentations.update(presentationId, { deletedAt });
         await syncQueue.enqueue('product_presentations', 'DELETE', presentationId, { id: presentationId, deleted_at: deletedAt }, tenantId);
         await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, action: 'deleted' });
@@ -812,15 +603,6 @@ export const inventoryService = {
       return failure(new AppError('PRODUCT_HAS_STOCK', `No se puede eliminar: el producto tiene ${product.stock} unidades en inventario. Ajuste el stock a cero primero.`));
     }
 
-    // Bloquear eliminacion directa de child products de presentaciones
-    const parentPresentation = await db.productPresentations
-      .where({ childProductId: id })
-      .filter((p) => !p.deletedAt)
-      .first();
-    if (parentPresentation) {
-      return failure(new AppError('PRODUCT_IS_PRESENTATION_CHILD', `No se puede eliminar directamente: es variante de "${parentPresentation.name}". Elimine la presentación desde el producto padre.`));
-    }
-
     // Validar que no tenga órdenes de compra activas (draft, confirmed o partially_received)
     const orderItems = await db.purchaseOrderItems.where({ productId: id }).toArray();
     if (orderItems.length > 0) {
@@ -844,21 +626,13 @@ export const inventoryService = {
     const deletedAt = new Date().toISOString();
 
     // Eliminar imágenes de storage (fire-and-forget, no bloquea la tx)
-    const childIds = presentations
-      .filter((p) => p.stockType === 'independent' && p.childProductId)
-      .map((p) => p.childProductId!);
-    const allImageIds = [id, ...childIds];
-    Promise.all(allImageIds.map(async (pid) => {
-      const p = await db.products.get(pid);
+    Promise.resolve().then(async () => {
+      const p = await db.products.get(id);
       if (p?.imageUrl) await deleteStorageImage(p.imageUrl);
-    }));
+    });
 
     await db.transaction('rw', [db.products, db.productPresentations, db.syncQueue, db.outbox], async () => {
       for (const pres of presentations) {
-        if (pres.stockType === 'independent' && pres.childProductId) {
-          await db.products.update(pres.childProductId, { deletedAt });
-          await syncQueue.enqueue('products', 'DELETE', pres.childProductId, { id: pres.childProductId, deleted_at: deletedAt }, tenantId);
-        }
         await db.productPresentations.update(pres.id, { deletedAt });
         await syncQueue.enqueue('product_presentations', 'DELETE', pres.id, { id: pres.id, deleted_at: deletedAt }, tenantId);
       }
@@ -1209,30 +983,10 @@ export const inventoryService = {
   async getProductLots(productId: string): Promise<Result<ActiveLot[], AppError>> {
     const db = getDb();
 
-    // Check if this product has independent presentations → aggregate lots from children
-    const presentations = await db.productPresentations
-      .where({ productId })
-      .filter((p) => !p.deletedAt && p.stockType === 'independent' && !!p.childProductId)
-      .toArray();
-
-    let productIds: string[];
-    if (presentations.length > 0) {
-      productIds = [productId, ...presentations.map(p => p.childProductId!)];
-    } else {
-      productIds = [productId];
-    }
-
     const lots = await db.inventoryLots
-      .where('productId')
-      .anyOf(productIds)
+      .where({ productId })
       .filter((l) => l.remainingQuantity > 0)
       .sortBy('createdAt');
-
-    // Build a map of childProductId → presentation name for labeling
-    const childLabelMap = new Map<string, string>();
-    for (const pres of presentations) {
-      if (pres.childProductId) childLabelMap.set(pres.childProductId, pres.name ?? '');
-    }
 
     return success(lots.map((l) => ({
       id: l.id,
@@ -1240,7 +994,6 @@ export const inventoryService = {
       quantityAdded: toNumber(l.quantityAdded),
       remainingQuantity: toNumber(l.remainingQuantity),
       costUsdPerUnit: l.costUsdPerUnit != null ? toNumber(l.costUsdPerUnit) : undefined,
-      productLabel: childLabelMap.get(l.productId),
     })));
   },
 

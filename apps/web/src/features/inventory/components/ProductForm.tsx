@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
-import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, Share2, FolderOpen, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { CreateProductInput, CreatePresentationInput } from '../types';
@@ -48,7 +48,7 @@ function StepIndicator({ current, steps }: { current: number; steps: { id: strin
 interface ProductFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }, imageFile?: File | null) => Promise<boolean>;
+  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => Promise<boolean>;
   categories: { id: string; name: string; isPredefined?: boolean }[];
   editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string; costPrice?: number } | null;
   onCreateCategory?: (name: string) => Promise<string | null>;
@@ -83,7 +83,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     costPrice: editProduct.costPrice ?? 0,
   } : undefined;
 
-  const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }): Promise<boolean> => {
+  const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }): Promise<boolean> => {
     const result = await onSubmit(data, imageFile);
     if (result && !imageFile) {
       setImageFile(null);
@@ -104,8 +104,6 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     addPresentation,
     removePresentation,
     updatePresentation,
-    setStockType,
-    stockType,
     generateSku,
   } = useProductForm({ onSubmit: wrappedOnSubmit, initialValues, editProductId: editProduct?.id });
 
@@ -493,66 +491,18 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
         {isVariants && (
           <>
-            <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
-              <button
-                type="button"
-                onClick={() => {
-                  setStockType('shared');
-                  setField('stockInicial', 0);
-                }}
-                className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-                  stockType === 'shared'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Share2 size={16} />
-                Todas salen del mismo stock
-              </button>
-              <button
-                type="button"
-                onClick={() => { setStockType('independent'); }}
-                className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-                  stockType === 'independent'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <FolderOpen size={16} />
-                Cada una tiene su propio stock
-              </button>
-            </div>
-
-            {stockType === 'shared' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="input-wrapper">
-                  <label className="input-label">Stock general (unidades base)</label>
-                  <Input
-                    sanitize="number"
-                    decimals={0}
-                    placeholder="0"
-                    value={formData.stockInicial || ''}
-                    onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
-                    validation={{ min: 0 }}
-                  />
-                </div>
-                <div className="input-wrapper">
-                  <label className="input-label">Costo total del lote ($)</label>
-                  <Input
-                    sanitize="currency"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.costPrice != null ? String(formData.costPrice) : ''}
-                    onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                    validation={{ min: 0, max: 999999 }}
-                    inputClassName="text-sm"
-                  />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="input-wrapper">
+                <label className="input-label">Stock general (unidades base)</label>
+                <Input
+                  sanitize="number"
+                  decimals={0}
+                  placeholder="0"
+                  value={formData.stockInicial || ''}
+                  onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
+                  validation={{ min: 0 }}
+                />
               </div>
-            )}
-
-
-            {stockType === 'independent' && (
               <div className="input-wrapper">
                 <label className="input-label">Costo total del lote ($)</label>
                 <Input
@@ -564,11 +514,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   validation={{ min: 0, max: 999999 }}
                   inputClassName="text-sm"
                 />
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  Suma total pagada por todas las variantes. Se distribuye proporcionalmente al stock de cada una.
-                </p>
               </div>
-            )}
+            </div>
 
             <div className="space-y-3">
               {presentations.map((pres, index) => (
@@ -610,44 +557,26 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                       />
                     </div>
 
-                    {stockType === 'shared' && (
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Equivale a (unidades)</label>
-                        <Input
-                          sanitize="number"
-                          decimals={0}
-                          placeholder="12"
-                          value={pres.unitMultiplier?.toString() || ''}
-                          onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
-                          inputClassName="text-sm"
-                        />
-                      </div>
-                    )}
-
-                    {stockType === 'independent' && (
-                      <>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Stock inicial</label>
-                          <Input
-                            sanitize="number"
-                            decimals={0}
-                            placeholder="0"
-                            value={pres.stockInicial?.toString() || ''}
-                            onChange={(e) => updatePresentation(index, 'stockInicial', parseInt(e.target.value) || 0)}
-                            inputClassName="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">SKU</label>
-                          <Input
-                            placeholder="Ej: HP-001-A"
-                            value={pres.barcode || ''}
-                            onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
-                            inputClassName="text-sm"
-                          />
-                        </div>
-                      </>
-                    )}
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Equivale a (unidades)</label>
+                      <Input
+                        sanitize="number"
+                        decimals={0}
+                        placeholder="12"
+                        value={pres.unitMultiplier?.toString() || ''}
+                        onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
+                        inputClassName="text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">SKU</label>
+                      <Input
+                        placeholder="Ej: HP-001-A"
+                        value={pres.barcode || ''}
+                        onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
+                        inputClassName="text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -696,21 +625,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       <div className="space-y-3">
         <p className="text-xs text-gray-500">
           Define las variantes o formatos de venta de este producto
-          {stockType === 'shared' ? '. Comparten el stock del producto base.' : '. Cada una tiene su propio stock independiente.'}
+          . Comparten el stock del producto base.
         </p>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-          <p className="text-xs text-gray-500">
-            Tipo de stock definido al crear las variantes. No se puede cambiar.
-          </p>
-        </div>
-
-        {stockType === 'shared' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-xs text-amber-700">
-              Solo puedes editar el nombre y precio de las variantes. El multiplicador y el stock no se modifican desde aquí.
-            </p>
-          </div>
-        )}
 
         {presentations.map((pres, index) => (
           <div
@@ -751,46 +667,23 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 />
               </div>
 
-              {stockType === 'shared' && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Multiplicador (unidades base) <span className="text-gray-400">— fijo</span>
-                  </label>
-                  <Input
-                    sanitize="number"
-                    decimals={0}
-                    disabled
-                    placeholder="12"
-                    value={pres.unitMultiplier?.toString() || ''}
-                    inputClassName="text-sm opacity-60"
-                  />
-                </div>
-              )}
-
-              {stockType === 'independent' && (
-                (pres as Record<string, unknown>).id ? (
-                  <div className="bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="text-xs text-gray-500">Stock inicial: </span>
-                    <span className="text-sm font-medium text-gray-700">{pres.stockInicial ?? 0} unid.</span>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Stock inicial</label>
-                    <Input
-                      sanitize="number"
-                      decimals={0}
-                      placeholder="0"
-                      value={pres.stockInicial?.toString() || ''}
-                      onChange={(e) => updatePresentation(index, 'stockInicial', parseInt(e.target.value) || 0)}
-                      inputClassName="text-sm"
-                    />
-                  </div>
-                )
-              )}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Multiplicador (unidades base) <span className="text-gray-400">— fijo</span>
+                </label>
+                <Input
+                  sanitize="number"
+                  decimals={0}
+                  disabled
+                  placeholder="12"
+                  value={pres.unitMultiplier?.toString() || ''}
+                  inputClassName="text-sm opacity-60"
+                />
+              </div>
 
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Código de barras {stockType === 'independent' ? '(será el SKU)' : '(opcional)'}
+                  Código de barras (opcional)
                 </label>
                 <Input
                   placeholder="Ej: 123456789012"

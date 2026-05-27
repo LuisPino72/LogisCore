@@ -19,7 +19,7 @@ const generateAutoSku = (name: string, existingSkus: string[]) => {
 interface UseProductFormOptions {
   initialValues?: Partial<ProductFormData>;
   editProductId?: string;
-  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' }) => Promise<boolean>;
+  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }) => Promise<boolean>;
 }
 
 interface UseProductFormReturn {
@@ -34,8 +34,6 @@ interface UseProductFormReturn {
   addPresentation: () => void;
   removePresentation: (index: number) => void;
   updatePresentation: (index: number, field: keyof CreatePresentationInput, value: unknown) => void;
-  setStockType: (type: 'shared' | 'independent') => void;
-  stockType: 'shared' | 'independent';
   generateSku: () => void;
 }
 
@@ -65,7 +63,6 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [presentations, setPresentations] = useState<CreatePresentationInput[]>([]);
-  const [stockType, setStockType] = useState<'shared' | 'independent'>('shared');
 
   const setField = useCallback(<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {
     setFormData((prev) => {
@@ -97,12 +94,12 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       name: '',
       priceUsd: 0,
       unitMultiplier: 1,
-      stockType,
+      stockType: 'shared',
       sortOrder: 0,
       barcode: undefined,
       stockInicial: 0,
     }]);
-  }, [stockType]);
+  }, []);
 
   const removePresentation = useCallback((index: number) => {
     setPresentations(prev => prev.filter((_, i) => i !== index));
@@ -122,13 +119,12 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
             name: p.name,
             priceUsd: p.priceUsd,
             unitMultiplier: p.unitMultiplier,
-            stockType: p.stockType,
+            stockType: 'shared' as const,
             sortOrder: p.sortOrder ?? 0,
             barcode: p.barcode || undefined,
             stockInicial: 0,
           }));
           setPresentations(mapped);
-          setStockType(existing[0].stockType);
         }
       };
       load();
@@ -140,7 +136,6 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     setErrors({});
     setIsSubmitting(false);
     setPresentations([]);
-    setStockType('shared');
   }, []);
 
   const handleSubmit = useCallback(async (): Promise<{ success: boolean; errors?: Record<string, string> }> => {
@@ -226,14 +221,14 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       }
     }
 
-    const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' | 'independent' } = {
+    const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' } = {
       ...parsed.data,
-      stockInicial: isEditing ? 0 : (presentations.length > 0 && stockType === 'independent' ? 0 : formData.stockInicial),
+      stockInicial: isEditing ? 0 : formData.stockInicial,
     };
 
     if (presentations.length > 0) {
       submitData.presentations = presentations;
-      submitData.stockType = stockType;
+      submitData.stockType = 'shared';
     }
 
     const success = await options.onSubmit(submitData);
@@ -241,7 +236,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     setIsSubmitting(false);
     if (success) reset();
     return { success };
-  }, [formData, options, presentations, stockType]);
+  }, [formData, options, presentations]);
 
   return {
     formData,
@@ -255,8 +250,6 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     addPresentation,
     removePresentation,
     updatePresentation,
-    setStockType,
-    stockType,
     generateSku,
   };
 }

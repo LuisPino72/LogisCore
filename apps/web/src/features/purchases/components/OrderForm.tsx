@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, Truck, Package, FileText, DollarSign } from 'lucide-react';
 import { Button, Input, Modal, SearchableSelect } from '../../../common/components';
 import { inventoryService } from '../../inventory/services/inventoryService';
-import type { Product, PresentationWithProduct } from '../../inventory/types';
+import type { Product, Presentation } from '../../inventory/types';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
 import { formatUsd } from '@/lib/formatBs';
 import { CreatePurchaseOrderInputSchema } from '../../../specs/purchases';
@@ -58,7 +58,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<OrderItemInput[]>([{ productId: '', quantity: 1, totalCostUsd: 0 }]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [presentationsByProduct, setPresentationsByProduct] = useState<Record<string, PresentationWithProduct[]>>({});
+  const [presentationsByProduct, setPresentationsByProduct] = useState<Record<string, Presentation[]>>({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
