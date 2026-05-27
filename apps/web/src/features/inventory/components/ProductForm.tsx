@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
 import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
@@ -109,6 +109,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
   const hasPresentations = creationType === 'variants' || showPresentations || (isEditing && presentations.length > 0);
 
+  useEffect(() => {
+    if (isEditing && presentations.length > 0 && creationType !== 'variants') {
+      setCreationType('variants');
+    }
+  }, [isEditing, presentations, creationType]);
+
   const creationSteps = [
     { id: 'type', label: 'Tipo' },
     { id: 'basic', label: 'Datos básicos' },
@@ -210,8 +216,10 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const goBack = useCallback(() => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
+    } else {
+      handleClose();
     }
-  }, [currentStep]);
+  }, [currentStep, handleClose]);
 
   const renderTypeSelector = () => (
     <div className="grid grid-cols-1 gap-3 animate-fade-in">
@@ -541,6 +549,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         placeholder="Ej: Caja de 12, Pack familiar"
                         value={pres.name}
                         onChange={(e) => updatePresentation(index, 'name', e.target.value)}
+                        validation={{ required: true, maxLength: 100 }}
                         inputClassName="text-sm"
                       />
                     </div>
@@ -553,6 +562,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         placeholder="0.00"
                         value={pres.priceUsd != null ? String(pres.priceUsd) : ''}
                         onChange={(e) => updatePresentation(index, 'priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                        validation={{ min: 0.01 }}
                         inputClassName="text-sm"
                       />
                     </div>
@@ -565,6 +575,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         placeholder="12"
                         value={pres.unitMultiplier?.toString() || ''}
                         onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
+                        validation={{ min: 1 }}
                         inputClassName="text-sm"
                       />
                     </div>
@@ -651,6 +662,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="Ej: Caja de 12, Pack familiar"
                   value={pres.name}
                   onChange={(e) => updatePresentation(index, 'name', e.target.value)}
+                  validation={{ required: true, maxLength: 100 }}
                   inputClassName="text-sm"
                 />
               </div>
@@ -663,6 +675,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder={formData.priceUsd > 0 ? `$${formData.priceUsd}` : '0.00'}
                   value={pres.priceUsd != null ? String(pres.priceUsd) : ''}
                   onChange={(e) => updatePresentation(index, 'priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                  validation={{ min: 0.01 }}
                   inputClassName="text-sm"
                 />
               </div>

@@ -65,6 +65,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
   const [presentations, setPresentations] = useState<CreatePresentationInput[]>([]);
 
   const setField = useCallback(<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {
+    if (options.editProductId && key === 'productType') return;
     setFormData((prev) => {
       const next = { ...prev, [key]: value };
 
@@ -76,7 +77,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       return next;
     });
     setErrors((prev) => ({ ...prev, [key]: '' }));
-  }, []);
+  }, [options.editProductId]);
 
   const setFormErrors = useCallback((newErrors: Record<string, string>) => {
     setErrors((prev) => ({ ...prev, ...newErrors }));
@@ -208,12 +209,38 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
         return { success: false, errors: errs };
       }
 
+      const barcodes = presentations.map((p) => p.barcode?.trim().toLowerCase()).filter(Boolean);
+      if (new Set(barcodes).size !== barcodes.length) {
+        const errs = { presentations: 'No puede haber dos presentaciones con el mismo código de barras.' };
+        setErrors(errs);
+        setIsSubmitting(false);
+        return { success: false, errors: errs };
+      }
+
       for (let i = 0; i < presentations.length; i++) {
         const pres = presentations[i];
+        if (!pres.name.trim()) {
+          const errs = { presentations: `Variante #${i + 1}: el nombre es obligatorio.` };
+          setErrors(errs);
+          setIsSubmitting(false);
+          return { success: false, errors: errs };
+        }
+        if (pres.priceUsd <= 0) {
+          const errs = { presentations: `Variante #${i + 1}: el precio debe ser mayor a 0.` };
+          setErrors(errs);
+          setIsSubmitting(false);
+          return { success: false, errors: errs };
+        }
+        if (!pres.unitMultiplier || pres.unitMultiplier <= 0) {
+          const errs = { presentations: `Variante #${i + 1}: el multiplicador debe ser mayor a 0.` };
+          setErrors(errs);
+          setIsSubmitting(false);
+          return { success: false, errors: errs };
+        }
         const presParsed = CreatePresentationInputSchema.safeParse(pres);
         if (!presParsed.success) {
           const firstIssue = presParsed.error.issues[0];
-          const errs = { presentations: `Presentación #${i + 1}: ${firstIssue.message}` };
+          const errs = { presentations: `Variante #${i + 1}: ${firstIssue.message}` };
           setErrors(errs);
           setIsSubmitting(false);
           return { success: false, errors: errs };

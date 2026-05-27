@@ -119,6 +119,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         addToast({ type: 'warning', message: `Producto actualizado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
       }
     }
+    setEditProduct(null);
     setShowProductForm(false);
     return true;
   };

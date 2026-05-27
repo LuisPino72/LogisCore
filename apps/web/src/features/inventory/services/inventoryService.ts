@@ -444,6 +444,7 @@ export const inventoryService = {
             if (existingId && existingPresMap.has(existingId)) {
               // Actualizar presentación existente
               const patchData: Record<string, unknown> = {
+                id: existingId,
                 name: pres.name,
                 priceUsd: pres.priceUsd,
                 barcode: pres.barcode,
