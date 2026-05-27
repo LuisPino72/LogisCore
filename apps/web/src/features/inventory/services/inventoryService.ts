@@ -692,7 +692,7 @@ export const inventoryService = {
         if (!error && data && data.length > 0) {
           // Wrap bulk seed en transacción para evitar estado parcial si la DB se cierra
           try {
-            await db.transaction('rw', [db.products, db.inventoryLots], async () => {
+            await db.transaction('rw', [db.products, db.inventoryLots, db.productPresentations], async () => {
               for (const prod of data) {
                 await db.products.put({
                   id: prod.id, tenantId,
@@ -729,6 +729,33 @@ export const inventoryService = {
                     sourceMovementId: lot.source_movement_id,
                     createdAt: lot.created_at,
                     updatedAt: lot.updated_at ?? lot.created_at,
+                  });
+                }
+              }
+
+              if (isDbClosing()) return;
+
+              const { data: presData } = await supabase
+                .from('product_presentations')
+                .select('*')
+                .in('product_id', data.map((p: Record<string, unknown>) => p.id))
+                .is('deleted_at', null);
+
+              if (presData && presData.length > 0) {
+                for (const pres of presData) {
+                  if (isDbClosing()) return;
+                  await db.productPresentations.put({
+                    id: pres.id,
+                    tenantId,
+                    productId: pres.product_id,
+                    name: pres.name,
+                    priceUsd: pres.price_usd,
+                    unitMultiplier: pres.unit_multiplier,
+                    stockType: pres.stock_type || 'shared',
+                    barcode: pres.barcode,
+                    sortOrder: pres.sort_order,
+                    createdAt: pres.created_at,
+                    updatedAt: pres.updated_at ?? pres.created_at,
                   });
                 }
               }

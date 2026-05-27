@@ -69,7 +69,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const [creationType, setCreationType] = useState<'simple' | 'weighted' | 'variants' | null>(
-    isEditing ? (editProduct?.isWeighted ? 'weighted' : 'simple') : null
+    isEditing ? (editProduct?.isWeighted ? 'weighted' : null) : null
   );
 
   const initialValues = editProduct ? {
