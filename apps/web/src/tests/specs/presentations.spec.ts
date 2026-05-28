@@ -111,15 +111,14 @@ function mockParent(stock = 100) {
   return product;
 }
 
-function mockPresentations(count = 2, stockType: 'shared' | 'independent' = 'shared') {
+function mockPresentations(count = 2) {
   const presentations = Array.from({ length: count }, (_, i) => ({
     id: `pres-${i + 1}`,
     productId: PARENT_ID,
-    childProductId: stockType === 'independent' ? `child-${i + 1}` : undefined,
     name: `Presentación ${i + 1}`,
     priceUsd: 12,
-    unitMultiplier: stockType === 'shared' ? (i + 1) * 6 : 1,
-    stockType,
+    unitMultiplier: (i + 1) * 6,
+    stockType: 'shared' as const,
     barcode: undefined,
     sortOrder: i,
     tenantId: TENANT_ID,
@@ -167,31 +166,6 @@ describe('PRES-001: Crear producto con presentaciones compartidas', () => {
   });
 });
 
-describe('PRES-002: Crear producto con presentaciones independientes', () => {
-  beforeEach(() => { resetMockDb(); });
-
-  it('Given: input + 2 pres independent. When: createProductWithPresentations. Then: padre+2 hijos+pres creados', async () => {
-    mockDb.products.add.mockResolvedValue(PARENT_ID);
-    mockDb.products.where.mockReturnValue({
-      filter: vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve([])) })),
-    });
-
-    const { inventoryService } = await import('../../features/inventory/services/inventoryService');
-    const result = await inventoryService.createProductWithPresentations(TENANT_ID, USER_ID, {
-      name: 'Producto Padre', sku: 'PADRE-001', priceUsd: 10,
-      isWeighted: false, unit: 'unidad', stockInicial: 0,
-    }, [
-      { name: 'Botella 1L', priceUsd: 12, unitMultiplier: 1, stockType: 'independent', stockInicial: 30 },
-      { name: 'Botella 2L', priceUsd: 20, unitMultiplier: 1, stockType: 'independent', stockInicial: 20 },
-    ], 'independent');
-
-    expect(result.ok).toBe(true);
-    expect(mockDb.products.add).toHaveBeenCalled();
-    expect(mockDb.productPresentations.add).toHaveBeenCalled();
-    expect(mockDb.inventoryLots.add).toHaveBeenCalled();
-  });
-});
-
 describe('PRES-003: Obtener presentaciones de un producto', () => {
   beforeEach(() => { resetMockDb(); });
 
@@ -225,11 +199,11 @@ describe('PRES-003: Obtener presentaciones de un producto', () => {
 describe('PRES-004: Soft delete producto en cascada con presentaciones', () => {
   beforeEach(() => { resetMockDb(); });
 
-  it('Given: producto con 2 pres independent. When: deleteProduct. Then: padre+2 hijos+pres soft deleted', async () => {
+  it('Given: producto con 2 pres shared. When: deleteProduct. Then: padre+pres soft deleted', async () => {
     const parent = mockParent(0);
     const pres = [
-      { id: 'pres-1', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 1', priceUsd: 12, unitMultiplier: 1, stockType: 'independent' as const, childProductId: 'child-1', sortOrder: 0, createdAt: 'now', updatedAt: 'now' },
-      { id: 'pres-2', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 2', priceUsd: 12, unitMultiplier: 1, stockType: 'independent' as const, childProductId: 'child-2', sortOrder: 1, createdAt: 'now', updatedAt: 'now' },
+      { id: 'pres-1', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 1', priceUsd: 12, unitMultiplier: 6, stockType: 'shared' as const, sortOrder: 0, createdAt: 'now', updatedAt: 'now' },
+      { id: 'pres-2', productId: PARENT_ID, tenantId: TENANT_ID, name: 'Var 2', priceUsd: 12, unitMultiplier: 12, stockType: 'shared' as const, sortOrder: 1, createdAt: 'now', updatedAt: 'now' },
     ];
     const presChain = vi.fn(() => ({ toArray: vi.fn(() => Promise.resolve(pres)), first: vi.fn(() => Promise.resolve(undefined)) }));
     mockDb.productPresentations.where.mockReturnValue({
@@ -237,8 +211,6 @@ describe('PRES-004: Soft delete producto en cascada con presentaciones', () => {
     });
     mockDb.products.get.mockImplementation((id: string) => {
       if (id === PARENT_ID) return Promise.resolve(parent);
-      if (id === 'child-1') return Promise.resolve({ ...parent, id: 'child-1', name: 'Var 1' });
-      if (id === 'child-2') return Promise.resolve({ ...parent, id: 'child-2', name: 'Var 2' });
       return Promise.resolve(undefined);
     });
 
@@ -247,8 +219,6 @@ describe('PRES-004: Soft delete producto en cascada con presentaciones', () => {
 
     expect(result.ok).toBe(true);
     expect(mockDb.products.update).toHaveBeenCalledWith(PARENT_ID, expect.objectContaining({ deletedAt: expect.any(String) }));
-    expect(mockDb.products.update).toHaveBeenCalledWith('child-1', expect.objectContaining({ deletedAt: expect.any(String) }));
-    expect(mockDb.products.update).toHaveBeenCalledWith('child-2', expect.objectContaining({ deletedAt: expect.any(String) }));
   });
 });
 

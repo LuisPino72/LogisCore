@@ -28,6 +28,7 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'sale_items', timeCol: 'updated_at' },
   { name: 'purchase_order_items', timeCol: 'updated_at' },
   { name: 'product_presentations', timeCol: 'updated_at' },
+  { name: 'expenses', timeCol: 'updated_at' },
 ];
 
 // Tablas de catálogo que se omiten en pull cuando estamos en datos móviles
@@ -231,7 +232,12 @@ export class SyncEngine {
                   .select('*')
                   .gt('created_at', since);
                 const fbResult = await fallbackQuery;
-                if (fbResult.error) continue;
+                if (fbResult.error) {
+                  logger.error('Sync', `Pull fallback failed for ${tableName}: ${fbResult.error.message}`);
+                  result.errors.push(new AppError('SYNC_PULL_FAILED', `Pull failed for ${tableName}: ${fbResult.error.message}`));
+                  result.failed++;
+                  continue;
+                }
                 const fbData = fbResult.data;
                 if (fbData && fbData.length > 0) {
                   for (const record of fbData) {
@@ -251,6 +257,9 @@ export class SyncEngine {
               }
             }
           } else {
+            logger.error('Sync', `Pull failed for ${tableName}: ${error.message}`);
+            result.errors.push(new AppError('SYNC_PULL_FAILED', `Pull failed for ${tableName}: ${error.message}`));
+            result.failed++;
             continue;
           }
         } else {
@@ -286,13 +295,18 @@ export class SyncEngine {
     const local: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(record)) {
       const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-      local[camel] = val;
+      if (typeof val === 'string' && /^\d+(\.\d+)?$/.test(val)) {
+        local[camel] = parseFloat(val);
+      } else {
+        local[camel] = val;
+      }
     }
     if (record.tenant_id) {
       const tid = record.tenant_id as string;
       local.tenantId = tid;
     }
-    await db.table(tableName).put(local);
+    const dexieTable = tableName.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    await db.table(dexieTable).put(local);
   }
 
   start(): void {

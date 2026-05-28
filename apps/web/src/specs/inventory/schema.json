@@ -43,11 +43,10 @@
       "properties": {
         "id": { "type": "string", "format": "uuid" },
         "productId": { "type": "string", "format": "uuid" },
-        "childProductId": { "type": ["string", "null"], "format": "uuid" },
         "name": { "type": "string", "minLength": 1 },
         "priceUsd": { "type": "number", "minimum": 0.01 },
         "unitMultiplier": { "type": "number", "minimum": 0.01 },
-        "stockType": { "type": "string", "enum": ["shared", "independent"] },
+        "stockType": { "type": "string", "const": "shared" },
         "barcode": { "type": ["string", "null"] },
         "sortOrder": { "type": "integer" },
         "deletedAt": { "type": ["string", "null"] }

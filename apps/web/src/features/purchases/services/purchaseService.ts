@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
-import { getDb, isDbClosing, type DexiePurchaseOrderItem } from '../../../services/dexie/db';
+import { getDb, isDbClosing, type DexiePurchaseOrderItem, type DexieExpense } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
@@ -19,6 +19,7 @@ import type {
   ReceivePurchaseOrderInput,
 } from '../../../specs/purchases';
 import { convertToStorage } from '../../inventory/types';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 
 const PURCHASES_MODULE = 'PURCHASES';
 
@@ -509,6 +510,35 @@ export const purchaseService = {
         await db.purchaseOrders.put(updatedOrder);
         await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updatedOrder, tenantId } as unknown as Record<string, unknown>), tenantId);
         await outboxService.enqueue('PURCHASE.RECEIVED', PURCHASES_MODULE, { orderId: id, status: newStatus });
+
+        let totalReceivedUsd = 0;
+        for (const rec of input.items) {
+          const item = itemMap.get(rec.itemId);
+          if (!item || rec.receivedQuantity <= 0) continue;
+          totalReceivedUsd += preciseRound(rec.receivedQuantity * (item.costUsdPerUnit ?? 0), 2);
+        }
+        if (totalReceivedUsd > 0) {
+          const currentRate = useExchangeRateStore.getState().rate ?? 1;
+          const expenseId = generateId();
+          const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+          const expense: DexieExpense = {
+            id: expenseId,
+            tenantId,
+            createdByUserId: userId,
+            category: 'COMPRA_INVENTARIO',
+            amountUsd: totalReceivedUsd,
+            exchangeRate: currentRate,
+            amountBs: preciseRound(totalReceivedUsd * currentRate, 2),
+            description: `Compra orden #${order.id.slice(0, 8)}`,
+            date: today,
+            isRecurring: false,
+            status: 'paid',
+            createdAt: now,
+            updatedAt: now,
+          };
+          await db.expenses.add(expense);
+          await syncQueue.enqueue('expenses', 'CREATE', expenseId, toSnake(expense as unknown as Record<string, unknown>), tenantId);
+        }
       });
 
       await emitWithAudit('PURCHASE.RECEIVED', PURCHASES_MODULE, { orderId: id, status: newStatus }, { userId, tenantId });

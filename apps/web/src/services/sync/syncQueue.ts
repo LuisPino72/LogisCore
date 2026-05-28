@@ -18,6 +18,7 @@ const TABLE_PRIORITY: Record<string, number> = {
   cash_registers: 60,
   sale_items: 50,
   purchase_order_items: 50,
+  expenses: 55,
   exchange_rates: 40,
 };
 

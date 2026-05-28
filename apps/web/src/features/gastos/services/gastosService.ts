@@ -1,8 +1,11 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { getDb, type DexieExpense } from '../../../services/dexie/db';
-import { preciseRound, generateId } from '@logiscore/shared';
+import { preciseRound, generateId, toSnake } from '@logiscore/shared';
 import type { Gasto, CreateGastoInput, UpdateGastoInput } from '../types';
 import { useNotificationStore } from '../../../stores/notificationStore';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
+import { syncQueue } from '../../../services/sync/syncQueue';
+import { outboxService } from '../../../services/outbox/outboxService';
 
 function mapExpense(e: DexieExpense): Gasto {
   return {
@@ -38,7 +41,7 @@ export const gastosService = {
       let collection = db.expenses
         .where('tenantId')
         .equals(tenantId)
-        .filter((e) => !e.deletedAt);
+        .filter((e) => !e.deletedAt && !(e.isRecurring && !e.parentExpenseId));
 
       if (options?.status && options.status !== 'all') {
         collection = collection.filter((e) => e.status === options.status);
@@ -102,6 +105,8 @@ export const gastosService = {
       };
 
       await db.expenses.add(expense);
+      await syncQueue.enqueue('expenses', 'CREATE', expense.id, toSnake(expense as unknown as Record<string, unknown>), tenantId);
+      await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category });
       return success(mapExpense(expense));
     } catch (err) {
       console.error('[gastosService.create]', err);
@@ -118,16 +123,25 @@ export const gastosService = {
       }
 
       const now = new Date().toISOString();
+      const isPayingPending = existing.status === 'pending' && input.status === 'paid';
+      const currentRate = isPayingPending ? useExchangeRateStore.getState().rate : undefined;
+      const effectiveAmountUsd = input.amountUsd ?? existing.amountUsd;
+
       const updated: Partial<DexieExpense> = {
         ...input,
-        amountBs: input.amountUsd !== undefined && input.exchangeRate !== undefined
-          ? preciseRound(input.amountUsd * input.exchangeRate, 2)
-          : input.amountBs ?? existing.amountBs,
+        exchangeRate: isPayingPending && currentRate ? currentRate : input.exchangeRate,
+        amountBs: isPayingPending && currentRate
+          ? preciseRound(effectiveAmountUsd * currentRate, 2)
+          : input.amountUsd !== undefined && input.exchangeRate !== undefined
+            ? preciseRound(input.amountUsd * input.exchangeRate, 2)
+            : input.amountBs ?? existing.amountBs,
         updatedAt: now,
       };
 
       await db.expenses.update(id, updated);
       const result = await db.expenses.get(id);
+      await syncQueue.enqueue('expenses', 'UPDATE', id, { id, ...toSnake(updated as unknown as Record<string, unknown>) }, tenantId);
+      await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(input) });
       return success(mapExpense(result!));
     } catch (err) {
       console.error('[gastosService.update]', err);
@@ -144,6 +158,8 @@ export const gastosService = {
       }
       const now = new Date().toISOString();
       await db.expenses.update(id, { deletedAt: now, updatedAt: now });
+      await syncQueue.enqueue('expenses', 'DELETE', id, { id, deleted_at: now }, tenantId);
+      await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
       return success(undefined);
     } catch (err) {
       console.error('[gastosService.remove]', err);
@@ -172,7 +188,7 @@ export const gastosService = {
   async checkAndGenerateRecurring(tenantId: string): Promise<Result<Gasto[], AppError>> {
     try {
       const db = getDb();
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
       const dueTemplates = await db.expenses
         .where('tenantId')
@@ -207,6 +223,7 @@ export const gastosService = {
         };
 
         await db.expenses.add(instance);
+        await syncQueue.enqueue('expenses', 'CREATE', instance.id, toSnake(instance as unknown as Record<string, unknown>), tenantId);
         generated.push(mapExpense(instance));
 
         const nextDate = new Date(tpl.nextDueDate!);
@@ -216,10 +233,12 @@ export const gastosService = {
           nextDate.setFullYear(nextDate.getFullYear() + 1);
         }
 
+        const nextDateStr = nextDate.toISOString().slice(0, 10);
         await db.expenses.update(tpl.id, {
-          nextDueDate: nextDate.toISOString().slice(0, 10),
+          nextDueDate: nextDateStr,
           updatedAt: now,
         });
+        await syncQueue.enqueue('expenses', 'UPDATE', tpl.id, { id: tpl.id, next_due_date: nextDateStr, updated_at: now }, tenantId);
       }
 
       const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -270,7 +289,7 @@ export const gastosService = {
     }
   },
 
-  async cancelOccurrence(_tenantId: string, templateId: string, occurrenceDate: string): Promise<Result<void, AppError>> {
+  async cancelOccurrence(tenantId: string, templateId: string, occurrenceDate: string): Promise<Result<void, AppError>> {
     try {
       const db = getDb();
       const instances = await db.expenses
@@ -280,7 +299,9 @@ export const gastosService = {
         .toArray();
 
       for (const inst of instances) {
-        await db.expenses.update(inst.id, { status: 'cancelled', updatedAt: new Date().toISOString() });
+        const now = new Date().toISOString();
+        await db.expenses.update(inst.id, { status: 'cancelled', updatedAt: now });
+        await syncQueue.enqueue('expenses', 'UPDATE', inst.id, { id: inst.id, status: 'cancelled', updated_at: now }, tenantId);
       }
 
       return success(undefined);

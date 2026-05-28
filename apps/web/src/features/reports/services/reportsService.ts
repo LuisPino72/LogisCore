@@ -326,9 +326,11 @@ export const reportsService = {
       };
       // Operating expenses (gastos operativos del período)
       const db = getDb();
+      const startNorm = start.slice(0, 10);
+      const endNorm = end.slice(0, 10);
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
-        .between([tenantId, start], [tenantId, end])
+        .between([tenantId, startNorm], [tenantId, endNorm])
         .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
         .toArray();
       const operatingExpensesUsd = operatingExpenses.reduce((s, e) => s + e.amountUsd, 0);
@@ -994,9 +996,11 @@ export const reportsService = {
 
       // Operating expenses breakdown
       const db = getDb();
+      const startNorm = start.slice(0, 10);
+      const endNorm = end.slice(0, 10);
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
-        .between([tenantId, start], [tenantId, end])
+        .between([tenantId, startNorm], [tenantId, endNorm])
         .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
         .toArray();
 

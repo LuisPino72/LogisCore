@@ -1,12 +1,13 @@
 import { useCallback, useEffect } from 'react';
-import { type Result, failure, AppError } from '@logiscore/core';
+import { type Result, failure, AppError, EventBus } from '@logiscore/core';
 import { useGastosStore } from '../stores/gastosStore';
 import { gastosService } from '../services/gastosService';
+import { useAuthStore } from '../../auth/stores/authStore';
 import type { Gasto, CreateGastoInput, UpdateGastoInput } from '../types';
 
 export function useGastos(tenantId: string | null) {
   const {
-    gastos, loading, filters, setGastos, setLoading, setFilters,
+    gastos, loading, filters, setGastos, setLoading, setFilters, setRecurringTemplates,
   } = useGastosStore();
 
   const fetchGastos = useCallback(async () => {
@@ -36,14 +37,32 @@ export function useGastos(tenantId: string | null) {
     fetchGastos();
   }, [fetchGastos]);
 
+  useEffect(() => {
+    if (!tenantId) return;
+    const sub = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+      const { table } = payload as { table?: string };
+      if (table === 'expenses') {
+        fetchGastos();
+      }
+    });
+    return () => { EventBus.off(sub); };
+  }, [tenantId, fetchGastos]);
+
   const createGasto = useCallback(async (input: CreateGastoInput): Promise<Result<Gasto, AppError>> => {
     if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));
-    const result = await gastosService.create(tenantId, 'system', input);
+    const userId = useAuthStore.getState().session?.userId ?? '00000000-0000-0000-0000-000000000000';
+    const result = await gastosService.create(tenantId, userId, input);
     if (result.ok) {
       await fetchGastos();
+      if (input.isRecurring) {
+        const templatesResult = await gastosService.getRecurringTemplates(tenantId);
+        if (templatesResult.ok) {
+          setRecurringTemplates(templatesResult.data);
+        }
+      }
     }
     return result;
-  }, [tenantId, fetchGastos]);
+  }, [tenantId, fetchGastos, setRecurringTemplates]);
 
   const updateGasto = useCallback(async (id: string, input: UpdateGastoInput): Promise<Result<Gasto, AppError>> => {
     if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));

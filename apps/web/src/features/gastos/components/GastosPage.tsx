@@ -113,7 +113,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
 
   return (
     <>
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6 pb-14">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -169,15 +169,6 @@ export function GastosPage({ tenantId }: GastosPageProps) {
       </div>
 
       <BottomNav items={bottomNavItems} activeId={activeTab} className="sm:hidden" />
-
-      <button
-        type="button"
-        onClick={handleOpenNew}
-        disabled={!isOnline}
-        className="fixed bottom-20 right-4 z-20 sm:hidden w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center disabled:opacity-50 active:scale-95 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
-      >
-        <Plus size={24} />
-      </button>
 
     {showForm && (
       <GastoForm

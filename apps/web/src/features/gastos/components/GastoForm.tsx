@@ -18,7 +18,11 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
   const [category, setCategory] = useState('');
   const [amountUsd, setAmountUsd] = useState('');
   const [exchangeRate, setExchangeRate] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const getVzlaDate = () => {
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' });
+    return formatter.format(new Date());
+  };
+  const [date, setDate] = useState(getVzlaDate);
   const [description, setDescription] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<'monthly' | 'yearly'>('monthly');
@@ -35,7 +39,7 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
     ? parsedAmount * parsedRate
     : null;
 
-  const hasUnsavedChanges = category !== '' || amountUsd !== '' || date !== new Date().toISOString().slice(0, 10) || description !== '' || isRecurring;
+  const hasUnsavedChanges = category !== '' || amountUsd !== '' || date !== getVzlaDate() || description !== '' || isRecurring;
 
   const initialValues = useRef<{
     category: string; amountUsd: string; exchangeRate: string; date: string; description: string;
@@ -77,7 +81,7 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
         setStatus('paid');
         initialValues.current = {
           category: '', amountUsd: '', exchangeRate: String(exchangeRateStore.rate ?? ''),
-          date: new Date().toISOString().slice(0, 10), description: '',
+          date: getVzlaDate(), description: '',
           isRecurring: false, recurrenceType: 'monthly', status: 'paid',
         };
       }
