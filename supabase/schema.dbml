@@ -163,6 +163,8 @@ Table purchase_order_items {
   order_id uuid [not null, ref: > purchase_orders.id]
   tenant_id uuid [not null, ref: > tenants.id]
   product_id uuid [not null, ref: > products.id]
+  presentation_id uuid [null, ref: > product_presentations.id]
+  unit_multiplier decimal(10,2) [not null, default: 1]
   product_name text
   quantity integer [not null]
   cost_usd_per_unit numeric(19,2) [not null]

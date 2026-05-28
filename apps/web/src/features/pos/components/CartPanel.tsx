@@ -41,61 +41,63 @@ export const CartPanel = memo(function CartPanel({
   const setDiscount = usePosStore((s) => s.setDiscount);
   const clearDiscount = usePosStore((s) => s.clearDiscount);
 
-  const renderContent = useCallback(
+  const renderItems = useCallback(
     () => (
-      <div className="flex flex-col h-full">
-        <div className="hidden md:block px-3 py-2 border-b border-border">
-          <h3 className="text-sm font-semibold text-gray-700">Carrito ({itemCount})</h3>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-3">
-          {cart.length === 0 ? (
-            <div className="py-8">
-              <EmptyState
-                icon={<ShoppingCart size={32} />}
-                title="Carrito vacío"
-                description="Selecciona productos para agregar al carrito."
-              />
-            </div>
-          ) : (
-            cart.map((item) => (
-              <CartItemRow
-                key={item.productId}
-                item={item}
-                onRemove={onRemoveFromCart}
-                onUpdateQuantity={onUpdateQuantity}
-              />
-            ))
-          )}
-        </div>
-
-        {cart.length > 0 && (
-          <div className="px-3 pb-3">
-            <CartSummary
-              items={cart}
-              exchangeRateBs={exchangeRateBs}
-              paymentMethod={paymentMethod}
-              onPaymentMethodChange={onPaymentMethodChange}
-              onPay={onPay}
-              onPark={onPark}
-              isOpen={isOpen}
-              loading={loading}
-              discount={discount}
-              onSetDiscount={setDiscount}
-              onClearDiscount={clearDiscount}
+      <div className="flex-1 overflow-y-auto px-3 min-h-0">
+        {cart.length === 0 ? (
+          <div className="py-8">
+            <EmptyState
+              icon={<ShoppingCart size={32} />}
+              title="Carrito vacío"
+              description="Selecciona productos para agregar al carrito."
             />
           </div>
+        ) : (
+          cart.map((item) => (
+            <CartItemRow
+              key={item.productId}
+              item={item}
+              onRemove={onRemoveFromCart}
+              onUpdateQuantity={onUpdateQuantity}
+            />
+          ))
         )}
       </div>
     ),
-    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onRemoveFromCart, onUpdateQuantity, onPay, isOpen, loading, itemCount, discount, setDiscount, clearDiscount],
+    [cart, onRemoveFromCart, onUpdateQuantity],
+  );
+
+  const renderSummary = useCallback(
+    () =>
+      cart.length > 0 ? (
+        <div className="px-3 pb-3 shrink-0">
+          <CartSummary
+            items={cart}
+            exchangeRateBs={exchangeRateBs}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={onPaymentMethodChange}
+            onPay={onPay}
+            onPark={onPark}
+            isOpen={isOpen}
+            loading={loading}
+            discount={discount}
+            onSetDiscount={setDiscount}
+            onClearDiscount={clearDiscount}
+          />
+        </div>
+      ) : null,
+    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onPay, onPark, isOpen, loading, discount, setDiscount, clearDiscount],
   );
 
   return (
     <>
       {/* Desktop: fixed sidebar */}
       <div className="hidden md:flex w-80 xl:w-96 shrink-0 h-full border-l border-border bg-white flex-col overflow-hidden">
-        {renderContent()}
+        <div className="hidden md:block px-3 py-2 border-b border-border shrink-0">
+          <h3 className="text-sm font-semibold text-gray-700">Carrito ({itemCount})</h3>
+        </div>
+        {renderItems()}
+        {renderSummary()}
       </div>
 
       {/* Mobile: floating button */}
@@ -119,9 +121,8 @@ export const CartPanel = memo(function CartPanel({
           className="max-w-none! m-0! modal-cart"
         >
           <div className="flex flex-col h-dvh">
-            <div className="flex-1 overflow-y-auto">
-              {renderContent()}
-            </div>
+            {renderItems()}
+            {renderSummary()}
           </div>
         </Modal>
       </div>

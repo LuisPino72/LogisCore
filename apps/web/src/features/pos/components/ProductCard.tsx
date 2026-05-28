@@ -51,7 +51,8 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
       >
         <Star
           size={16}
-          className={`transition-all ${isFavorite ? 'text-accent fill-accent drop-shadow-sm' : 'text-gray-300'}`}
+          strokeWidth={2.5}
+          className={`transition-all ${isFavorite ? 'text-accent fill-accent drop-shadow-sm' : 'text-gray-500'}`}
         />
       </button>
 

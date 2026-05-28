@@ -196,9 +196,22 @@ export function useReports(tenantId: string | null) {
 
   useEffect(() => {
     if (!tenantId) return;
-    const sub = EventBus.on('SALE.COMPLETED', () => refetch());
+    const events = [
+      'SALE.COMPLETED',
+      'SALE.VOIDED',
+      'BOX.CLOSED',
+      'PURCHASE.RECEIVED',
+      'INVENTORY.ADJUSTMENT',
+      'EXPENSES.CREATED',
+      'EXPENSES.UPDATED',
+      'EXPENSES.DELETED',
+      'SYNC.REFRESH_TABLE',
+    ] as const;
+    const subs = events.map((event) =>
+      EventBus.on(event, () => refetch())
+    );
     return () => {
-      EventBus.off(sub);
+      subs.forEach((sub) => EventBus.off(sub));
     };
   }, [tenantId, refetch]);
 

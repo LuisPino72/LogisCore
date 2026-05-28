@@ -68,6 +68,7 @@ interface SaleWithItems {
     id: string;
     totalBs: number;
     igtfBs: number;
+    ivaBs?: number;
     exchangeRate: number;
     paymentMethod: string;
     createdAt: string;
@@ -114,6 +115,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
           id: sale.id,
           totalBs: sale.totalBs,
           igtfBs: sale.igtfBs,
+          ivaBs: sale.ivaBs,
           exchangeRate: sale.exchangeRate,
           paymentMethod: sale.paymentMethod,
           createdAt: sale.createdAt,
@@ -136,7 +138,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const { data: cloudSales, error: salesError } = await supabase
       .from('sales')
-      .select('id, total_bs, igtf_bs, exchange_rate, payment_method, created_at, discount_bs')
+      .select('id, total_bs, igtf_bs, iva_bs, exchange_rate, payment_method, created_at, discount_bs')
       .eq('tenant_id', tenantUuid)
       .eq('status', 'completed')
       .is('deleted_at', null)
@@ -166,6 +168,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         id: sale.id,
         totalBs: Number(sale.total_bs) || 0,
         igtfBs: Number(sale.igtf_bs) || 0,
+        ivaBs: sale.iva_bs ? Number(sale.iva_bs) : undefined,
         exchangeRate: Number(sale.exchange_rate) || 1,
         paymentMethod: sale.payment_method || 'efectivo_bs',
         createdAt: sale.created_at,
@@ -256,14 +259,20 @@ export const reportsService = {
 
       let totalSalesBs = 0;
       let totalSalesUsd = 0;
+      let totalRevenueBs = 0;
+      let totalRevenueUsd = 0;
       let totalCostBs = 0;
       let totalCostUsd = 0;
       let totalDiscountBs = 0;
+      let totalIvaBs = 0;
+      let totalIgtfBs = 0;
       const productProfitMap = new Map<string, { name: string; profit: number }>();
 
       let totalDiscountUsdAccum = 0;
       for (const { sale, items } of data) {
         totalSalesBs += sale.totalBs;
+        totalIvaBs += sale.ivaBs || 0;
+        totalIgtfBs += sale.igtfBs || 0;
         totalDiscountBs += sale.discountBs || 0;
         const saleUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
         totalSalesUsd += saleUsd;
@@ -274,6 +283,9 @@ export const reportsService = {
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
           const costUsd = item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
+          const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
+          totalRevenueBs += revenueBs;
+          totalRevenueUsd += revenueUsd;
           totalCostBs += costBs;
           totalCostUsd += costUsd;
 
@@ -289,14 +301,20 @@ export const reportsService = {
 
       totalSalesBs = preciseRound(totalSalesBs, 2);
       totalSalesUsd = preciseRound(totalSalesUsd, 2);
+      totalRevenueBs = preciseRound(totalRevenueBs, 2);
+      totalRevenueUsd = preciseRound(totalRevenueUsd, 2);
       totalCostBs = preciseRound(totalCostBs, 2);
       totalCostUsd = preciseRound(totalCostUsd, 2);
-      const grossProfitBs = preciseRound(totalSalesBs - totalCostBs, 2);
-      const grossProfitUsd = preciseRound(totalSalesUsd - totalCostUsd, 2);
-      const profitMarginPercent = totalSalesBs > 0 ? preciseRound((grossProfitBs / totalSalesBs) * 100, 2) : 0;
+      totalIvaBs = preciseRound(totalIvaBs, 2);
+      totalIgtfBs = preciseRound(totalIgtfBs, 2);
+      const effectiveRevenueBs = preciseRound(totalRevenueBs - (totalDiscountBs || 0), 2);
+      const effectiveRevenueUsd = preciseRound(totalRevenueUsd - (totalDiscountUsdAccum || 0), 2);
+      const grossProfitBs = preciseRound(effectiveRevenueBs - totalCostBs, 2);
+      const grossProfitUsd = preciseRound(effectiveRevenueUsd - totalCostUsd, 2);
+      const profitMarginPercent = effectiveRevenueBs > 0 ? preciseRound((grossProfitBs / effectiveRevenueBs) * 100, 2) : 0;
       const totalTransactions = data.length;
-      const averageTicketBs = totalTransactions > 0 ? preciseRound(totalSalesBs / totalTransactions, 2) : 0;
-      const averageTicketUsd = totalTransactions > 0 ? preciseRound(totalSalesUsd / totalTransactions, 2) : 0;
+      const averageTicketBs = totalTransactions > 0 ? preciseRound(effectiveRevenueBs / totalTransactions, 2) : 0;
+      const averageTicketUsd = totalTransactions > 0 ? preciseRound(effectiveRevenueUsd / totalTransactions, 2) : 0;
       const totalDiscountUsd = totalDiscountUsdAccum > 0 ? preciseRound(totalDiscountUsdAccum, 2) : 0;
 
       let topProductName: string | undefined;
@@ -349,9 +367,12 @@ export const reportsService = {
         const yStart = startOfDayVzla(yest);
         const yEnd = endOfDayVzla(yest);
         const yData = await fetchSalesWithItems(tenantId, yStart, yEnd);
-        const ySales = yData.reduce((sum, d) => sum + d.sale.totalBs, 0);
-        if (ySales > 0) {
-          salesVsYesterdayPercent = preciseRound(((totalSalesBs - ySales) / ySales) * 100, 2);
+        const yRevenue = yData.reduce((sum, d) => {
+          const itemRevenue = d.items.reduce((s, i) => s + i.quantity * i.unitPriceUsd * d.sale.exchangeRate, 0);
+          return sum + itemRevenue - (d.sale.discountBs || 0);
+        }, 0);
+        if (yRevenue > 0) {
+          salesVsYesterdayPercent = preciseRound(((effectiveRevenueBs - yRevenue) / yRevenue) * 100, 2);
         }
       }
 
@@ -392,23 +413,26 @@ export const reportsService = {
       const data = await fetchSalesWithItems(tenantId, start, end);
 
       const map = new Map<string, DailyProfitPoint>();
-      for (const { sale } of data) {
+      const discountByDate = new Map<string, number>();
+
+      for (const { sale, items } of data) {
         const dateKey = sale.createdAt.slice(0, 10);
         const label = new Date(dateKey).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' });
         if (!map.has(dateKey)) {
           map.set(dateKey, { date: dateKey, label, salesBs: 0, salesUsd: 0, costBs: 0, costUsd: 0, profitBs: 0, profitUsd: 0, transactions: 0, lastRate: sale.exchangeRate });
         }
         const point = map.get(dateKey)!;
-        point.salesBs += sale.totalBs;
-        point.salesUsd += sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
         point.transactions += 1;
         point.lastRate = sale.exchangeRate;
-      }
 
-      for (const { sale, items } of data) {
-        const dateKey = sale.createdAt.slice(0, 10);
-        const point = map.get(dateKey)!;
+        const currentDiscount = discountByDate.get(dateKey) || 0;
+        discountByDate.set(dateKey, currentDiscount + (sale.discountBs || 0));
+
         for (const item of items) {
+          const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
+          const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
+          point.salesBs += revenueBs;
+          point.salesUsd += revenueUsd;
           point.costBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
           point.costUsd += item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
         }
@@ -416,12 +440,15 @@ export const reportsService = {
 
       const sorted = Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
       for (const point of sorted) {
+        const discount = discountByDate.get(point.date) || 0;
+        const effectiveRevenueBs = preciseRound(point.salesBs - discount, 2);
+        const effectiveRevenueUsd = point.lastRate > 0 ? preciseRound(effectiveRevenueBs / point.lastRate, 2) : 0;
         point.salesBs = preciseRound(point.salesBs, 2);
         point.salesUsd = preciseRound(point.salesUsd, 2);
         point.costBs = preciseRound(point.costBs, 2);
         point.costUsd = preciseRound(point.costUsd, 2);
-        point.profitBs = preciseRound(point.salesBs - point.costBs, 2);
-        point.profitUsd = preciseRound(point.salesUsd - point.costUsd, 2);
+        point.profitBs = preciseRound(effectiveRevenueBs - point.costBs, 2);
+        point.profitUsd = preciseRound(effectiveRevenueUsd - point.costUsd, 2);
         point.lastRate = preciseRound(point.lastRate, 4);
       }
 

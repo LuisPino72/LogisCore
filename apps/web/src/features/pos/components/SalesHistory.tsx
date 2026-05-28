@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { Button, Badge, Modal, DataTable, EmptyState, Skeleton, DatePicker } from '../../../common/components';
 import { Eye, Ban, Calendar } from 'lucide-react';
 import { useDebounce } from '../../../common/hooks/useDebounce';
+import { EventBus } from '@logiscore/core';
 import type { Column } from '../../../common/components';
 import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
@@ -48,6 +49,14 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   useEffect(() => {
     const offset = (page - 1) * PAGE_SIZE;
     fetchSalesHistory(tenantId, offset, PAGE_SIZE, debouncedStartDate || undefined, debouncedEndDate || undefined);
+  }, [page, tenantId, fetchSalesHistory, debouncedStartDate, debouncedEndDate]);
+
+  useEffect(() => {
+    const sub = EventBus.on('SALE.COMPLETED', () => {
+      const offset = (page - 1) * PAGE_SIZE;
+      fetchSalesHistory(tenantId, offset, PAGE_SIZE, debouncedStartDate || undefined, debouncedEndDate || undefined);
+    });
+    return () => EventBus.off(sub);
   }, [page, tenantId, fetchSalesHistory, debouncedStartDate, debouncedEndDate]);
 
   const handleView = async (sale: Sale) => {

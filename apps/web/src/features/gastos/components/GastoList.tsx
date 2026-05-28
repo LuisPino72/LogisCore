@@ -3,6 +3,7 @@ import { Receipt, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Modal } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
 import type { Gasto } from '../types';
+import { getExpenseCategoryLabel } from '../types';
 
 interface GastoListProps {
   gastos: Gasto[];
@@ -73,7 +74,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
                   idx % 2 === 0 ? 'bg-white' : 'bg-surface-alt/30'
                 }`}
               >
-                <td className="py-3 px-3 font-medium text-gray-800">{gasto.category}</td>
+                <td className="py-3 px-3 font-medium text-gray-800">{getExpenseCategoryLabel(gasto.category)}</td>
                 <td className="py-3 px-3 text-right font-bold text-primary text-base">{formatUsd(gasto.amountUsd)}</td>
                 <td className="py-3 px-3 text-text-secondary whitespace-nowrap">{formatDate(gasto.date)}</td>
                 <td className="py-3 px-3">
@@ -142,7 +143,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
               <Trash2 size={24} className="text-danger" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-semibold">¿Eliminar gasto de {deleteTarget.category}?</p>
+              <p className="text-sm font-semibold">¿Eliminar gasto de {getExpenseCategoryLabel(deleteTarget.category)}?</p>
               <p className="text-xs text-gray-500 mt-1">El gasto se ocultará de la lista.</p>
             </div>
             <div className="flex gap-3 w-full pt-1">
@@ -166,7 +167,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
             <div className="text-center">
               <p className="text-sm font-semibold">¿Marcar como pagado?</p>
               <p className="text-xs text-gray-500 mt-1">
-                Gasto de <span className="font-medium text-gray-700">{confirmPayTarget.category}</span> por{' '}
+                Gasto de <span className="font-medium text-gray-700">{getExpenseCategoryLabel(confirmPayTarget.category)}</span> por{' '}
                 <span className="font-medium text-gray-700">{formatUsd(confirmPayTarget.amountUsd)}</span>
               </p>
             </div>
@@ -239,7 +240,7 @@ function MobileCard({
 
       {/* Categoría + descripción */}
       <div className="text-center px-4 pb-4">
-        <p className="text-sm font-semibold text-gray-800 leading-snug">{gasto.category}</p>
+        <p className="text-sm font-semibold text-gray-800 leading-snug">{getExpenseCategoryLabel(gasto.category)}</p>
         {gasto.description && (
           <p className="text-xs text-text-secondary mt-1 line-clamp-2 leading-relaxed">{gasto.description}</p>
         )}

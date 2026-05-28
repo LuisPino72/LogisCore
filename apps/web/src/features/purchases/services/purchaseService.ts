@@ -426,6 +426,7 @@ export const purchaseService = {
         db.inventoryLots,
         db.syncQueue,
         db.outbox,
+        db.expenses,
       ], async () => {
         for (const rec of input.items) {
           const item = itemMap.get(rec.itemId);

@@ -10,6 +10,22 @@ export const ALL_EXPENSE_CATEGORIES = [
   'IMPUESTOS', 'COMPRA_INVENTARIO', 'OTROS'
 ] as const;
 
+export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
+  LUZ: 'Luz',
+  AGUA: 'Agua',
+  GAS: 'Gas',
+  INTERNET: 'Internet',
+  ALQUILER: 'Alquiler',
+  NOMINA: 'Nómina',
+  IMPUESTOS: 'Impuestos',
+  COMPRA_INVENTARIO: 'Compra de Inventario',
+  OTROS: 'Otros',
+};
+
+export function getExpenseCategoryLabel(category: string): string {
+  return EXPENSE_CATEGORY_LABELS[category] ?? category;
+}
+
 export type ExpenseCategory = typeof ALL_EXPENSE_CATEGORIES[number];
 
 export interface Gasto {
