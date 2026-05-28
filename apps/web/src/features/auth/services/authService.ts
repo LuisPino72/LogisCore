@@ -196,7 +196,7 @@ export const authService = {
     return success(userSession);
   },
 
-  startSync(): void {
+  async startSync(): Promise<void> {
     const allTables: SyncTableConfig[] = [
       { name: 'products', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
       { name: 'categories', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
@@ -209,7 +209,7 @@ export const authService = {
       { name: 'cash_registers', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
     ];
     allTables.forEach((cfg) => syncEngine.registerTable(cfg));
-    syncEngine.start();
+    await syncEngine.start();
   },
 
   stopSync(): void {
