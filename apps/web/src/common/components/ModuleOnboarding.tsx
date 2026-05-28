@@ -61,10 +61,10 @@ export function ModuleOnboarding({ moduleId, steps, onComplete }: ModuleOnboardi
   const isLast = currentStep === steps.length - 1;
 
   return (
-    <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
+    <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-slide-up">
         {/* Header */}
-        <div className="bg-linear-to-br from-primary to-primary-dark p-5 text-white relative">
+        <div className="bg-linear-to-br from-primary to-primary-dark p-4 sm:p-5 text-white relative shrink-0">
           <button
             onClick={handleClose}
             className="absolute top-3 right-3 p-2 rounded-full hover:bg-white/20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -72,14 +72,14 @@ export function ModuleOnboarding({ moduleId, steps, onComplete }: ModuleOnboardi
           >
             <X size={18} />
           </button>
-          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-3">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white/20 flex items-center justify-center mb-3">
             {step.icon}
           </div>
-          <h2 className="text-xl font-title font-bold">{step.title}</h2>
+          <h2 className="text-lg sm:text-xl font-title font-bold">{step.title}</h2>
         </div>
 
         {/* Body */}
-        <div className="p-5">
+        <div className="p-4 sm:p-5 flex-1 min-h-0 overflow-y-auto">
           <p className="text-sm text-gray-600 leading-relaxed">{step.description}</p>
 
           {/* Progress dots */}
@@ -100,7 +100,7 @@ export function ModuleOnboarding({ moduleId, steps, onComplete }: ModuleOnboardi
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-5 flex items-center gap-3">
+        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-2 flex items-center gap-3 shrink-0 border-t border-gray-100 sm:border-0">
           {currentStep > 0 && (
             <Button variant="ghost" onClick={handlePrev} className="min-h-[44px]">
               <ChevronLeft size={16} />

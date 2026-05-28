@@ -38,7 +38,9 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     startTime: 0,
   });
 
-  const handleStepDelta = useCallback((delta: number) => {
+  const wasHoldingRef = useRef(false);
+
+  const applyDelta = useCallback((delta: number) => {
     setLocalQty(null);
     const currentQty = qtyRef.current;
     const next = Math.max(step, parseFloat((currentQty + delta).toFixed(decimals)));
@@ -53,22 +55,31 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     setIsRepeating(null);
   }, []);
 
-  const startRepeat = useCallback((delta: number) => {
+  const startHold = useCallback((delta: number) => {
     stopRepeat();
-    handleStepDelta(delta);
+    wasHoldingRef.current = false;
     setIsRepeating(delta > 0 ? 'plus' : 'minus');
     repeatRef.current.startTime = Date.now();
 
     const tick = () => {
+      wasHoldingRef.current = true;
       const elapsed = Date.now() - repeatRef.current.startTime;
       const { mult, interval } = getAcceleration(elapsed);
       const acceleratedStep = parseFloat((step * mult).toFixed(2));
-      handleStepDelta(delta > 0 ? acceleratedStep : -acceleratedStep);
+      applyDelta(delta > 0 ? acceleratedStep : -acceleratedStep);
       repeatRef.current.timer = setTimeout(tick, interval);
     };
 
-    repeatRef.current.timer = setTimeout(tick, 800);
-  }, [handleStepDelta, step, stopRepeat]);
+    repeatRef.current.timer = setTimeout(tick, 500);
+  }, [applyDelta, step, stopRepeat]);
+
+  const handleClick = useCallback((delta: number) => {
+    if (wasHoldingRef.current) {
+      wasHoldingRef.current = false;
+      return;
+    }
+    applyDelta(delta);
+  }, [applyDelta]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -123,12 +134,13 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onMouseDown={() => startRepeat(-step)}
+            onMouseDown={() => startHold(-step)}
             onMouseUp={stopRepeat}
             onMouseLeave={stopRepeat}
-            onTouchStart={() => startRepeat(-step)}
+            onTouchStart={() => startHold(-step)}
             onTouchEnd={stopRepeat}
             onTouchCancel={stopRepeat}
+            onClick={() => handleClick(-step)}
             className={`${btnBase} ${isRepeating === 'minus' ? btnActive : btnIdle}`}
             aria-label="Reducir cantidad"
           >
@@ -149,12 +161,13 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
 
           <button
             type="button"
-            onMouseDown={() => startRepeat(step)}
+            onMouseDown={() => startHold(step)}
             onMouseUp={stopRepeat}
             onMouseLeave={stopRepeat}
-            onTouchStart={() => startRepeat(step)}
+            onTouchStart={() => startHold(step)}
             onTouchEnd={stopRepeat}
             onTouchCancel={stopRepeat}
+            onClick={() => handleClick(step)}
             className={`${btnBase} ${isRepeating === 'plus' ? btnActive : btnIdle}`}
             aria-label="Aumentar cantidad"
           >
