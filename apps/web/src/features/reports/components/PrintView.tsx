@@ -53,16 +53,11 @@ const printStyles = `
     margin: 0;
   }
 
-  .print-domain {
-    font-size: 8pt;
-    color: #888;
-    margin: 2px 0 0;
-  }
-
   .print-section {
     margin-bottom: 20px;
     page-break-inside: avoid;
     break-inside: avoid;
+    overflow: hidden;
   }
 
   .print-section-title {
@@ -109,14 +104,14 @@ const printStyles = `
   }
 
   .print-table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 
   .print-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 7.5pt;
+    table-layout: fixed;
   }
 
   .print-table th {
@@ -178,7 +173,6 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
       <div className="print-header">
         <h1 className="print-title">Sasa ERP</h1>
         <p className="print-subtitle">Reporte de Gesti&oacute;n &mdash; {reportDate}</p>
-        <p className="print-domain">Dominio: {window.location.host}</p>
       </div>
 
       {/* Resumen Ejecutivo */}
@@ -188,7 +182,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
           <div className="print-kpi-grid">
             <KpiCard label="Ventas Totales" value={formatDual(summary.totalSalesBs, summary.totalSalesUsd)} subtitle={`${summary.totalTransactions} transacciones`} />
             <KpiCard label="Ganancia Bruta" value={formatDual(summary.grossProfitBs, summary.grossProfitUsd)} subtitle={`Margen ${summary.profitMarginPercent}%`} />
-            <KpiCard label="Gasto Total" value={formatDual(summary.totalCostBs + summary.totalExpensesBs, summary.totalCostUsd + summary.totalExpensesUsd)} subtitle={`Costo ventas ${formatUsd(summary.totalCostUsd)} + Gastos ${formatUsd(summary.totalExpensesUsd)}`} />
+            <KpiCard label="Gasto Total" value={formatDual(summary.totalCostBs + summary.totalExpensesBs, summary.totalCostUsd + summary.totalExpensesUsd)} subtitle={`Costo compras ${formatUsd(summary.totalCostUsd)} + Gastos ${formatUsd(summary.totalExpensesUsd)}`} />
             <KpiCard label="Ticket Promedio" value={formatDual(summary.averageTicketBs, summary.averageTicketUsd)} />
             {summary.topProductName && <KpiCard label="Top Producto" value={summary.topProductName} />}
             {summary.salesVsYesterdayPercent !== undefined && (

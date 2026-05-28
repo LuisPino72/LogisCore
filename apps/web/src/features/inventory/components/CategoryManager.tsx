@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ListTree, Trash2, Edit3 } from 'lucide-react';
 import { Button, SearchInput, Input, Modal, EmptyState, Pagination } from '../../../common/components';
+import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import type { Category } from '../types';
 
 const PAGE_SIZE = 10;
@@ -25,11 +26,7 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return categories;
-    const q = search.toLowerCase();
-    return categories.filter((c) => c.name.toLowerCase().includes(q));
-  }, [categories, search]);
+  const filtered = useFuzzySearch(categories, search, { keys: ['name'] });
 
   useEffect(() => {
     setPage(1);

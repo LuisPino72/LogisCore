@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import type { Tenant } from '../types';
 
 type FilterStatus = 'all' | 'active' | 'inactive';
@@ -16,26 +17,16 @@ export function useTenantFilters(tenants: Tenant[]) {
     plan: 'all',
   });
 
-  const filteredTenants = useMemo(() => {
-    return tenants.filter((t) => {
-      // Search by name or RIF
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        const nameMatch = t.name.toLowerCase().includes(q);
-        const rifMatch = t.rif.toLowerCase().includes(q);
-        if (!nameMatch && !rifMatch) return false;
-      }
+  const fuzzyTenants = useFuzzySearch(tenants, filters.search, { keys: ['name', 'rif'] });
 
-      // Status filter
+  const filteredTenants = useMemo(() => {
+    return fuzzyTenants.filter((t) => {
       if (filters.status === 'active' && t.deletedAt) return false;
       if (filters.status === 'inactive' && !t.deletedAt) return false;
-
-      // Plan filter
       if (filters.plan !== 'all' && t.plan !== filters.plan) return false;
-
       return true;
     });
-  }, [tenants, filters]);
+  }, [fuzzyTenants, filters.status, filters.plan]);
 
   const setSearch = (search: string) => setFilters((f) => ({ ...f, search }));
   const setStatus = (status: FilterStatus) => setFilters((f) => ({ ...f, status }));

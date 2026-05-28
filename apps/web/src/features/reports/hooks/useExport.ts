@@ -85,7 +85,7 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): SheetConfig {
   if (summary) {
     rows.push(
       ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / ${formatUsd(summary.totalSalesUsd)}`],
-      ['Costo de Ventas', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
+      ['Costo de Compras', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
       ['Ganancia Bruta', `${formatBs(summary.grossProfitBs)} / ${formatUsd(summary.grossProfitUsd)}`],
       ['Margen %', `${summary.profitMarginPercent}%`],
       ['Transacciones', summary.totalTransactions],

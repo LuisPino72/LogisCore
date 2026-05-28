@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { ShoppingCart, Truck, AlertTriangle, Plus, ClipboardCheck } from 'lucide-react';
 import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, Modal, ModuleOnboarding, DatePicker } from '../../../common/components';
 import { cn } from '../../../lib/utils';
+import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import { usePurchases } from '../hooks/usePurchases';
 import { useToastStore } from '../../../stores/toastStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
@@ -80,6 +81,9 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     () => orders.filter((o) => o.status === 'draft' || o.status === 'confirmed' || o.status === 'partially_received').length,
     [orders]
   );
+
+  const fuzzyOrders = useFuzzySearch(orders, tabState.searchQuery, { keys: ['supplierName', 'id'] });
+  const fuzzySuppliers = useFuzzySearch(suppliers, tabState.searchQuery, { keys: ['name'] });
 
   const handleCreateSupplier = async (data: CreateSupplierInput) => {
     if (!tenantId || !userId) return false;
@@ -277,13 +281,11 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               )}
             </div>
             <OrderList
-              orders={orders.filter((o) => {
-                const matchSearch = o.supplierName?.toLowerCase().includes(tabState.searchQuery.toLowerCase()) ||
-                  o.id.toLowerCase().includes(tabState.searchQuery.toLowerCase());
+              orders={fuzzyOrders.filter((o) => {
                 const matchStatus = tabState.statusFilter === 'all' || o.status === tabState.statusFilter;
-                if (!tabState.dateFilter) return matchSearch && matchStatus;
+                if (!tabState.dateFilter) return matchStatus;
                 const orderDate = o.createdAt.slice(0, 10);
-                return matchSearch && matchStatus && orderDate === tabState.dateFilter;
+                return matchStatus && orderDate === tabState.dateFilter;
               })}
               loading={loading}
               isOwner={isOwner}
@@ -315,9 +317,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               onClear={() => saveTabState(activeTab, { searchQuery: '' })}
             />
             <SupplierList
-              suppliers={suppliers.filter((s) =>
-                s.name.toLowerCase().includes(tabState.searchQuery.toLowerCase())
-              )}
+              suppliers={fuzzySuppliers}
               loading={loading}
               isOwner={isOwner}
               activeOrdersBySupplier={orders.reduce((acc, o) => {

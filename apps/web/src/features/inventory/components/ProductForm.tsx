@@ -519,7 +519,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   sanitize="currency"
                   step="0.01"
                   placeholder="0.00"
-                  value={formData.costPrice != null ? String(formData.costPrice) : ''}
+                  value={formData.costPrice > 0 ? String(formData.costPrice) : ''}
                   onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   validation={{ min: 0, max: 999999 }}
                   inputClassName="text-sm"
@@ -573,7 +573,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         sanitize="currency"
                         step="0.01"
                         placeholder="0.00"
-                        value={pres.priceUsd != null ? String(pres.priceUsd) : ''}
+                        value={pres.priceUsd > 0 ? String(pres.priceUsd) : ''}
                         onChange={(e) => updatePresentation(index, 'priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         validation={{ min: 0.01 }}
                         inputClassName="text-sm"
@@ -586,7 +586,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         sanitize="number"
                         decimals={0}
                         placeholder="12"
-                        value={pres.unitMultiplier?.toString() || ''}
+                        value={pres.unitMultiplier && pres.unitMultiplier > 1 ? pres.unitMultiplier.toString() : ''}
                         onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
                         validation={{ min: 1 }}
                         inputClassName="text-sm"
@@ -699,7 +699,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   sanitize="currency"
                   step="0.01"
                   placeholder={formData.priceUsd > 0 ? `$${formData.priceUsd}` : '0.00'}
-                  value={pres.priceUsd != null ? String(pres.priceUsd) : ''}
+                  value={pres.priceUsd > 0 ? String(pres.priceUsd) : ''}
                   onChange={(e) => updatePresentation(index, 'priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   validation={{ min: 0.01 }}
                   inputClassName="text-sm"

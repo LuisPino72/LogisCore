@@ -164,7 +164,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
               <div className="flex flex-col gap-0.5 text-[10px] sm:text-xs text-text-secondary">
                 <div className="flex items-center gap-1">
                   <Tooltip content="Suma del costo de adquisición de los productos vendidos (COGS).">
-                    <span className="underline decoration-dotted cursor-help">Costo ventas</span>
+                    <span className="underline decoration-dotted cursor-help">Costo compras</span>
                   </Tooltip>
                   <span>{formatUsd(data.totalCostUsd)}</span>
                 </div>

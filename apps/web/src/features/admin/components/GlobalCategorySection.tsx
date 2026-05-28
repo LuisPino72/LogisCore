@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit2, Trash2, Tags } from 'lucide-react';
 import { Button, Card, DataTable, Pagination, SearchInput } from '../../../common/components';
+import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
 import type { GlobalCategory, CreateGlobalCategoryInput } from '../types';
@@ -37,11 +38,7 @@ export function GlobalCategorySection({
 
   useEffect(() => { setPage(1); }, [search]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return globalCategories;
-    const q = search.toLowerCase();
-    return globalCategories.filter((c) => c.name.toLowerCase().includes(q));
-  }, [globalCategories, search]);
+  const filtered = useFuzzySearch(globalCategories, search, { keys: ['name'] });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

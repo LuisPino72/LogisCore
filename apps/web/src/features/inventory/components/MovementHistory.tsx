@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { History, TrendingUp, TrendingDown, Package } from 'lucide-react';
 import { Badge, DataTable, Card, SearchInput, Pagination } from '../../../common/components';
+import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import type { Column } from '../../../common/components';
 import type { Product } from '../types';
 import { displayStock } from '../types';
@@ -75,13 +76,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    if (!productSearch.trim()) return products;
-    const q = productSearch.toLowerCase();
-    return products.filter((p) =>
-      p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
-    );
-  }, [products, productSearch]);
+  const filteredProducts = useFuzzySearch(products, productSearch, { keys: ['name', 'sku'] });
 
   const handleProductChange = async (productId: string) => {
     setSelectedProductId(productId);

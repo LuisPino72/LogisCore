@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, ChevronDown } from 'lucide-react';
+import Fuse from 'fuse.js';
 import { cn } from '../../lib/utils';
 import { useClickOutside } from '../hooks/useClickOutside';
 
@@ -44,11 +45,21 @@ export function SearchableSelect({
 
   const selectedOption = options.find((o) => o.value === value);
 
+  const fuse = useMemo(
+    () => new Fuse(options, {
+      keys: ['label'],
+      threshold: 0.4,
+      ignoreLocation: true,
+      includeScore: false,
+    }),
+    [options],
+  );
+
   const filteredOptions = hideSearch
     ? options
-    : options.filter((o) =>
-        o.label.toLowerCase().includes(search.toLowerCase())
-      );
+    : search.trim().length < 1
+      ? options
+      : fuse.search(search).map((r) => r.item);
 
   const handleOpen = useCallback(() => {
     setIsOpen(true);

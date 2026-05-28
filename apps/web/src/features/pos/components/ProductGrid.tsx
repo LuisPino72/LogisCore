@@ -54,6 +54,8 @@ export const ProductGrid = memo(function ProductGrid({
     minMatchCharLength: 2,
   });
 
+  const filteredCategories = useFuzzySearch(categories, categorySearch, { keys: ['name'] });
+
   let filtered = searchQuery
     ? fuzzyResults.filter((p) => p.stock > 0)
     : products.filter((p) => p.stock > 0);
@@ -134,7 +136,6 @@ export const ProductGrid = memo(function ProductGrid({
               />
               <div className="flex flex-wrap gap-2">
                 {(() => {
-                  const filtered = categories.filter((cat) => cat.name.toLowerCase().includes(categorySearch.toLowerCase()));
                   return (
                     <>
                       <button
@@ -148,7 +149,7 @@ export const ProductGrid = memo(function ProductGrid({
                       >
                         Todos
                       </button>
-                      {filtered.map((cat) => (
+                      {filteredCategories.map((cat) => (
                         <button
                           key={cat.id}
                           type="button"

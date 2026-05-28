@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Receipt, RotateCcw, DollarSign } from 'lucide-react';
 import { Button, Card, BottomNav, ModuleOnboarding, type BottomNavItem } from '@/common/components';
+import { useFuzzySearch } from '@/lib/useFuzzySearch';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { useGastos } from '../hooks/useGastos';
@@ -26,8 +27,11 @@ export function GastosPage({ tenantId }: GastosPageProps) {
 
   const isOwner = role === 'owner' || role === 'admin';
 
+  const baseList = activeTab === 'gastos' ? gastos : recurringTemplates;
+  const fuzzyGastos = useFuzzySearch(baseList, filters.search || '', { keys: ['description'] });
+
   const filteredGastos = useMemo(() => {
-    let list = activeTab === 'gastos' ? gastos : recurringTemplates;
+    let list = fuzzyGastos;
 
     if (filters.status && filters.status !== 'all') {
       list = list.filter((g) => g.status === filters.status);
@@ -35,16 +39,12 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     if (filters.category && filters.category !== 'all') {
       list = list.filter((g) => g.category === filters.category);
     }
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      list = list.filter((g) => g.description?.toLowerCase().includes(q));
-    }
     if (filters.month) {
       list = list.filter((g) => g.date.startsWith(filters.month!));
     }
 
     return list;
-  }, [gastos, recurringTemplates, filters, activeTab]);
+  }, [fuzzyGastos, filters.status, filters.category, filters.month]);
 
   const handleSubmit = async (data: CreateGastoInput) => {
     if (!tenantId) return false;

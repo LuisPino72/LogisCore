@@ -266,7 +266,11 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                   </div>
                 )}
 
-                {hasProduct && presentationsByProduct[item.productId] && presentationsByProduct[item.productId].length > 0 && (
+                {hasProduct && presentationsByProduct[item.productId] && presentationsByProduct[item.productId].length > 0 && (() => {
+                  const pres = presentationsByProduct[item.productId];
+                  const allShared = pres.every((p) => p.stockType === 'shared');
+                  if (allShared) return null;
+                  return (
                   <div className="p-2 bg-gray-50 rounded-lg border border-border">
                     <label className="block text-xs text-gray-500 mb-1">Presentación</label>
                     <div className="space-y-1">
@@ -281,27 +285,28 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       >
                         Producto base (1 unidad)
                       </button>
-                      {presentationsByProduct[item.productId].map((pres) => (
+                      {pres.map((p) => (
                         <button
-                          key={pres.id}
+                          key={p.id}
                           type="button"
                           onClick={() => updateItemFields(idx, {
-                            presentationId: pres.id,
-                            unitMultiplier: pres.unitMultiplier,
+                            presentationId: p.id,
+                            unitMultiplier: p.unitMultiplier,
                           })}
                           className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
-                            item.presentationId === pres.id
+                            item.presentationId === p.id
                               ? 'bg-white text-gray-900 shadow-sm border border-primary/30'
                               : 'text-gray-500 hover:text-gray-700'
                           }`}
                         >
-                          {pres.name} {pres.unitMultiplier > 1 ? `(${pres.unitMultiplier} unid.)` : ''}
-                          {pres.priceUsd > 0 && ` · $${pres.priceUsd.toFixed(2)}`}
+                          {p.name} {p.unitMultiplier > 1 ? `(${p.unitMultiplier} unid.)` : ''}
+                          {p.priceUsd > 0 && ` · $${p.priceUsd.toFixed(2)}`}
                         </button>
                       ))}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 <div className="flex gap-2">
                   <div className="flex-1">
@@ -310,7 +315,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       decimals={weighted ? 2 : 0}
                       step={weighted ? '0.01' : '1'}
                       placeholder={`Cant (${unit || 'Und'})`}
-                      value={item.quantity || ''}
+                      value={item.quantity > 1 ? String(item.quantity) : ''}
                       onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
                       validation={{ required: true, min: 0, max: 99999 }}
                       inputClassName="text-sm"

@@ -982,7 +982,7 @@ export const reportsService = {
       if (totalCostUsd > 0) {
         items.push({
           type: 'costo_ventas',
-          label: 'Costo de Ventas',
+          label: 'Costo de Compras',
           amountBs: preciseRound(totalCostBs, 2),
           amountUsd: preciseRound(totalCostUsd, 2),
         });
