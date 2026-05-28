@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useCallback, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -35,8 +35,6 @@ export function Modal({
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
-  const prevOpenRef = useRef(isOpen);
-  const [closing, setClosing] = useState(false);
   onCloseRef.current = onClose;
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -68,18 +66,6 @@ export function Modal({
   }, [closeOnEsc]);
 
   useEffect(() => {
-    if (prevOpenRef.current && !isOpen) {
-      setClosing(true);
-      const timer = setTimeout(() => setClosing(false), 200);
-      return () => clearTimeout(timer);
-    }
-    if (isOpen) {
-      setClosing(false);
-    }
-    prevOpenRef.current = isOpen;
-  }, [isOpen]);
-
-  useEffect(() => {
     if (!isOpen) return;
 
     previousFocusRef.current = document.activeElement as HTMLElement;
@@ -103,7 +89,7 @@ export function Modal({
     };
   }, [isOpen, handleKeyDown, initialFocusRef]);
 
-  if (!isOpen && !closing) return null;
+  if (!isOpen) return null;
 
   const sizeClasses = {
     sm: 'modal-content-sm',
@@ -114,7 +100,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className={cn('modal-overlay', closing && 'animate-fade-out', overlayClassName)}
+      className={cn('modal-overlay', overlayClassName)}
       onClick={closeOnOverlay ? onClose : undefined}
       role="dialog"
       aria-modal="true"
@@ -122,7 +108,7 @@ export function Modal({
     >
       <div 
         ref={modalRef}
-        className={cn('modal-content', sizeClasses[size], closing && 'animate-slide-out-down', className)} 
+         className={cn('modal-content', sizeClasses[size], className)}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
