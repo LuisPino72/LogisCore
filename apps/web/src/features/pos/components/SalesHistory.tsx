@@ -96,7 +96,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         return (
           <div className="text-right">
             <p className="text-sm font-bold">{formatBs(sale.totalBs)}</p>
-            <p className="text-[10px] text-gray-400">{formatUsd(totalUsd)}</p>
+            <p className="text-[10px] text-gray-800">{formatUsd(totalUsd)}</p>
           </div>
         );
       },

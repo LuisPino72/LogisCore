@@ -26,7 +26,6 @@ export function CashRegisterModal({
   mode,
   currentSalesCount,
   currentSalesBs,
-  currentIgtfBs,
   openingBalanceBs,
   exchangeRate,
   onOpenCash,
@@ -93,17 +92,13 @@ export function CashRegisterModal({
                 <span className="text-gray-500">Total vendido</span>
                 <span className="font-medium">{formatBs(currentSalesBs)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">IGTF recaudado</span>
-                <span className="font-medium">{formatBs(currentIgtfBs)}</span>
-              </div>
               <div className="flex justify-between border-t border-border pt-1 mt-1">
                 <span className="text-gray-700 font-medium">Cierre esperado</span>
                 <span className="font-bold">{formatBs(expectedClosing)}</span>
               </div>
             </div>
             <Input
-              label="Monto final declarado (Bs)"
+              label="Monto final declarado (Bolívares)"
               sanitize="currency"
               value={declaredClosing}
               onChange={(e) => setDeclaredClosing(e.target.value)}

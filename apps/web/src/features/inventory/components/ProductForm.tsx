@@ -259,7 +259,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         </div>
         <div className="min-w-0">
           <span className="block text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors">Producto pesable</span>
-          <span className="block text-xs text-gray-500 mt-0.5">Se vende por peso o volumen. Kg o litros.</span>
+          <span className="block text-xs text-gray-500 mt-0.5">Se vende por peso (Kg) o Litros (Lt)</span>
         </div>
       </button>
 
@@ -433,7 +433,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               </div>
 
               <div className="input-wrapper">
-                <label className="input-label">Costo total del lote inicial ($)</label>
+                <label className="input-label">Costo total del lote($)</label>
                 <Input
                   sanitize="currency"
                   step="0.01"
@@ -447,7 +447,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
               <div className="input-wrapper">
                 <label className="input-label">
-                  Stock inicial
+                  Stock inicial (Cantidad)
                   {formData.productType === 'pesable_kg' && ' (Kg)'}
                   {formData.productType === 'pesable_lt' && ' (Lt)'}
                 </label>
@@ -485,7 +485,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <Settings size={14} className="text-gray-400 shrink-0" />
               <div className="flex-1 space-y-1">
                 <Checkbox
-                  label="Producto gravado con IVA"
+                  label="Producto con IVA"
                   checked={formData.isTaxable}
                   onChange={(e) => setField('isTaxable', e.target.checked)}
                 />
@@ -619,7 +619,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <Settings size={14} className="text-gray-400 shrink-0" />
               <div className="flex-1 space-y-1">
                 <Checkbox
-                  label="Producto gravado con IVA"
+                  label="Producto con IVA"
                   checked={formData.isTaxable}
                   onChange={(e) => setField('isTaxable', e.target.checked)}
                 />
@@ -740,7 +740,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         <Settings size={14} className="text-gray-400 shrink-0" />
         <div className="flex-1 space-y-1">
           <Checkbox
-            label="Producto gravado con IVA"
+            label="Producto con IVA"
             checked={formData.isTaxable}
             onChange={(e) => setField('isTaxable', e.target.checked)}
           />

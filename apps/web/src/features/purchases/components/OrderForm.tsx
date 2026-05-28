@@ -143,7 +143,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
     }
     const validItems = items.filter((i) => i.productId && i.quantity > 0 && i.totalCostUsd > 0);
     if (validItems.length === 0) {
-      setError('Agrega al menos un item válido');
+      setError('Agrega al menos un producto válido');
       return;
     }
 
@@ -220,7 +220,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
         />
 
         {/* Section: Items */}
-        <SectionDivider icon={<Package size={14} className="text-primary" />} title={`Items (${items.length})`} />
+        <SectionDivider icon={<Package size={14} className="text-primary" />} title={`Productos (${items.length})`} />
 
         <div className="space-y-2">
           {items.map((item, idx) => {
@@ -240,8 +240,8 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                         value: p.id,
                         label: `${p.name} (${p.sku})`,
                       }))}
-                      placeholder="Producto..."
-                      searchPlaceholder="Buscar producto..."
+                      placeholder="Producto"
+                      searchPlaceholder="Buscar producto"
                     />
                   </div>
                   {items.length > 1 && (
@@ -283,7 +283,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                             : 'text-gray-500 hover:text-gray-700'
                         }`}
                       >
-                        Producto base (1 unidad)
+                        Producto(1 unidad)
                       </button>
                       {pres.map((p) => (
                         <button
@@ -314,7 +314,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       sanitize="number"
                       decimals={weighted ? 2 : 0}
                       step={weighted ? '0.01' : '1'}
-                      placeholder={`Cant (${unit || 'Und'})`}
+                      placeholder={`Cantidad (${unit})`}
                       value={item.quantity > 1 ? String(item.quantity) : ''}
                       onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
                       validation={{ required: true, min: 0, max: 99999 }}
@@ -325,7 +325,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                     <Input
                       sanitize="currency"
                       step="0.01"
-                      placeholder="Costo del item ($)"
+                      placeholder="Costo($)"
                       value={item.totalCostUsd || ''}
                       onChange={(e) => updateItem(idx, 'totalCostUsd', parseFloat(e.target.value) || 0)}
                       validation={{ required: true, min: 0, max: 999999 }}

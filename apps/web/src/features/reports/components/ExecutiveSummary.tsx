@@ -183,7 +183,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
             onClick={onKpiClick ? () => onKpiClick('gastos') : undefined}
           />
         <KpiCard
-          label="Ticket Promedio"
+          label="Promedio de ventas"
           value={formatDual(data.averageTicketBs, data.averageTicketUsd)}
           icon={<DollarSign size={18} />}
           gradient="amber"

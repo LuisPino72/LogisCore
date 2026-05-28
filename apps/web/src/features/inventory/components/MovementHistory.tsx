@@ -163,7 +163,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
         <label className="input-label">Seleccionar producto</label>
         <SearchInput
           maxLength={20}
-          placeholder="Buscar por nombre o SKU..."
+          placeholder="Buscar por nombre o sku"
           value={selectedProductId
             ? (products.find((p) => p.id === selectedProductId)?.name ?? '')
             : productSearch}
@@ -220,7 +220,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
         )}
         {showDropdown && filteredProducts.length === 0 && (
           <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-4 text-sm text-gray-400 text-center">
-            No encontramos productos con ese nombre o código
+            No hay productos
           </div>
         )}
       </div>

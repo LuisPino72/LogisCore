@@ -131,7 +131,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-gray-900 wrap-break-word">{order.supplierName || 'Sin proveedor'}</p>
-                <p className="text-xs text-text-secondary">{receivedItems} de {totalItems} items completados</p>
+                <p className="text-xs text-text-secondary">{receivedItems} de {totalItems} productos recibidos</p>
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-bold text-primary">{formatUsd(order.totalUsd)}</p>
