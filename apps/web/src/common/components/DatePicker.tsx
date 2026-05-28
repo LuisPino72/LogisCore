@@ -43,6 +43,13 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
     }
   };
 
+  const handleClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+    }
+  };
+
   return (
     <div className={cn('input-wrapper', className)}>
       {label && (
@@ -54,12 +61,13 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(({
         <input
           ref={ref}
           type="date"
-          className={cn('input pr-16', displayError && 'input-error', formatHint && !value && 'text-transparent')}
+          className={cn('input pr-16 cursor-pointer', displayError && 'input-error', formatHint && !value && 'text-transparent')}
           style={formatHint && !value ? { colorScheme: 'normal' } : undefined}
           min={minDate}
           max={maxDate}
           value={value}
           onBlur={handleBlur}
+          onClick={handleClick}
           {...props}
         />
         {formatHint && !value && (

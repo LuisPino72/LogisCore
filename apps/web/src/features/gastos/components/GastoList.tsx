@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Receipt, Edit2, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
+import { Receipt, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Modal } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
 import type { Gasto } from '../types';
@@ -8,7 +8,6 @@ interface GastoListProps {
   gastos: Gasto[];
   loading: boolean;
   isOwner: boolean;
-  onEdit: (gasto: Gasto) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string, status: 'paid' | 'pending') => void;
 }
@@ -24,7 +23,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggleStatus }: GastoListProps) {
+export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }: GastoListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
   const [confirmPayTarget, setConfirmPayTarget] = useState<{ id: string; category: string; amountUsd: number } | null>(null);
 
@@ -106,24 +105,14 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
                       </button>
                     )}
                     {isOwner && gasto.status !== 'paid' && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onEdit(gasto)}
-                          className="p-1.5 rounded-lg text-text-secondary hover:text-primary hover:bg-primary/5 transition-colors active:scale-90"
-                          title="Editar"
-                        >
-                          <Edit2 size="16" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget({ id: gasto.id, category: gasto.category })}
-                          className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors active:scale-90"
-                          title="Eliminar"
-                        >
-                          <Trash2 size="16" />
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget({ id: gasto.id, category: gasto.category })}
+                        className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors active:scale-90"
+                        title="Eliminar"
+                      >
+                        <Trash2 size="16" />
+                      </button>
                     )}
                   </div>
                 </td>
@@ -140,7 +129,6 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
             key={gasto.id}
             gasto={gasto}
             isOwner={isOwner}
-            onEdit={onEdit}
             onDelete={setDeleteTarget}
             onPay={setConfirmPayTarget}
           />
@@ -200,13 +188,11 @@ export function GastoList({ gastos, loading, isOwner, onEdit, onDelete, onToggle
 function MobileCard({
   gasto,
   isOwner,
-  onEdit,
   onDelete,
   onPay,
 }: {
   gasto: Gasto;
   isOwner: boolean;
-  onEdit: (g: Gasto) => void;
   onDelete: (t: { id: string; category: string }) => void;
   onPay: (t: { id: string; category: string; amountUsd: number }) => void;
 }) {
@@ -270,16 +256,6 @@ function MobileCard({
             <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             <CheckCircle size={15} className="relative z-10" />
             <span className="relative z-10">Pagar</span>
-          </button>
-        )}
-        {isOwner && gasto.status !== 'paid' && (
-          <button
-            type="button"
-            onClick={() => onEdit(gasto)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium text-text-secondary hover:text-primary hover:bg-primary/4 active:scale-[0.98] transition-all duration-150 border-l border-border"
-          >
-            <Edit2 size={14} />
-            <span className="hidden min-[360px]:inline">Editar</span>
           </button>
         )}
         {isOwner && gasto.status !== 'paid' && (

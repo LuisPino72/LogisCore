@@ -1,100 +1,59 @@
 import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Button, Input, Modal, Select, Textarea, Toggle } from '@/common/components';
+import { Button, Input, Modal, Select, Textarea, Toggle, SearchableSelect } from '@/common/components';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { CreateGastoInputSchema } from '../../../specs/gastos';
-import { EXPENSE_CATEGORIES, type ExpenseCategory, type CreateGastoInput, type Gasto } from '../types';
+import { EXPENSE_CATEGORIES, type ExpenseCategory, type CreateGastoInput } from '../types';
 import { formatBs } from '@/lib/formatBs';
 
 interface GastoFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: CreateGastoInput) => Promise<boolean>;
-  editGasto?: Gasto | null;
 }
 
-export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormProps) {
+export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
   const exchangeRateStore = useExchangeRateStore();
   const [category, setCategory] = useState('');
   const [amountUsd, setAmountUsd] = useState('');
-  const [exchangeRate, setExchangeRate] = useState('');
-  const getVzlaDate = () => {
-    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' });
-    return formatter.format(new Date());
-  };
-  const [date, setDate] = useState(getVzlaDate);
   const [description, setDescription] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<'monthly' | 'yearly'>('monthly');
-  const [status, setStatus] = useState<'pending' | 'paid'>('paid');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [confirmClose, setConfirmClose] = useState(false);
 
-  const isEditing = !!editGasto;
-
   const parsedAmount = parseFloat(amountUsd);
-  const parsedRate = parseFloat(exchangeRate);
-  const bsPreview = !isNaN(parsedAmount) && !isNaN(parsedRate) && parsedAmount > 0 && parsedRate > 0
-    ? parsedAmount * parsedRate
+  const currentRate = exchangeRateStore.rate ?? 0;
+  const bsPreview = !isNaN(parsedAmount) && parsedAmount > 0 && currentRate > 0
+    ? parsedAmount * currentRate
     : null;
 
-  const hasUnsavedChanges = category !== '' || amountUsd !== '' || date !== getVzlaDate() || description !== '' || isRecurring;
+  const hasUnsavedChanges = category !== '' || amountUsd !== '' || description !== '' || isRecurring;
 
   const initialValues = useRef<{
-    category: string; amountUsd: string; exchangeRate: string; date: string; description: string;
-    isRecurring: boolean; recurrenceType: 'monthly' | 'yearly'; status: 'pending' | 'paid';
+    category: string; amountUsd: string; description: string;
+    isRecurring: boolean; recurrenceType: 'monthly' | 'yearly';
   }>({
-    category: '', amountUsd: '', exchangeRate: '', date: '', description: '',
-    isRecurring: false, recurrenceType: 'monthly', status: 'paid',
+    category: '', amountUsd: '', description: '',
+    isRecurring: false, recurrenceType: 'monthly',
   });
 
   useEffect(() => {
     if (isOpen) {
-      if (editGasto) {
-        setCategory(editGasto.category);
-        setAmountUsd(String(editGasto.amountUsd));
-        setExchangeRate(String(editGasto.exchangeRate));
-        setDate(editGasto.date);
-        setDescription(editGasto.description ?? '');
-        setIsRecurring(editGasto.isRecurring);
-        setRecurrenceType(editGasto.recurrenceType ?? 'monthly');
-        setStatus(editGasto.status === 'paid' ? 'paid' : 'pending');
-        initialValues.current = {
-          category: editGasto.category,
-          amountUsd: String(editGasto.amountUsd),
-          exchangeRate: String(editGasto.exchangeRate),
-          date: editGasto.date,
-          description: editGasto.description ?? '',
-          isRecurring: editGasto.isRecurring,
-          recurrenceType: editGasto.recurrenceType ?? 'monthly',
-          status: editGasto.status === 'paid' ? 'paid' : 'pending',
-        };
-      } else {
-        setCategory('');
-        setAmountUsd('');
-        setExchangeRate(String(exchangeRateStore.rate ?? ''));
-        setDate(new Date().toISOString().slice(0, 10));
-        setDescription('');
-        setIsRecurring(false);
-        setRecurrenceType('monthly');
-        setStatus('paid');
-        initialValues.current = {
-          category: '', amountUsd: '', exchangeRate: String(exchangeRateStore.rate ?? ''),
-          date: getVzlaDate(), description: '',
-          isRecurring: false, recurrenceType: 'monthly', status: 'paid',
-        };
-      }
+      setCategory('');
+      setAmountUsd('');
+      setDescription('');
+      setIsRecurring(false);
+      setRecurrenceType('monthly');
+      initialValues.current = {
+        category: '', amountUsd: '', description: '',
+        isRecurring: false, recurrenceType: 'monthly',
+      };
       setError('');
       setConfirmClose(false);
     }
-  }, [isOpen, editGasto, exchangeRateStore.rate]);
-
-  useEffect(() => {
-    if (!isEditing && exchangeRateStore.rate && !exchangeRate) {
-      setExchangeRate(String(exchangeRateStore.rate));
-    }
-  }, [exchangeRateStore.rate, isEditing, exchangeRate]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -121,15 +80,17 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
   };
 
   const handleSubmit = async () => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const currentRate = exchangeRateStore.rate ?? 0;
     const payload = {
       category: category as ExpenseCategory,
       amountUsd: parsedAmount,
-      exchangeRate: parsedRate,
-      date,
+      exchangeRate: currentRate,
+      date: today,
       description: description.trim() || undefined,
       isRecurring,
       recurrenceType: isRecurring ? recurrenceType : undefined,
-      status,
+      status: 'pending' as const,
     };
 
     const parsed = CreateGastoInputSchema.safeParse(payload);
@@ -156,28 +117,27 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
       <Modal
         isOpen={isOpen && !confirmClose}
         onClose={handleClose}
-        title={isEditing ? 'Editar gasto' : 'Nuevo gasto'}
+        title="Nuevo gasto"
         footer={
           <div className="flex gap-3 w-full">
             <Button variant="ghost" fullWidth onClick={handleClose}>Cancelar</Button>
             <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear gasto'}
+              {submitting ? 'Guardando...' : 'Crear gasto'}
             </Button>
           </div>
         }
       >
         <div className="space-y-4">
-          <Select
-            label="Categoría"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            validation={{ required: true }}
-          >
-            <option value="">Seleccionar categoría</option>
-            {EXPENSE_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </Select>
+          <div className="input-wrapper">
+            <label className="input-label">Categoría</label>
+            <SearchableSelect
+              value={category}
+              onChange={setCategory}
+              placeholder="Seleccionar categoría"
+              searchPlaceholder="Buscar categoría..."
+              options={EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+            />
+          </div>
 
           <Input
             label="Monto ($)"
@@ -190,38 +150,27 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
             validation={{ required: true, min: 0.01 }}
           />
 
-          <Input
-            label="Tasa de cambio (Bs/$)"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            value={exchangeRate}
-            onChange={(e) => setExchangeRate(e.target.value)}
-            validation={{ required: true, min: 0.01 }}
-          />
-
-          {bsPreview !== null && (
-            <div className="flex items-center justify-between bg-accent/5 border border-accent/10 p-3 rounded-lg shadow-sm">
-              <span className="text-xs font-medium text-text-secondary">Total en Bs:</span>
-              <span className="text-base font-bold text-accent">{formatBs(bsPreview)}</span>
+          {currentRate > 0 && (
+            <div className="bg-accent/5 border border-accent/10 p-3 rounded-lg shadow-sm space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-text-secondary">Tasa del día</span>
+                <span className="text-xs font-semibold text-accent">Bs/{currentRate.toFixed(2)}</span>
+              </div>
+              {bsPreview !== null && (
+                <div className="flex items-center justify-between pt-1 border-t border-accent/10">
+                  <span className="text-xs font-medium text-text-secondary">Total en Bs:</span>
+                  <span className="text-base font-bold text-accent">{formatBs(bsPreview)}</span>
+                </div>
+              )}
             </div>
           )}
 
-          <Input
-            label="Fecha"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            validation={{ required: true }}
-          />
-
           <Textarea
             label="Descripción"
-            placeholder="Opcional"
+            placeholder="Opcional (máx. 35 caracteres)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            validation={{ maxLength: 200 }}
+            validation={{ maxLength: 35 }}
             autoResize
           />
 
@@ -243,15 +192,6 @@ export function GastoForm({ isOpen, onClose, onSubmit, editGasto }: GastoFormPro
               <option value="yearly">Anual</option>
             </Select>
           )}
-
-          <Select
-            label="Estado"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as 'pending' | 'paid')}
-          >
-            <option value="paid">Pagado</option>
-            <option value="pending">Pendiente</option>
-          </Select>
 
           {error && (
             <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">

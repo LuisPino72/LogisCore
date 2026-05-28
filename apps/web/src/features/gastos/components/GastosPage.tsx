@@ -9,7 +9,7 @@ import { useGastosStore } from '../stores/gastosStore';
 import { GastoForm } from './GastoForm';
 import { GastoList } from './GastoList';
 import { GastoFilters } from './GastoFilters';
-import type { CreateGastoInput, Gasto } from '../types';
+import type { CreateGastoInput } from '../types';
 
 interface GastosPageProps {
   tenantId: string | null;
@@ -18,7 +18,7 @@ interface GastosPageProps {
 export function GastosPage({ tenantId }: GastosPageProps) {
   const { gastos, loading, filters, setFilters, createGasto, updateGasto, removeGasto } = useGastos(tenantId);
   const { recurringTemplates } = useRecurringGastos(tenantId);
-  const { showForm, setShowForm, editingGasto, setEditingGasto } = useGastosStore();
+  const { showForm, setShowForm } = useGastosStore();
   const isOnline = useOnlineStatus();
   const role = useAuthStore((s) => s.session?.role);
 
@@ -48,24 +48,8 @@ export function GastosPage({ tenantId }: GastosPageProps) {
 
   const handleSubmit = async (data: CreateGastoInput) => {
     if (!tenantId) return false;
-    if (editingGasto) {
-      const result = await updateGasto(editingGasto.id, {
-        category: data.category,
-        amountUsd: data.amountUsd,
-        exchangeRate: data.exchangeRate,
-        description: data.description,
-        date: data.date,
-        status: data.status,
-      });
-      return result.ok;
-    }
     const result = await createGasto(data);
     return result.ok;
-  };
-
-  const handleEdit = (gasto: Gasto) => {
-    setEditingGasto(gasto);
-    setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -79,7 +63,6 @@ export function GastosPage({ tenantId }: GastosPageProps) {
   };
 
   const handleOpenNew = () => {
-    setEditingGasto(null);
     setShowForm(true);
   };
 
@@ -160,7 +143,6 @@ export function GastosPage({ tenantId }: GastosPageProps) {
             gastos={filteredGastos}
             loading={loading}
             isOwner={isOwner}
-            onEdit={handleEdit}
             onDelete={handleDelete}
             onToggleStatus={handleToggleStatus}
           />
@@ -173,9 +155,8 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     {showForm && (
       <GastoForm
         isOpen={showForm}
-        onClose={() => { setShowForm(false); setEditingGasto(null); }}
+        onClose={() => setShowForm(false)}
         onSubmit={handleSubmit}
-        editGasto={editingGasto}
       />
     )}
 

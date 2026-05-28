@@ -156,12 +156,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
               (iconLeft && !iconOutside) && 'pl-10',
               (iconRight || (showPassword && isPassword)) && 'pr-10',
               displayError && 'input-error',
+              (effectiveType === 'date' || effectiveType === 'month') && 'cursor-pointer',
               inputClassName
             )}
             maxLength={validation?.maxLength}
             value={displayValue}
             onChange={handleChange}
             onBlur={handleBlur}
+            onClick={(e) => {
+              const input = e.currentTarget;
+              if ((effectiveType === 'date' || effectiveType === 'month') && typeof input.showPicker === 'function') {
+                input.showPicker();
+              }
+              props.onClick?.(e);
+            }}
           />
           {passwordIcon}
         </div>

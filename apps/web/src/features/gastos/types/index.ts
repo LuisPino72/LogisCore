@@ -1,10 +1,16 @@
 export const EXPENSE_CATEGORIES = [
   'LUZ', 'AGUA', 'GAS', 'INTERNET',
   'ALQUILER', 'NOMINA',
+  'IMPUESTOS', 'OTROS'
+] as const;
+
+export const ALL_EXPENSE_CATEGORIES = [
+  'LUZ', 'AGUA', 'GAS', 'INTERNET',
+  'ALQUILER', 'NOMINA',
   'IMPUESTOS', 'COMPRA_INVENTARIO', 'OTROS'
 ] as const;
 
-export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+export type ExpenseCategory = typeof ALL_EXPENSE_CATEGORIES[number];
 
 export interface Gasto {
   id: string;

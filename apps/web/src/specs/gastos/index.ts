@@ -45,7 +45,7 @@ export const CreateGastoInputSchema = z.object({
   date: z.string().min(1, 'Selecciona una fecha'),
   isRecurring: z.boolean(),
   recurrenceType: RecurrenceTypeSchema.optional(),
-  status: ExpenseStatusSchema,
+  status: ExpenseStatusSchema.optional(),
 });
 
 export type CreateGastoInput = z.infer<typeof CreateGastoInputSchema>;
