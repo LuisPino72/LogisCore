@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 import { validateValue, sanitizeValue, type ValidationRule } from '../../lib/validation';
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
-  label?: string;
+  label?: ReactNode;
   error?: string;
   hint?: string;
   iconLeft?: ReactNode;

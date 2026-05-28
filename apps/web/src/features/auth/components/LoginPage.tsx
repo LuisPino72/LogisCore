@@ -108,26 +108,24 @@ export function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <Input
-            label="Email"
+            label={<span className="flex items-center gap-2"><Mail size={14} className="text-text-muted" /> Email</span>}
             type="email"
             placeholder="correo@negocio.com"
             value={email}
             onChange={(e) => { setEmail(e.target.value); clearLoginError(); }}
             error={fieldErrors.email}
-            iconLeft={<Mail size={18} className="text-gray-400" />}
             autoComplete="email"
             autoFocus
             inputClassName="input-glow"
           />
 
           <Input
-            label="Contraseña"
+            label={<span className="flex items-center gap-2"><Lock size={14} className="text-text-muted" /> Contraseña</span>}
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••"
             value={password}
             onChange={(e) => { setPassword(e.target.value); clearLoginError(); }}
             error={fieldErrors.password}
-            iconLeft={<Lock size={18} className="text-gray-400" />}
             iconRight={
               <button
                 type="button"

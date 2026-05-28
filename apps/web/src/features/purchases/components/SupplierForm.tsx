@@ -78,40 +78,26 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           </div>
         </div>
 
-        <div className="input-wrapper">
-          <label className="input-label">Nombre del proveedor</label>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              <Building2 size={16} />
-            </div>
-            <Input
-              placeholder="Ej: Distribuidora XYZ"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              error={error && !name.trim() ? error : undefined}
-              validation={{ required: true, maxLength: 25 }}
-              inputClassName="text-sm pl-10"
-            />
-          </div>
-        </div>
+        <Input
+          label={<span className="flex items-center gap-2"><Building2 size={14} className="text-text-muted" /> Nombre del proveedor</span>}
+          placeholder="Ej: Distribuidora XYZ"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          error={error && !name.trim() ? error : undefined}
+          validation={{ required: true, maxLength: 25 }}
+          inputClassName="text-sm"
+        />
 
-        <div className="input-wrapper">
-          <label className="input-label">Teléfono <span className="text-text-muted font-normal">(opcional)</span></label>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              <Phone size={16} />
-            </div>
-            <Input
-              placeholder="Ej: 0412-1234567"
-      value={phone}
-      sanitize="phone"
-      onChange={(e) => setPhone(sanitizeValue(e.target.value, 'phone'))}
-      validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
-      hint="Formato: 04121234567"
-              inputClassName="text-sm pl-10"
-            />
-          </div>
-        </div>
+        <Input
+          label={<span className="flex items-center gap-2"><Phone size={14} className="text-text-muted" /> Teléfono <span className="text-text-muted font-normal">(opcional)</span></span>}
+          placeholder="Ej: 0412-1234567"
+          value={phone}
+          sanitize="phone"
+          onChange={(e) => setPhone(sanitizeValue(e.target.value, 'phone'))}
+          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
+          hint="Formato: 04121234567"
+          inputClassName="text-sm"
+        />
 
         {error && name.trim() && (
           <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
