@@ -41,7 +41,7 @@ export const CreateGastoInputSchema = z.object({
   category: ExpenseCategorySchema,
   amountUsd: z.number().positive('El monto debe ser mayor a 0'),
   exchangeRate: z.number().positive('La tasa debe ser mayor a 0'),
-  description: z.string().max(200).optional(),
+  description: z.string().max(35).optional(),
   date: z.string().min(1, 'Selecciona una fecha'),
   isRecurring: z.boolean(),
   recurrenceType: RecurrenceTypeSchema.optional(),
@@ -55,7 +55,7 @@ export const UpdateGastoInputSchema = z.object({
   amountUsd: z.number().positive('El monto debe ser mayor a 0').optional(),
   exchangeRate: z.number().positive('La tasa debe ser mayor a 0').optional(),
   amountBs: z.number().nonnegative().optional(),
-  description: z.string().max(200).optional(),
+  description: z.string().max(35).optional(),
   date: z.string().min(1, 'Selecciona una fecha').optional(),
   status: ExpenseStatusSchema.optional(),
 });
