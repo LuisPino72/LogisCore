@@ -23,7 +23,7 @@ export const GastoSchema = z.object({
   amountUsd: z.number().positive('El monto debe ser mayor a 0'),
   exchangeRate: z.number().positive('La tasa debe ser mayor a 0'),
   amountBs: z.number().nonnegative(),
-  description: z.string().max(200).optional(),
+  description: z.string().max(35).optional(),
   date: z.string().min(1, 'Selecciona una fecha'),
   isRecurring: z.boolean(),
   recurrenceType: RecurrenceTypeSchema.optional(),
