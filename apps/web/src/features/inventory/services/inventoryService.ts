@@ -110,10 +110,42 @@ function toPresentation(raw: Record<string, unknown>): Presentation {
 async function getAllPresentations(tenantId: string): Promise<Result<Presentation[], AppError>> {
     const db = getDb();
     try {
-      const rows = await db.productPresentations
+      let rows = await db.productPresentations
         .where({ tenantId })
         .filter((p) => !p.deletedAt)
         .toArray();
+
+      if (rows.length === 0 && !isDbClosing()) {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data, error } = await supabase
+          .from('product_presentations')
+          .select('*')
+          .eq('tenant_id', tenantUuid)
+          .is('deleted_at', null);
+
+        if (!error && data && data.length > 0 && !isDbClosing()) {
+          for (const pres of data) {
+            await db.productPresentations.put({
+              id: pres.id,
+              tenantId,
+              productId: pres.product_id,
+              name: pres.name,
+              priceUsd: pres.price_usd,
+              unitMultiplier: pres.unit_multiplier,
+              stockType: pres.stock_type || 'shared',
+              barcode: pres.barcode,
+              sortOrder: pres.sort_order,
+              createdAt: pres.created_at,
+              updatedAt: pres.updated_at ?? pres.created_at,
+            });
+          }
+          rows = await db.productPresentations
+            .where({ tenantId })
+            .filter((p) => !p.deletedAt)
+            .toArray();
+        }
+      }
+
       return success(rows.map((r) => toPresentation(r as unknown as Record<string, unknown>)));
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en getAllPresentations:', err);

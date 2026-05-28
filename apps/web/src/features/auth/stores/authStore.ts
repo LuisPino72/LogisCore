@@ -72,12 +72,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const result = await authService.login(email, password);
 
     if (result.ok) {
-      try {
-        await authService.startSync();
-      } catch (err) {
-        console.error('Initial sync failed', err);
-      }
-
       set({
         status: 'authenticated',
         session: result.data,
@@ -86,6 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         loginAttempts: 0,
         loginCooldownUntil: 0,
       });
+      authService.startSync();
     } else {
       const attempts = get().loginAttempts + 1;
       const delay = Math.min(attempts * 2000, 30000);

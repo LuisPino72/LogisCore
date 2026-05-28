@@ -96,6 +96,9 @@ export function usePos(tenantId: string | null) {
         if (table === 'products' && tenantId) {
           fetchProducts(tenantId, true);
         }
+        if (table === 'product_presentations' && tenantId) {
+          fetchPresentations(tenantId);
+        }
         if (table === 'cash_registers' && tenantId) {
           fetchCashRegister(tenantId, true);
         }

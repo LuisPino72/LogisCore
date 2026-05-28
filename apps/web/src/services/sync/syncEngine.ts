@@ -295,12 +295,10 @@ export class SyncEngine {
     await db.table(tableName).put(local);
   }
 
-  async start(): Promise<void> {
+  start(): void {
     if (this.running) return;
     this.running = true;
-    await this.pull().catch((err) => {
-      logger.error('Sync', 'Initial pull failed during start', err);
-    });
+    this.pull().catch(() => {});
 
     // Reaccionar a cambios de red para re-sincronizar al recuperar WiFi
     this.unsubscribeNetwork = networkAware.onChange((state) => {
