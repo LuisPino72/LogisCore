@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { getDb } from '../../../services/dexie/db';
 import { useNotificationStore } from '../../../stores/notificationStore';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 
-const HIGH_SALE_THRESHOLD_BS = 5000;
+const HIGH_SALE_THRESHOLD_USD = 100;
 
 async function checkLowStock(tenantId: string): Promise<void> {
   try {
@@ -51,7 +52,7 @@ async function checkOpenRegister(tenantId: string): Promise<void> {
   try {
     const now = new Date();
     const hour = now.getHours();
-    if (hour < 21) return;
+    if (hour !== 23) return;
 
     const db = getDb();
     const openReg = await db.cashRegisters
@@ -109,12 +110,14 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
       EventBus.on(SystemEvents.SALE_COMPLETED, (payload: unknown) => {
         const data = payload as { saleId?: string; totalBs?: number };
         if (!data.saleId || !data.totalBs) return;
-        if (data.totalBs < HIGH_SALE_THRESHOLD_BS) return;
+        const rate = useExchangeRateStore.getState().rate ?? 1;
+        const totalUsd = data.totalBs / rate;
+        if (totalUsd < HIGH_SALE_THRESHOLD_USD) return;
 
         store.addNotification({
           type: 'venta_alta',
           title: 'Venta alta',
-          message: `Venta #${data.saleId.slice(0, 8)} — ${data.totalBs.toFixed(2)} Bs`,
+          message: `Venta #${data.saleId.slice(0, 8)} — $${totalUsd.toFixed(2)} USD`,
         });
       }),
     );

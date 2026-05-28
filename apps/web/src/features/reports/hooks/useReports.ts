@@ -13,6 +13,8 @@ import type {
   ReportTab,
 } from '../types';
 
+const REFETCH_DEBOUNCE_MS = 200;
+
 interface ReportsState {
   loading: boolean;
   error: string | null;
@@ -37,6 +39,7 @@ export function useReports(tenantId: string | null) {
   const prevKey = useRef('');
   const dataCache = useRef<Map<string, Partial<ReportsState>>>(new Map());
   const cacheOrder = useRef<string[]>([]);
+  const debounceRefetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pruneCache = () => {
     while (cacheOrder.current.length > MAX_CACHE_SIZE) {
@@ -188,11 +191,20 @@ export function useReports(tenantId: string | null) {
   }, [tenantId, filters, activeTab, loadTab]);
 
   const refetch = useCallback(() => {
-    prevKey.current = '';
-    dataCache.current.clear();
-    cacheOrder.current = [];
-    loadTab(activeTab);
+    if (debounceRefetchTimer.current) clearTimeout(debounceRefetchTimer.current);
+    debounceRefetchTimer.current = setTimeout(() => {
+      prevKey.current = '';
+      dataCache.current.clear();
+      cacheOrder.current = [];
+      loadTab(activeTab);
+    }, REFETCH_DEBOUNCE_MS);
   }, [loadTab, activeTab]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRefetchTimer.current) clearTimeout(debounceRefetchTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!tenantId) return;

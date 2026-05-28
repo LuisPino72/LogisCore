@@ -31,9 +31,6 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'expenses', timeCol: 'updated_at' },
 ];
 
-// Tablas de catálogo que se omiten en pull cuando estamos en datos móviles
-const CATALOG_TABLES = new Set(['products', 'categories', 'suppliers', 'purchase_orders', 'purchase_order_items', 'product_presentations']);
-
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();
   private isSyncing = false;
@@ -183,19 +180,12 @@ export class SyncEngine {
     return this.push(batchSize);
   }
 
-  async pull(tables?: string[]): Promise<Result<SyncBatchResult, AppError>> {
+  async pull(): Promise<Result<SyncBatchResult, AppError>> {
     if (!networkAware.isOnline()) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
     const db = getDb();
-
-    if (isDbClosing()) return success(result);
-
-    // En datos móviles, solo sincronizamos tablas transaccionales (no catálogo)
-    // así protegemos los megas del plan del bodeguero
-    let tablesToSync = tables ?? PULL_TABLES.map((t) => t.name);
-    if (networkAware.isMobileData()) {
-      tablesToSync = tablesToSync.filter((t) => !CATALOG_TABLES.has(t));
-    }
+    const tablesToSync = PULL_TABLES.map((t) => t.name);
+    let hasChanges = false;
 
     for (const tableName of tablesToSync) {
       if (isDbClosing()) break;
@@ -254,6 +244,7 @@ export class SyncEngine {
                 if (isDbClosing()) break;
                 await this.upsertLocalRecord(tableName, record);
                 result.pushed++;
+                hasChanges = true;
               }
             }
           } else {
@@ -268,6 +259,7 @@ export class SyncEngine {
               if (isDbClosing()) break;
               await this.upsertLocalRecord(tableName, record);
               result.pushed++;
+              hasChanges = true;
             }
           }
         }
@@ -277,13 +269,16 @@ export class SyncEngine {
         await db.syncMeta.put({ table: tableName, lastPullAt: Date.now() });
         const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
         emitEngineEvent(eventName, { table: tableName });
-        emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
       } catch (err) {
         if (err instanceof AppError) {
           result.errors.push(err);
           result.failed++;
         }
       }
+    }
+
+    if (hasChanges) {
+      emitEngineEvent('SYNC.REFRESH_TABLE', { table: '*' });
     }
 
     return success(result);

@@ -16,6 +16,7 @@ import type {
   CashRegisterSummaryData,
   AdjustmentLossExpenses,
   SaleDetail,
+  DiscountBreakdownItem,
   ExpenseBreakdownItem,
   TicketDistributionItem,
 } from '../types';
@@ -1135,6 +1136,31 @@ export const reportsService = {
     } catch (err) {
       console.error('[reportsService.getTicketDistribution]', err);
       return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener distribución de tickets.'));
+    }
+  },
+
+  async getDiscountBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<DiscountBreakdownItem[], AppError>> {
+    try {
+      const { start, end } = getDateRange(filters);
+      const data = await fetchSalesWithItems(tenantId, start, end);
+
+      const discounted = data
+        .filter((d) => d.sale.discountBs && d.sale.discountBs > 0)
+        .map((d) => ({
+          saleId: d.sale.id,
+          date: d.sale.createdAt.slice(0, 10),
+          discountBs: preciseRound(d.sale.discountBs || 0, 2),
+          discountUsd: d.sale.exchangeRate > 0 ? preciseRound((d.sale.discountBs || 0) / d.sale.exchangeRate, 2) : 0,
+          subtotalBs: preciseRound(d.sale.totalBs + (d.sale.discountBs || 0), 2),
+          totalBs: d.sale.totalBs,
+          paymentMethod: d.sale.paymentMethod,
+        }))
+        .sort((a, b) => b.discountBs - a.discountBs);
+
+      return success(discounted);
+    } catch (err) {
+      console.error('[reportsService.getDiscountBreakdown]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener desglose de descuentos.'));
     }
   },
 };

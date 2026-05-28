@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy, useRef, useCallback } from 'react';
+import { useState, Suspense, lazy, useRef, useCallback, type ReactNode } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip, DrillDownModal } from '@/common/components';
 import type { Column } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer } from 'lucide-react';
@@ -92,7 +92,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
   const drillDownConfigs: Record<DrillDownType, {
     title: string;
     columns: Column<Record<string, unknown>>[];
-    footerSummary?: (data: Record<string, unknown>[]) => { label: string; value: string }[];
+    footerSummary?: (data: Record<string, unknown>[]) => { label: string; value: ReactNode }[];
   }> = {
     ventas: {
       title: 'Ventas Totales',
@@ -187,6 +187,26 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         ];
       },
     },
+    descuentos: {
+      title: 'Descuentos Aplicados',
+      columns: [
+        { key: 'date', header: 'Fecha', render: (item) => new Date(item.date as string).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit' }) },
+        { key: 'saleId', header: 'Venta', render: (item) => `#${(item.saleId as string).slice(0, 8)}` },
+        { key: 'subtotalBs', header: 'Subtotal', render: (item) => formatBs(item.subtotalBs as number), hideOnMobile: true },
+        { key: 'discountBs', header: 'Descuento', render: (item) => <span className="text-danger font-bold">-{formatBs(item.discountBs as number)}</span> },
+        { key: 'totalBs', header: 'Total', render: (item) => formatBs(item.totalBs as number) },
+      ],
+      footerSummary: (data) => {
+        const totalDiscountBs = data.reduce((s, d) => s + (d.discountBs as number), 0);
+        const totalDiscountUsd = data.reduce((s, d) => s + (d.discountUsd as number), 0);
+        const totalSubtotal = data.reduce((s, d) => s + (d.subtotalBs as number), 0);
+        return [
+          { label: 'Subtotal', value: formatBs(totalSubtotal) },
+          { label: 'Descuento total', value: <span className="text-danger font-bold">-{formatBs(totalDiscountBs)}</span> },
+          { label: 'Descuento USD', value: <span className="text-danger">-{formatUsd(totalDiscountUsd)}</span> },
+        ];
+      },
+    },
   };
 
   const handleKpiClick = useCallback(async (type: DrillDownType) => {
@@ -204,6 +224,8 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         result = await reportsService.getExpenseBreakdown(tenantId, filters);
       } else if (type === 'ticket') {
         result = await reportsService.getTicketDistribution(tenantId, filters);
+      } else if (type === 'descuentos') {
+        result = await reportsService.getDiscountBreakdown(tenantId, filters);
       }
 
       if (result?.ok) {

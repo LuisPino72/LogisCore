@@ -199,11 +199,17 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           }
           icon={<DollarSign size={18} />}
           gradient="red"
+          onClick={onKpiClick ? () => onKpiClick('descuentos') : undefined}
         />
       </div>
 
       {data.topProductName && (
-        <Card className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20">
+        <Card
+          className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20 transition-shadow hover:shadow-md active:scale-[0.98]"
+          interactive={!!onKpiClick}
+          onClick={onKpiClick ? () => onKpiClick('topProducto') : undefined}
+          role={onKpiClick ? 'button' : undefined}
+        >
           <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
             <ShoppingCart size={14} className="sm:w-4.5 sm:h-4.5 text-primary" />
           </div>
@@ -214,6 +220,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           <Badge variant="info" className="shrink-0">
             #1
           </Badge>
+          {onKpiClick && <ChevronRight size={14} className="text-text-secondary/40 shrink-0" />}
         </Card>
       )}
     </div>

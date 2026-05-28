@@ -11,7 +11,7 @@ interface DrillDownModalProps {
   columns: Column<Record<string, unknown>>[];
   data: Record<string, unknown>[];
   loading?: boolean;
-  footerSummary?: { label: string; value: string }[];
+  footerSummary?: { label: string; value: ReactNode }[];
   children?: ReactNode;
 }
 

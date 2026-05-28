@@ -114,7 +114,7 @@ export interface CashRegisterSummaryData {
 
 export type ReportTab = 'summary' | 'profits' | 'products' | 'cash';
 
-export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto';
+export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos';
 
 export interface SaleDetail {
   id: string;
@@ -123,6 +123,16 @@ export interface SaleDetail {
   itemCount: number;
   totalBs: number;
   totalUsd: number;
+  paymentMethod: string;
+}
+
+export interface DiscountBreakdownItem {
+  saleId: string;
+  date: string;
+  discountBs: number;
+  discountUsd: number;
+  subtotalBs: number;
+  totalBs: number;
   paymentMethod: string;
 }
 

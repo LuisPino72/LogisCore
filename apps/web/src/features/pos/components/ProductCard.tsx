@@ -106,7 +106,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
           )}
         </div>
 
-        <div className="flex items-center gap-1 mt-auto pt-1">
+        <div className="flex flex-wrap items-center gap-1 mt-auto pt-1">
           {!product.isTaxable && (
             <Badge variant="neutral" className="text-[10px] px-1 py-0.5">Exento</Badge>
           )}
