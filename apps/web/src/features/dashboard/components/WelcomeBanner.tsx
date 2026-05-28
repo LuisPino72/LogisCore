@@ -16,8 +16,7 @@ function getGreeting(): { text: string; icon: FC<{ size?: number; className?: st
   return { text: 'Buenas noches', icon: Moon };
 }
 
-export const WelcomeBanner: FC<WelcomeBannerProps> = ({ userName, tenantName, subscription }) => {
-  const name = userName.split('@')[0] ?? userName;
+export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription }) => {
   const today = new Date().toLocaleDateString('es-ES', {
     weekday: 'long',
     day: 'numeric',
@@ -66,18 +65,14 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ userName, tenantName, su
               {daysRemaining !== null && expiryUrgency === 'ok' && daysRemaining > 7 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100/70 border border-teal-200/50 text-[10px] font-medium text-teal-700">
                   <CheckCircle size={10} />
-                  {daysRemaining} días
+                  Quedan {daysRemaining} días
                 </span>
               )}
             </div>
-            <p className="text-xs text-accent-dark/60 mt-0.5">{greeting.text}</p>
+            <p className="text-xs text-accent-dark mt-0.5">{greeting.text}</p>
           </div>
         </div>
-
-        <h1 className="text-xl sm:text-2xl font-title font-bold text-gray-900 mt-3 truncate">
-          ¡Hola, {name}!
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5 capitalize">{today}</p>
+        <p className="text-sm text-gray-800 mt-0.5 capitalize">{today}</p>
       </div>
 
       {daysRemaining !== null && expiryUrgency !== 'ok' && (

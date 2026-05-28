@@ -113,7 +113,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
         </Button>
       </div>
 
-      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-14 z-10 shadow-sm">
+      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
         <button
           type="button"
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200 active:scale-95 ${

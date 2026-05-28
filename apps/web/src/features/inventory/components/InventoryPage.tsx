@@ -274,7 +274,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       </div>
 
       {/* Desktop tabs */}
-      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-14 z-10 shadow-sm">
+      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
         <Tooltip content="Gestiona productos y stock" position="bottom">
           <button
             type="button"

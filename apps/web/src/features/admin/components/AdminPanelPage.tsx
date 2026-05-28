@@ -133,7 +133,7 @@ export function AdminPanelPage() {
         </div>
       }
     >
-      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-14 z-10 max-w-6xl mx-auto">
+      <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-0 z-10 max-w-6xl mx-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}

@@ -136,8 +136,7 @@ export const dashboardService = {
         .select('product_id, product_name, quantity')
         .eq('tenant_id', tenantUuid)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(10000);
 
       if (error) {
         return failure(new AppError('DASHBOARD_TOP_PRODUCTS_FAILED', 'Error al cargar productos más vendidos'));
