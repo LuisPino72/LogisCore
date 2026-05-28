@@ -18,11 +18,11 @@ export function useAuth(): {
 
     authService
       .bootstrapSession()
-      .then((result) => {
+      .then(async (result) => {
         if (result.ok) {
           if (result.data) {
+            await authService.startSync();
             setSession(result.data);
-            authService.startSync();
           } else {
             clearSession();
           }
