@@ -51,9 +51,14 @@ export function useInventory(tenantId: string | null) {
       doFetch(undefined, true);
     });
 
+    const sub3 = EventBus.on('PURCHASE.RECEIVED', () => {
+      doFetch(undefined, true);
+    });
+
     return () => {
       EventBus.off(sub1);
       EventBus.off(sub2);
+      EventBus.off(sub3);
     };
   }, [tenantId, doFetch]);
 

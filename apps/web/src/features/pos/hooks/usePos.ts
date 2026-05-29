@@ -66,6 +66,7 @@ export function usePos(tenantId: string | null) {
     subs.push(
       EventBus.on('SALE.COMPLETED', () => {
         if (tenantId) {
+          fetchProducts(tenantId);
           fetchCashRegister(tenantId);
           fetchExchangeRate(tenantId);
         }
@@ -92,6 +93,12 @@ export function usePos(tenantId: string | null) {
 
     subs.push(
       EventBus.on('INVENTORY.ADJUSTMENT', () => {
+        if (tenantId) fetchProducts(tenantId);
+      }),
+    );
+
+    subs.push(
+      EventBus.on('PURCHASE.RECEIVED', () => {
         if (tenantId) fetchProducts(tenantId);
       }),
     );
