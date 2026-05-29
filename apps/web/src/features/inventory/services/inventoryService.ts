@@ -187,7 +187,9 @@ export const inventoryService = {
       isSellable: input.isSellable !== undefined ? input.isSellable : true,
       unit: input.unit,
       stock: stockInicial,
-      stockMin: input.stockMin,
+      stockMin: input.stockMin != null
+        ? convertToStorage(input.stockMin, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
+        : undefined,
       costPrice: costPerDisplayUnit,
     };
 
@@ -321,7 +323,9 @@ export const inventoryService = {
         isSellable: input.isSellable !== undefined ? input.isSellable : true,
         unit: input.unit,
         stock: parentStock,
-        stockMin: input.stockMin,
+        stockMin: input.stockMin != null
+          ? convertToStorage(input.stockMin, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
+          : undefined,
         costPrice: costPerDisplayUnit,
         imageUrl: input.imageUrl,
       };
@@ -430,6 +434,13 @@ export const inventoryService = {
       delete safeInput.stockInicial;
       delete safeInput.presentations;
       delete safeInput.stockType;
+      // Convertir stockMin a storage units para productos pesables
+      if (safeInput.stockMin !== undefined && existing.isWeighted) {
+        safeInput.stockMin = convertToStorage(
+          safeInput.stockMin as number,
+          existing.unit === 'lt' ? 'pesable_lt' : 'pesable_kg',
+        );
+      }
       // Preservar imageUrl existente si no viene explícitamente en el input
       if (safeInput.imageUrl === undefined && existing.imageUrl) {
         delete safeInput.imageUrl;

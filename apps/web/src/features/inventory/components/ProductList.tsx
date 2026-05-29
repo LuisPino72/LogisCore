@@ -212,6 +212,11 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   No vendible
                 </span>
               )}
+              {product.isWeighted && (
+                <span className="hidden md:inline-flex text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  Pesable
+                </span>
+              )}
             </div>
             <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
               {productIdsWithVariants.has(product.id) && (
@@ -228,6 +233,13 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                 <div className="flex md:hidden mt-1">
                   <span className="text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     No vendible
+                  </span>
+                </div>
+              )}
+              {product.isWeighted && (
+                <div className="flex md:hidden mt-1">
+                  <span className="text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    Pesable
                   </span>
                 </div>
               )}
@@ -415,6 +427,11 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               {!product.isSellable && (
                 <span className="text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   No vendible
+                </span>
+              )}
+              {product.isWeighted && (
+                <span className="text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  Pesable
                 </span>
               )}
               <div className="mt-1 text-xs text-gray-600 space-y-1 flex flex-col items-center">
