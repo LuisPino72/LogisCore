@@ -38,7 +38,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,svg,png,woff2}'],
         navigateFallback: '/index.html',
-        maximumFileSizeToCacheInBytes: 4.5 * 1024 * 1024, // 4.5 MB
+        maximumFileSizeToCacheInBytes: 4.5 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             // Cachea las imágenes de productos de Supabase Storage con StaleWhileRevalidate
