@@ -125,7 +125,9 @@ export function SearchableSelect({
               const padding = 8;
               return Math.max(padding, Math.min(rect.left, window.innerWidth - menuWidth - padding));
             })() : 0,
-            minWidth: wrapperRef.current ? Math.max(200, wrapperRef.current.getBoundingClientRect().width) : 200,
+   minWidth: wrapperRef.current ? Math.max(200, wrapperRef.current.getBoundingClientRect().width) : 200,
+      maxWidth: wrapperRef.current ? wrapperRef.current.getBoundingClientRect().width : '100%',
+      boxSizing: 'border-box',
           }}
         >
           {!hideSearch && (

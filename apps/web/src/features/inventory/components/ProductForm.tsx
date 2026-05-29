@@ -326,10 +326,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       <p className="text-[10px] text-gray-400 -mt-2">JPG, PNG o WebP. Se comprime automáticamente.</p>
 
       <div className="input-wrapper">
-        <SearchableSelect
-          value={formData.categoryId || ''}
-          onChange={(value) => setField('categoryId', value || undefined)}
-          options={[
+        <div className="max-w-xs">
+          <SearchableSelect
+            value={formData.categoryId || ''}
+            onChange={(value) => setField('categoryId', value || undefined)}
+            options={[
             { value: '', label: 'Seleccionar categoría...' },
             ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
           ]}
@@ -345,7 +346,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               Crear nueva categoría
             </button>
           }
-        />
+          />
+        </div>
         {errors.categoryId && <span className="input-error-text">{errors.categoryId}</span>}
       </div>
 
@@ -408,6 +410,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <div className="input-wrapper">
                 <label className="input-label">Unidad de medida</label>
                 <Select
+                  className="max-w-xs"
                   value={formData.productType}
                   onChange={(e) => setField('productType', e.target.value as 'unidad' | 'pesable_kg' | 'pesable_lt')}
                 >
@@ -503,7 +506,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="input-wrapper">
-                <label className="input-label">Stock general (unidades base)</label>
+                <label className="input-label">Stock Total</label>
                 <Input
                   sanitize="number"
                   decimals={0}
@@ -831,18 +834,18 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
     return (
       <div className="flex gap-3 w-full">
-        <Button variant="outline" fullWidth={false} onClick={goBack}>
+        <Button variant="outline" className="flex-1" onClick={goBack}>
           <ChevronLeft size={16} />
           Atrás
         </Button>
 
         {isLastStep ? (
-          <Button variant="primary" fullWidth onClick={handleFinalSubmit} loading={isSubmitting}>
+          <Button variant="primary" className="flex-1" onClick={handleFinalSubmit} loading={isSubmitting}>
             <Check size={16} />
             {isEditing ? 'Guardar cambios' : 'Crear producto'}
           </Button>
         ) : (
-          <Button variant="primary" fullWidth onClick={goNext}>
+          <Button variant="primary" className="flex-1" onClick={goNext}>
             Siguiente
             <ChevronRight size={16} />
           </Button>

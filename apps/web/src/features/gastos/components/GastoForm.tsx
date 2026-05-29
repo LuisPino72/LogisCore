@@ -130,13 +130,15 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
         <div className="space-y-4">
           <div className="input-wrapper">
             <label className="input-label">Categoría</label>
-            <SearchableSelect
-              value={category}
-              onChange={setCategory}
-              placeholder="Seleccionar categoría"
-              searchPlaceholder="Buscar categoría..."
-              options={EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
-            />
+            <div className="max-w-xs">
+              <SearchableSelect
+                value={category}
+                onChange={setCategory}
+                placeholder="Seleccionar categoría"
+                searchPlaceholder="Buscar categoría..."
+                options={EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+              />
+            </div>
           </div>
 
           <Input
@@ -187,6 +189,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
               label="Frecuencia"
               value={recurrenceType}
               onChange={(e) => setRecurrenceType(e.target.value as 'monthly' | 'yearly')}
+              className="max-w-xs"
             >
               <option value="monthly">Mensual</option>
               <option value="yearly">Anual</option>

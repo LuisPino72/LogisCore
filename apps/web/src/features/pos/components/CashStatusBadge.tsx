@@ -19,7 +19,7 @@ export function CashStatusBadge({ isOpen, onClick, role, disabled }: CashStatusB
         onClick={onClick}
         disabled={disabled}
         title={disabled ? 'Necesitas internet para abrir o cerrar caja' : undefined}
-        className={`w-full text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} hover:opacity-90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} hover:opacity-90 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shrink-0`}
       >
         <span className={`w-1.5 h-1.5 rounded-full ${dot} animate-pulse`} />
         {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
@@ -28,7 +28,7 @@ export function CashStatusBadge({ isOpen, onClick, role, disabled }: CashStatusB
   }
 
   return (
-    <div className={`w-full text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} flex items-center gap-1.5`}>
+    <div className={`text-left px-3 py-1.5 rounded-full text-xs font-semibold ${classes} flex items-center gap-1.5 shrink-0`}>
       <span className={`w-1.5 h-1.5 rounded-full ${dot} animate-pulse`} />
       {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
     </div>
