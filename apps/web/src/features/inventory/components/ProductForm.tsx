@@ -229,7 +229,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     }
-  }, [currentStep, totalSteps, formData.name, creationType, presentations.length, setFormErrors, isEditing]);
+  }, [currentStep, totalSteps, formData.name, formData.categoryId, creationType, presentations.length, setFormErrors, isEditing]);
 
   const goBack = useCallback(() => {
     if (currentStep > 0) {

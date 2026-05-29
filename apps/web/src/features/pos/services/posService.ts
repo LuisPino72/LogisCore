@@ -446,7 +446,7 @@ export const posService = {
 
           const costUsdPerUnitStorage = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 2) : 0;
           const costUsdPerUnit = product.isWeighted
-            ? preciseRound(costUsdPerUnitStorage / 1000, 4)
+            ? preciseRound(costUsdPerUnitStorage * 1000, 4)
             : costUsdPerUnitStorage;
 
           const saleItemId = generateId();
