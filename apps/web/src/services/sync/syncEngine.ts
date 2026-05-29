@@ -7,6 +7,7 @@ import { getDb, isDbClosing } from '../dexie/db';
 import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
 import { networkAware } from '../network/networkAwareService';
+import { realtimeService, type RealtimeTable } from './realtimeService';
 import { logger } from '../../lib/logger';
 import type {
   SyncQueueItem,
@@ -31,12 +32,23 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'expenses', timeCol: 'updated_at' },
 ];
 
+const REALTIME_TABLES: Set<string> = new Set<RealtimeTable>([
+  'products',
+  'inventory_lots',
+  'sales',
+  'sale_items',
+  'cash_registers',
+  'expenses',
+]);
+
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();
   private isSyncing = false;
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
   private unsubscribeNetwork: (() => void) | null = null;
+  private realtimeConnected = false;
+  private _realtimeCleanup: (() => void) | null = null;
 
   registerTable(config: SyncTableConfig): void {
     this.configs.set(config.name, config);
@@ -188,6 +200,7 @@ export class SyncEngine {
     let hasChanges = false;
 
     for (const tableName of tablesToSync) {
+      if (this.realtimeConnected && REALTIME_TABLES.has(tableName)) continue;
       if (isDbClosing()) break;
 
       try {
@@ -320,6 +333,22 @@ export class SyncEngine {
     this.running = true;
     this.pull().catch(() => {});
 
+    // Iniciar Supabase Realtime para push instantáneo
+    realtimeService.start(async (tableName, record) => {
+      if (isDbClosing()) return;
+      await this.upsertLocalRecord(tableName, record);
+      const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
+      emitEngineEvent(eventName, { table: tableName });
+      emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
+    });
+
+    // Escuchar estado de Realtime
+    const unsubRealtime = networkAware.onChange(() => {});
+    const checkRealtime = () => {
+      this.realtimeConnected = realtimeService.isConnected();
+    };
+    const realtimeCheckInterval = setInterval(checkRealtime, 2000);
+
     // Reaccionar a cambios de red: al reconectar, push + pull inmediatos
     let wasOnline = networkAware.isOnline();
     this.unsubscribeNetwork = networkAware.onChange((state) => {
@@ -332,6 +361,12 @@ export class SyncEngine {
     });
 
     this.scheduleNext();
+
+    // Guardar cleanup para stop
+    this._realtimeCleanup = () => {
+      clearInterval(realtimeCheckInterval);
+      unsubRealtime();
+    };
   }
 
   stop(): void {
@@ -343,6 +378,12 @@ export class SyncEngine {
     if (this.unsubscribeNetwork) {
       this.unsubscribeNetwork();
       this.unsubscribeNetwork = null;
+    }
+    realtimeService.stop();
+    this.realtimeConnected = false;
+    if (this._realtimeCleanup) {
+      this._realtimeCleanup();
+      this._realtimeCleanup = null;
     }
   }
 
