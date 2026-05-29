@@ -183,21 +183,21 @@ export function InsightsCarousel({
         <button
           onClick={() => goTo(current - 1)}
           disabled={current === 0}
-          className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-3 rounded-xl border-2 border-gray-200 hover:border-primary/40 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-100 transition-all"
           aria-label="Anterior"
         >
-          <ChevronLeft size={18} className="text-gray-600" />
+          <ChevronLeft size={26} className="text-gray-700" />
         </button>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2.5">
           {allSlides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => goTo(idx)}
               className={`rounded-full transition-all duration-300 ${
                 idx === current
-                  ? 'w-5 h-1.5 bg-primary'
-                  : 'w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400'
+                  ? 'w-8 h-2.5 bg-primary'
+                  : 'w-2.5 h-2.5 bg-gray-300 hover:bg-gray-400'
               }`}
               aria-label={`Ir a slide ${idx + 1}`}
             />
@@ -207,10 +207,10 @@ export function InsightsCarousel({
         <button
           onClick={() => goTo(current + 1)}
           disabled={current === allSlides.length - 1}
-          className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-3 rounded-xl border-2 border-gray-200 hover:border-primary/40 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-100 transition-all"
           aria-label="Siguiente"
         >
-          <ChevronRight size={18} className="text-gray-600" />
+          <ChevronRight size={26} className="text-gray-700" />
         </button>
       </div>
     </Card>

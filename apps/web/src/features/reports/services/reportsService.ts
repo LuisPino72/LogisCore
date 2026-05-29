@@ -1128,7 +1128,7 @@ export const reportsService = {
 
       const total = salesData.length;
       let cumulative = 0;
-      const result: TicketDistributionItem[] = RANGES.map((r, i) => {
+      let result: TicketDistributionItem[] = RANGES.map((r, i) => {
         cumulative += buckets[i];
         return {
           range: r.label,
@@ -1137,6 +1137,11 @@ export const reportsService = {
           cumulative: total > 0 ? preciseRound((cumulative / total) * 100, 1) : 0,
         };
       });
+
+      // Eliminar rangos vacíos al final para que el acumulado no muestre 100% en una fila con 0 ventas
+      while (result.length > 1 && result[result.length - 1].count === 0) {
+        result.pop();
+      }
 
       return success(result);
     } catch (err) {

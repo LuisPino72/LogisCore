@@ -193,7 +193,6 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       title: 'Descuentos Aplicados',
       columns: [
         { key: 'date', header: 'Fecha', render: (item) => new Date(item.date as string).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit' }) },
-        { key: 'saleId', header: 'Venta', render: (item) => `#${(item.saleId as string).slice(0, 8)}` },
         { key: 'subtotalBs', header: 'Subtotal', render: (item) => formatBs(item.subtotalBs as number), hideOnMobile: true },
         { key: 'discountBs', header: 'Descuento', render: (item) => <span className="text-danger font-bold">-{formatBs(item.discountBs as number)}</span> },
         { key: 'totalBs', header: 'Total', render: (item) => formatBs(item.totalBs as number) },
