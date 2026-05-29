@@ -31,7 +31,7 @@ export function useRecurringGastos(tenantId: string | null) {
     if (!tenantId) return;
     const sub = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
       const { table } = payload as { table?: string };
-      if (table === 'expenses') {
+      if (table === 'expenses' || table === '*') {
         fetchTemplates();
       }
     });

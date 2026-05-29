@@ -1,85 +1,39 @@
 import { logger } from '../../lib/logger';
 
-type ConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'unknown';
-type EffectiveType = 'slow-2g' | '2g' | '3g' | '4g' | '5g' | 'unknown';
-
 interface NetworkInformation {
   type: string;
-  effectiveType: string;
   addEventListener: (event: string, handler: () => void) => void;
   removeEventListener: (event: string, handler: () => void) => void;
 }
 
-export type SyncProfile = 'realtime' | 'normal' | 'conservative' | 'minimal';
+const SYNC_INTERVAL_MS = 10000;
 
 export interface NetworkState {
   online: boolean;
-  connectionType: ConnectionType;
-  effectiveType: EffectiveType;
-  syncProfile: SyncProfile;
-  syncIntervalMs: number;
   isMobileData: boolean;
+  syncIntervalMs: number;
 }
 
 class NetworkAwareService {
   private state: NetworkState;
   private listeners = new Set<(state: NetworkState) => void>();
 
-  private readonly WIFI_INTERVAL = 5000;
-  private readonly CELLULAR_4G_INTERVAL = 15000;
-  private readonly CELLULAR_3G_INTERVAL = 30000;
-  private readonly CELLULAR_2G_INTERVAL = 60000;
-
   constructor() {
     this.state = this.detectNetwork();
     this.setupListeners();
-    logger.info('[NetworkAware]', `Inicializado: ${this.state.connectionType}, ${this.state.effectiveType}, perfil: ${this.state.syncProfile}`);
+    logger.info('[NetworkAware]', `Inicializado: online=${this.state.online}, mobile=${this.state.isMobileData}`);
   }
 
   private detectNetwork(): NetworkState {
-    const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
     const online = navigator.onLine;
+    let isMobileData = false;
 
-    let connectionType: ConnectionType = 'unknown';
-    let effectiveType: EffectiveType = 'unknown';
-
+    const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
     if (conn) {
-      switch (conn.type) {
-        case 'wifi': connectionType = 'wifi'; break;
-        case 'cellular': connectionType = 'cellular'; break;
-        case 'ethernet': connectionType = 'ethernet'; break;
-        default: if (online) connectionType = 'wifi';
-      }
-      effectiveType = (conn.effectiveType as EffectiveType) || 'unknown';
-    } else if (online) {
-      connectionType = 'wifi';
+      isMobileData = conn.type === 'cellular';
     }
 
-    const isMobileData = connectionType === 'cellular';
-    const syncProfile = this.getSyncProfile(connectionType, effectiveType, online);
-    const syncIntervalMs = this.getIntervalForProfile(syncProfile);
-
-    return { online, connectionType, effectiveType, syncProfile, syncIntervalMs, isMobileData };
-  }
-
-  private getSyncProfile(type: ConnectionType, effective: EffectiveType, online: boolean): SyncProfile {
-    if (!online) return 'minimal';
-    if (type === 'wifi' || type === 'ethernet') return 'realtime';
-    if (type === 'cellular') {
-      if (effective === '4g' || effective === '5g') return 'normal';
-      if (effective === '3g') return 'conservative';
-      return 'minimal';
-    }
-    return 'normal';
-  }
-
-  private getIntervalForProfile(profile: SyncProfile): number {
-    switch (profile) {
-      case 'realtime': return this.WIFI_INTERVAL;
-      case 'normal': return this.CELLULAR_4G_INTERVAL;
-      case 'conservative': return this.CELLULAR_3G_INTERVAL;
-      case 'minimal': return this.CELLULAR_2G_INTERVAL;
-    }
+    return { online, isMobileData, syncIntervalMs: SYNC_INTERVAL_MS };
   }
 
   private setupListeners(): void {
@@ -103,11 +57,13 @@ class NetworkAwareService {
 
   private emitChange(): void {
     const newState = this.detectNetwork();
-    const prevProfile = this.state.syncProfile;
+    const wasOnline = this.state.online;
     this.state = newState;
-    if (newState.syncProfile !== prevProfile) {
-      logger.info('[NetworkAware]', `Perfil cambió: ${prevProfile} → ${newState.syncProfile} (${newState.isMobileData ? 'datos' : 'wifi'}, intervalo: ${newState.syncIntervalMs}ms)`);
+
+    if (!wasOnline && newState.online) {
+      logger.info('[NetworkAware]', 'Reconectado');
     }
+
     this.listeners.forEach((cb) => cb(this.state));
   }
 
@@ -116,7 +72,7 @@ class NetworkAwareService {
   }
 
   getSyncInterval(): number {
-    return this.state.syncIntervalMs;
+    return SYNC_INTERVAL_MS;
   }
 
   isOnline(): boolean {
@@ -124,7 +80,11 @@ class NetworkAwareService {
   }
 
   isWifi(): boolean {
-    return this.state.connectionType === 'wifi' || this.state.connectionType === 'ethernet';
+    const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
+    if (conn) {
+      return conn.type === 'wifi' || conn.type === 'ethernet';
+    }
+    return this.state.online;
   }
 
   isMobileData(): boolean {
@@ -133,10 +93,6 @@ class NetworkAwareService {
 
   shouldPreloadImages(): boolean {
     return this.isWifi() && this.state.online;
-  }
-
-  getCurrentSyncProfile(): SyncProfile {
-    return this.state.syncProfile;
   }
 
   onChange(callback: (state: NetworkState) => void): () => void {

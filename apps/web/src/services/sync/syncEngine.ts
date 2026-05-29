@@ -287,6 +287,17 @@ export class SyncEngine {
   private async upsertLocalRecord(tableName: string, record: Record<string, unknown>): Promise<void> {
     if (isDbClosing()) return;
     const db = getDb();
+
+    // Skip overwrite if there are pending local changes for this record in the sync queue
+    // (e.g., soft delete or nextDueDate update not yet pushed to Supabase)
+    const recordId = record.id as string | undefined;
+    if (recordId) {
+      const pendingCount = await db.syncQueue
+        .filter((item) => item.recordId === recordId && item.status === 'pending')
+        .count();
+      if (pendingCount > 0) return;
+    }
+
     const local: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(record)) {
       const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -309,13 +320,15 @@ export class SyncEngine {
     this.running = true;
     this.pull().catch(() => {});
 
-    // Reaccionar a cambios de red para re-sincronizar al recuperar WiFi
+    // Reaccionar a cambios de red: al reconectar, push + pull inmediatos
+    let wasOnline = networkAware.isOnline();
     this.unsubscribeNetwork = networkAware.onChange((state) => {
-      if (state.online && !networkAware.isMobileData()) {
-        // Al volver a WiFi, hacemos un pull completo para ponernos al día
+      if (!wasOnline && state.online) {
+        logger.info('[SyncEngine]', 'Reconectado — ejecutando push + pull inmediatos');
+        this.push().catch(() => {});
         this.pull().catch(() => {});
       }
-      // El scheduleNext() ya usa getSyncInterval() que se adapta automáticamente
+      wasOnline = state.online;
     });
 
     this.scheduleNext();

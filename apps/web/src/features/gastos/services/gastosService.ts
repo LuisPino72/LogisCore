@@ -202,6 +202,14 @@ export const gastosService = {
       const generated: Gasto[] = [];
 
       for (const tpl of dueTemplates) {
+        // Skip if an instance already exists for this template + date (prevents duplicates)
+        const existingInstance = await db.expenses
+          .where('parentExpenseId')
+          .equals(tpl.id)
+          .filter((e) => e.date === today && !e.deletedAt)
+          .first();
+        if (existingInstance) continue;
+
         const now = new Date().toISOString();
         const currentRate = tpl.exchangeRate;
 
