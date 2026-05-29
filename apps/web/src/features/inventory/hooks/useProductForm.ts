@@ -5,6 +5,8 @@ import { useInventoryStore } from '../stores/inventoryStore';
 import { supabase } from '../../../services/supabase/client';
 import { getDb } from '../../../services/dexie/db';
 
+type PresentationFormData = CreatePresentationInput & { id?: string };
+
 // Utility for auto-generating SKU
 const generateAutoSku = (name: string, existingSkus: string[]) => {
   const base = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
@@ -32,7 +34,7 @@ interface UseProductFormReturn {
   setFormErrors: (errors: Record<string, string>) => void;
   handleSubmit: () => Promise<{ success: boolean; errors?: Record<string, string> }>;
   reset: () => void;
-  presentations: CreatePresentationInput[];
+  presentations: PresentationFormData[];
   presentationsLoading: boolean;
   addPresentation: () => void;
   removePresentation: (index: number) => void;
@@ -65,7 +67,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [presentations, setPresentations] = useState<CreatePresentationInput[]>([]);
+  const [presentations, setPresentations] = useState<PresentationFormData[]>([]);
   const [presentationsLoading, setPresentationsLoading] = useState(!!options.editProductId);
 
   const setField = useCallback(<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {

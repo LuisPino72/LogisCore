@@ -708,15 +708,18 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Multiplicador (unidades base) <span className="text-gray-400">— fijo</span>
+                  Multiplicador (unidades base) {!pres.id && <span className="text-gray-400">— nuevo</span>}
+                  {pres.id && <span className="text-gray-400">— fijo</span>}
                 </label>
                 <Input
                   sanitize="number"
                   decimals={0}
-                  disabled
+                  disabled={!!pres.id}
                   placeholder="12"
                   value={pres.unitMultiplier?.toString() || ''}
-                  inputClassName="text-sm opacity-60"
+                  onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
+                  validation={{ min: 1 }}
+                  inputClassName={`text-sm ${pres.id ? 'opacity-60' : ''}`}
                 />
               </div>
 
@@ -735,6 +738,15 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           </div>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={addPresentation}
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium border-2 border-dashed border-gray-300 text-gray-500 hover:border-primary/40 hover:text-primary transition-colors"
+      >
+        <Plus size={16} />
+        Agregar variante
+      </button>
 
       <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
         <Settings size={14} className="text-gray-400 shrink-0" />
