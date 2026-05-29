@@ -273,7 +273,7 @@ export const posService = {
 
     const parsed = CreateSaleInputSchema.safeParse(input);
     if (!parsed.success) {
-      return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Datos de venta invalidos: ' + parsed.error.errors.map((e) => e.message).join(', ')));
+      return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Datos de venta invalidos: ' + parsed.error.issues.map((e: { message: string }) => e.message).join(', ')));
     }
 
     let subtotalBs = 0;
