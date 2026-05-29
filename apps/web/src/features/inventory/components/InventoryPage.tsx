@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { EventBus } from '@logiscore/core';
 import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
@@ -32,6 +33,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const {
     products, categories, loading, activeTab, setActiveTab,
     createProduct, updateProduct, deleteProduct, createCategory, updateCategory, deleteCategory, adjustStock, createProductWithPresentations,
+    updateProductImageUrl,
     search, refresh, userId, role, tabStates, saveTabState,
   } = useInventory(tenantId);
 
@@ -96,7 +98,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       addToast({ type: 'success', message: 'Producto creado exitosamente.', duration: 3000 });
       if (imageFile) {
         const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, product.id);
-        if (!imgResult.ok) {
+        if (imgResult.ok) {
+          updateProductImageUrl(product.id, imgResult.data);
+          EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
+        } else {
           addToast({ type: 'warning', message: `Producto creado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
         }
       }
@@ -115,7 +120,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     addToast({ type: 'success', message: 'Producto actualizado exitosamente.', duration: 3000 });
     if (imageFile) {
       const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, editProduct.id);
-      if (!imgResult.ok) {
+      if (imgResult.ok) {
+        updateProductImageUrl(editProduct.id, imgResult.data);
+        EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
+      } else {
         addToast({ type: 'warning', message: `Producto actualizado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
       }
     }

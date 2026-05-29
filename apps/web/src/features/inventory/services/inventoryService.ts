@@ -323,6 +323,7 @@ export const inventoryService = {
         stock: parentStock,
         stockMin: input.stockMin,
         costPrice: costPerDisplayUnit,
+        imageUrl: input.imageUrl,
       };
 
       await db.transaction('rw', [

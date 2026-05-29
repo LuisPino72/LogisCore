@@ -29,6 +29,7 @@ interface InventoryStore extends InventoryState {
   fetchPresentations: (productId: string) => Promise<Presentation[]>;
   updatePresentation: (tenantId: string, presentationId: string, input: UpdatePresentationInput) => Promise<boolean>;
   deletePresentation: (tenantId: string, presentationId: string) => Promise<boolean>;
+  updateProductImageUrl: (productId: string, imageUrl: string) => void;
   refresh: (tenantId: string, userId: string) => Promise<void>;
   reset: () => void;
 }
@@ -77,6 +78,14 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     } else {
       set({ loading: false, error: result.error.message });
     }
+  },
+
+  updateProductImageUrl: (productId, imageUrl) => {
+    set((s) => ({
+      products: s.products.map((p) =>
+        p.id === productId ? { ...p, imageUrl } : p
+      ),
+    }));
   },
 
   fetchCategories: async (tenantId, silent = false) => {

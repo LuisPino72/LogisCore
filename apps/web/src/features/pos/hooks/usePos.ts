@@ -79,6 +79,24 @@ export function usePos(tenantId: string | null) {
     );
 
     subs.push(
+      EventBus.on('INVENTORY.CREATED', () => {
+        if (tenantId) fetchProducts(tenantId);
+      }),
+    );
+
+    subs.push(
+      EventBus.on('INVENTORY.DELETED', () => {
+        if (tenantId) fetchProducts(tenantId);
+      }),
+    );
+
+    subs.push(
+      EventBus.on('INVENTORY.ADJUSTMENT', () => {
+        if (tenantId) fetchProducts(tenantId);
+      }),
+    );
+
+    subs.push(
       EventBus.on('BOX.OPENED', () => {
         if (tenantId) fetchCashRegister(tenantId);
       }),
