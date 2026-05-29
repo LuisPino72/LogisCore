@@ -11,7 +11,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
-import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, MovementRow, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
+import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage } from '../types';
 
 const INVENTORY_MODULE = 'INVENTORY';
@@ -1051,51 +1051,6 @@ export const inventoryService = {
       remainingQuantity: toNumber(l.remainingQuantity),
       costUsdPerUnit: l.costUsdPerUnit != null ? toNumber(l.costUsdPerUnit) : undefined,
     })));
-  },
-
-  async getProductMovements(productId: string): Promise<Result<MovementRow[], AppError>> {
-    const db = getDb();
-    const rows = await db.inventoryMovements
-      .where({ productId })
-      .filter((m) => !m.deletedAt)
-      .sortBy('createdAt');
-
-    if (rows.length === 0) return success([]);
-
-    const movements: MovementRow[] = [];
-    let balance = rows[0].previousStock;
-
-    // Primer fila: estado inicial
-    movements.push({
-      date: rows[0].createdAt,
-      type: 'initial',
-      entry: 0,
-      exit: 0,
-      balance,
-      reason: 'Stock inicial',
-    });
-
-    for (const mov of rows) {
-      const entry = mov.newStock > mov.previousStock ? Math.abs(mov.quantity) : 0;
-      const exit_ = mov.newStock < mov.previousStock ? Math.abs(mov.quantity) : 0;
-      balance = mov.newStock;
-
-      const typeLabel = mov.type === 'sale' ? 'sale'
-        : mov.type === 'purchase' ? 'purchase'
-        : 'adjustment';
-
-      movements.push({
-        date: mov.createdAt,
-        type: typeLabel,
-        entry,
-        exit: exit_,
-        balance,
-        reason: mov.reason ?? undefined,
-        reasonType: mov.reasonType ?? undefined,
-      });
-    }
-
-    return success(movements);
   },
 
   async uploadProductImage(file: File, tenantId: string, productId: string): Promise<Result<string, AppError>> {

@@ -60,16 +60,6 @@ export interface ActiveLot {
   productLabel?: string;
 }
 
-export interface MovementRow {
-  date: string;
-  type: 'purchase' | 'sale' | 'adjustment' | 'initial';
-  entry: number;
-  exit: number;
-  balance: number;
-  reason?: string;
-  reasonType?: string;
-}
-
 export type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
 export type TabKey = 'productos' | 'categorias' | 'historial';

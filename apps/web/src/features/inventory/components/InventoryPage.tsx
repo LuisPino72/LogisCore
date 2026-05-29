@@ -11,7 +11,6 @@ import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
 import { ProductLots } from './ProductLots';
-import { KardexView } from './KardexView';
 import { CategoryManager } from './CategoryManager';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
@@ -54,7 +53,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [adjSubmitting, setAdjSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
-  const [selectedKardexProduct, setSelectedKardexProduct] = useState<{ id: string; name: string } | null>(null);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
   
@@ -352,10 +350,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 setShowAdjustment(true);
               }}
               onViewLots={(id) => setSelectedProductLotsId(id)}
-              onViewKardex={(id) => {
-                const product = products.find((p) => p.id === id);
-                if (product) setSelectedKardexProduct({ id: product.id, name: product.name });
-              }}
               onRefresh={refresh}
             />
           </div>
@@ -642,20 +636,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             productId={selectedProductLotsId}
             tenantId={tenantId}
             unit={products.find((p) => p.id === selectedProductLotsId)?.unit}
-          />
-        </Modal>
-      )}
-
-      {selectedKardexProduct && (
-        <Modal
-          isOpen={true}
-          onClose={() => setSelectedKardexProduct(null)}
-          title={`Kardex - ${selectedKardexProduct.name}`}
-        >
-          <KardexView
-            productId={selectedKardexProduct.id}
-            productName={selectedKardexProduct.name}
-            unit={products.find((p) => p.id === selectedKardexProduct.id)?.unit}
           />
         </Modal>
       )}

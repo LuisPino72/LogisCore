@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, ClipboardList, MoreVertical } from 'lucide-react';
+import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, MoreVertical } from 'lucide-react';
 import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect, Modal } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
@@ -25,7 +25,6 @@ interface ProductListProps {
   onRequestDelete: (id: string, name: string) => void;
   onAdjust: (id: string) => void;
   onViewLots: (productId: string) => void;
-  onViewKardex: (productId: string) => void;
   onRefresh: () => void;
 }
 
@@ -60,7 +59,7 @@ function getStockVariant(stock: number, product: { stockMin?: number; isWeighted
   return 'success';
 }
 
-export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onViewKardex }: ProductListProps) {
+export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
@@ -283,12 +282,10 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                 isOnline
                   ? [
                     { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                    { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
                     { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
                   ]
                   : [
                     { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                    { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
                   ]
               }
             />
@@ -298,7 +295,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
     }
 
     return cols;
-  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewKardex, onViewLots]);
+  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewLots]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (
@@ -433,12 +430,10 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                         isOnline
                           ? [
                             { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                            { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
                             { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
                           ]
                           : [
                             { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                            { label: 'Kardex', icon: <ClipboardList size={15} />, onClick: () => onViewKardex(product.id) },
                           ]
                       }
                     />
