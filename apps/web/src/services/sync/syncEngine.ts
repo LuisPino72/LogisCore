@@ -39,6 +39,11 @@ const REALTIME_TABLES: Set<string> = new Set<RealtimeTable>([
   'sale_items',
   'cash_registers',
   'expenses',
+  'categories',
+  'suppliers',
+  'purchase_orders',
+  'purchase_order_items',
+  'product_presentations',
 ]);
 
 export class SyncEngine {
