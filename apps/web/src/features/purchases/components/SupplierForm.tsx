@@ -84,7 +84,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={error && !name.trim() ? error : undefined}
-          validation={{ required: true, maxLength: 25 }}
+          validation={{ required: 'Ingresa el nombre del proveedor', maxLength: 25 }}
           inputClassName="text-sm"
         />
 

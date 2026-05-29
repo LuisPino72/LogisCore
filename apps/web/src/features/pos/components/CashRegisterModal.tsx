@@ -36,10 +36,15 @@ export function CashRegisterModal({
 }: CashRegisterModalProps) {
   const [balance, setBalance] = useState('');
   const [declaredClosing, setDeclaredClosing] = useState('');
+  const [localError, setLocalError] = useState('');
 
   const handleOpen = async () => {
     const parsed = parseFloat(balance);
-    if (!parsed || parsed <= 0) return;
+    if (!parsed || parsed <= 0) {
+      setLocalError('Ingresa el monto inicial de la caja.');
+      return;
+    }
+    setLocalError('');
     const ok = await onOpenCash(parsed);
     if (ok) {
       setBalance('');
@@ -49,7 +54,11 @@ export function CashRegisterModal({
 
   const handleClose = async () => {
     const parsed = parseFloat(declaredClosing);
-    if (isNaN(parsed)) return;
+    if (isNaN(parsed) || parsed < 0) {
+      setLocalError('Ingresa el monto final declarado.');
+      return;
+    }
+    setLocalError('');
     const ok = await onCloseCash(parsed);
     if (ok) {
       setDeclaredClosing('');
@@ -76,7 +85,7 @@ export function CashRegisterModal({
               label="Monto inicial (Bs)"
               sanitize="currency"
               value={balance}
-              onChange={(e) => setBalance(e.target.value)}
+              onChange={(e) => { setBalance(e.target.value); setLocalError(''); }}
               validation={{ required: true, min: 0.01 }}
               placeholder="0.00"
             />
@@ -101,16 +110,16 @@ export function CashRegisterModal({
               label="Monto final declarado (Bolívares)"
               sanitize="currency"
               value={declaredClosing}
-              onChange={(e) => setDeclaredClosing(e.target.value)}
+              onChange={(e) => { setDeclaredClosing(e.target.value); setLocalError(''); }}
               validation={{ required: true, min: 0 }}
               placeholder="0.00"
             />
           </>
         )}
 
-        {error && (
+        {(error || localError) && (
           <Alert variant="error" className="p-3! text-sm">
-            {error}
+            {error || localError}
           </Alert>
         )}
 

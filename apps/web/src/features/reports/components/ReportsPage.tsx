@@ -18,6 +18,7 @@ const ProfitChart = lazy(() => import('./ProfitChart').then((m) => ({ default: m
 const TopProductsChart = lazy(() => import('./TopProductsChart').then((m) => ({ default: m.TopProductsChart })));
 const PaymentBreakdown = lazy(() => import('./PaymentBreakdown').then((m) => ({ default: m.PaymentBreakdown })));
 const CashAnalysis = lazy(() => import('./CashAnalysis').then((m) => ({ default: m.CashAnalysis })));
+const ExpenseBreakdownChart = lazy(() => import('./ExpenseBreakdownChart').then((m) => ({ default: m.ExpenseBreakdownChart })));
 
 const TIME_RANGE_OPTIONS: { value: ReportTimeRange; label: string }[] = [
   { value: 'today', label: 'Hoy' },
@@ -74,6 +75,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     topByVolume,
     paymentBreakdown,
     cashAnalysis,
+    expenseBreakdown,
   } = useReports(tenantId);
 
   const [showCustomDate, setShowCustomDate] = useState(false);
@@ -487,6 +489,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         <div className={`print-section ${activeTab !== 'summary' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
             <ExecutiveSummary data={summary} loading={loading} onKpiClick={handleKpiClick} />
+            <ExpenseBreakdownChart data={expenseBreakdown} loading={loading} />
           </Suspense>
         </div>
         <div className={`print-section ${activeTab !== 'profits' ? 'hidden' : ''}`}>

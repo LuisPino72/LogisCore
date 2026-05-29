@@ -207,18 +207,30 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   Variantes
                 </span>
               )}
+              {!product.isSellable && (
+                <span className="hidden md:inline-flex text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  No vendible
+                </span>
+              )}
             </div>
             <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
-            {productIdsWithVariants.has(product.id) && (
-              <div className="flex md:hidden mt-1">
-                <span
-                  className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); openVariantModal(product.id); }}
-                >
-                  Variantes
-                </span>
-              </div>
-            )}
+              {productIdsWithVariants.has(product.id) && (
+                <div className="flex md:hidden mt-1">
+                  <span
+                    className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                    onClick={() => openVariantModal(product.id)}
+                  >
+                    Variantes
+                  </span>
+                </div>
+              )}
+              {!product.isSellable && (
+                <div className="flex md:hidden mt-1">
+                  <span className="text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    No vendible
+                  </span>
+                </div>
+              )}
           </div>
         ),
       },
@@ -398,6 +410,11 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   onClick={() => openVariantModal(product.id)}
                 >
                   Variantes
+                </span>
+              )}
+              {!product.isSellable && (
+                <span className="text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  No vendible
                 </span>
               )}
               <div className="mt-1 text-xs text-gray-600 space-y-1 flex flex-col items-center">

@@ -40,6 +40,8 @@ export interface ExecutiveSummaryData {
   netProfitBs: number;
   totalDiscountBs: number;
   totalDiscountUsd: number;
+  totalIvaBs: number;
+  totalIvaUsd: number;
 }
 
 export interface DailyProfitPoint {

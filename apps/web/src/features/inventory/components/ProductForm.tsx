@@ -107,7 +107,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     removePresentation,
     updatePresentation,
     generateSku,
-  } = useProductForm({ onSubmit: wrappedOnSubmit, initialValues, editProductId: editProduct?.id });
+  } = useProductForm({ onSubmit: wrappedOnSubmit, initialValues, editProductId: editProduct?.id, creationType });
 
   const hasPresentations = creationType === 'variants' || showPresentations || (isEditing && presentations.length > 0);
 
@@ -205,15 +205,20 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     if (stepIndex === 1) {
       const errs: Record<string, string> = {};
       if (!formData.name.trim()) errs.name = 'El nombre es obligatorio';
+      if (!formData.categoryId) errs.categoryId = 'Debes seleccionar una categoría';
       if (Object.keys(errs).length > 0) {
         setFormErrors(errs);
         return;
       }
     }
+    if (stepIndex === 2 && creationType === 'variants' && presentations.length === 0) {
+      setFormErrors({ presentations: 'Debes agregar al menos una variante para continuar' });
+      return;
+    }
     if (currentStep < totalSteps - 1) {
       setCurrentStep(prev => prev + 1);
     }
-  }, [currentStep, totalSteps, formData.name, setFormErrors, isEditing]);
+  }, [currentStep, totalSteps, formData.name, creationType, presentations.length, setFormErrors, isEditing]);
 
   const goBack = useCallback(() => {
     if (currentStep > 0) {
@@ -445,7 +450,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   inputClassName="text-sm"
                 />
-                <p className="text-[10px] text-gray-400 mt-0.5">Costo total pagado por la primera entrada de stock. Se divide entre el stock para calcular el costo por unidad.</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Costo total pagado por el lote de productos.</p>
               </div>
 
               <div className="input-wrapper">

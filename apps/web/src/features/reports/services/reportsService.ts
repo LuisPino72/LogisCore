@@ -266,6 +266,7 @@ export const reportsService = {
       let totalCostUsd = 0;
       let totalDiscountBs = 0;
       let totalIvaBs = 0;
+      let totalIvaUsd = 0;
       let totalIgtfBs = 0;
       const productProfitMap = new Map<string, { name: string; profit: number }>();
 
@@ -273,6 +274,9 @@ export const reportsService = {
       for (const { sale, items } of data) {
         totalSalesBs += sale.totalBs;
         totalIvaBs += sale.ivaBs || 0;
+        if (sale.ivaBs && sale.exchangeRate > 0) {
+          totalIvaUsd += preciseRound(sale.ivaBs / sale.exchangeRate, 2);
+        }
         totalIgtfBs += sale.igtfBs || 0;
         totalDiscountBs += sale.discountBs || 0;
         const saleUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
@@ -350,7 +354,7 @@ export const reportsService = {
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
         .between([tenantId, startNorm], [tenantId, endNorm])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
         .toArray();
       const operatingExpensesUsd = operatingExpenses.reduce((s, e) => s + e.amountUsd, 0);
       const operatingExpensesBs = operatingExpenses.reduce((s, e) => s + e.amountBs, 0);
@@ -401,6 +405,8 @@ export const reportsService = {
         netProfitBs,
         totalDiscountBs,
         totalDiscountUsd,
+        totalIvaBs,
+        totalIvaUsd,
       });
     } catch (err) {
       console.error('[reportsService.getExecutiveSummary]', err);
@@ -1029,7 +1035,7 @@ export const reportsService = {
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
         .between([tenantId, startNorm], [tenantId, endNorm])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
         .toArray();
 
       if (operatingExpenses.length > 0) {

@@ -279,8 +279,7 @@ export const posService = {
     let subtotalBs = 0;
     let subtotalTaxableBs = 0;
     for (const item of items) {
-      const prod = await getDb().products.get(item.productId);
-      const isTaxable = prod?.isTaxable !== undefined ? prod.isTaxable : true;
+      const isTaxable = item.isTaxable !== undefined ? item.isTaxable : true;
       const lineBs = preciseRound(item.unitPriceUsd * item.quantity * rawExchangeRate, 2);
       subtotalBs += lineBs;
       if (isTaxable) subtotalTaxableBs += lineBs;
@@ -403,7 +402,9 @@ export const posService = {
               productId: cartItem.productId,
               quantityAdded: product.stock,
               remainingQuantity: product.stock,
-              costUsdPerUnit: product.costPrice ?? 0,
+              costUsdPerUnit: product.isWeighted
+                ? (product.costPrice ?? 0) / 1000
+                : (product.costPrice ?? 0),
               createdAt: now,
               updatedAt: now,
             };
@@ -443,7 +444,10 @@ export const posService = {
           const newStock = previousStock - storageQuantity;
           await db.products.update(cartItem.productId, { stock: newStock });
 
-          const costUsdPerUnit = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 2) : 0;
+          const costUsdPerUnitStorage = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 2) : 0;
+          const costUsdPerUnit = product.isWeighted
+            ? preciseRound(costUsdPerUnitStorage / 1000, 4)
+            : costUsdPerUnitStorage;
 
           const saleItemId = generateId();
           await db.saleItems.add({

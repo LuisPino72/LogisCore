@@ -80,6 +80,11 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
   };
 
   const handleSubmit = async () => {
+    if (!category) {
+      setError('Selecciona una categoría');
+      return;
+    }
+
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const currentRate = exchangeRateStore.rate ?? 0;
     const payload = {

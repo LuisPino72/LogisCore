@@ -27,7 +27,7 @@ export function PaymentModal({
   const handleConfirm = () => {
     const qty = parseFloat(quantity);
     if (!qty || qty <= 0) {
-      setError('Ingrese una cantidad valida.');
+      setError('Ingresa una cantidad válida.');
       return;
     }
     setError('');

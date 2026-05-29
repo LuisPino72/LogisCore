@@ -1,5 +1,5 @@
 import { Card, Badge, Tooltip, EmptyState } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight, BarChart3, Receipt } from 'lucide-react';
 import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
@@ -136,7 +136,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
         )}
       </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <KpiCard
           label="Ventas Totales"
           value={formatDual(data.totalSalesBs, data.totalSalesUsd)}
@@ -200,6 +200,13 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           icon={<DollarSign size={18} />}
           gradient="red"
           onClick={onKpiClick ? () => onKpiClick('descuentos') : undefined}
+        />
+        <KpiCard
+          label="IVA Acumulado"
+          value={formatDual(data.totalIvaBs, data.totalIvaUsd)}
+          subtitle="Impuesto al valor agregado (16%)"
+          icon={<Receipt size={18} />}
+          gradient="blue"
         />
       </div>
 

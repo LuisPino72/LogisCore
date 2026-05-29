@@ -10,6 +10,7 @@ import type {
   TopCategoryData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
+  ExpenseBreakdownItem,
   ReportTab,
 } from '../types';
 
@@ -24,11 +25,12 @@ interface ReportsState {
   topCategories: TopCategoryData[];
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
+  expenseBreakdown: ExpenseBreakdownItem[];
 }
 
 const initialState: ReportsState = {
   loading: false, error: null,
-  summary: null, profitOverTime: [], topProducts: [], topCategories: [], paymentBreakdown: [], cashAnalysis: [],
+  summary: null, profitOverTime: [], topProducts: [], topCategories: [], paymentBreakdown: [], cashAnalysis: [], expenseBreakdown: [],
 };
 
 export function useReports(tenantId: string | null) {
@@ -56,13 +58,14 @@ export function useReports(tenantId: string | null) {
     try {
       let updates: Partial<ReportsState>;
       if (tab === 'summary') {
-        const [s, p, tp, tc, pm, c] = await Promise.all([
+        const [s, p, tp, tc, pm, c, eb] = await Promise.all([
           reportsService.getExecutiveSummary(tenantId, filters),
           reportsService.getProfitOverTime(tenantId, filters),
           reportsService.getTopProducts(tenantId, filters),
           reportsService.getTopCategories(tenantId, filters),
           reportsService.getPaymentBreakdown(tenantId, filters),
           reportsService.getCashAnalysis(tenantId, filters),
+          reportsService.getExpenseBreakdown(tenantId, filters),
         ]);
         updates = {
           summary: s.ok ? s.data : null,
@@ -71,6 +74,7 @@ export function useReports(tenantId: string | null) {
           topCategories: tc.ok ? tc.data : [],
           paymentBreakdown: pm.ok ? pm.data : [],
           cashAnalysis: c.ok ? c.data : [],
+          expenseBreakdown: eb.ok ? eb.data : [],
         };
       } else if (tab === 'profits') {
         const res = await reportsService.getProfitOverTime(tenantId, filters);
@@ -122,15 +126,16 @@ export function useReports(tenantId: string | null) {
 
     try {
       if (tab === 'summary') {
-        const [s, p, tp, tc, pm, c] = await Promise.all([
+        const [s, p, tp, tc, pm, c, eb] = await Promise.all([
           reportsService.getExecutiveSummary(tenantId, filters),
           reportsService.getProfitOverTime(tenantId, filters),
           reportsService.getTopProducts(tenantId, filters),
           reportsService.getTopCategories(tenantId, filters),
           reportsService.getPaymentBreakdown(tenantId, filters),
           reportsService.getCashAnalysis(tenantId, filters),
+          reportsService.getExpenseBreakdown(tenantId, filters),
         ]);
-        const errs = [s, p, tp, tc, pm, c].filter((r) => !r.ok).map((r) => r.error.message);
+        const errs = [s, p, tp, tc, pm, c, eb].filter((r) => !r.ok).map((r) => r.error.message);
         apply({
           summary: s.ok ? s.data : null,
           profitOverTime: p.ok ? p.data : [],
@@ -138,6 +143,7 @@ export function useReports(tenantId: string | null) {
           topCategories: tc.ok ? tc.data : [],
           paymentBreakdown: pm.ok ? pm.data : [],
           cashAnalysis: c.ok ? c.data : [],
+          expenseBreakdown: eb.ok ? eb.data : [],
         }, errs.length ? errs.join('. ') : null);
         preloadAdjacent(tab);
         return;

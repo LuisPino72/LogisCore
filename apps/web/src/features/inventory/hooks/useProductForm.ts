@@ -23,6 +23,7 @@ const generateAutoSku = (name: string, existingSkus: string[]) => {
 interface UseProductFormOptions {
   initialValues?: Partial<ProductFormData>;
   editProductId?: string;
+  creationType?: 'simple' | 'weighted' | 'variants' | null;
   onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }) => Promise<boolean>;
 }
 
@@ -199,6 +200,13 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
     const { productType, stockInicial, ...validationData } = formData;
 
+    if (!validationData.categoryId) {
+      const errs = { categoryId: 'Debes seleccionar una categoría' };
+      setErrors(errs);
+      setIsSubmitting(false);
+      return { success: false, errors: errs };
+    }
+
     // Si tiene variantes, el precio base se hereda de la primera variante para pasar Zod
     if (presentations.length > 0 && validationData.priceUsd <= 0) {
       validationData.priceUsd = presentations[0]?.priceUsd || 0.05;
@@ -252,6 +260,13 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
         setIsSubmitting(false);
         return { success: false, errors: errs };
       }
+    }
+
+    if (presentations.length === 0 && options.creationType === 'variants') {
+      const errs = { presentations: 'Debes agregar al menos una variante' };
+      setErrors(errs);
+      setIsSubmitting(false);
+      return { success: false, errors: errs };
     }
 
     if (presentations.length > 0) {
