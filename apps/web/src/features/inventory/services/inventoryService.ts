@@ -1364,7 +1364,10 @@ export const inventoryService = {
       const displayStock = p.isWeighted
         ? (p.unit === 'kg' || p.unit === 'lt' ? p.stock / 1000 : p.stock)
         : p.stock;
-      return displayStock <= p.stockMin!;
+      const displayStockMin = p.isWeighted
+        ? (p.unit === 'kg' || p.unit === 'lt' ? p.stockMin! / 1000 : p.stockMin!)
+        : p.stockMin!;
+      return displayStock <= displayStockMin;
     });
     return success(lowStock.map((r) => toProduct(r as unknown as Record<string, unknown>)));
   },

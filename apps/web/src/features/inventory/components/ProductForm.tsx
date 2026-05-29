@@ -84,7 +84,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     categoryId: editProduct.categoryId,
     isWeighted: editProduct.isWeighted,
     unit: editProduct.unit,
-    stockMin: editProduct.stockMin,
+    stockMin: editProduct.stockMin != null
+      ? (editProduct.isWeighted
+          ? (editProduct.unit === 'lt' ? Math.round(editProduct.stockMin / 1000) : Math.round(editProduct.stockMin / 1000))
+          : editProduct.stockMin)
+      : undefined,
     costPrice: editProduct.costPrice ?? 0,
     imageUrl: editProduct.imageUrl,
   } : undefined;
@@ -393,7 +397,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
        {isEditing && (
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
            <div className="input-wrapper">
-             <label className="input-label">Stock mínimo (alerta)</label>
+             <label className="input-label">
+               Stock mínimo (alerta)
+               {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
+               {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
+             </label>
              <Input
                sanitize="number"
                decimals={0}
@@ -492,7 +500,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             
 
             <div className="input-wrapper">
-              <label className="input-label">Stock mínimo (alerta)</label>
+              <label className="input-label">
+                Stock mínimo (alerta)
+                {formData.productType === 'pesable_kg' && ' (Kg)'}
+                {formData.productType === 'pesable_lt' && ' (Lt)'}
+              </label>
               <Input
                 sanitize="number"
                 decimals={0}
@@ -670,7 +682,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div className="input-wrapper">
-          <label className="input-label">Stock mínimo (alerta)</label>
+          <label className="input-label">
+            Stock mínimo (alerta)
+            {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
+            {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
+          </label>
           <Input
             sanitize="number"
             decimals={0}
