@@ -264,7 +264,12 @@ export function PosPage({ tenantId }: PosPageProps) {
           addToast({ type: 'info', message: `${result.data.name} es pesable. Agrégalo manualmente.`, duration: 3000 });
           return;
         }
-        addToCart(result.data, 1);
+        const presentation = await inventoryService.getPresentationByBarcode(code, tenantId);
+        if (presentation?.id) {
+          addToCart(result.data, 1, { id: presentation.id, name: presentation.name, priceUsd: presentation.priceUsd, unitMultiplier: presentation.unitMultiplier });
+        } else {
+          addToCart(result.data, 1);
+        }
         addToast({ type: 'success', message: `${result.data.name} agregado`, duration: 2000 });
       } else {
         addToast({ type: 'error', message: `Producto con código "${code}" no encontrado.`, duration: 4000 });

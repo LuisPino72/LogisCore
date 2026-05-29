@@ -4,6 +4,7 @@ import { EventBus } from '@logiscore/core';
 import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
+import { useInventoryStore } from '../stores/inventoryStore';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
 import { inventoryService } from '../services/inventoryService';
@@ -103,6 +104,9 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           addToast({ type: 'warning', message: `Producto creado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
         }
       }
+    } else {
+      const storeError = useInventoryStore.getState().error;
+      addToast({ type: 'error', message: storeError ?? 'Error al crear el producto. Verifica tu conexión e intenta de nuevo.', duration: 5000 });
     }
     if (product) setShowProductForm(false);
     return !!product;

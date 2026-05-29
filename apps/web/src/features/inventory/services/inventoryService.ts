@@ -1174,21 +1174,71 @@ export const inventoryService = {
 
   async getProductBySku(sku: string, tenantId: string): Promise<Result<Product | null, AppError>> {
     const db = getDb();
+
+    // 1. Buscar por product SKU en Dexie
     const product = await db.products
       .where({ tenantId })
       .filter((p) => !p.deletedAt && p.sku === sku)
       .first();
     if (product) return success(toProduct(product as unknown as Record<string, unknown>));
 
-    const { data } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('sku', sku)
-      .is('deleted_at', null)
-      .maybeSingle();
-    if (data) return success(toProduct(data as unknown as Record<string, unknown>));
+    // 2. Buscar por presentation barcode en Dexie
+    const presentation = await db.productPresentations
+      .where({ tenantId })
+      .filter((p) => !p.deletedAt && p.barcode === sku)
+      .first();
+    if (presentation) {
+      const parentProduct = await db.products.get(presentation.productId);
+      if (parentProduct && !parentProduct.deletedAt) {
+        return success(toProduct(parentProduct as unknown as Record<string, unknown>));
+      }
+    }
+
+    // 3. Fallback a Supabase (con UUID y mapeo snake_case)
+    if (!navigator.onLine) return success(null);
+    try {
+      const uuid = await TenantTranslator.slugToUuid(tenantId);
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', uuid)
+        .eq('sku', sku)
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (data) {
+        const local = {
+          id: data.id as string,
+          tenantId,
+          name: data.name as string,
+          sku: data.sku as string,
+          priceUsd: data.price_usd as number,
+          categoryId: data.category_id as string | undefined,
+          isWeighted: data.is_weighted as boolean,
+          isTaxable: data.is_taxable !== undefined ? !!data.is_taxable : true,
+          isSellable: data.is_sellable !== undefined ? !!data.is_sellable : true,
+          unit: data.unit as Product['unit'],
+          stock: data.stock as number,
+          stockMin: data.stock_min as number | undefined,
+          imageUrl: data.image_url as string | undefined,
+          costPrice: data.cost_price as number | undefined,
+        };
+        await db.products.put(local);
+        return success(toProduct(local as unknown as Record<string, unknown>));
+      }
+    } catch {
+      // Silenciar errores de red en fallback
+    }
     return success(null);
+  },
+
+  async getPresentationByBarcode(barcode: string, tenantId: string): Promise<Presentation | null> {
+    const db = getDb();
+    const pres = await db.productPresentations
+      .where({ tenantId })
+      .filter((p) => !p.deletedAt && p.barcode === barcode && !!p.id)
+      .first();
+    if (pres) return toPresentation(pres as unknown as Record<string, unknown>);
+    return null;
   },
 
   async consumeFifo(productId: string, quantity: number, tenantId: string): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
