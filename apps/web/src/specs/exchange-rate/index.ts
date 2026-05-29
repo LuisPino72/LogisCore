@@ -30,9 +30,7 @@ export const EXCHANGE_RATE_CONFIG = {
   API_URL: 'https://ve.dolarapi.com/v1/dolares/oficial',
   CACHE_TTL_MS: 3600000, // 1 hora
   CRON_SCHEDULE: '0 6 * * *', // 12:01 AM VET = 6:01 UTC
-  DEFAULT_FALLBACK: process.env.EXCHANGE_RATE_FALLBACK 
-    ? parseFloat(process.env.EXCHANGE_RATE_FALLBACK) 
-    : undefined,
+  DEFAULT_FALLBACK: undefined,
 } as const;
 
 // =====================
