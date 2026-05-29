@@ -164,7 +164,7 @@
 
 /* ───────────────────── MODAL ───────────────────── */
 .modal-overlay { @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in; }
-.modal-content { @apply bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-lg max-h-[90vh] flex flex-col animate-slide-up shadow-2xl ring-1 ring-black/5; }
+.modal-content { @apply bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-lg max-h-[90dvh] flex flex-col animate-slide-up shadow-2xl ring-1 ring-black/5; }
 .modal-content-sm { @apply sm:max-w-sm; }
 .modal-content-lg { @apply sm:max-w-2xl; }
 .modal-content-full { @apply sm:max-w-full sm:m-4; }

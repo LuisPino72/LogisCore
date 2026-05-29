@@ -252,7 +252,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     if (formData.sku.trim()) {
       const existingProducts = useInventoryStore.getState().products;
       const skuExists = existingProducts.some(
-        (p) => p.sku.toLowerCase() === formData.sku.trim().toLowerCase() && (!options.editProductId || p.id !== options.editProductId)
+        (p) => p.sku && p.sku.toLowerCase() === formData.sku.trim().toLowerCase() && (!options.editProductId || p.id !== options.editProductId)
       );
       if (skuExists) {
         const errs = { sku: 'Ya existe un producto con este código SKU' };

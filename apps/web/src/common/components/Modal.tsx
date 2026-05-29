@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useVisualViewport } from '../../hooks/useVisualViewport';
 
 interface ModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export function Modal({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const viewport = useVisualViewport();
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (closeOnEsc && e.key === 'Escape') {
@@ -98,6 +100,10 @@ export function Modal({
     full: 'modal-content-full',
   };
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const keyboardOpen = isMobile && viewport.height < window.innerHeight * 0.85;
+  const dynamicMaxHeight = keyboardOpen ? `${viewport.height - 16}px` : undefined;
+
   return createPortal(
     <div
       className={cn('modal-overlay', overlayClassName)}
@@ -109,6 +115,7 @@ export function Modal({
       <div 
         ref={modalRef}
          className={cn('modal-content', sizeClasses[size], className)}
+        style={dynamicMaxHeight ? { maxHeight: dynamicMaxHeight } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
