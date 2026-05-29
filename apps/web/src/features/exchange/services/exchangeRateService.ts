@@ -61,6 +61,12 @@ async function readFromDexie(tenantId: string): Promise<ExchangeRateResponse | n
 
 export const exchangeRateService = {
   async fetchLatest(tenantId: string): Promise<Result<ExchangeRateResponse | null, AppError>> {
+    if (!navigator.onLine) {
+      const cached = await readFromDexie(tenantId);
+      if (cached) return success(cached);
+      return success(null);
+    }
+
     const { data, error } = await supabase
       .from('exchange_rates')
       .select('id, rate, source, fetched_at, created_at')
@@ -71,10 +77,8 @@ export const exchangeRateService = {
       .maybeSingle();
 
     if (error) {
-      if (!navigator.onLine) {
-        const cached = await readFromDexie(tenantId);
-        if (cached) return success(cached);
-      }
+      const cached = await readFromDexie(tenantId);
+      if (cached) return success(cached);
       return failure(new AppError(DashboardErrors.TASA_BCV_FETCH_FAILED, 'Error al cargar tasa BCV'));
     }
 

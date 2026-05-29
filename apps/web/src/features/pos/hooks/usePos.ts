@@ -118,13 +118,13 @@ export function usePos(tenantId: string | null) {
     subs.push(
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
-        if (table === 'products' && tenantId) {
+        if ((table === '*' || table === 'products') && tenantId) {
           fetchProducts(tenantId, true);
         }
-        if (table === 'product_presentations' && tenantId) {
+        if ((table === '*' || table === 'product_presentations') && tenantId) {
           fetchPresentations(tenantId);
         }
-        if (table === 'cash_registers' && tenantId) {
+        if ((table === '*' || table === 'cash_registers') && tenantId) {
           fetchCashRegister(tenantId, true);
         }
       }),

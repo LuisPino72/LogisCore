@@ -710,8 +710,10 @@ export const inventoryService = {
         .filter((p) => !p.deletedAt)
         .toArray();
 
-      if (rows.length === 0) {
-        if (isDbClosing()) return success([]);
+      const presCount = rows.length > 0 ? await db.productPresentations.where({ tenantId }).filter(p => !p.deletedAt).count() : 0;
+
+      if (rows.length === 0 || presCount === 0) {
+        if (isDbClosing()) return success(rows.map((r) => toProduct(r as unknown as Record<string, unknown>)));
 
         const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
         const { data, error } = await supabase
@@ -789,7 +791,6 @@ export const inventoryService = {
             });
           } catch (err) {
             logger.error(INVENTORY_MODULE, 'Error during seed:', err);
-            return success([]);
           }
         }
       }

@@ -42,7 +42,7 @@ export function useInventory(tenantId: string | null) {
 
     const sub1 = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
       const { table } = payload as { table?: string };
-      if (!table || ['products', 'categories', 'inventory_movements', 'inventory_lots'].includes(table)) {
+      if (!table || table === '*' || ['products', 'categories', 'inventory_movements', 'inventory_lots'].includes(table)) {
         doFetch(undefined, true);
       }
     });
