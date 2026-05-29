@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Html5Qrcode as Html5QrcodeType } from 'html5-qrcode';
 import { Camera, CameraOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/common/components';
+import { hasCamera } from '@/lib/camera';
 
 interface BarcodeScannerModalProps {
   isOpen: boolean;
@@ -72,7 +73,14 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
 
   useEffect(() => {
     if (isOpen) {
-      startScanner(cameraFacing);
+      hasCamera().then((available) => {
+        if (available) {
+          startScanner(cameraFacing);
+        } else {
+          setError('Este dispositivo no tiene cámara disponible.');
+          setScanning(false);
+        }
+      });
     } else {
       stopScanner();
     }

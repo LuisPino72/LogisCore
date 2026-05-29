@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
-import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check, Camera, Image } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
+import { hasCamera } from '../../../lib/camera';
 import type { CreateProductInput, CreatePresentationInput } from '../types';
 
 function StepIndicator({ current, steps }: { current: number; steps: { id: string; label: string }[] }) {
@@ -67,6 +68,10 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const [categoryError, setCategoryError] = useState('');
   const [categorySubmitting, setCategorySubmitting] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [cameraAvailable, setCameraAvailable] = useState(true);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const [creationType, setCreationType] = useState<'simple' | 'weighted' | 'variants' | null>(
     isEditing ? (editProduct?.isWeighted ? 'weighted' : null) : null
@@ -116,6 +121,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       setCreationType('variants');
     }
   }, [isEditing, presentations, creationType]);
+
+  useEffect(() => {
+    if (showImagePicker) {
+      hasCamera().then(setCameraAvailable);
+    }
+  }, [showImagePicker]);
 
   const creationSteps = [
     { id: 'type', label: 'Tipo' },
@@ -312,10 +323,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </button>
           </div>
         ) : (
-          <label className="w-14 h-14 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowImagePicker(true)}
+            className="w-14 h-14 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all shrink-0"
+          >
             <ImagePlus size={18} className="text-gray-400" />
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
-          </label>
+          </button>
         )}
         <div className="flex-1 min-w-0">
           <Input
@@ -923,6 +937,64 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           setField('sku', code);
           setShowBarcodeScanner(false);
         }}
+      />
+
+      <Modal isOpen={showImagePicker} onClose={() => setShowImagePicker(false)} title="Agregar imagen" size="sm">
+        <div className="space-y-2">
+          {cameraAvailable && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowImagePicker(false);
+                setTimeout(() => cameraInputRef.current?.click(), 100);
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-left group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+                <Camera size={18} className="text-primary" />
+              </div>
+              <div>
+                <span className="block text-sm font-semibold text-gray-800">Tomar foto</span>
+                <span className="block text-xs text-gray-500">Usa la cámara del dispositivo</span>
+              </div>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setShowImagePicker(false);
+              setTimeout(() => galleryInputRef.current?.click(), 100);
+            }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+              <Image size={18} className="text-primary" />
+            </div>
+            <div>
+              <span className="block text-sm font-semibold text-gray-800">Elegir de galería</span>
+              <span className="block text-xs text-gray-500">Selecciona una imagen guardada</span>
+            </div>
+          </button>
+          {!cameraAvailable && (
+            <p className="text-[11px] text-gray-400 text-center pt-1">No se detectó cámara en este dispositivo</p>
+          )}
+        </div>
+      </Modal>
+
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleImageChange}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleImageChange}
       />
     </Modal>
   );
