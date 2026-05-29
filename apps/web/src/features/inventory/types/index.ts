@@ -62,12 +62,15 @@ export interface ActiveLot {
 
 export type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
+export type ProductTypeFilter = 'all' | 'simple' | 'weighted' | 'with_variants';
+
 export type TabKey = 'productos' | 'categorias' | 'historial';
 
 export interface TabState {
   searchQuery: string;
   filterCategory: string;
   stockFilter: StockFilter;
+  productTypeFilter: ProductTypeFilter;
   page: number;
 }
 

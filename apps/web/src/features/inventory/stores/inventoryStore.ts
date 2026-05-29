@@ -4,7 +4,7 @@ import { inventoryService } from '../services/inventoryService';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateProductInput, AdjustStockInput } from '../types';
 
-const DEFAULT_TAB_STATE: TabState = { searchQuery: '', filterCategory: '', stockFilter: 'all', page: 1 };
+const DEFAULT_TAB_STATE: TabState = { searchQuery: '', filterCategory: '', stockFilter: 'all', productTypeFilter: 'all', page: 1 };
 
 interface InventoryStore extends InventoryState {
   setActiveTab: (tab: TabKey) => void;

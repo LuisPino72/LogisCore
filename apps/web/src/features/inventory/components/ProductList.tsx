@@ -4,7 +4,7 @@ import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, Sear
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
-import type { Product, Category, TabState, StockFilter } from '../types';
+import type { Product, Category, TabState, StockFilter, ProductTypeFilter } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 import { getDb } from '../../../services/dexie/db';
@@ -68,10 +68,20 @@ function getStockVariant(stock: number, product: { stockMin?: number; isWeighted
   return 'success';
 }
 
+function applyProductTypeFilter(product: { isWeighted: boolean; id: string }, filter: ProductTypeFilter, productIdsWithVariants: Set<string>): boolean {
+  switch (filter) {
+    case 'all': return true;
+    case 'simple': return !product.isWeighted && !productIdsWithVariants.has(product.id);
+    case 'weighted': return product.isWeighted;
+    case 'with_variants': return productIdsWithVariants.has(product.id);
+  }
+}
+
 export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
+  const [productTypeFilter, setProductTypeFilter] = useState<ProductTypeFilter>(initialTabState.productTypeFilter ?? 'all');
   const [page, setPage] = useState(initialTabState.page);
   const [productIdsWithVariants, setProductIdsWithVariants] = useState<Set<string>>(new Set());
   const [variantModalProductId, setVariantModalProductId] = useState<string | null>(null);
@@ -166,7 +176,13 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
 
   const handleStockFilter = (value: StockFilter, el: HTMLElement) => {
     setStockFilter(value);
-    onSaveTabState({ searchQuery, filterCategory, stockFilter: value, page });
+    onSaveTabState({ searchQuery, filterCategory, stockFilter: value, productTypeFilter, page });
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
+
+  const handleProductTypeFilter = (value: ProductTypeFilter, el: HTMLElement) => {
+    setProductTypeFilter(value);
+    onSaveTabState({ searchQuery, filterCategory, stockFilter, productTypeFilter: value, page });
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   };
 
@@ -177,13 +193,21 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
     { value: 'out_of_stock', label: 'Sin stock' },
   ];
 
+  const productTypeOptions: { value: ProductTypeFilter; label: string }[] = [
+    { value: 'all', label: 'Todos los tipos' },
+    { value: 'simple', label: 'Simples' },
+    { value: 'weighted', label: 'Pesables' },
+    { value: 'with_variants', label: 'Con variantes' },
+  ];
+
   const fuzzyResults = useProductFuzzySearch(products, searchQuery);
 
     const filteredByStock = useMemo(() => {
       const result = searchQuery ? fuzzyResults : products;
-
-    return result.filter((p) => applyStockFilter(p.stock, p, stockFilter));
-  }, [searchQuery, fuzzyResults, products, stockFilter]);
+      return result
+        .filter((p) => applyProductTypeFilter(p, productTypeFilter, productIdsWithVariants))
+        .filter((p) => applyStockFilter(p.stock, p, stockFilter));
+  }, [searchQuery, fuzzyResults, products, stockFilter, productTypeFilter, productIdsWithVariants]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [
@@ -378,6 +402,25 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               onClick={(e) => handleStockFilter(opt.value, e.currentTarget)}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-95 ${
                 stockFilter === opt.value
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary hover:bg-primary/2'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          {productTypeOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={(e) => handleProductTypeFilter(opt.value, e.currentTarget)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-95 ${
+                productTypeFilter === opt.value
                   ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                   : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary hover:bg-primary/2'
               }`}

@@ -5,6 +5,10 @@ import Fuse from 'fuse.js';
 import { cn } from '../../lib/utils';
 import { useClickOutside } from '../hooks/useClickOutside';
 
+function normalizeText(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 interface SearchableSelectOption {
   value: string;
   label: string;
@@ -59,7 +63,7 @@ export function SearchableSelect({
     ? options
     : search.trim().length < 1
       ? options
-      : fuse.search(search).map((r) => r.item);
+      : fuse.search(normalizeText(search)).map((r) => r.item);
 
   const handleOpen = useCallback(() => {
     setIsOpen(true);
