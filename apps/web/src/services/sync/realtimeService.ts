@@ -7,30 +7,28 @@ import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/
 type RecordPayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
 export type RealtimeTable =
-  | 'products'
-  | 'inventory_lots'
   | 'sales'
   | 'sale_items'
   | 'cash_registers'
-  | 'expenses'
+  | 'products'
+  | 'inventory_lots'
+  | 'inventory_movements'
+  | 'product_presentations'
   | 'categories'
-  | 'suppliers'
   | 'purchase_orders'
-  | 'purchase_order_items'
-  | 'product_presentations';
+  | 'purchase_order_items';
 
 export const REALTIME_TABLES: RealtimeTable[] = [
-  'products',
-  'inventory_lots',
   'sales',
   'sale_items',
   'cash_registers',
-  'expenses',
+  'products',
+  'inventory_lots',
+  'inventory_movements',
+  'product_presentations',
   'categories',
-  'suppliers',
   'purchase_orders',
   'purchase_order_items',
-  'product_presentations',
 ];
 
 export type RealtimeCallback = (tableName: string, record: Record<string, unknown>) => Promise<void>;
