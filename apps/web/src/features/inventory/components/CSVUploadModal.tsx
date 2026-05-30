@@ -1,7 +1,21 @@
 import { useState, useRef, useCallback } from 'react';
 import { Button, Modal, Badge } from '../../../common/components';
-import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2 } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download } from 'lucide-react';
 import { parseCsvFile, validateCsvRows, importProductsFromCsv, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
+
+function downloadCsvTemplate() {
+  const headers = 'nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad';
+  const example1 = 'Arroz Premium,ARR001,2.50,1.80,100,10,víveres,si,kg';
+  const example2 = 'Aceite Vegetal,ACE002,3.00,2.20,50,5,víveres,no,lt';
+  const csvContent = `${headers}\n${example1}\n${example2}`;
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'plantilla-productos.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface CSVUploadModalProps {
   isOpen: boolean;
@@ -113,7 +127,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
                   <p className="text-sm font-medium text-gray-700">Arrastra un archivo CSV aquí</p>
                   <p className="text-xs text-gray-500 mt-1">o haz clic para seleccionar</p>
                 </div>
-                <p className="text-[10px] text-gray-400">Máximo 500 productos por importación</p>
+                <p className="text-[10px] text-gray-600">Máximo 500 productos por importación</p>
               </div>
             )}
           </div>
@@ -126,11 +140,13 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
           )}
 
           <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs font-medium text-gray-700 mb-2">Formato esperado del CSV:</p>
-            <code className="text-[10px] text-gray-600 block bg-white p-2 rounded border">
-              nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad
-            </code>
-            <p className="text-[10px] text-gray-400 mt-1">Campos requeridos: nombre, sku, precio, costo, stock, stock_min</p>
+            <div className="flex items-center justify-between mb-2">
+              <Button variant="ghost" size="sm" onClick={downloadCsvTemplate}>
+                <Download size={16} />
+                Descargar plantilla
+              </Button>
+            </div>
+            <p className="text-[14px] text-gray-600 mt-1">Campos requeridos: nombre, sku, precio, costo, stock, stock_min</p>
           </div>
 
           <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
@@ -197,7 +213,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
           )}
 
           {previewRows.length > 0 && (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-60 overflow-y-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-200">

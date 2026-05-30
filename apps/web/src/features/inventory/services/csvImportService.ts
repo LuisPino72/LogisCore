@@ -90,13 +90,13 @@ function parseNumber(value: string | undefined, fallback: number): number {
   return isNaN(num) ? fallback : num;
 }
 
-function parseBoolean(value: string | undefined): boolean {
+export function parseBoolean(value: string | undefined): boolean {
   if (!value) return false;
   const v = value.trim().toLowerCase();
   return v === 'si' || v === 'sí' || v === 'true' || v === '1' || v === 'yes';
 }
 
-function parseUnit(value: string | undefined, isWeighted: boolean): string {
+export function parseUnit(value: string | undefined, isWeighted: boolean): string {
   if (!value) return isWeighted ? 'kg' : 'unidad';
   const v = value.trim().toLowerCase();
   const validUnits = ['kg', 'gr', 'lt', 'm', 'unidad'];
@@ -258,68 +258,91 @@ export async function importProductsFromCsv(
 
   const validRows = rows.filter((_, i) => validatedResults[i]?.status === 'valid');
 
-  for (const row of validRows) {
-    const nombre = row.nombre?.trim() ?? '';
-    const sku = row.sku?.trim() ?? '';
-    const precio = parseNumber(row.precio, 0);
-    const costo = parseNumber(row.costo, 0);
-    const stock = parseNumber(row.stock, 0);
-    const stockMin = parseNumber(row.stock_min, 0);
-    const isWeighted = parseBoolean(row.pesable);
-    const unit = parseUnit(row.unidad, isWeighted);
+  const chunkSize = 50;
+  for (let i = 0; i < validRows.length; i += chunkSize) {
+    const chunk = validRows.slice(i, i + chunkSize);
+    const results = await Promise.allSettled(
+      chunk.map(async (row) => {
+        const nombre = row.nombre?.trim() ?? '';
+        const sku = row.sku?.trim() ?? '';
+        const precio = parseNumber(row.precio, 0);
+        const costo = parseNumber(row.costo, 0);
+        const stock = parseNumber(row.stock, 0);
+        const stockMin = parseNumber(row.stock_min, 0);
+        const isWeighted = parseBoolean(row.pesable);
+        const unit = parseUnit(row.unidad, isWeighted);
 
-    let categoryId = '';
-    if (row.categoria && row.categoria.trim() !== '') {
-      const catName = row.categoria.trim();
-      const categoryNames = Array.from(categoryMap.values()).map((c) => c.name);
-      const fuzzyMatch = fuzzyMatchCategory(catName, categoryNames);
-      if (fuzzyMatch) {
-        const existingCat = categoryMap.get(normalizeText(fuzzyMatch));
-        if (existingCat) {
-          categoryId = existingCat.id;
+        let categoryId = '';
+        if (row.categoria && row.categoria.trim() !== '') {
+          const catName = row.categoria.trim();
+          const categoryNames = Array.from(categoryMap.values()).map((c) => c.name);
+          const fuzzyMatch = fuzzyMatchCategory(catName, categoryNames);
+          if (fuzzyMatch) {
+            const existingCat = categoryMap.get(normalizeText(fuzzyMatch));
+            if (existingCat) {
+              categoryId = existingCat.id;
+            }
+          } else {
+            const newCatResult = await inventoryService.createCategory({ name: catName, tenantId });
+            if (newCatResult.ok) {
+              categoryId = newCatResult.data.id;
+              categoryMap.set(normalizeText(catName), { id: categoryId, name: catName, tenantId } as never);
+              categoriesCreated.push(catName);
+            }
+          }
         }
+
+        if (!categoryId) {
+          const defaultCat = categoryMap.get(normalizeText('Otros'));
+          if (defaultCat) {
+            categoryId = defaultCat.id;
+          } else {
+            const newCatResult = await inventoryService.createCategory({ name: 'Otros', tenantId });
+            if (newCatResult.ok) {
+              categoryId = newCatResult.data.id;
+              categoryMap.set(normalizeText('Otros'), { id: categoryId, name: 'Otros', tenantId } as never);
+              categoriesCreated.push('Otros');
+            }
+          }
+        }
+
+        const input = {
+          name: nombre,
+          sku,
+          priceUsd: precio,
+          categoryId,
+          isWeighted,
+          isTaxable: true,
+          isSellable: true,
+          unit: unit as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
+          stockInicial: stock,
+          stockMin: stockMin || undefined,
+          costPrice: costo || undefined,
+        };
+
+        const result = await inventoryService.createProduct(tenantId, userId, input);
+        if (!result.ok) {
+          throw new Error(result.error?.message ?? 'Error al crear producto');
+        }
+        return { sku, nombre };
+      }),
+    );
+
+    results.forEach((r, idx) => {
+      if (r.status === 'fulfilled') {
+        summary.imported++;
       } else {
-        const newCatResult = await inventoryService.createCategory({ name: catName, tenantId });
-        if (newCatResult.ok) {
-          categoryId = newCatResult.data.id;
-          categoryMap.set(normalizeText(catName), { id: categoryId, name: catName, tenantId } as never);
-          categoriesCreated.push(catName);
+        summary.errors++;
+        const row = chunk[idx];
+        const existingResult = summary.results.find(
+          (res) => res.sku === row.sku?.trim() && res.status === 'valid',
+        );
+        if (existingResult) {
+          existingResult.status = 'error';
+          existingResult.errors = [{ field: 'import', message: r.reason?.message ?? 'Error al importar' }];
         }
       }
-    }
-
-    if (!categoryId) {
-      const defaultCat = categoryMap.get(normalizeText('Otros'));
-      if (defaultCat) {
-        categoryId = defaultCat.id;
-      } else {
-        const newCatResult = await inventoryService.createCategory({ name: 'Otros', tenantId });
-        if (newCatResult.ok) {
-          categoryId = newCatResult.data.id;
-          categoryMap.set(normalizeText('Otros'), { id: categoryId, name: 'Otros', tenantId } as never);
-          categoriesCreated.push('Otros');
-        }
-      }
-    }
-
-    const input = {
-      name: nombre,
-      sku,
-      priceUsd: precio,
-      categoryId,
-      isWeighted,
-      isTaxable: true,
-      isSellable: true,
-      unit: unit as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
-      stockInicial: stock,
-      stockMin: stockMin || undefined,
-      costPrice: costo || undefined,
-    };
-
-    const result = await inventoryService.createProduct(tenantId, userId, input);
-    if (result.ok) {
-      summary.imported++;
-    }
+    });
   }
 
   return summary;

@@ -10,7 +10,6 @@ import { posService } from '../services/posService';
 import { usePosStore } from '../stores/posStore';
 import { METADATA_PAGOS } from '../../../specs/sales';
 import { formatBs, formatUsd } from '@/lib/formatBs';
-import { TicketButton } from './TicketButton';
 
 const PAGE_SIZE = 20;
 
@@ -32,9 +31,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [ticketSale, setTicketSale] = useState<Sale | null>(null);
-  const [ticketItems, setTicketItems] = useState<SaleItem[]>([]);
-  const [ticketLoading, setTicketLoading] = useState(false);
 
   const debouncedStartDate = useDebounce(startDate, 400);
   const debouncedEndDate = useDebounce(endDate, 400);
@@ -69,14 +65,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
     const result = await posService.getSaleItems(sale.id);
     if (result.ok) setSaleItems(result.data);
     setItemsLoading(false);
-  };
-
-  const handleTicket = async (sale: Sale) => {
-    setTicketSale(sale);
-    setTicketLoading(true);
-    const result = await posService.getSaleItems(sale.id);
-    if (result.ok) setTicketItems(result.data);
-    setTicketLoading(false);
   };
 
   const columns: Column<Sale>[] = [
@@ -121,9 +109,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         <div className="flex items-center justify-end gap-1">
           <Button variant="ghost" size="sm" onClick={() => handleView(sale)} className="p-1.5" title="Ver detalle">
             <Eye size={16} />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleTicket(sale)} className="p-1.5" title="Generar ticket">
-            <span className="text-sm">📄</span>
           </Button>
           {canVoid && (
             <Button variant="ghost" size="sm" onClick={() => onVoid(sale.id)} className="p-1.5" title="Anular venta">
@@ -268,51 +253,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
                 <span>{formatBs(selectedSale.totalBs)} / {formatUsd(selectedSale.exchangeRate > 0 ? selectedSale.totalBs / selectedSale.exchangeRate : 0)}</span>
               </div>
             </div>
-          </div>
-        )}
-      </Modal>
-
-      <Modal
-        isOpen={ticketSale !== null}
-        onClose={() => { setTicketSale(null); setTicketItems([]); }}
-        title="Ticket de venta"
-        size="sm"
-      >
-        {ticketSale && (
-          <div className="flex flex-col gap-3 py-2">
-            {ticketLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Skeleton variant="shimmer" className="h-8 w-32 rounded-lg" />
-              </div>
-            ) : (
-              <>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p><strong>Fecha:</strong> {new Date(ticketSale.createdAt).toLocaleString('es-VE')}</p>
-                  <p><strong>Total:</strong> {formatBs(ticketSale.totalBs)} / {formatUsd(ticketSale.exchangeRate > 0 ? ticketSale.totalBs / ticketSale.exchangeRate : 0)}</p>
-                </div>
-                <TicketButton
-                  saleId={ticketSale.id}
-                  items={ticketItems.map((item) => ({
-                    name: item.presentationName ? `${item.productName} - ${item.presentationName}` : item.productName,
-                    quantity: item.quantity,
-                    unitPriceUsd: item.unitPriceUsd,
-                    totalPriceUsd: item.totalPriceUsd,
-                    presentationName: item.presentationName,
-                    unit: item.unit,
-                  }))}
-                  subtotalBs={ticketSale.subtotalBs}
-                  totalUsd={ticketSale.exchangeRate > 0 ? ticketSale.totalBs / ticketSale.exchangeRate : 0}
-                  totalBs={ticketSale.totalBs}
-                  ivaBs={ticketSale.ivaBs ?? 0}
-                  igtfBs={ticketSale.igtfBs}
-                  discountBs={ticketSale.discountBs}
-                  paymentMethod={ticketSale.paymentMethod}
-                  exchangeRate={ticketSale.exchangeRate}
-                  createdAt={ticketSale.createdAt}
-                  tenantId={tenantId}
-                />
-              </>
-            )}
           </div>
         )}
       </Modal>

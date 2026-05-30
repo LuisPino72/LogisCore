@@ -17,6 +17,7 @@ import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
 import { CSVUploadModal } from './CSVUploadModal';
 import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
+import { parseBoolean, parseUnit } from '../services/csvImportService';
 
 
 
@@ -752,9 +753,29 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         tenantId={tenantId ?? ''}
         userId={userId ?? ''}
         onImported={() => refresh()}
-        onEditErrors={() => {
+        onEditErrors={(errorRows) => {
           setShowCsvImport(false);
-          openNewProduct();
+          if (errorRows.length > 0) {
+            const row = errorRows[0];
+            const isWeighted = parseBoolean(row.pesable);
+            setEditProduct({
+              id: '',
+              name: row.nombre?.trim() ?? '',
+              sku: row.sku?.trim() ?? '',
+              priceUsd: parseFloat(row.precio ?? '0') || 0,
+              categoryId: '',
+              isWeighted,
+              isTaxable: true,
+              isSellable: true,
+              unit: parseUnit(row.unidad, isWeighted) as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
+              stock: parseFloat(row.stock ?? '0') || 0,
+              stockMin: parseFloat(row.stock_min ?? '0') || undefined,
+              costPrice: parseFloat(row.costo ?? '0') || undefined,
+            });
+            setShowProductForm(true);
+          } else {
+            openNewProduct();
+          }
         }}
       />
     </div>

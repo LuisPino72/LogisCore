@@ -15,7 +15,7 @@ import { ParkedCartsList } from './ParkedCartsList';
 import { SalesHistory } from './SalesHistory';
 import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
-import { TicketButton } from './TicketButton';
+
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
@@ -595,19 +595,6 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Badge variant="success" className="text-xs">
               {METADATA_PAGOS[completedSale.paymentMethod]?.label ?? completedSale.paymentMethod}
             </Badge>
-            <TicketButton
-              saleId={completedSale.saleId}
-              items={completedSale.items}
-              subtotalBs={completedSale.subtotalBs}
-              totalUsd={completedSale.totalUsd}
-              totalBs={completedSale.totalBs}
-              ivaBs={0}
-              igtfBs={0}
-              paymentMethod={completedSale.paymentMethod}
-              exchangeRate={completedSale.exchangeRate}
-              createdAt={new Date().toISOString()}
-              tenantId={tenantId ?? ''}
-            />
             <Button variant="ghost" fullWidth onClick={() => setCompletedSale(null)}>
               Nueva venta
             </Button>
