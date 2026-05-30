@@ -15,6 +15,7 @@ import { ParkedCartsList } from './ParkedCartsList';
 import { SalesHistory } from './SalesHistory';
 import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
+import { TicketButton } from './TicketButton';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
@@ -66,7 +67,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [verifyCounts, setVerifyCounts] = useState({ sold: 0, lowStock: 0 });
   const [cashError, setCashError] = useState<string | null>(null);
   const [selectedProductForPres, setSelectedProductForPres] = useState<Product | null>(null);
-  const [completedSale, setCompletedSale] = useState<{ totalUsd: number; totalBs: number; paymentMethod: PaymentMethod } | null>(null);
+  const [completedSale, setCompletedSale] = useState<{ saleId: string; subtotalBs: number; totalUsd: number; totalBs: number; paymentMethod: PaymentMethod; items: Array<{ name: string; quantity: number; unitPriceUsd: number; totalPriceUsd: number; presentationName?: string; unit?: string }>; exchangeRate: number } | null>(null);
 
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
@@ -126,11 +127,20 @@ export function PosPage({ tenantId }: PosPageProps) {
     if (!tenantId || !userId || !paymentMethod) return;
     setProcessing(true);
     try {
-      const ok = await completeSale(tenantId, paymentMethod, userId);
-      if (ok) {
+      const saleId = await completeSale(tenantId, paymentMethod, userId);
+      if (saleId) {
         const totalUsd = cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
         const totalBs = exchangeRateBs > 0 ? preciseRound(totalUsd * exchangeRateBs, 2) : 0;
-        setCompletedSale({ totalUsd, totalBs, paymentMethod });
+        const subtotalBs = totalBs;
+        const items = cart.map((item) => ({
+          name: item.presentationName ? `${item.name} - ${item.presentationName}` : item.name,
+          quantity: item.quantity,
+          unitPriceUsd: item.unitPriceUsd,
+          totalPriceUsd: item.totalPriceUsd,
+          presentationName: item.presentationName,
+          unit: item.unit,
+        }));
+        setCompletedSale({ saleId, subtotalBs, totalUsd, totalBs, paymentMethod, items, exchangeRate: exchangeRateBs });
         setPaymentMethod(null);
         clearCart();
         setMobileCartOpen(false);
@@ -144,7 +154,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     } finally {
       setProcessing(false);
     }
-  }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast]);
+  }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs]);
 
   const handleOpenCash = useCallback(async () => {
     setCashMode('open');
@@ -585,7 +595,20 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Badge variant="success" className="text-xs">
               {METADATA_PAGOS[completedSale.paymentMethod]?.label ?? completedSale.paymentMethod}
             </Badge>
-            <Button variant="primary" fullWidth onClick={() => setCompletedSale(null)}>
+            <TicketButton
+              saleId={completedSale.saleId}
+              items={completedSale.items}
+              subtotalBs={completedSale.subtotalBs}
+              totalUsd={completedSale.totalUsd}
+              totalBs={completedSale.totalBs}
+              ivaBs={0}
+              igtfBs={0}
+              paymentMethod={completedSale.paymentMethod}
+              exchangeRate={completedSale.exchangeRate}
+              createdAt={new Date().toISOString()}
+              tenantId={tenantId ?? ''}
+            />
+            <Button variant="ghost" fullWidth onClick={() => setCompletedSale(null)}>
               Nueva venta
             </Button>
           </div>

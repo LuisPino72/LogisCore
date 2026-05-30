@@ -32,7 +32,7 @@ interface PosStore extends PosState {
   deleteParkedCart: (id: string) => Promise<void>;
   toggleFavorite: (tenantId: string, productId: string) => Promise<void>;
   isFavorite: (productId: string) => boolean;
-  completeSale: (tenantId: string, paymentMethod: PaymentMethod, userId: string) => Promise<boolean>;
+  completeSale: (tenantId: string, paymentMethod: PaymentMethod, userId: string) => Promise<string | false>;
   openCashRegister: (tenantId: string, openingBalance: number, userId: string) => Promise<boolean>;
   closeCashRegister: (tenantId: string, declaredClosingBalance: number, userId: string) => Promise<boolean>;
   reset: () => void;
@@ -381,7 +381,7 @@ export const usePosStore = create<PosStore>()(
         const remaining = get().parkedCarts.filter((p) => p.id !== activeId);
         set({ parkedCarts: remaining });
       }
-      return true;
+      return result.data.id;
     }
     set({ loading: false, error: result.error.message });
     return false;
