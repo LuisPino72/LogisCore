@@ -13,6 +13,7 @@ import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage } from '../types';
+import { useAuthStore } from '../../auth/stores/authStore';
 
 const INVENTORY_MODULE = 'INVENTORY';
 
@@ -736,8 +737,8 @@ export const inventoryService = {
         if (!error && data && data.length > 0) {
           try {
             const [lotsResponse, presResponse] = await Promise.all([
-              supabase.from('inventory_lots').select('*').in('product_id', data.map((p: Record<string, unknown>) => p.id)),
-              supabase.from('product_presentations').select('*').in('product_id', data.map((p: Record<string, unknown>) => p.id)).is('deleted_at', null)
+              supabase.from('inventory_lots').select('*').eq('tenant_id', tenantId).in('product_id', data.map((p: Record<string, unknown>) => p.id)),
+              supabase.from('product_presentations').select('*').eq('tenant_id', tenantId).in('product_id', data.map((p: Record<string, unknown>) => p.id)).is('deleted_at', null)
             ]);
 
             const lots = lotsResponse.data;
@@ -1289,15 +1290,18 @@ export const inventoryService = {
 
     // If local is empty, try pulling from Supabase
     if (rows.length === 0) {
-      const { data, error } = await supabase
+      const tenantUuid = useAuthStore.getState().session?.tenantId;
+      const query = supabase
         .from('inventory_movements')
         .select('*')
         .eq('product_id', productId);
+      if (tenantUuid) query.eq('tenant_id', tenantUuid);
+      const { data, error } = await query;
 
       if (!error && data && data.length > 0) {
         for (const mov of data) {
           await db.inventoryMovements.add({
-            id: mov.id, tenantId: '',
+            id: mov.id, tenantId: tenantUuid ?? '',
             productId: mov.product_id,
             userId: mov.user_id,
             type: mov.type,

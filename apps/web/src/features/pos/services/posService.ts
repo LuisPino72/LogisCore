@@ -17,6 +17,7 @@ import { CreateSaleInputSchema } from '../../../specs/pos';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
+import { useAuthStore } from '../../auth/stores/authStore';
 
 const MODULE_NAME = 'POS';
 
@@ -846,10 +847,13 @@ export const posService = {
         .toArray();
 
       if (rows.length === 0) {
-        const { data } = await supabase
+        const tenantUuid = useAuthStore.getState().session?.tenantId;
+        const query = supabase
           .from('sale_items')
           .select('*')
           .eq('sale_id', saleId);
+        if (tenantUuid) query.eq('tenant_id', tenantUuid);
+        const { data } = await query;
 
         if (data) {
           for (const item of data) {

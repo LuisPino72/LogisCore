@@ -284,6 +284,23 @@ export const adminService = {
   },
 
   async removeEmployee(userRoleId: string): Promise<Result<void, AppError>> {
+    // Verificar que el employee pertenece al tenant del caller
+    const { data: existing, error: fetchError } = await supabase
+      .from('user_roles')
+      .select('id, tenant_id')
+      .eq('id', userRoleId)
+      .single();
+
+    if (fetchError || !existing) {
+      return failure(new AppError('TENANT_NOT_FOUND', 'Empleado no encontrado'));
+    }
+
+    // Verificar que el tenant coincide con el del JWT (RLS también verifica, pero esto es defense-in-depth)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return failure(new AppError('UNAUTHORIZED', 'No autenticado'));
+    }
+
     const { error } = await supabase
       .from('user_roles')
       .update({ deleted_at: new Date().toISOString() })

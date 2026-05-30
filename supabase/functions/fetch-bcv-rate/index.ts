@@ -13,6 +13,16 @@ function checkRateLimit(key: string): boolean {
   return true;
 }
 
+function decodeJWTPayload(token: string): Record<string, unknown> {
+  try {
+    const payload = token.split('.')[1];
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(json);
+  } catch {
+    return {};
+  }
+}
+
 interface BcvApiRate {
   moneda: string;
   fuente: string;
@@ -42,8 +52,59 @@ serve(async (req: Request) => {
   }
 
   try {
+    // === AUTENTICACIÓN: Verificar JWT ===
+    const authHeader = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ code: 'UNAUTHORIZED', message: 'Token requerido' }),
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(authHeader);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ code: 'UNAUTHORIZED', message: 'Token inválido o expirado' }),
+        { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Extraer tenant_id del JWT (inyectado por custom_access_token_hook)
+    let jwtTenantId: string | undefined;
+    try {
+      const payload = decodeJWTPayload(authHeader);
+      const appMeta = payload.app_metadata as Record<string, unknown> | undefined;
+      jwtTenantId = appMeta?.tenant_id as string | undefined;
+    } catch {
+      // Si no se puede decodificar, continuar sin tenant (bulk update solo admin)
+    }
+
+    // === RATE LIMITING ===
     const body = await req.json().catch(() => ({}));
-    const tenant_id = body?.tenant_id as string | undefined;
+    const requestTenantId = body?.tenant_id as string | undefined;
+
+    // Si se proporciona tenant_id en el body, verificar que coincida con el JWT
+    if (requestTenantId) {
+      if (!jwtTenantId) {
+        return new Response(
+          JSON.stringify({ code: 'FORBIDDEN', message: 'No se pudo determinar tu tenant' }),
+          { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
+        );
+      }
+      if (requestTenantId !== jwtTenantId) {
+        return new Response(
+          JSON.stringify({ code: 'TENANT_MISMATCH', message: 'No puedes modificar la tasa de otro tenant' }),
+          { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
+    // Usar el tenant_id del JWT como source of truth
+    const tenant_id = jwtTenantId;
 
     const rateKey = tenant_id ?? 'global';
     if (!checkRateLimit(rateKey)) {
@@ -53,10 +114,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { persistSession: false },
-    });
-
+    // === FETCH BCV RATE ===
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
 
@@ -98,6 +156,7 @@ serve(async (req: Request) => {
     const rate = oficialRate.promedio;
     const fetchedAt = oficialRate.fechaActualizacion ?? new Date().toISOString();
 
+    // === UPSERT: Solo para el tenant autenticado ===
     if (tenant_id) {
       const { data, error } = await supabaseAdmin
         .from('exchange_rates')
@@ -121,35 +180,10 @@ serve(async (req: Request) => {
       );
     }
 
-    const { data: tenants, error: tenantError } = await supabaseAdmin
-      .from('tenants')
-      .select('id')
-      .is('deleted_at', null);
-
-    if (tenantError) {
-      return new Response(
-        JSON.stringify({ code: 'TENANTS_QUERY_ERROR', message: tenantError.message }),
-        { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    const results: { tenant_id: string; rate: number }[] = [];
-    for (const tenant of tenants ?? []) {
-      const { error: upsertError } = await supabaseAdmin
-        .from('exchange_rates')
-        .upsert(
-          { tenant_id: tenant.id, rate, source: 'bcv_api', fetched_at: fetchedAt },
-          { onConflict: 'tenant_id', ignoreDuplicates: false },
-        );
-
-      if (!upsertError) {
-        results.push({ tenant_id: tenant.id, rate });
-      }
-    }
-
+    // Sin tenant_id del JWT — no permitir bulk update (seguridad)
     return new Response(
-      JSON.stringify({ rate, tenants: results.length, fetched_at: fetchedAt }),
-      { status: 200, headers: { ...headers, 'Content-Type': 'application/json' } },
+      JSON.stringify({ code: 'TENANT_REQUIRED', message: 'No se pudo determinar el tenant' }),
+      { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
     return new Response(

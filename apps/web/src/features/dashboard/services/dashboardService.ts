@@ -214,6 +214,7 @@ export const dashboardService = {
       const { data: cloudItems, error: itemsError } = await supabase
         .from('sale_items')
         .select('sale_id, quantity, unit_price_usd, cost_usd_per_unit')
+        .eq('tenant_id', tenantUuid)
         .in('sale_id', saleIdsCloud);
 
       if (itemsError || !cloudItems) return success(0);
