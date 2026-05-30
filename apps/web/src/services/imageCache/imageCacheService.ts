@@ -88,13 +88,22 @@ export const imageCacheService = {
   },
 
   async preloadAll(products: { imageUrl?: string | null }[], _force = false): Promise<void> {
-    const urls = Array.from(new Set(products.filter((p) => p.imageUrl).map((p) => p.imageUrl!)));
-    if (urls.length === 0) return;
+    const allUrls = Array.from(new Set(products.filter((p) => p.imageUrl).map((p) => p.imageUrl!)));
+    if (allUrls.length === 0) return;
 
-    // Procesamos la precarga offline con concurrencia máxima controlada (3 descargas simultáneas)
-    // para evitar saturar el canal de red de la base de datos y de la sincronización.
+    // Filtrar URLs que ya están en memoria o en Cache API — no re-descargar
+    const cache = await caches.open(CACHE_NAME);
+    const urlsToLoad: string[] = [];
+    for (const url of allUrls) {
+      if (resolvedUrlsMemoryCache.has(url)) continue;
+      const existing = await cache.match(url);
+      if (!existing) urlsToLoad.push(url);
+    }
+
+    if (urlsToLoad.length === 0) return;
+
     const CONCURRENCY_LIMIT = 3;
-    const queue = [...urls];
+    const queue = [...urlsToLoad];
 
     const worker = async () => {
       while (queue.length > 0) {
