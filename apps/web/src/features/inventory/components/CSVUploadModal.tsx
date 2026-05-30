@@ -5,8 +5,8 @@ import { parseCsvFile, validateCsvRows, importProductsFromCsv, type CsvRow, type
 
 function downloadCsvTemplate() {
   const headers = 'nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible';
-  const example1 = 'Arroz Premium,ARR001,2.50,1.80,100,10,víveres,si,kg,si,si';
-  const example2 = 'Aceite Vegetal,ACE002,3.00,2.20,50,5,víveres,no,lt,no,si';
+  const example1 = 'Arroz Premium,ARR001,2,1,100,10,víveres,si,kg,si,si';
+  const example2 = 'Aceite Vegetal,ACE002,3,2,50,5,víveres,no,lt,no,si';
   const csvContent = `${headers}\n${example1}\n${example2}`;
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
