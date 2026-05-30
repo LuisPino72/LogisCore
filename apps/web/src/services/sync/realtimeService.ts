@@ -35,7 +35,6 @@ export type RealtimeCallback = (tableName: string, record: Record<string, unknow
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
-const HEARTBEAT_INTERVAL_MS = 30000;
 
 class RealtimeService {
   private channel: RealtimeChannel | null = null;
@@ -43,7 +42,6 @@ class RealtimeService {
   private onRecord: RealtimeCallback | null = null;
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private running = false;
 
   start(onRecord: RealtimeCallback): void {
@@ -77,12 +75,10 @@ class RealtimeService {
         if (status === 'SUBSCRIBED') {
           this.connected = true;
           this.reconnectAttempt = 0;
-          this.startHeartbeat();
           logger.info('[Realtime]', 'Conexión WebSocket establecida');
           emitEngineEvent('SYNC.REALTIME_CONNECTED');
         } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           this.connected = false;
-          this.stopHeartbeat();
           logger.warn('[Realtime]', `Conexión perdida: ${status} (intento ${this.reconnectAttempt})`);
           emitEngineEvent('SYNC.REALTIME_DISCONNECTED');
           this.scheduleReconnect();
@@ -132,27 +128,8 @@ class RealtimeService {
     }
   }
 
-  private startHeartbeat(): void {
-    this.stopHeartbeat();
-    this.heartbeatTimer = setInterval(() => {
-      if (this.channel && this.connected) {
-        this.channel.send({
-          type: 'heartbeat',
-        });
-      }
-    }, HEARTBEAT_INTERVAL_MS);
-  }
-
-  private stopHeartbeat(): void {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = null;
-    }
-  }
-
   stop(): void {
     this.running = false;
-    this.stopHeartbeat();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

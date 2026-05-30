@@ -12,5 +12,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     params: {
       log_level: 'debug',
     },
+    heartbeatIntervalMs: 15000,
   },
 });
