@@ -288,7 +288,7 @@ export class LogisCoreDB extends Dexie {
       expenses: 'id, tenantId, category, date, status, nextDueDate, isRecurring, parentExpenseId, [tenantId+date], [tenantId+status], [tenantId+deletedAt], [tenantId+isRecurring]',
       exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
-      syncQueue: '++id, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status]',
+      syncQueue: '++id, recordId, table, status, tenantId, nextRetryAt, createdAt, [tenantId+status], [recordId+table+status]',
       syncMeta: 'table',
       outbox: '++id, event, status, createdAt, nextRetryAt, [status+nextRetryAt]',
       products: 'id, tenantId, sku, categoryId, name, [tenantId+deletedAt]',

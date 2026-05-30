@@ -37,6 +37,7 @@ export type RealtimeCallback = (tableName: string, record: Record<string, unknow
 
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 class RealtimeService {
   private channel: RealtimeChannel | null = null;
@@ -59,6 +60,13 @@ class RealtimeService {
       this.channel = null;
     }
 
+    queueMicrotask(() => {
+      if (!this.running) return;
+      this.createChannel();
+    });
+  }
+
+  private createChannel(): void {
     this.channel = supabase
       .channel('logiscore-realtime')
       .on(
@@ -74,7 +82,7 @@ class RealtimeService {
           emitEngineEvent('SYNC.REALTIME_CONNECTED');
         } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           this.connected = false;
-          logger.warn('[Realtime]', `Conexión perdida: ${status}`);
+          logger.warn('[Realtime]', `Conexión perdida: ${status} (intento ${this.reconnectAttempt})`);
           emitEngineEvent('SYNC.REALTIME_DISCONNECTED');
           this.scheduleReconnect();
         }
@@ -85,10 +93,17 @@ class RealtimeService {
     if (!this.running) return;
     if (this.reconnectTimer) return;
 
+    if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      logger.error('[Realtime]', `Máximo de reintentos alcanzado (${MAX_RECONNECT_ATTEMPTS})`);
+      emitEngineEvent('SYNC.REALTIME_DISCONNECTED');
+      this.running = false;
+      return;
+    }
+
     const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt), RECONNECT_MAX_MS);
     this.reconnectAttempt++;
 
-    logger.info('[Realtime]', `Reconexión programada en ${delay}ms (intento ${this.reconnectAttempt})`);
+    logger.info('[Realtime]', `Reconexión programada en ${delay}ms (intento ${this.reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS})`);
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
