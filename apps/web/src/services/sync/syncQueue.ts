@@ -3,22 +3,19 @@ import type { SyncQueueItem, SyncOperationType } from './types';
 import { MAX_RETRIES, BASE_BACKOFF_MS } from './types';
 
 const TABLE_PRIORITY: Record<string, number> = {
-  // Must be synced first: parent products, then child products
-  products: 100,
-  // Depends on products (via product_id and child_product_id FKs)
-  product_presentations: 90,
-  // Other core entities
-  categories: 85,
-  suppliers: 85,
-  // Depends on products; inventory_movements must sync BEFORE inventory_lots (FK source_movement_id)
-  inventory_movements: 70,
-  inventory_lots: 65,
-  purchase_orders: 60,
+  // Dependencies: categories → products → movements → lots
+  categories: 100,
+  products: 90,
+  product_presentations: 85,
+  suppliers: 80,
+  inventory_movements: 75,
+  inventory_lots: 70,
+  purchase_orders: 65,
+  cash_registers: 65,
   sales: 60,
-  cash_registers: 60,
-  sale_items: 50,
-  purchase_order_items: 50,
-  expenses: 55,
+  sale_items: 55,
+  purchase_order_items: 55,
+  expenses: 50,
   exchange_rates: 40,
 };
 

@@ -110,7 +110,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
             <p className="text-sm font-semibold">
               {signedQty > 0 ? '+' : ''}{prod?.isWeighted ? displayStock(Math.abs(mov.quantity), prod.unit) : signedQty}{prod?.isWeighted ? ` ${prod.unit}` : ''}
             </p>
-            <span className="text-[10px] text-gray-400">
+            <span className="text-[10px] text-gray-600">
               {new Date(mov.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
@@ -124,10 +124,10 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       render: (mov) => {
         const prod = products.find((p) => p.id === mov.productId);
         if (!prod?.isWeighted) {
-          return <span className="text-xs text-gray-400">{mov.previousStock} → {mov.newStock}</span>;
+          return <span className="text-xs text-gray-600">{mov.previousStock} → {mov.newStock}</span>;
         }
         return (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-600">
             {displayStock(mov.previousStock, prod.unit)} → {displayStock(mov.newStock, prod.unit)} {prod.unit}
           </span>
         );
@@ -139,7 +139,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       hideOnMobile: true,
       className: 'text-right',
       render: (mov) => (
-        <span className="text-[10px] text-gray-400">
+        <span className="text-[14px] text-gray-600">
           {new Date(mov.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
         </span>
       ),
@@ -212,9 +212,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
                 }`}
                 onClick={() => handleProductChange(p.id)}
               >
-                <span className="font-medium">{p.name}</span>
-                <span className="text-gray-400 ml-2">({p.sku})</span>
-              </button>
+                <span className="font-medium">{p.name}</span>              </button>
             ))}
           </div>
         )}

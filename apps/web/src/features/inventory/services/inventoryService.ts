@@ -62,7 +62,7 @@ function toProduct(raw: Record<string, unknown>): Product {
     unit: raw.unit as Product['unit'],
     stock: toNumber(raw.stock),
     stockMin: raw.stockMin != null ? toNumber(raw.stockMin) : undefined,
-    imageUrl: raw.imageUrl as string | undefined,
+    imageUrl: (raw.imageUrl as string | undefined) ?? undefined,
     costPrice: raw.costPrice != null ? toNumber(raw.costPrice) : undefined,
     deletedAt: raw.deletedAt as string | undefined,
   };
@@ -1220,7 +1220,7 @@ export const inventoryService = {
           unit: data.unit as Product['unit'],
           stock: data.stock as number,
           stockMin: data.stock_min as number | undefined,
-          imageUrl: data.image_url as string | undefined,
+          imageUrl: (data.image_url as string | undefined) ?? undefined,
           costPrice: data.cost_price as number | undefined,
         };
         await db.products.put(local);

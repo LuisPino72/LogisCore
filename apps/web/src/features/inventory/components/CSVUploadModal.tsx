@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback } from 'react';
-import { Button, Modal, Badge } from '../../../common/components';
+import { Button, Modal, Badge, Input } from '../../../common/components';
 import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { parseCsvFile, validateCsvRows, importProductsFromCsv, validateRow, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
 
 function downloadCsvTemplate() {
   const headers = 'nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible';
   const example1 = 'Arroz Premium,ARR001,2,1,100,10,víveres,si,kg,si,si';
-  const example2 = 'Aceite Vegetal,ACE002,3,2,50,5,víveres,no,lt,no,si';
+  const example2 = 'Aceite Vegetal,ACE002,3.75,2.10,50,5,víveres,si,lt,si,si';
   const csvContent = `${headers}\n${example1}\n${example2}`;
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -409,125 +409,90 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="col-span-2 sm:col-span-1">
-                      <label className="block text-[10px] text-gray-500 mb-1">Nombre *</label>
-                      <input
-                        type="text"
+                      <Input
+                        label="Nombre *"
+                        placeholder="Nombre del producto"
                         value={row.nombre || ''}
                         onChange={(e) => updateEditRow(i, 'nombre', e.target.value)}
                         onBlur={() => handleBlurValidate(i)}
-                        placeholder="Nombre del producto"
-                        maxLength={25}
-                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
-                          getFieldError('nombre')
-                            ? 'border-danger focus:ring-danger'
-                            : 'border-gray-200 focus:ring-primary'
-                        }`}
+                        error={getFieldError('nombre')}
+                        validation={{ required: true, maxLength: 25 }}
+                        inputClassName="text-xs"
                       />
-                      {getFieldError('nombre') && (
-                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('nombre')}</p>
-                      )}
                     </div>
 
                     <div className="col-span-2 sm:col-span-1">
-                      <label className="block text-[10px] text-gray-500 mb-1">SKU *</label>
-                      <input
-                        type="text"
+                      <Input
+                        label="SKU *"
+                        placeholder="Ej: ARR001"
                         value={row.sku || ''}
                         onChange={(e) => updateEditRow(i, 'sku', e.target.value)}
                         onBlur={() => handleBlurValidate(i)}
-                        placeholder="Ej: ARR001"
-                        maxLength={14}
-                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg font-mono focus:outline-none focus:ring-1 transition-colors ${
-                          getFieldError('sku')
-                            ? 'border-danger focus:ring-danger'
-                            : 'border-gray-200 focus:ring-primary'
-                        }`}
+                        error={getFieldError('sku')}
+                        validation={{ required: true, maxLength: 14 }}
+                        inputClassName="text-xs font-mono"
                       />
-                      {getFieldError('sku') && (
-                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('sku')}</p>
-                      )}
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-gray-500 mb-1">Precio ($) *</label>
-                      <input
-                        type="number"
+                      <Input
+                        label="Precio ($) *"
+                        sanitize="currency"
+                        step="0.01"
+                        placeholder="2.50"
                         value={row.precio || ''}
                         onChange={(e) => updateEditRow(i, 'precio', e.target.value)}
                         onBlur={() => handleBlurValidate(i)}
-                        placeholder="0.00"
-                        min="0"
-                        step="0.01"
-                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
-                          getFieldError('precio')
-                            ? 'border-danger focus:ring-danger'
-                            : 'border-gray-200 focus:ring-primary'
-                        }`}
+                        error={getFieldError('precio')}
+                        validation={{ required: true, min: 0.05, max: 9999 }}
+                        inputClassName="text-xs"
                       />
-                      {getFieldError('precio') && (
-                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('precio')}</p>
-                      )}
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-gray-500 mb-1">Costo ($)</label>
-                      <input
-                        type="number"
+                      <Input
+                        label="Costo ($)"
+                        sanitize="currency"
+                        step="0.01"
+                        placeholder="0.00"
                         value={row.costo || ''}
                         onChange={(e) => updateEditRow(i, 'costo', e.target.value)}
                         onBlur={() => handleBlurValidate(i)}
-                        placeholder="0.00"
-                        min="0"
-                        step="0.01"
-                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
-                          getFieldError('costo')
-                            ? 'border-danger focus:ring-danger'
-                            : 'border-gray-200 focus:ring-primary'
-                        }`}
+                        error={getFieldError('costo')}
+                        validation={{ min: 0 }}
+                        inputClassName="text-xs"
                       />
-                      {getFieldError('costo') && (
-                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('costo')}</p>
-                      )}
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-gray-500 mb-1">Stock *</label>
-                      <input
-                        type="number"
+                      <Input
+                        label="Stock *"
+                        sanitize="number"
+                        decimals={row.pesable === 'si' || row.pesable === 'true' ? 2 : 0}
+                        step={row.pesable === 'si' || row.pesable === 'true' ? '0.01' : '1'}
+                        placeholder="0"
                         value={row.stock || ''}
                         onChange={(e) => updateEditRow(i, 'stock', e.target.value)}
                         onBlur={() => handleBlurValidate(i)}
-                        placeholder="0"
-                        min="0"
-                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
-                          getFieldError('stock')
-                            ? 'border-danger focus:ring-danger'
-                            : 'border-gray-200 focus:ring-primary'
-                        }`}
+                        error={getFieldError('stock')}
+                        validation={{ required: true, min: 0 }}
+                        inputClassName="text-xs"
                       />
-                      {getFieldError('stock') && (
-                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('stock')}</p>
-                      )}
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-gray-500 mb-1">Stock mínimo</label>
-                      <input
-                        type="number"
+                      <Input
+                        label="Stock mínimo"
+                        sanitize="number"
+                        decimals={0}
+                        placeholder="0"
                         value={row.stock_min || ''}
                         onChange={(e) => updateEditRow(i, 'stock_min', e.target.value)}
                         onBlur={() => handleBlurValidate(i)}
-                        placeholder="0"
-                        min="0"
-                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
-                          getFieldError('stock_min')
-                            ? 'border-danger focus:ring-danger'
-                            : 'border-gray-200 focus:ring-primary'
-                        }`}
+                        error={getFieldError('stock_min')}
+                        validation={{ min: 0, max: 999 }}
+                        inputClassName="text-xs"
                       />
-                      {getFieldError('stock_min') && (
-                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('stock_min')}</p>
-                      )}
                     </div>
                   </div>
                 </div>

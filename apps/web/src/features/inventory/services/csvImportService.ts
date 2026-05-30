@@ -106,9 +106,23 @@ export function parseUnit(value: string | undefined, isWeighted: boolean): strin
   return isWeighted ? 'kg' : 'unidad';
 }
 
+export function reconcileWeighted(isWeighted: boolean, unit: string): { isWeighted: boolean; unit: string } {
+  const weightUnits = ['kg', 'gr', 'lt', 'm'];
+  if (weightUnits.includes(unit) && !isWeighted) {
+    return { isWeighted: true, unit };
+  }
+  if (unit === 'unidad' && isWeighted) {
+    return { isWeighted: false, unit: 'unidad' };
+  }
+  return { isWeighted, unit };
+}
+
 export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
   const errors: ValidationError[] = [];
-  const isWeighted = parseBoolean(row.pesable);
+  const rawIsWeighted = parseBoolean(row.pesable);
+  const rawUnit = parseUnit(row.unidad, rawIsWeighted);
+  const reconciled = reconcileWeighted(rawIsWeighted, rawUnit);
+  const isWeighted = reconciled.isWeighted;
 
   if (!row.nombre || row.nombre.trim() === '') {
     errors.push({ field: 'nombre', message: 'El nombre es obligatorio' });
@@ -151,6 +165,10 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
     if (!isWeighted && !Number.isInteger(stockMin)) {
       errors.push({ field: 'stock_min', message: 'Stock mínimo debe ser entero para productos por unidad' });
     }
+  }
+
+  if (row.pesable && row.pesable.trim() === 'no' && rawUnit !== 'unidad' && row.unidad) {
+    errors.push({ field: 'unidad', message: 'Si el producto no es pesable, la unidad debe ser "unidad"' });
   }
 
   return errors;
@@ -281,9 +299,12 @@ export async function importProductsFromCsv(
         const precio = parseNumber(row.precio, 0);
         const costo = parseNumber(row.costo, 0);
         const stock = parseNumber(row.stock, 0);
-        const stockMin = parseNumber(row.stock_min, 0);
+        const stockMin = row.stock_min?.trim() ? parseNumber(row.stock_min, 0) : Math.round(stock / 4);
         const isWeighted = parseBoolean(row.pesable);
         const unit = parseUnit(row.unidad, isWeighted);
+        const reconciled = reconcileWeighted(isWeighted, unit);
+        const finalIsWeighted = reconciled.isWeighted;
+        const finalUnit = reconciled.unit;
 
         let categoryId = '';
         if (row.categoria && row.categoria.trim() !== '') {
@@ -324,10 +345,10 @@ export async function importProductsFromCsv(
           sku,
           priceUsd: precio,
           categoryId,
-          isWeighted,
+          isWeighted: finalIsWeighted,
           isTaxable: parseBoolean(row.iva),
           isSellable: row.vendible ? parseBoolean(row.vendible) : true,
-          unit: unit as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
+          unit: finalUnit as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
           stockInicial: stock,
           stockMin: stockMin || undefined,
           costPrice: costo || undefined,

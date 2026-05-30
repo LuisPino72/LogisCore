@@ -90,7 +90,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           : editProduct.stockMin)
       : undefined,
     costPrice: editProduct.costPrice ?? 0,
-    imageUrl: editProduct.imageUrl,
+    imageUrl: editProduct.imageUrl ?? undefined,
   } : undefined;
 
   const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }): Promise<boolean> => {
