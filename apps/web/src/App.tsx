@@ -201,37 +201,48 @@ function DashboardLayout() {
     >
 
       <ErrorBoundary moduleName="Dashboard">
-        {/* KeepAlive: todos los módulos siempre en DOM, solo cambia visibilidad */}
-        <div className={`${activeModule !== 'dashboard' ? 'hidden' : ''} animate-fade-in`}>
-          <Suspense fallback={<ModuleSkeleton />}>
-            <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />
-          </Suspense>
-        </div>
-        <div className={`${activeModule !== 'inventory' ? 'hidden' : ''} animate-fade-in`}>
-          <Suspense fallback={<ModuleSkeleton />}>
-            <InventoryPage tenantId={effectiveTenantId} />
-          </Suspense>
-        </div>
-        <div className={`${activeModule !== 'gastos' ? 'hidden' : ''} animate-fade-in`}>
-          <Suspense fallback={<ModuleSkeleton />}>
-            <GastosPage tenantId={effectiveTenantId} />
-          </Suspense>
-        </div>
-        <div className={`${activeModule !== 'purchases' ? 'hidden' : ''} animate-fade-in`}>
-          <Suspense fallback={<ModuleSkeleton />}>
-            <PurchasePage tenantId={effectiveTenantId} />
-          </Suspense>
-        </div>
-        <div className={`${activeModule !== 'pos' ? 'hidden' : ''} animate-fade-in`}>
-          <Suspense fallback={<ModuleSkeleton />}>
-            <PosPage tenantId={effectiveTenantId} />
-          </Suspense>
-        </div>
-        <div className={`${activeModule !== 'reports' ? 'hidden' : ''} animate-fade-in`}>
-          <Suspense fallback={<ModuleSkeleton />}>
-            <ReportsPage tenantId={effectiveTenantId} />
-          </Suspense>
-        </div>
+        {activeModule === 'dashboard' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />
+            </Suspense>
+          </div>
+        )}
+        {activeModule === 'inventory' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <InventoryPage tenantId={effectiveTenantId} />
+            </Suspense>
+          </div>
+        )}
+        {activeModule === 'gastos' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <GastosPage tenantId={effectiveTenantId} />
+            </Suspense>
+          </div>
+        )}
+        {activeModule === 'purchases' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <PurchasePage tenantId={effectiveTenantId} />
+            </Suspense>
+          </div>
+        )}
+        {activeModule === 'pos' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <PosPage tenantId={effectiveTenantId} />
+            </Suspense>
+          </div>
+        )}
+        {activeModule === 'reports' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <ReportsPage tenantId={effectiveTenantId} />
+            </Suspense>
+          </div>
+        )}
       </ErrorBoundary>
     </AppShell>
 
