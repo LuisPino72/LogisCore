@@ -238,11 +238,10 @@ export const authService = {
       await sessionGuard.release();
     }
 
-    // 5. Señalizar que la DB se cerrará para que servicios dejen de escribir
-    setDbClosing(true);
+    // 5. Detener sync y Realtime PRIMERO (antes de cerrar DB)
+    this.stopSync();
 
     // 6. Flush de sync antes de cerrar DB local
-    this.stopSync();
     try {
       const pendingCount = await syncQueue.getPendingCount();
       if (pendingCount > 0) {
@@ -272,7 +271,10 @@ export const authService = {
       // Si la DB ya se está cerrando, ignoramos
     }
 
-    // 9. Cerrar DB local SIN destruir — preservar datos offline para próximo login
+    // 9. Señalizar que la DB se cerrará (DESPUÉS de detener sync/Realtime)
+    setDbClosing(true);
+
+    // 10. Cerrar DB local SIN destruir — preservar datos offline para próximo login
     offlineGrace.clear();
     const db = getDb();
     db.close();
