@@ -106,42 +106,53 @@ export function parseUnit(value: string | undefined, isWeighted: boolean): strin
   return isWeighted ? 'kg' : 'unidad';
 }
 
-function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
+export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
   const errors: ValidationError[] = [];
+  const isWeighted = parseBoolean(row.pesable);
+
   if (!row.nombre || row.nombre.trim() === '') {
     errors.push({ field: 'nombre', message: 'El nombre es obligatorio' });
   } else if (row.nombre.trim().length > 25) {
     errors.push({ field: 'nombre', message: 'Máximo 25 caracteres' });
   }
+
   if (!row.sku || row.sku.trim() === '') {
     errors.push({ field: 'sku', message: 'El SKU es obligatorio' });
   } else if (row.sku.trim().length > 14) {
     errors.push({ field: 'sku', message: 'Máximo 14 caracteres' });
   }
+
   if (!row.precio || row.precio.trim() === '') {
     errors.push({ field: 'precio', message: 'El precio es obligatorio' });
   } else {
     const precio = parseNumber(row.precio, 0);
     if (precio <= 0) errors.push({ field: 'precio', message: 'El precio debe ser mayor a 0' });
+    else if (precio < 0.05) errors.push({ field: 'precio', message: 'El precio parece muy bajo (mínimo $0.05)' });
   }
-  if (!row.costo || row.costo.trim() === '') {
-    errors.push({ field: 'costo', message: 'El costo es obligatorio' });
-  } else {
+
+  if (row.costo && row.costo.trim() !== '') {
     const costo = parseNumber(row.costo, 0);
     if (costo < 0) errors.push({ field: 'costo', message: 'El costo no puede ser negativo' });
   }
+
   if (!row.stock || row.stock.trim() === '') {
     errors.push({ field: 'stock', message: 'El stock es obligatorio' });
   } else {
     const stock = parseNumber(row.stock, 0);
     if (stock < 0) errors.push({ field: 'stock', message: 'El stock no puede ser negativo' });
+    if (!isWeighted && !Number.isInteger(stock)) {
+      errors.push({ field: 'stock', message: 'Productos por unidad deben tener stock entero' });
+    }
   }
-  if (!row.stock_min || row.stock_min.trim() === '') {
-    errors.push({ field: 'stock_min', message: 'El stock mínimo es obligatorio' });
-  } else {
+
+  if (row.stock_min && row.stock_min.trim() !== '') {
     const stockMin = parseNumber(row.stock_min, 0);
     if (stockMin < 0) errors.push({ field: 'stock_min', message: 'El stock mínimo no puede ser negativo' });
+    if (!isWeighted && !Number.isInteger(stockMin)) {
+      errors.push({ field: 'stock_min', message: 'Stock mínimo debe ser entero para productos por unidad' });
+    }
   }
+
   return errors;
 }
 

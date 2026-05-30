@@ -816,7 +816,7 @@ export const inventoryService = {
 
       if (filters?.query) {
         const q = filters.query.toLowerCase();
-        products = products.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+        products = products.filter((p) => p.name.toLowerCase().includes(q) || String(p.sku ?? '').toLowerCase().includes(q));
       }
 
       if (filters?.categoryId) {

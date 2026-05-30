@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Button, Modal, Badge } from '../../../common/components';
-import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download } from 'lucide-react';
-import { parseCsvFile, validateCsvRows, importProductsFromCsv, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
+import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { parseCsvFile, validateCsvRows, importProductsFromCsv, validateRow, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
 
 function downloadCsvTemplate() {
   const headers = 'nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible';
@@ -23,12 +23,25 @@ interface CSVUploadModalProps {
   tenantId: string;
   userId: string;
   onImported: () => void;
-  onEditErrors?: (rows: CsvRow[]) => void;
 }
 
-type Step = 'upload' | 'preview' | 'importing' | 'result';
+type Step = 'upload' | 'preview' | 'editing' | 'importing' | 'result';
 
-export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, onEditErrors }: CSVUploadModalProps) {
+const EMPTY_ROW: CsvRow = {
+  nombre: '',
+  sku: '',
+  precio: '',
+  costo: '',
+  stock: '',
+  stock_min: '',
+  categoria: '',
+  pesable: '',
+  unidad: '',
+  iva: '',
+  vendible: '',
+};
+
+export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }: CSVUploadModalProps) {
   const [step, setStep] = useState<Step>('upload');
   const [parsedRows, setParsedRows] = useState<CsvRow[]>([]);
   const [results, setResults] = useState<ImportResult[]>([]);
@@ -38,6 +51,9 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [editingRows, setEditingRows] = useState<CsvRow[]>([]);
+  const [editingErrors, setEditingErrors] = useState<Record<number, ValidationError[]>>({});
+
   const reset = useCallback(() => {
     setStep('upload');
     setParsedRows([]);
@@ -46,6 +62,8 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
     setLoading(false);
     setError(null);
     setFileName('');
+    setEditingRows([]);
+    setEditingErrors({});
   }, []);
 
   const handleClose = useCallback(() => {
@@ -97,6 +115,103 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
     setStep('result');
     onImported();
   }, [parsedRows, results, tenantId, userId, onImported]);
+
+  const handleEditErrors = useCallback(() => {
+    const errorIndices: number[] = [];
+    results.forEach((r, i) => {
+      if (r.status === 'error') errorIndices.push(i);
+    });
+    const rows = errorIndices.map((i) => ({ ...parsedRows[i] }));
+    setEditingRows(rows);
+    setEditingErrors({});
+    setStep('editing');
+  }, [parsedRows, results]);
+
+  const validateEditingRow = useCallback((row: CsvRow, index: number) => {
+    const errs = validateRow(row, index);
+    setEditingErrors((prev) => {
+      const next = { ...prev };
+      if (errs.length > 0) {
+        next[index] = errs;
+      } else {
+        delete next[index];
+      }
+      return next;
+    });
+    return errs;
+  }, []);
+
+  const updateEditRow = useCallback((index: number, field: keyof CsvRow, value: string) => {
+    setEditingRows((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }, []);
+
+  const handleBlurValidate = useCallback((index: number) => {
+    setEditingRows((prev) => {
+      validateEditingRow(prev[index], index);
+      return prev;
+    });
+  }, [validateEditingRow]);
+
+  const deleteEditRow = useCallback((index: number) => {
+    setEditingRows((prev) => prev.filter((_, i) => i !== index));
+    setEditingErrors((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      const reindexed: Record<number, ValidationError[]> = {};
+      Object.keys(next).forEach((key) => {
+        const oldIdx = parseInt(key);
+        if (oldIdx > index) {
+          reindexed[oldIdx - 1] = next[oldIdx];
+        } else {
+          reindexed[oldIdx] = next[oldIdx];
+        }
+      });
+      return reindexed;
+    });
+  }, []);
+
+  const addEditRow = useCallback(() => {
+    setEditingRows((prev) => [...prev, { ...EMPTY_ROW }]);
+  }, []);
+
+  const handleSaveEdits = useCallback(async () => {
+    let allValid = true;
+    const newErrors: Record<number, ValidationError[]> = {};
+
+    editingRows.forEach((row, i) => {
+      const errs = validateEditingRow(row, i);
+      if (errs.length > 0) {
+        allValid = false;
+        newErrors[i] = errs;
+      }
+    });
+
+    setEditingErrors(newErrors);
+    if (!allValid) return;
+
+    const validEditingRows = editingRows.filter((row) => {
+      return row.nombre?.trim() && row.sku?.trim() && row.precio?.trim();
+    });
+
+    const nonErrorIndices: number[] = [];
+    results.forEach((r, i) => {
+      if (r.status !== 'error') nonErrorIndices.push(i);
+    });
+
+    const keptRows = nonErrorIndices.map((i) => parsedRows[i]);
+    const newParsedRows = [...keptRows, ...validEditingRows];
+
+    setParsedRows(newParsedRows);
+    const validationResults = await validateCsvRows(newParsedRows, tenantId);
+    setResults(validationResults);
+    setEditingRows([]);
+    setEditingErrors({});
+    setStep('preview');
+  }, [editingRows, parsedRows, results, tenantId, validateEditingRow]);
 
   const validCount = results.filter((r) => r.status === 'valid').length;
   const errorCount = results.filter((r) => r.status === 'error').length;
@@ -175,19 +290,9 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
             <div className="bg-danger/5 rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-danger">Filas con errores:</p>
-                {onEditErrors && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const errorRows = parsedRows.filter((_, i) => results[i]?.status === 'error');
-                      onEditErrors(errorRows);
-                      handleClose();
-                    }}
-                  >
-                    Corregir
-                  </Button>
-                )}
+                <Button variant="ghost" size="sm" onClick={handleEditErrors}>
+                  Corregir
+                </Button>
               </div>
               {results.filter((r) => r.status === 'error').slice(0, 5).map((r, i) => (
                 <div key={i} className="text-xs text-gray-600">
@@ -268,6 +373,184 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
         </div>
       )}
 
+      {step === 'editing' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setStep('preview')}>
+                <ArrowLeft size={14} />
+              </Button>
+              <span className="text-sm font-medium text-gray-700">
+                Corregir errores ({editingRows.length} fila{editingRows.length !== 1 ? 's' : ''})
+              </span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={addEditRow}>
+              <Plus size={14} />
+            </Button>
+          </div>
+
+          <div className="max-h-[50vh] overflow-y-auto space-y-3">
+            {editingRows.map((row, i) => {
+              const rowErrs = editingErrors[i] || [];
+              const getFieldError = (field: string) => rowErrs.find((e) => e.field === field)?.message;
+
+              return (
+                <div key={i} className="border border-gray-200 rounded-xl p-3 sm:p-4 space-y-3 bg-white">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-400">Fila {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => deleteEditRow(i)}
+                      className="p-1 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2 sm:col-span-1">
+                      <label className="block text-[10px] text-gray-500 mb-1">Nombre *</label>
+                      <input
+                        type="text"
+                        value={row.nombre || ''}
+                        onChange={(e) => updateEditRow(i, 'nombre', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        placeholder="Nombre del producto"
+                        maxLength={25}
+                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
+                          getFieldError('nombre')
+                            ? 'border-danger focus:ring-danger'
+                            : 'border-gray-200 focus:ring-primary'
+                        }`}
+                      />
+                      {getFieldError('nombre') && (
+                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('nombre')}</p>
+                      )}
+                    </div>
+
+                    <div className="col-span-2 sm:col-span-1">
+                      <label className="block text-[10px] text-gray-500 mb-1">SKU *</label>
+                      <input
+                        type="text"
+                        value={row.sku || ''}
+                        onChange={(e) => updateEditRow(i, 'sku', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        placeholder="Ej: ARR001"
+                        maxLength={14}
+                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg font-mono focus:outline-none focus:ring-1 transition-colors ${
+                          getFieldError('sku')
+                            ? 'border-danger focus:ring-danger'
+                            : 'border-gray-200 focus:ring-primary'
+                        }`}
+                      />
+                      {getFieldError('sku') && (
+                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('sku')}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1">Precio ($) *</label>
+                      <input
+                        type="number"
+                        value={row.precio || ''}
+                        onChange={(e) => updateEditRow(i, 'precio', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
+                          getFieldError('precio')
+                            ? 'border-danger focus:ring-danger'
+                            : 'border-gray-200 focus:ring-primary'
+                        }`}
+                      />
+                      {getFieldError('precio') && (
+                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('precio')}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1">Costo ($)</label>
+                      <input
+                        type="number"
+                        value={row.costo || ''}
+                        onChange={(e) => updateEditRow(i, 'costo', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
+                          getFieldError('costo')
+                            ? 'border-danger focus:ring-danger'
+                            : 'border-gray-200 focus:ring-primary'
+                        }`}
+                      />
+                      {getFieldError('costo') && (
+                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('costo')}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1">Stock *</label>
+                      <input
+                        type="number"
+                        value={row.stock || ''}
+                        onChange={(e) => updateEditRow(i, 'stock', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        placeholder="0"
+                        min="0"
+                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
+                          getFieldError('stock')
+                            ? 'border-danger focus:ring-danger'
+                            : 'border-gray-200 focus:ring-primary'
+                        }`}
+                      />
+                      {getFieldError('stock') && (
+                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('stock')}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1">Stock mínimo</label>
+                      <input
+                        type="number"
+                        value={row.stock_min || ''}
+                        onChange={(e) => updateEditRow(i, 'stock_min', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        placeholder="0"
+                        min="0"
+                        className={`w-full px-2.5 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-1 transition-colors ${
+                          getFieldError('stock_min')
+                            ? 'border-danger focus:ring-danger'
+                            : 'border-gray-200 focus:ring-primary'
+                        }`}
+                      />
+                      {getFieldError('stock_min') && (
+                        <p className="text-[10px] text-danger mt-0.5">{getFieldError('stock_min')}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setStep('preview')}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              onClick={handleSaveEdits}
+              disabled={editingRows.length === 0}
+            >
+              Confirmar cambios
+            </Button>
+          </div>
+        </div>
+      )}
+
       {step === 'importing' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <Loader2 size={32} className="text-primary animate-spin" />
@@ -318,4 +601,9 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
       )}
     </Modal>
   );
+}
+
+interface ValidationError {
+  field: string;
+  message: string;
 }

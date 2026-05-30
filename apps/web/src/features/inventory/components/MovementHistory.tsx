@@ -108,7 +108,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
               <Badge variant={getTypeBadge(mov.type)}>{getTypeLabel(mov)}</Badge>
             </div>
             <p className="text-sm font-semibold">
-              {signedQty > 0 ? '+' : ''}{signedQty}{prod?.isWeighted ? ` ${prod.unit}` : ''}
+              {signedQty > 0 ? '+' : ''}{prod?.isWeighted ? displayStock(Math.abs(mov.quantity), prod.unit) : signedQty}{prod?.isWeighted ? ` ${prod.unit}` : ''}
             </p>
             <span className="text-[10px] text-gray-400">
               {new Date(mov.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}

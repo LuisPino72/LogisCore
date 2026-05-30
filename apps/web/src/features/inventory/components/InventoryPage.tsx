@@ -17,7 +17,7 @@ import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
 import { CSVUploadModal } from './CSVUploadModal';
 import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
-import { parseBoolean, parseUnit } from '../services/csvImportService';
+
 
 
 
@@ -263,7 +263,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             {activeTab === 'categorias' ? <ListTree size={18} className="text-primary" /> : <Package size={18} className="text-primary" />}
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>
+            <h1 className="text-lg sm:text-xl font-title font-bold wrap-break-word" style={{ fontSize: 'var(--text-fluid-xl)' }}>
               {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
             </h1>
             <p className="text-[13px] text-text-secondary hidden sm:block truncate max-w-md">
@@ -753,30 +753,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         tenantId={tenantId ?? ''}
         userId={userId ?? ''}
         onImported={() => refresh()}
-        onEditErrors={(errorRows) => {
-          setShowCsvImport(false);
-          if (errorRows.length > 0) {
-            const row = errorRows[0];
-            const isWeighted = parseBoolean(row.pesable);
-            setEditProduct({
-              id: '',
-              name: row.nombre?.trim() ?? '',
-              sku: row.sku?.trim() ?? '',
-              priceUsd: parseFloat(row.precio ?? '0') || 0,
-              categoryId: '',
-              isWeighted,
-              isTaxable: true,
-              isSellable: true,
-              unit: parseUnit(row.unidad, isWeighted) as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
-              stock: parseFloat(row.stock ?? '0') || 0,
-              stockMin: parseFloat(row.stock_min ?? '0') || undefined,
-              costPrice: parseFloat(row.costo ?? '0') || undefined,
-            });
-            setShowProductForm(true);
-          } else {
-            openNewProduct();
-          }
-        }}
       />
     </div>
   );
