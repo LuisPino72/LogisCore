@@ -1,7 +1,7 @@
 import { type UserSession, AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
-import { initDb, setDbClosing, getDb } from '../../../services/dexie/db';
+import { initDb, setDbClosing, getDb, resetDbInstance } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
@@ -278,6 +278,8 @@ export const authService = {
     offlineGrace.clear();
     const db = getDb();
     db.close();
+    // Resetear referencia para que initDb() cree una nueva instancia en el próximo login
+    resetDbInstance();
     TenantTranslator.clearCache();
     await supabase.auth.signOut({ scope: 'local' });
     return success(undefined);

@@ -337,6 +337,11 @@ export function setDbClosing(closing: boolean): void {
   _dbClosing = closing;
 }
 
+export function resetDbInstance(): void {
+  dbInstance = null;
+  _dbClosing = false;
+}
+
 export function initDb(tenantSlug: string): LogisCoreDB {
   if (dbInstance && dbInstance.name === `LogisCore_${tenantSlug}`) {
     return dbInstance;
