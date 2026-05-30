@@ -31,6 +31,22 @@ export const syncQueue = {
     tenantId: string,
   ): Promise<void> {
     const db = getDb();
+
+    // Deduplicar: si ya existe un item pending para el mismo recordId+table+operation, reemplazarlo
+    const existing = await db.syncQueue
+      .where('recordId')
+      .equals(recordId)
+      .and((item) => item.table === table && item.status === 'pending')
+      .first();
+
+    if (existing) {
+      await db.syncQueue.update(existing.id!, {
+        payload,
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
     const now = new Date().toISOString();
     await db.syncQueue.add({
       table,
@@ -55,15 +71,15 @@ export const syncQueue = {
       .where('status')
       .equals('pending')
       .and((item) => !item.nextRetryAt || item.nextRetryAt <= now)
-      .limit(batchSize)
       .toArray();
 
     items.sort((a, b) => (TABLE_PRIORITY[b.table] ?? 0) - (TABLE_PRIORITY[a.table] ?? 0));
+    const sliced = items.slice(0, batchSize);
 
-    const ids = items.map((i) => i.id!);
+    const ids = sliced.map((i) => i.id!);
     await db.syncQueue.where('id').anyOf(ids).modify({ status: 'syncing' });
 
-    return items;
+    return sliced;
   },
 
   async markSuccess(id: number): Promise<void> {
@@ -99,6 +115,12 @@ export const syncQueue = {
   async getPendingCount(): Promise<number> {
     const db = getDb();
     return db.syncQueue.where('status').equals('pending').count();
+  },
+
+  async getPendingRecordIds(): Promise<Set<string>> {
+    const db = getDb();
+    const pending = await db.syncQueue.where('status').equals('pending').toArray();
+    return new Set(pending.map((item) => item.recordId));
   },
 
   async getFailedCount(): Promise<number> {

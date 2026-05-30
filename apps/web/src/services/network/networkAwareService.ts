@@ -6,7 +6,7 @@ interface NetworkInformation {
   removeEventListener: (event: string, handler: () => void) => void;
 }
 
-const SYNC_INTERVAL_MS = 10000;
+export const SYNC_INTERVAL_MS = 10000;
 
 export interface NetworkState {
   online: boolean;
@@ -17,6 +17,9 @@ export interface NetworkState {
 class NetworkAwareService {
   private state: NetworkState;
   private listeners = new Set<(state: NetworkState) => void>();
+  private boundOnlineHandler: (() => void) | null = null;
+  private boundOfflineHandler: (() => void) | null = null;
+  private boundConnectionHandler: (() => void) | null = null;
 
   constructor() {
     this.state = this.detectNetwork();
@@ -37,21 +40,25 @@ class NetworkAwareService {
   }
 
   private setupListeners(): void {
-    window.addEventListener('online', () => {
+    this.boundOnlineHandler = () => {
       logger.info('[NetworkAware]', 'Evento online detectado');
       this.emitChange();
-    });
-    window.addEventListener('offline', () => {
+    };
+    this.boundOfflineHandler = () => {
       logger.info('[NetworkAware]', 'Evento offline detectado');
       this.emitChange();
-    });
+    };
+
+    window.addEventListener('online', this.boundOnlineHandler);
+    window.addEventListener('offline', this.boundOfflineHandler);
 
     const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
     if (conn) {
-      conn.addEventListener('change', () => {
+      this.boundConnectionHandler = () => {
         logger.info('[NetworkAware]', 'Cambio en Connection API');
         this.emitChange();
-      });
+      };
+      conn.addEventListener('change', this.boundConnectionHandler);
     }
   }
 
@@ -102,6 +109,18 @@ class NetworkAwareService {
 
   destroy(): void {
     this.listeners.clear();
+    if (this.boundOnlineHandler) {
+      window.removeEventListener('online', this.boundOnlineHandler);
+    }
+    if (this.boundOfflineHandler) {
+      window.removeEventListener('offline', this.boundOfflineHandler);
+    }
+    if (this.boundConnectionHandler) {
+      const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
+      if (conn) {
+        conn.removeEventListener('change', this.boundConnectionHandler);
+      }
+    }
   }
 }
 

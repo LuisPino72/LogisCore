@@ -7,7 +7,7 @@ import { getDb, isDbClosing } from '../dexie/db';
 import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
 import { networkAware } from '../network/networkAwareService';
-import { realtimeService, type RealtimeTable } from './realtimeService';
+import { realtimeService, REALTIME_TABLES } from './realtimeService';
 import { logger } from '../../lib/logger';
 import type {
   SyncQueueItem,
@@ -31,20 +31,6 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'product_presentations', timeCol: 'updated_at' },
   { name: 'expenses', timeCol: 'updated_at' },
 ];
-
-const REALTIME_TABLES: Set<string> = new Set<RealtimeTable>([
-  'products',
-  'inventory_lots',
-  'sales',
-  'sale_items',
-  'cash_registers',
-  'expenses',
-  'categories',
-  'suppliers',
-  'purchase_orders',
-  'purchase_order_items',
-  'product_presentations',
-]);
 
 export class SyncEngine {
   private configs = new Map<string, SyncTableConfig>();
@@ -91,7 +77,7 @@ export class SyncEngine {
 
         for (const item of items) {
            try {
-            await this.pushItem(item);
+            await this.pushItem(item, result);
             await syncQueue.markSuccess(item.id!);
             result.pushed++;
           } catch (err) {
@@ -119,7 +105,7 @@ export class SyncEngine {
     }
   }
 
-  private async pushItem(item: SyncQueueItem): Promise<void> {
+  private async pushItem(item: SyncQueueItem, result: SyncBatchResult): Promise<void> {
     const cfg = this.getConfig(item.table);
     const tenantUuid = await TenantTranslator.slugToUuid(item.tenantId);
     const remotePayload: Record<string, unknown> = { ...item.payload, tenant_id: tenantUuid };
@@ -143,6 +129,7 @@ export class SyncEngine {
           });
           const { error } = await supabase.from(item.table).upsert(resolved);
           if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
+          result.conflicts++;
           emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
         } else {
           const { error } = await supabase.from(item.table).upsert(remotePayload);
@@ -173,6 +160,7 @@ export class SyncEngine {
             });
             const { error: upsertError } = await supabase.from(item.table).upsert(resolved);
             if (upsertError) throw new AppError('SYNC_PUSH_FAILED', upsertError.message, { details: { table: item.table, recordId: item.recordId } });
+            result.conflicts++;
             emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
           } else if (error.message) {
             throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
@@ -205,7 +193,7 @@ export class SyncEngine {
     let hasChanges = false;
 
     for (const tableName of tablesToSync) {
-      if (this.realtimeConnected && REALTIME_TABLES.has(tableName)) continue;
+      if (this.realtimeConnected && REALTIME_TABLES.includes(tableName as typeof REALTIME_TABLES[number])) continue;
       if (isDbClosing()) break;
 
       try {
@@ -248,9 +236,10 @@ export class SyncEngine {
                 }
                 const fbData = fbResult.data;
                 if (fbData && fbData.length > 0) {
+                  const pendingIds = await syncQueue.getPendingRecordIds();
                   for (const record of fbData) {
                     if (isDbClosing()) break;
-                    await this.upsertLocalRecord(tableName, record);
+                    await this.upsertLocalRecord(tableName, record, pendingIds);
                     result.pushed++;
                   }
                 }
@@ -258,9 +247,10 @@ export class SyncEngine {
               continue;
             }
             if (simpleResult.data && simpleResult.data.length > 0) {
+              const pendingIds = await syncQueue.getPendingRecordIds();
               for (const record of simpleResult.data) {
                 if (isDbClosing()) break;
-                await this.upsertLocalRecord(tableName, record);
+                await this.upsertLocalRecord(tableName, record, pendingIds);
                 result.pushed++;
                 hasChanges = true;
               }
@@ -273,9 +263,10 @@ export class SyncEngine {
           }
         } else {
           if (data && data.length > 0) {
+            const pendingIds = await syncQueue.getPendingRecordIds();
             for (const record of data) {
               if (isDbClosing()) break;
-              await this.upsertLocalRecord(tableName, record);
+              await this.upsertLocalRecord(tableName, record, pendingIds);
               result.pushed++;
               hasChanges = true;
             }
@@ -302,14 +293,16 @@ export class SyncEngine {
     return success(result);
   }
 
-  private async upsertLocalRecord(tableName: string, record: Record<string, unknown>): Promise<void> {
+  private async upsertLocalRecord(tableName: string, record: Record<string, unknown>, pendingIds?: Set<string>): Promise<void> {
     if (isDbClosing()) return;
     const db = getDb();
 
     // Skip overwrite if there are pending local changes for this record in the sync queue
     // (e.g., soft delete or nextDueDate update not yet pushed to Supabase)
     const recordId = record.id as string | undefined;
-    if (recordId) {
+    if (recordId && pendingIds) {
+      if (pendingIds.has(recordId)) return;
+    } else if (recordId) {
       const pendingCount = await db.syncQueue
         .filter((item) => item.recordId === recordId && item.status === 'pending')
         .count();

@@ -1,7 +1,7 @@
 import type { AppError } from '@logiscore/core';
 
 export type SyncOperationType = 'CREATE' | 'UPDATE' | 'DELETE';
-export type SyncStatus = 'pending' | 'syncing' | 'failed' | 'resolved';
+export type SyncStatus = 'pending' | 'syncing' | 'failed';
 export type ConflictStrategy = 'LWW' | 'REMOTE_WINS' | 'MANUAL';
 export type SyncTableType = 'catalog' | 'transactional';
 
@@ -52,4 +52,3 @@ export interface SyncBatchResult {
 export const DEFAULT_BATCH_SIZE = 10;
 export const MAX_RETRIES = 5;
 export const BASE_BACKOFF_MS = 1000;
-export const SYNC_INTERVAL_MS = 5000;

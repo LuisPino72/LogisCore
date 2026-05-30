@@ -307,6 +307,10 @@ export class LogisCoreDB extends Dexie {
       purchaseOrderItems: 'id, orderId, productId, [orderId]',
       auditEntries: '++id, eventName, status, createdAt, [status+createdAt]',
       notifications: 'id, tenantId, type, read, createdAt, [tenantId+read], [tenantId+deletedAt]',
+    }).upgrade(() => {
+      // Preservar datos existentes durante upgrade — no destruir nada
+      // Dexie recrea tablas con nuevos índices pero preserva los datos
+      return Promise.resolve();
     });
   }
 }

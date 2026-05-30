@@ -1,7 +1,7 @@
 import { type UserSession, AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
-import { initDb, destroyDb, setDbClosing, getDb } from '../../../services/dexie/db';
+import { initDb, setDbClosing, getDb } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
@@ -241,7 +241,7 @@ export const authService = {
     // 5. Señalizar que la DB se cerrará para que servicios dejen de escribir
     setDbClosing(true);
 
-    // 6. Flush de sync antes de destruir DB local
+    // 6. Flush de sync antes de cerrar DB local
     this.stopSync();
     try {
       const pendingCount = await syncQueue.getPendingCount();
@@ -255,7 +255,7 @@ export const authService = {
     // 7. Pequeña pausa para que operaciones en vuelo terminen
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // 8. Persistir favoritos a localStorage antes de destruir DB
+    // 8. Persistir favoritos a localStorage antes de cerrar DB
     try {
       const db = getDb();
       const favs = await db.productFavorites.toArray();
@@ -272,9 +272,10 @@ export const authService = {
       // Si la DB ya se está cerrando, ignoramos
     }
 
-    // 9. Limpieza de infraestructura
+    // 9. Cerrar DB local SIN destruir — preservar datos offline para próximo login
     offlineGrace.clear();
-    await destroyDb();
+    const db = getDb();
+    db.close();
     TenantTranslator.clearCache();
     await supabase.auth.signOut({ scope: 'local' });
     return success(undefined);

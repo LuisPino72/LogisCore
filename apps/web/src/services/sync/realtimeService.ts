@@ -19,7 +19,7 @@ export type RealtimeTable =
   | 'purchase_order_items'
   | 'product_presentations';
 
-const REALTIME_TABLES: RealtimeTable[] = [
+export const REALTIME_TABLES: RealtimeTable[] = [
   'products',
   'inventory_lots',
   'sales',
@@ -35,14 +35,29 @@ const REALTIME_TABLES: RealtimeTable[] = [
 
 export type RealtimeCallback = (tableName: string, record: Record<string, unknown>) => Promise<void>;
 
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
+
 class RealtimeService {
   private channel: RealtimeChannel | null = null;
   private connected = false;
   private onRecord: RealtimeCallback | null = null;
+  private reconnectAttempt = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private running = false;
 
   start(onRecord: RealtimeCallback): void {
-    if (this.channel) return;
+    if (this.running) return;
+    this.running = true;
     this.onRecord = onRecord;
+    this.connect();
+  }
+
+  private connect(): void {
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
 
     this.channel = supabase
       .channel('logiscore-realtime')
@@ -54,14 +69,33 @@ class RealtimeService {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           this.connected = true;
+          this.reconnectAttempt = 0;
           logger.info('[Realtime]', 'Conexión WebSocket establecida');
           emitEngineEvent('SYNC.REALTIME_CONNECTED');
         } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           this.connected = false;
           logger.warn('[Realtime]', `Conexión perdida: ${status}`);
           emitEngineEvent('SYNC.REALTIME_DISCONNECTED');
+          this.scheduleReconnect();
         }
       });
+  }
+
+  private scheduleReconnect(): void {
+    if (!this.running) return;
+    if (this.reconnectTimer) return;
+
+    const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt), RECONNECT_MAX_MS);
+    this.reconnectAttempt++;
+
+    logger.info('[Realtime]', `Reconexión programada en ${delay}ms (intento ${this.reconnectAttempt})`);
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (this.running) {
+        this.connect();
+      }
+    }, delay);
   }
 
   private async handleChange(payload: RecordPayload): Promise<void> {
@@ -90,6 +124,11 @@ class RealtimeService {
   }
 
   stop(): void {
+    this.running = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.channel) {
       supabase.removeChannel(this.channel);
       this.channel = null;
