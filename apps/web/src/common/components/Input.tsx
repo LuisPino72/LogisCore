@@ -1,4 +1,4 @@
-import { forwardRef, useState, useRef, useEffect, type ReactNode, type ChangeEvent } from 'react';
+import { forwardRef, useState, useRef, useEffect, type ReactNode, type ChangeEvent, type FocusEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { validateValue, sanitizeValue, type ValidationRule } from '../../lib/validation';
@@ -94,8 +94,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
     onChange?.(sanitizedEvent);
   };
 
-  const handleBlur = () => {
+  const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
     setTouched(true);
+    const propStr = valueToDisplay(value, getSanitized);
+    if (propStr !== displayValue) {
+      isInternalRef.current = true;
+      setDisplayValue(propStr);
+    }
     if (sanitize === 'currency' || sanitize === 'number') {
       const num = parseFloat(displayValue);
       if (!isNaN(num)) {
@@ -111,6 +116,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       setInternalError(err);
       onValidate?.(err);
     }
+    props.onBlur?.(e);
   };
 
   const hasRequired = validation?.required || props.required;

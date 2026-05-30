@@ -107,6 +107,10 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     }
   };
 
+  const handleBlur = () => {
+    setLocalQty(null);
+  };
+
   const displayQty = localQty ?? (item.isWeighted ? item.quantity.toFixed(2) : item.quantity.toString());
 
   const btnBase = 'w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs hover:shadow-sm';
@@ -154,6 +158,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
               step={step}
               value={displayQty}
               onChange={handleChange}
+              onBlur={handleBlur}
               validation={{ min: 0.01, max: 99999 }}
               className="text-center py-1.5 text-sm font-semibold"
             />

@@ -698,7 +698,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                       {isSelected ? (
                         <CheckCircle2 size={20} className="text-primary" />
                       ) : (
-                        <Circle size={20} className="text-gray-300" />
+                        <Circle size={20} className="text-gray-600" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
