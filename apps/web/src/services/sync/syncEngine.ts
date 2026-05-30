@@ -7,7 +7,7 @@ import { getDb, isDbClosing } from '../dexie/db';
 import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
 import { networkAware } from '../network/networkAwareService';
-import { realtimeService, REALTIME_TABLES } from './realtimeService';
+import { realtimeService } from './realtimeService';
 import { logger } from '../../lib/logger';
 import type {
   SyncQueueItem,
@@ -39,8 +39,6 @@ export class SyncEngine {
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
   private unsubscribeNetwork: (() => void) | null = null;
-  private realtimeConnected = false;
-  private _realtimeCleanup: (() => void) | null = null;
 
   registerTable(config: SyncTableConfig): void {
     this.configs.set(config.name, config);
@@ -194,7 +192,6 @@ export class SyncEngine {
     let hasChanges = false;
 
     for (const tableName of tablesToSync) {
-      if (this.realtimeConnected && REALTIME_TABLES.includes(tableName as typeof REALTIME_TABLES[number])) continue;
       if (isDbClosing()) break;
 
       try {
@@ -332,21 +329,18 @@ export class SyncEngine {
     this.running = true;
     this.pull().catch(() => {});
 
-    // Iniciar Supabase Realtime para push instantáneo
+    // Iniciar Supabase Realtime para push instantáneo (opcional - si falla, sync normal sigue)
     realtimeService.start(async (tableName, record) => {
       if (isDbClosing()) return;
-      await this.upsertLocalRecord(tableName, record);
-      const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
-      emitEngineEvent(eventName, { table: tableName });
-      emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
+      try {
+        await this.upsertLocalRecord(tableName, record);
+        const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
+        emitEngineEvent(eventName, { table: tableName });
+        emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
+      } catch (err) {
+        logger.warn('[SyncEngine]', `Realtime upsert failed for ${tableName}, continuing with normal sync`, String(err));
+      }
     });
-
-    // Escuchar estado de Realtime
-    const unsubRealtime = networkAware.onChange(() => {});
-    const checkRealtime = () => {
-      this.realtimeConnected = realtimeService.isConnected();
-    };
-    const realtimeCheckInterval = setInterval(checkRealtime, 2000);
 
     // Reaccionar a cambios de red: al reconectar, push + pull inmediatos
     let wasOnline = networkAware.isOnline();
@@ -360,12 +354,6 @@ export class SyncEngine {
     });
 
     this.scheduleNext();
-
-    // Guardar cleanup para stop
-    this._realtimeCleanup = () => {
-      clearInterval(realtimeCheckInterval);
-      unsubRealtime();
-    };
   }
 
   stop(): void {
@@ -379,11 +367,6 @@ export class SyncEngine {
       this.unsubscribeNetwork = null;
     }
     realtimeService.stop();
-    this.realtimeConnected = false;
-    if (this._realtimeCleanup) {
-      this._realtimeCleanup();
-      this._realtimeCleanup = null;
-    }
   }
 
   private scheduleNext(): void {

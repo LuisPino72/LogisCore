@@ -6,7 +6,7 @@ interface NetworkInformation {
   removeEventListener: (event: string, handler: () => void) => void;
 }
 
-export const SYNC_INTERVAL_MS = 10000;
+export const SYNC_INTERVAL_MS = 5000;
 
 export interface NetworkState {
   online: boolean;
