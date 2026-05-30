@@ -595,9 +595,6 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Badge variant="success" className="text-xs">
               {METADATA_PAGOS[completedSale.paymentMethod]?.label ?? completedSale.paymentMethod}
             </Badge>
-            <Button variant="ghost" fullWidth onClick={() => setCompletedSale(null)}>
-              Nueva venta
-            </Button>
           </div>
         )}
       </Modal>

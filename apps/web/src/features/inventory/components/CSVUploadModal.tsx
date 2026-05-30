@@ -4,9 +4,9 @@ import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download } f
 import { parseCsvFile, validateCsvRows, importProductsFromCsv, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
 
 function downloadCsvTemplate() {
-  const headers = 'nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad';
-  const example1 = 'Arroz Premium,ARR001,2.50,1.80,100,10,víveres,si,kg';
-  const example2 = 'Aceite Vegetal,ACE002,3.00,2.20,50,5,víveres,no,lt';
+  const headers = 'nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible';
+  const example1 = 'Arroz Premium,ARR001,2.50,1.80,100,10,víveres,si,kg,si,si';
+  const example2 = 'Aceite Vegetal,ACE002,3.00,2.20,50,5,víveres,no,lt,no,si';
   const csvContent = `${headers}\n${example1}\n${example2}`;
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -146,7 +146,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported, 
                 Descargar plantilla
               </Button>
             </div>
-            <p className="text-[14px] text-gray-600 mt-1">Campos requeridos: nombre, sku, precio, costo, stock, stock_min</p>
+            <p className="text-[14px] text-gray-600 mt-1">Campos requeridos: nombre, sku, precio, costo, stock, stock_min, iva, vendible</p>
           </div>
 
           <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />

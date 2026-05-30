@@ -17,6 +17,8 @@ export interface CsvRow {
   categoria?: string;
   pesable?: string;
   unidad?: string;
+  iva?: string;
+  vendible?: string;
   [key: string]: string | undefined;
 }
 
@@ -312,8 +314,8 @@ export async function importProductsFromCsv(
           priceUsd: precio,
           categoryId,
           isWeighted,
-          isTaxable: true,
-          isSellable: true,
+          isTaxable: parseBoolean(row.iva),
+          isSellable: row.vendible ? parseBoolean(row.vendible) : true,
           unit: unit as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
           stockInicial: stock,
           stockMin: stockMin || undefined,
