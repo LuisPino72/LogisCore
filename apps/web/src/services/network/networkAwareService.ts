@@ -24,7 +24,7 @@ class NetworkAwareService {
   constructor() {
     this.state = this.detectNetwork();
     this.setupListeners();
-    logger.info('[NetworkAware]', `Inicializado: online=${this.state.online}, mobile=${this.state.isMobileData}`);
+    logger.debug('[NetworkAware]', `Inicializado: online=${this.state.online}, mobile=${this.state.isMobileData}`);
   }
 
   private detectNetwork(): NetworkState {
@@ -41,11 +41,11 @@ class NetworkAwareService {
 
   private setupListeners(): void {
     this.boundOnlineHandler = () => {
-      logger.info('[NetworkAware]', 'Evento online detectado');
+      logger.debug('[NetworkAware]', 'Evento online detectado');
       this.emitChange();
     };
     this.boundOfflineHandler = () => {
-      logger.info('[NetworkAware]', 'Evento offline detectado');
+      logger.debug('[NetworkAware]', 'Evento offline detectado');
       this.emitChange();
     };
 
@@ -55,7 +55,7 @@ class NetworkAwareService {
     const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
     if (conn) {
       this.boundConnectionHandler = () => {
-        logger.info('[NetworkAware]', 'Cambio en Connection API');
+        logger.debug('[NetworkAware]', 'Cambio en Connection API');
         this.emitChange();
       };
       conn.addEventListener('change', this.boundConnectionHandler);
@@ -68,7 +68,7 @@ class NetworkAwareService {
     this.state = newState;
 
     if (!wasOnline && newState.online) {
-      logger.info('[NetworkAware]', 'Reconectado');
+      logger.debug('[NetworkAware]', 'Reconectado');
     }
 
     this.listeners.forEach((cb) => cb(this.state));

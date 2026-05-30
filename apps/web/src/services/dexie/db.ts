@@ -1,6 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 import type { TenantInfo } from '@logiscore/core';
 
+// Deshabilitar logs de Dexie (Dexie: read products, etc.)
+Dexie.debug = false;
+
 export interface DexieTenantRef extends TenantInfo {
   rif?: string;
 }

@@ -185,7 +185,7 @@ export class SyncEngine {
   }
 
   async pull(): Promise<Result<SyncBatchResult, AppError>> {
-    if (!networkAware.isOnline()) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
+    if (!networkAware.isOnline() || isDbClosing()) return success({ pushed: 0, failed: 0, conflicts: 0, errors: [] });
     const result: SyncBatchResult = { pushed: 0, failed: 0, conflicts: 0, errors: [] };
     const db = getDb();
     const tablesToSync = PULL_TABLES.map((t) => t.name);
@@ -346,7 +346,7 @@ export class SyncEngine {
     let wasOnline = networkAware.isOnline();
     this.unsubscribeNetwork = networkAware.onChange((state) => {
       if (!wasOnline && state.online) {
-        logger.info('[SyncEngine]', 'Reconectado — ejecutando push + pull inmediatos');
+        logger.debug('[SyncEngine]', 'Reconectado — ejecutando push + pull inmediatos');
         this.push().catch(() => {});
         this.pull().catch(() => {});
       }
@@ -370,23 +370,29 @@ export class SyncEngine {
   }
 
   private scheduleNext(): void {
-    if (!this.running) return;
+    if (!this.running || isDbClosing()) return;
 
     const interval = networkAware.getSyncInterval();
 
     this.syncTimer = setTimeout(async () => {
       if (!this.running || isDbClosing()) return;
 
-      const pushResult = await this.push();
-      if (pushResult.ok) {
-        await this.pull();
+      try {
+        const pushResult = await this.push();
+        if (pushResult.ok && this.running && !isDbClosing()) {
+          await this.pull();
+        }
+
+        if (this.running && !isDbClosing() && networkAware.isOnline()) {
+          await flushPendingAudits();
+        }
+      } catch {
+        // DB cerrándose durante operación — ignorar silenciosamente
       }
 
-      if (networkAware.isOnline()) {
-        await flushPendingAudits();
+      if (this.running && !isDbClosing()) {
+        this.scheduleNext();
       }
-
-      this.scheduleNext();
     }, interval);
   }
 

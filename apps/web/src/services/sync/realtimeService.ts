@@ -75,11 +75,10 @@ class RealtimeService {
         if (status === 'SUBSCRIBED') {
           this.connected = true;
           this.reconnectAttempt = 0;
-          logger.info('[Realtime]', 'Conexión WebSocket establecida');
           emitEngineEvent('SYNC.REALTIME_CONNECTED');
         } else if (status === 'TIMED_OUT' || status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           this.connected = false;
-          logger.warn('[Realtime]', `Conexión perdida: ${status} (intento ${this.reconnectAttempt})`);
+          logger.debug('[Realtime]', `Conexión perdida: ${status} (intento ${this.reconnectAttempt})`);
           emitEngineEvent('SYNC.REALTIME_DISCONNECTED');
           this.scheduleReconnect();
         }
@@ -93,7 +92,7 @@ class RealtimeService {
     const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt), RECONNECT_MAX_MS);
     this.reconnectAttempt++;
 
-    logger.info('[Realtime]', `Reconexión programada en ${delay}ms (intento ${this.reconnectAttempt})`);
+    logger.debug('[Realtime]', `Reconexión programada en ${delay}ms (intento ${this.reconnectAttempt})`);
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
@@ -124,7 +123,7 @@ class RealtimeService {
         }
       }
     } catch (err) {
-      logger.error('[Realtime]', `Error procesando cambio en ${table}`, String(err));
+      logger.debug('[Realtime]', `Error procesando cambio en ${table}`, String(err));
     }
   }
 
@@ -139,7 +138,7 @@ class RealtimeService {
       this.channel = null;
       this.connected = false;
       this.onRecord = null;
-      logger.info('[Realtime]', 'Conexión WebSocket cerrada');
+      logger.debug('[Realtime]', 'Conexión WebSocket cerrada');
     }
   }
 
