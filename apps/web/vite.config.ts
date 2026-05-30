@@ -42,15 +42,13 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            // Cachea las imágenes de productos de Supabase Storage con StaleWhileRevalidate
-            // Sirve de respaldo offline cuando imageCacheService no las ha precargado
             urlPattern: /\/storage\/v1\/object\/public\/Products\/[^?]+/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'logiscore-supabase-images',
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 días
+                maxAgeSeconds: 60 * 60 * 24 * 30,
               },
               cacheableResponse: {
                 statuses: [0, 200],

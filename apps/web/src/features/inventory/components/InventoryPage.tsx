@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EventBus } from '@logiscore/core';
-import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2 } from 'lucide-react';
+import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2, Upload } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useInventoryStore } from '../stores/inventoryStore';
@@ -15,6 +15,7 @@ import { ProductLots } from './ProductLots';
 import { CategoryManager } from './CategoryManager';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
+import { CSVUploadModal } from './CSVUploadModal';
 import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
 
 
@@ -56,6 +57,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
+  const [showCsvImport, setShowCsvImport] = useState(false);
   
 
   const navigate = useNavigate();
@@ -274,6 +276,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {isOwner && activeTab === 'productos' && (
+            <Button variant="outline" size="sm" onClick={() => setShowCsvImport(true)} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para importar' : undefined}>
+              <Upload size={16} />
+              <span className="hidden sm:inline">Importar CSV</span>
+            </Button>
+          )}
           {isOwner && activeTab !== 'historial' && (
             <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para esta acción' : undefined}>
               <Plus size={16} />
@@ -737,6 +745,17 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           },
         ]}
         onComplete={() => {}}
+      />
+      <CSVUploadModal
+        isOpen={showCsvImport}
+        onClose={() => setShowCsvImport(false)}
+        tenantId={tenantId ?? ''}
+        userId={userId ?? ''}
+        onImported={() => refresh()}
+        onEditErrors={() => {
+          setShowCsvImport(false);
+          openNewProduct();
+        }}
       />
     </div>
   );
