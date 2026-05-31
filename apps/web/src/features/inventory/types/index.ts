@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { ProductSchema, CategorySchema, InventoryMovementSchema, CreateProductInputSchema, PresentationSchema, CreatePresentationInputSchema } from '../../../specs/inventory';
+import type { ProductType } from '../../../specs/inventory';
 
 export type Product = z.infer<typeof ProductSchema>;
 export type Category = z.infer<typeof CategorySchema>;
@@ -8,6 +9,8 @@ export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
 
 export type Presentation = z.infer<typeof PresentationSchema>;
 export type CreatePresentationInput = z.infer<typeof CreatePresentationInputSchema>;
+
+export type { ProductType };
 
 export type AdjustmentReason =
   | 'inventario_inicial'
@@ -34,6 +37,7 @@ export interface ProductFormData {
   isTaxable: boolean;
   isSellable: boolean;
   productType: 'unidad' | 'pesable_kg' | 'pesable_lt';
+  productionType?: 'materia_prima' | 'producto_terminado' | 'both';
   unit: string;
   stockInicial: number;
   stockMin?: number;

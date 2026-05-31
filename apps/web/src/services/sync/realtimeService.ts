@@ -16,7 +16,10 @@ export type RealtimeTable =
   | 'product_presentations'
   | 'categories'
   | 'purchase_orders'
-  | 'purchase_order_items';
+  | 'purchase_order_items'
+  | 'recipes'
+  | 'recipe_lines'
+  | 'production_orders';
 
 export const REALTIME_TABLES: RealtimeTable[] = [
   'sales',
@@ -29,6 +32,9 @@ export const REALTIME_TABLES: RealtimeTable[] = [
   'categories',
   'purchase_orders',
   'purchase_order_items',
+  'recipes',
+  'recipe_lines',
+  'production_orders',
 ];
 
 export type RealtimeCallback = (tableName: string, record: Record<string, unknown>) => Promise<void>;

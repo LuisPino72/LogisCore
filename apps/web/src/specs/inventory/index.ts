@@ -5,6 +5,9 @@ import { z } from 'zod';
 export const PESABLE_UNITS = ['kg', 'gr', 'lt', 'm'] as const;
 export type WeightUnit = typeof PESABLE_UNITS[number];
 
+export const ProductTypeEnum = z.enum(['materia_prima', 'producto_terminado', 'both']);
+export type ProductType = z.infer<typeof ProductTypeEnum>;
+
 export const ProductSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1, 'Nombre requerido').max(200),
@@ -19,6 +22,7 @@ export const ProductSchema = z.object({
   stockMin: z.number().int().min(0).optional(),
   imageUrl: z.string().optional(),
   costPrice: z.number().min(0).optional(),
+  productType: ProductTypeEnum.default('materia_prima').optional(),
   deletedAt: z.string().datetime().optional(),
 });
 

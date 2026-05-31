@@ -40,6 +40,7 @@ export interface DexieProduct {
   stockMin?: number;
   imageUrl?: string;
   costPrice?: number;
+  productType?: 'materia_prima' | 'producto_terminado' | 'both';
   deletedAt?: string;
 }
 
@@ -261,6 +262,53 @@ export interface DexieExpense {
   deletedAt?: string;
 }
 
+export interface DexieRecipe {
+  id: string;
+  tenantId: string;
+  name: string;
+  productId: string;
+  mode: 'batch' | 'assembly';
+  yieldQuantity: number;
+  yieldUnit: string;
+  wastePct: number;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export interface DexieRecipeLine {
+  id: string;
+  tenantId: string;
+  recipeId: string;
+  productId: string;
+  quantity: number;
+  unit: string;
+  sortOrder: number;
+  createdAt: string;
+  deletedAt?: string;
+}
+
+export interface DexieProductionOrder {
+  id: string;
+  tenantId: string;
+  recipeId: string;
+  productId: string;
+  batchCount: number;
+  quantityTarget: number;
+  quantityProduced: number;
+  status: 'draft' | 'confirmed' | 'in_progress' | 'done' | 'cancelled';
+  plannedDate?: string;
+  startedAt?: string;
+  completedAt?: string;
+  wasteNotes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
 export class LogisCoreDB extends Dexie {
   tenantRefs!: Table<DexieTenantRef, string>;
   syncQueue!: Table<SyncQueueItem, number>;
@@ -284,10 +332,13 @@ export class LogisCoreDB extends Dexie {
   auditEntries!: Table<DexieAuditEntry, number>;
   notifications!: Table<DexieNotification, string>;
   expenses!: Table<DexieExpense, string>;
+  recipes!: Table<DexieRecipe, string>;
+  recipeLines!: Table<DexieRecipeLine, string>;
+  productionOrders!: Table<DexieProductionOrder, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(15).stores({
+    this.version(16).stores({
       expenses: 'id, tenantId, category, date, status, nextDueDate, isRecurring, parentExpenseId, [tenantId+date], [tenantId+status], [tenantId+deletedAt], [tenantId+isRecurring]',
       exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
@@ -310,6 +361,9 @@ export class LogisCoreDB extends Dexie {
       purchaseOrderItems: 'id, orderId, productId, [orderId]',
       auditEntries: '++id, eventName, status, createdAt, [status+createdAt]',
       notifications: 'id, tenantId, type, read, createdAt, [tenantId+read], [tenantId+deletedAt]',
+      recipes: 'id, tenantId, productId, mode, isActive, [tenantId+deletedAt]',
+      recipeLines: 'id, tenantId, recipeId, productId, [recipeId]',
+      productionOrders: 'id, tenantId, recipeId, productId, status, [tenantId+status], [tenantId+deletedAt]',
     }).upgrade(() => {
       // Preservar datos existentes durante upgrade — no destruir nada
       // Dexie recrea tablas con nuevos índices pero preserva los datos

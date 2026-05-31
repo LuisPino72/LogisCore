@@ -31,6 +31,9 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'inventory_movements', timeCol: 'created_at' },
   { name: 'product_presentations', timeCol: 'updated_at' },
   { name: 'expenses', timeCol: 'updated_at' },
+  { name: 'recipes', timeCol: 'updated_at' },
+  { name: 'recipe_lines', timeCol: 'created_at' },
+  { name: 'production_orders', timeCol: 'updated_at' },
 ];
 
 export class SyncEngine {

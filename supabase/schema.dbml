@@ -92,6 +92,7 @@ Table products {
   stock integer [not null, default: 0]
   stock_min integer
   image_url text
+  product_type text [not null, default: 'materia_prima']
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
   deleted_at timestamptz
@@ -256,3 +257,63 @@ Ref: sale_items.sale_id - sales.id
 Ref: sale_items.tenant_id - tenants.id
 Ref: sale_items.product_id - products.id
 Ref: cash_registers.tenant_id - tenants.id
+
+// ===== PRODUCTION (PLAN-PRODUCTION) =====
+
+Table recipes {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  name text [not null]
+  product_id uuid [not null, ref: > products.id]
+  mode text [not null, default: 'batch']
+  yield_quantity integer [not null, default: 1]
+  yield_unit text [not null, default: 'unidad']
+  waste_pct numeric(5,2) [not null, default: 0]
+  is_active boolean [not null, default: true]
+  notes text
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table recipe_lines {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  recipe_id uuid [not null, ref: > recipes.id]
+  product_id uuid [not null, ref: > products.id]
+  quantity numeric(19,4) [not null]
+  unit text [not null, default: 'unidad']
+  sort_order integer [not null, default: 0]
+  created_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table production_orders {
+  id uuid [pk]
+  tenant_id uuid [not null, ref: > tenants.id]
+  recipe_id uuid [not null, ref: > recipes.id]
+  product_id uuid [not null, ref: > products.id]
+  batch_count integer [not null, default: 1]
+  quantity_target integer [not null]
+  quantity_produced integer [default: 0]
+  status text [not null, default: 'draft']
+  planned_date date
+  started_at timestamptz
+  completed_at timestamptz
+  waste_notes text
+  created_by uuid [not null, ref: > auth.users.id]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+// Refs adicionales para producción
+Ref: recipes.tenant_id - tenants.id
+Ref: recipes.product_id - products.id
+Ref: recipe_lines.tenant_id - tenants.id
+Ref: recipe_lines.recipe_id - recipes.id
+Ref: recipe_lines.product_id - products.id
+Ref: production_orders.tenant_id - tenants.id
+Ref: production_orders.recipe_id - recipes.id
+Ref: production_orders.product_id - products.id
+Ref: production_orders.created_by - auth.users.id

@@ -30,6 +30,7 @@ import {
   Truck,
   Receipt,
   DollarSign,
+  ChefHat,
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
@@ -44,10 +45,12 @@ const PosPage = lazy(() => import('./features/pos').then((m) => ({ default: m.Po
 const PurchasePage = lazy(() => import('./features/purchases').then((m) => ({ default: m.PurchasePage })));
 const ReportsPage = lazy(() => import('./features/reports').then((m) => ({ default: m.ReportsPage })));
 const GastosPage = lazy(() => import('./features/gastos').then((m) => ({ default: m.GastosPage })));
+const ProductionPage = lazy(() => import('./features/production').then((m) => ({ default: m.ProductionPage })));
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
+  { id: 'production', label: 'Producción', icon: <ChefHat size={20} /> },
   { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
   { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
   { id: 'gastos', label: 'Gastos', icon: <Receipt size={20} /> },
@@ -59,6 +62,7 @@ const EMPLOYEE_ALLOWED = new Set(['pos']);
 const MODULE_ROUTE_MAP: Record<string, string> = {
   dashboard: '/dashboard',
   inventory: '/inventory',
+  production: '/production',
   gastos: '/gastos',
   purchases: '/purchases',
   pos: '/pos',
@@ -91,6 +95,7 @@ function useSyncModuleFromRoute() {
   const location = useLocation();
   const path = location.pathname;
   if (path.startsWith('/inventory')) return 'inventory';
+  if (path.startsWith('/production')) return 'production';
   if (path.startsWith('/gastos')) return 'gastos';
   if (path.startsWith('/purchases')) return 'purchases';
   if (path.startsWith('/pos')) return 'pos';
@@ -212,6 +217,13 @@ function DashboardLayout() {
           <div className="animate-fade-in">
             <Suspense fallback={<ModuleSkeleton />}>
               <InventoryPage tenantId={effectiveTenantId} />
+            </Suspense>
+          </div>
+        )}
+        {activeModule === 'production' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <ProductionPage tenantId={effectiveTenantId} />
             </Suspense>
           </div>
         )}
