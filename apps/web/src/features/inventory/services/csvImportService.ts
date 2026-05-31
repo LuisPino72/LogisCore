@@ -132,8 +132,8 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
 
   if (!row.sku || row.sku.trim() === '') {
     errors.push({ field: 'sku', message: 'El SKU es obligatorio' });
-  } else if (row.sku.trim().length > 14) {
-    errors.push({ field: 'sku', message: 'Máximo 14 caracteres' });
+  } else if (row.sku.trim().length > 18) {
+    errors.push({ field: 'sku', message: 'Máximo 18 caracteres' });
   }
 
   if (!row.precio || row.precio.trim() === '') {
@@ -165,6 +165,17 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
     if (!isWeighted && !Number.isInteger(stockMin)) {
       errors.push({ field: 'stock_min', message: 'Stock mínimo debe ser entero para productos por unidad' });
     }
+    if (isWeighted) {
+      const decimals = (row.stock_min.split('.')[1] || '').length;
+      if (decimals > 2) {
+        errors.push({ field: 'stock_min', message: 'Stock mínimo acepta máximo 2 decimales en pesables' });
+      }
+      // Verificar que el valor convertido a gramos/ml no sea 0
+      const storageMin = Math.round(stockMin * 1000);
+      if (stockMin > 0 && storageMin === 0) {
+        errors.push({ field: 'stock_min', message: 'Stock mínimo demasiado bajo (se redondea a 0 en gramos/ml)' });
+      }
+    }
   }
 
   if (row.pesable && row.pesable.trim() === 'no' && rawUnit !== 'unidad' && row.unidad) {
@@ -180,11 +191,14 @@ export async function parseCsvFile(file: File): Promise<Result<CsvRow[], AppErro
   }
 
   return new Promise((resolve) => {
-    Papa.parse(file, {
+    // skipBOM is supported at runtime but not in @types/papaparse yet
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (Papa.parse as any)(file, {
       header: true,
       skipEmptyLines: true,
       encoding: 'UTF-8',
-      complete: (results) => {
+      skipBOM: true,
+      complete: (results: Papa.ParseResult<CsvRow>) => {
         if (results.errors.length > 0) {
           resolve(failure(new AppErrorClass('CSV_PARSE_ERROR', `Error al leer el archivo: ${results.errors[0].message}`)));
           return;
@@ -196,7 +210,7 @@ export async function parseCsvFile(file: File): Promise<Result<CsvRow[], AppErro
         }
         resolve({ ok: true, data });
       },
-      error: (error) => {
+      error: (error: Error) => {
         resolve(failure(new AppErrorClass('CSV_PARSE_ERROR', `Error al leer el archivo: ${error.message}`)));
       },
     });
@@ -289,6 +303,40 @@ export async function importProductsFromCsv(
 
   const validRows = rows.filter((_, i) => validatedResults[i]?.status === 'valid');
 
+  // Pre-resolver categorías de forma secuencial para evitar duplicados en chunks paralelos
+  const categoryResolveMap = new Map<string, string>(); // normalized -> categoryId
+  for (const row of validRows) {
+    const catName = row.categoria?.trim();
+    if (!catName) continue;
+    const normalized = normalizeText(catName);
+    if (categoryResolveMap.has(normalized)) continue;
+
+    const categoryNames = Array.from(categoryMap.values()).map((c) => c.name);
+    const fuzzyMatch = fuzzyMatchCategory(catName, categoryNames);
+    if (fuzzyMatch) {
+      const existingCat = categoryMap.get(normalizeText(fuzzyMatch));
+      if (existingCat) {
+        categoryResolveMap.set(normalized, existingCat.id);
+      }
+    } else {
+      const newCatResult = await inventoryService.createCategory({ name: catName, tenantId });
+      if (newCatResult.ok) {
+        categoryResolveMap.set(normalized, newCatResult.data.id);
+        categoryMap.set(normalized, { id: newCatResult.data.id, name: catName, tenantId } as never);
+        categoriesCreated.push(catName);
+      }
+    }
+  }
+
+  // Asegurar categoría default "Otros"
+  if (!categoryMap.has(normalizeText('Otros'))) {
+    const newCatResult = await inventoryService.createCategory({ name: 'Otros', tenantId });
+    if (newCatResult.ok) {
+      categoryMap.set(normalizeText('Otros'), { id: newCatResult.data.id, name: 'Otros', tenantId } as never);
+      categoriesCreated.push('Otros');
+    }
+  }
+
   const chunkSize = 50;
   for (let i = 0; i < validRows.length; i += chunkSize) {
     const chunk = validRows.slice(i, i + chunkSize);
@@ -308,36 +356,12 @@ export async function importProductsFromCsv(
 
         let categoryId = '';
         if (row.categoria && row.categoria.trim() !== '') {
-          const catName = row.categoria.trim();
-          const categoryNames = Array.from(categoryMap.values()).map((c) => c.name);
-          const fuzzyMatch = fuzzyMatchCategory(catName, categoryNames);
-          if (fuzzyMatch) {
-            const existingCat = categoryMap.get(normalizeText(fuzzyMatch));
-            if (existingCat) {
-              categoryId = existingCat.id;
-            }
-          } else {
-            const newCatResult = await inventoryService.createCategory({ name: catName, tenantId });
-            if (newCatResult.ok) {
-              categoryId = newCatResult.data.id;
-              categoryMap.set(normalizeText(catName), { id: categoryId, name: catName, tenantId } as never);
-              categoriesCreated.push(catName);
-            }
-          }
+          const normalized = normalizeText(row.categoria.trim());
+          categoryId = categoryResolveMap.get(normalized) ?? '';
         }
-
         if (!categoryId) {
           const defaultCat = categoryMap.get(normalizeText('Otros'));
-          if (defaultCat) {
-            categoryId = defaultCat.id;
-          } else {
-            const newCatResult = await inventoryService.createCategory({ name: 'Otros', tenantId });
-            if (newCatResult.ok) {
-              categoryId = newCatResult.data.id;
-              categoryMap.set(normalizeText('Otros'), { id: categoryId, name: 'Otros', tenantId } as never);
-              categoriesCreated.push('Otros');
-            }
-          }
+          categoryId = defaultCat?.id ?? '';
         }
 
         const input = {

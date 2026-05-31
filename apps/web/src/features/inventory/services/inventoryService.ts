@@ -262,6 +262,19 @@ export const inventoryService = {
       return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, 'No puede haber dos presentaciones con el mismo nombre.'));
     }
 
+    // Validar barcodes duplicados contra todas las presentaciones del tenant
+    const barcodes = presentations.filter((p) => p.barcode?.trim()).map((p) => p.barcode!.trim());
+    if (barcodes.length > 0) {
+      const db = getDb();
+      const allPres = await db.productPresentations.where({ tenantId }).filter((p) => !p.deletedAt).toArray();
+      const existingBarcodes = new Set(allPres.filter((p) => p.barcode).map((p) => p.barcode));
+      for (const barcode of barcodes) {
+        if (existingBarcodes.has(barcode)) {
+          return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, `El código de barras "${barcode}" ya está en uso por otro producto.`));
+        }
+      }
+    }
+
     const db = getDb();
     const productId = generateId();
     const now = new Date().toISOString();
@@ -583,6 +596,16 @@ export const inventoryService = {
           .first();
         if (duplicate) {
           return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, `Ya existe una presentación llamada "${newName.trim()}".`));
+        }
+      }
+
+      // Validar barcode duplicado contra otras presentaciones del tenant
+      if (input.barcode !== undefined && input.barcode.trim()) {
+        const barcodeTrimmed = input.barcode.trim();
+        const allPres = await db.productPresentations.where({ tenantId }).filter((p) => !p.deletedAt && p.id !== presentationId).toArray();
+        const duplicateBarcode = allPres.find((p) => p.barcode === barcodeTrimmed);
+        if (duplicateBarcode) {
+          return failure(new AppError(InventoryErrors.PRESENTATION_NAME_REQUIRED, `El código de barras "${barcodeTrimmed}" ya está en uso por otro producto.`));
         }
       }
 
@@ -925,6 +948,20 @@ export const inventoryService = {
   async adjustStock(input: AdjustStockInput & { userId: string; tenantId: string }): Promise<Result<InventoryMovement, AppError>> {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
+
+    // Role check: solo owner o admin pueden ajustar stock
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para ajustar stock.'));
+      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const role = decoded.app_metadata?.role || decoded.role;
+      if (role !== 'owner' && role !== 'admin') {
+        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden ajustar stock.'));
+      }
+    } catch {
+      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
+    }
+
     if (!input.reasonType) {
       return failure(new AppError('INVENTORY_ADJUSTMENT_INVALID', 'Debes seleccionar un motivo para el ajuste.'));
     }

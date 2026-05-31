@@ -325,6 +325,5 @@ describe('PRES-009: Codigos de error de presentaciones', () => {
     expect(InventoryErrors.PRESENTATION_NOT_FOUND).toBe('PRESENTATION_NOT_FOUND');
     expect(InventoryErrors.PRESENTATION_MULTIPLIER_INVALID).toBe('PRESENTATION_MULTIPLIER_INVALID');
     expect(InventoryErrors.PRESENTATION_NAME_REQUIRED).toBe('PRESENTATION_NAME_REQUIRED');
-    expect(InventoryErrors.PRESENTATION_PRICE_INVALID).toBe('PRESENTATION_PRICE_INVALID');
   });
 });

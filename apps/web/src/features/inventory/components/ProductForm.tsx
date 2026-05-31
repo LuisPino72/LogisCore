@@ -70,6 +70,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [cameraAvailable, setCameraAvailable] = useState(true);
+  const [imageError, setImageError] = useState('');
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -182,9 +183,21 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     performClose();
   };
 
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageError('');
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        setImageError('Formato no válido. Usa JPG, PNG o WebP.');
+        return;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        setImageError('La imagen es muy grande. Máximo 10MB.');
+        return;
+      }
       revokeBlobUrl();
       const url = URL.createObjectURL(file);
       blobUrlRef.current = url;
@@ -347,6 +360,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         </div>
       </div>
       <p className="text-[10px] text-gray-400 -mt-2">JPG, PNG o WebP. Se comprime automáticamente.</p>
+      {imageError && (
+        <p className="text-[11px] text-danger -mt-1">{imageError}</p>
+      )}
 
       <div className="input-wrapper">
         <div className="max-w-xs">
@@ -382,7 +398,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             value={formData.sku}
             onChange={(e) => setField('sku', e.target.value)}
             error={errors.sku}
-            validation={{ required: true, maxLength: 14 }}
+            validation={{ required: true, maxLength: 18 }}
             inputClassName="text-sm"
           />
           <Button variant="outline" size="sm" onClick={generateSku} className="shrink-0 px-2 text-xs" title="Generar SKU automático">
@@ -470,6 +486,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="0.00"
                   value={formData.costPrice != null && formData.costPrice > 0 ? String(formData.costPrice) : ''}
                   onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                  validation={{ min: 0, max: 9999.99 }}
                   inputClassName="text-sm"
                 />
                 <p className="text-[10px] text-gray-400 mt-0.5">Costo total pagado por el lote de productos.</p>
@@ -555,7 +572,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="0.00"
                   value={formData.costPrice > 0 ? String(formData.costPrice) : ''}
                   onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                  validation={{ min: 0, max: 999999 }}
+                  validation={{ min: 0, max: 9999.99 }}
                   inputClassName="text-sm"
                 />
               </div>

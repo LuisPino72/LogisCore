@@ -429,7 +429,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         onChange={(e) => updateEditRow(i, 'sku', e.target.value)}
                         onBlur={() => handleBlurValidate(i)}
                         error={getFieldError('sku')}
-                        validation={{ required: true, maxLength: 14 }}
+                        validation={{ required: true, maxLength: 18 }}
                         inputClassName="text-xs font-mono"
                       />
                     </div>

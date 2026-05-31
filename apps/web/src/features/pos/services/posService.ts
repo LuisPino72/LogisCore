@@ -441,8 +441,16 @@ export const posService = {
             throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}" (lotes agotados).`);
           }
 
-          const previousStock = product.stock;
+          // Re-leer stock fresco para evitar race condition entre transacciones concurrentes
+          const freshProduct = await db.products.get(cartItem.productId);
+          if (!freshProduct) {
+            throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
+          }
+          const previousStock = freshProduct.stock;
           const newStock = previousStock - storageQuantity;
+          if (newStock < 0) {
+            throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}". Disponible: ${previousStock}.`);
+          }
           await db.products.update(cartItem.productId, { stock: newStock });
 
           const costUsdPerUnitStorage = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 2) : 0;
@@ -905,6 +913,19 @@ export const posService = {
   },
 
   async voidSale(saleId: string, tenantId: string, userId: string): Promise<Result<void, AppError>> {
+    // Role check: solo owner o admin pueden anular ventas
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para anular la venta.'));
+      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const role = decoded.app_metadata?.role || decoded.role;
+      if (role !== 'owner' && role !== 'admin') {
+        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden anular ventas.'));
+      }
+    } catch {
+      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
+    }
+
     try {
       const db = getDb();
       const sale = await db.sales.get(saleId);
@@ -954,6 +975,8 @@ export const posService = {
             if (toRestore <= 0) break;
             const currentLot = await db.inventoryLots.get(lot.id);
             if (!currentLot) continue;
+            // Optimistic locking: verificar que el lote no haya sido restaurado ya
+            if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) continue;
             const consumedFromLot = currentLot.quantityAdded - currentLot.remainingQuantity;
             if (consumedFromLot <= 0) continue;
             const restoreAmount = Math.min(toRestore, consumedFromLot);

@@ -3,6 +3,7 @@ import type { Product, ProductFilters, InventoryState, TabKey, TabState, CreateP
 import { inventoryService } from '../services/inventoryService';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateProductInput, AdjustStockInput } from '../types';
+import { convertToStorage } from '../types';
 
 const DEFAULT_TAB_STATE: TabState = { searchQuery: '', filterCategory: '', stockFilter: 'all', productTypeFilter: 'all', page: 1 };
 
@@ -170,11 +171,14 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     const result = await inventoryService.adjustStock(input);
     if (result.ok) {
       set((s) => ({
-        products: s.products.map((p) =>
-          p.id === input.productId
-            ? { ...p, stock: p.stock + input.quantity }
-            : p
-        ),
+        products: s.products.map((p) => {
+          if (p.id !== input.productId) return p;
+          const storageType = p.isWeighted
+            ? (p.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
+            : 'unidad';
+          const storageQty = convertToStorage(input.quantity, storageType);
+          return { ...p, stock: p.stock + storageQty };
+        }),
       }));
       await get().fetchLowStock(input.tenantId, true);
       return true;
