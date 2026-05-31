@@ -198,6 +198,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     setErrors({});
     setIsSubmitting(true);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { productType, stockInicial, ...validationData } = formData;
 
     if (!validationData.categoryId) {

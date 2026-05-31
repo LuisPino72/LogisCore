@@ -313,7 +313,7 @@ export class SyncEngine {
     const local: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(record)) {
       const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-      if (typeof val === 'string' && /^\d+(\.\d+)?$/.test(val)) {
+      if (typeof val === 'string' && !isNaN(Number(val))) {
         local[camel] = parseFloat(val);
       } else {
         local[camel] = val;

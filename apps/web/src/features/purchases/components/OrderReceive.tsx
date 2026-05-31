@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Package, Truck } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
 import { inventoryService } from '../../inventory/services/inventoryService';
@@ -15,6 +15,7 @@ interface OrderReceiveProps {
 }
 
 export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: OrderReceiveProps) {
+  const submittedRef = useRef(false);
   const [products, setProducts] = useState<Map<string, Product>>(new Map());
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     const map: Record<string, number> = {};
@@ -29,6 +30,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
 
   useEffect(() => {
     if (!isOpen) return;
+    submittedRef.current = false;
     const productIds = order.items.map((i) => i.productId);
     inventoryService.getProducts(tenantId).then((res) => {
       if (res.ok) {
@@ -69,6 +71,8 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
   const canReceive = order.items.some((i) => (i.quantity - i.receivedQuantity) > 0);
 
   const handleSubmit = async () => {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     const items = Object.entries(quantities)
       .filter(([, qty]) => qty > 0)
       .map(([itemId, receivedQuantity]) => ({ itemId, receivedQuantity }));
@@ -96,6 +100,11 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
     }
   };
 
+  const handleClose = () => {
+    submittedRef.current = false;
+    onClose();
+  };
+
   const totalItems = order.items.length;
   const receivedItems = order.items.filter((i) => {
     const qty = quantities[i.id] ?? 0;
@@ -105,11 +114,11 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Recibir mercancía"
       footer={
         <div className="flex gap-3 w-full">
-          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
+          <Button variant="ghost" fullWidth onClick={handleClose}>Cancelar</Button>
           <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
             {submitting ? 'Procesando...' : (
               <>

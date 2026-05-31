@@ -18,7 +18,7 @@ export type ProductType = z.infer<typeof ProductTypeEnum>;
 export const RecipeSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string(),
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, 'Nombre requerido').max(25),
   productId: z.string().uuid(),
   mode: RecipeModeSchema,
   yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0'),
@@ -58,7 +58,7 @@ export const CreateRecipeLineInputSchema = z.object({
 });
 
 export const CreateRecipeInputSchema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, 'Nombre requerido').max(25),
   productId: z.string().uuid('Selecciona un producto terminado'),
   mode: RecipeModeSchema,
   yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0'),
@@ -73,7 +73,7 @@ export type CreateRecipeInput = z.infer<typeof CreateRecipeInputSchema>;
 // ===== Update Recipe Input =====
 
 export const UpdateRecipeInputSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().min(1).max(25).optional(),
   yieldQuantity: z.number().int().positive().optional(),
   yieldUnit: z.string().min(1).optional(),
   wastePct: z.number().min(0).max(100).optional(),

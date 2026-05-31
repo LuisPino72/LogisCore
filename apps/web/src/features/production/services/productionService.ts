@@ -6,6 +6,7 @@ import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
+import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability } from '../types';
 import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder } from '../../../services/dexie/db';
@@ -76,6 +77,12 @@ export const productionService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
+    // Zod runtime validation
+    const parsed = CreateRecipeInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(new AppError(ProductionErrors.RECIPE_INVALID_INPUT, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
+
     const db = getDb();
     const now = new Date().toISOString();
 
@@ -83,6 +90,18 @@ export const productionService = {
     const product = await db.products.get(input.productId);
     if (!product || product.deletedAt) {
       return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_NOT_FOUND, 'Producto terminado no encontrado.'));
+    }
+    if (product.productType && product.productType === 'materia_prima') {
+      return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_TYPE_INVALID, 'El producto seleccionado es materia prima, no se puede producir. Selecciona un producto terminado.'));
+    }
+
+    // Check duplicate recipe name
+    const existingName = await db.recipes
+      .where({ tenantId, name: input.name })
+      .filter((r) => !r.deletedAt)
+      .first();
+    if (existingName) {
+      return failure(new AppError(ProductionErrors.RECIPE_DUPLICATE_NAME, 'Ya existe una receta con ese nombre.'));
     }
 
     // Check duplicate recipe batch for same product
@@ -96,11 +115,14 @@ export const productionService = {
       }
     }
 
-    // Validate ingredients exist
+    // Validate ingredients exist and have valid productType
     for (const line of input.lines) {
       const ingredient = await db.products.get(line.productId);
       if (!ingredient || ingredient.deletedAt) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
+      }
+      if (ingredient.productType && ingredient.productType === 'producto_terminado') {
+        return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
       }
     }
 
@@ -149,7 +171,7 @@ export const productionService = {
       return success(toRecipe(recipe as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en createRecipe:', err);
-      return failure(new AppError('PRODUCTION_RECIPE_CREATE_FAILED', 'Error al crear la receta.'));
+      return failure(new AppError(ProductionErrors.RECIPE_CREATE_FAILED, 'Error al crear la receta.'));
     }
   },
 
@@ -161,9 +183,17 @@ export const productionService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
+    // Zod runtime validation
+    if (Object.keys(input).length > 0) {
+      const parsed = UpdateRecipeInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return failure(new AppError(ProductionErrors.RECIPE_INVALID_INPUT, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+      }
+    }
+
     const db = getDb();
-    const existing = await db.recipes.get(id);
-    if (!existing || existing.deletedAt) {
+    const existing = await db.recipes.where({ id }).filter((r) => r.tenantId === tenantId && !r.deletedAt).first();
+    if (!existing) {
       return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
     }
 
@@ -184,8 +214,23 @@ export const productionService = {
         await db.recipes.put(updated);
         await syncQueue.enqueue('recipes', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
 
-        // Update lines if provided
-        if (input.lines) {
+    // Update lines if provided
+    if (input.lines) {
+          // Validate new ingredients exist and have valid productType
+          for (const line of input.lines) {
+            const lineRaw = line as Record<string, unknown>;
+            if (!lineRaw.id) {
+              // New line — validate ingredient
+              const ingredient = await db.products.get(line.productId);
+              if (!ingredient || ingredient.deletedAt) {
+                return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
+              }
+              if (ingredient.productType && ingredient.productType === 'producto_terminado') {
+                return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
+              }
+            }
+          }
+
           const existingLines = await db.recipeLines
             .where({ recipeId: id })
             .filter((l) => !l.deletedAt)
@@ -243,7 +288,7 @@ export const productionService = {
       return success(toRecipe(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en updateRecipe:', err);
-      return failure(new AppError('PRODUCTION_RECIPE_UPDATE_FAILED', 'Error al actualizar la receta.'));
+      return failure(new AppError(ProductionErrors.RECIPE_UPDATE_FAILED, 'Error al actualizar la receta.'));
     }
   },
 
@@ -423,6 +468,12 @@ export const productionService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
+    // Zod runtime validation
+    const parsed = CreateProductionOrderInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(new AppError(ProductionErrors.ORDER_INVALID_INPUT, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
+
     const db = getDb();
     const now = new Date().toISOString();
 
@@ -435,10 +486,16 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.ORDER_RECIPE_NOT_BATCH, 'Esta receta es de ensamblaje, no de producción por lotes.'));
     }
     if (!recipe.isActive) {
-      return failure(new AppError('PRODUCTION_RECIPE_INACTIVE', 'Esta receta está desactivada. Actívala antes de producir.'));
+      return failure(new AppError(ProductionErrors.RECIPE_INACTIVE, 'Esta receta está desactivada. Actívala antes de producir.'));
+    }
+    if (recipe.wastePct < 0 || recipe.wastePct > 100) {
+      return failure(new AppError(ProductionErrors.RECIPE_INVALID_INPUT, 'El porcentaje de merma de la receta es inválido.'));
     }
     if (input.batchCount > 1000) {
-      return failure(new AppError('PRODUCTION_BATCH_COUNT_TOO_HIGH', 'No se pueden producir más de 1000 lotes por orden.'));
+      return failure(new AppError(ProductionErrors.ORDER_BATCH_COUNT_EXCEEDED, 'No se pueden producir más de 1000 lotes por orden.'));
+    }
+    if (input.batchCount < 1) {
+      return failure(new AppError(ProductionErrors.ORDER_BATCH_COUNT_INVALID, 'Debes producir al menos 1 lote.'));
     }
 
     // 2. Get recipe lines
@@ -488,6 +545,22 @@ export const productionService = {
       : 0;
 
     // 6. Atomic transaction
+    // Re-validate stock right before transaction (concurrency guard)
+    for (const line of lines) {
+      const needed = Math.ceil(line.quantity * input.batchCount * wasteMultiplier);
+      const freshProduct = await db.products.get(line.productId);
+      if (!freshProduct || freshProduct.stock < needed) {
+        const productName = freshProduct?.name || 'Desconocido';
+        const available = freshProduct?.stock || 0;
+        return failure(
+          new AppError(
+            ProductionErrors.ORDER_INSUFFICIENT_STOCK,
+            `Stock insuficiente de "${productName}" (verificación final): necesitas ${needed}, tienes ${available}.`,
+          ),
+        );
+      }
+    }
+
     try {
       const orderId = generateId();
 
@@ -506,6 +579,7 @@ export const productionService = {
           quantityProduced: 0,
           status: 'confirmed',
           plannedDate: input.plannedDate,
+          wasteNotes: input.notes,
           createdBy: userId,
           createdAt: now,
           updatedAt: now,
@@ -825,7 +899,7 @@ export const productionService = {
             if (!product) throw new AppError(ProductionErrors.ASSEMBLY_PRODUCT_NOT_FOUND, 'Ingrediente no encontrado.');
 
             const previousStock = product.stock;
-            const newStock = previousStock - needed;
+            const newStock = Math.max(0, previousStock - needed);
 
             await db.products.update(line.productId, { stock: newStock });
             await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...product, stock: newStock } as unknown as Record<string, unknown>), tenantId);
@@ -868,12 +942,19 @@ export const productionService = {
     } catch (err) {
       if (err instanceof AppError) return failure(err);
       logger.error(PRODUCTION_MODULE, 'Error en consumeForAssembly:', err);
-      return failure(new AppError('PRODUCTION_ASSEMBLY_FAILED', 'Error al consumir ingredientes.'));
+      return failure(new AppError(ProductionErrors.ASSEMBLY_FAILED, 'Error al consumir ingredientes.'));
     }
   },
-};
+  // ===== INTERNAL HELPERS =====
 
-// ===== Internal helpers =====
+  consumeFifoInternal(
+    productId: string,
+    quantity: number,
+    tenantId: string,
+  ): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
+    return consumeFifoInternal(productId, quantity, tenantId);
+  },
+};
 
 async function consumeFifoInternal(
   productId: string,

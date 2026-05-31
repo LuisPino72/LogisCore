@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 export const SupplierSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, 'Nombre requerido').max(25),
   phone: z.string().max(50).optional(),
   createdAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
@@ -28,8 +28,8 @@ export const PurchaseOrderItemSchema = z.object({
   unitMultiplier: z.number().positive().optional(),
   productName: z.string(),
   quantity: z.number().positive(),
-  costUsdPerUnit: z.number().positive().max(999999.99),
-  receivedQuantity: z.number().positive().default(0),
+  costUsdPerUnit: z.number().positive().max(99999.99),
+  receivedQuantity: z.number().min(0).default(0),
   totalUsd: z.number().positive(),
   createdAt: z.string().datetime(),
 });

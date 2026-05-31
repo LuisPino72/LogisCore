@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Utensils, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
-import { Button, Card, Modal, Input, Spinner } from '../../../common/components';
+import { Utensils, AlertTriangle, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { Alert, Button, Card, Modal, Input, Spinner } from '../../../common/components';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
 import type { Recipe, IngredientAvailability } from '../types';
@@ -22,6 +22,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   const [isChecking, setIsChecking] = useState(false);
   const [isProducing, setIsProducing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmStep, setConfirmStep] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   const fetchAvailability = useCallback(async (count: number) => {
@@ -58,6 +59,11 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
 
   const allIngredientsAvailable = ingredientAvailability.length > 0 && ingredientAvailability.every((i) => i.sufficient);
 
+  const handleConfirm = () => {
+    if (!allIngredientsAvailable) return;
+    setConfirmStep(true);
+  };
+
   const handleProduce = async () => {
     if (!tenantId || !userId) return;
     setIsProducing(true);
@@ -76,121 +82,146 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
       onClose();
     } else {
       setIsProducing(false);
-      setError('Error al producir. Verifica el stock de ingredientes.');
+      setConfirmStep(false);
+      setError('Error al producir. Verifica que la receta esté activa y haya stock suficiente.');
     }
   };
 
   return (
     <Modal
       isOpen={true}
-      onClose={onClose}
-      title="Producir"
+      onClose={() => { setConfirmStep(false); onClose(); }}
+      title={confirmStep ? '¿Confirmar producción?' : 'Producir'}
       footer={
-        <div className="flex gap-2 justify-end">
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleProduce}
-            disabled={isProducing || isChecking || !allIngredientsAvailable}
-            className="flex items-center gap-2"
-          >
-            {isProducing ? <Spinner size="sm" /> : <Utensils size={16} />}
-            Producir
-          </Button>
-        </div>
+        confirmStep ? (
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => setConfirmStep(false)} disabled={isProducing}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleProduce}
+              disabled={isProducing}
+              className="flex items-center gap-2"
+            >
+              {isProducing ? <Spinner size="sm" /> : <CheckCircle2 size={16} />}
+              {isProducing ? 'Produciendo...' : 'Sí, producir'}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirm}
+              disabled={isProducing || isChecking || !allIngredientsAvailable}
+              className="flex items-center gap-2"
+            >
+              {isProducing ? <Spinner size="sm" /> : <Utensils size={16} />}
+              Producir
+            </Button>
+          </div>
+        )
       }
     >
       <div className="space-y-4">
-        {/* Recipe Info */}
-        <Card className="p-3 bg-primary/5 border-primary/20">
-          <div className="flex items-center gap-2">
-            <Utensils size={18} className="text-primary" />
-            <div>
-              <h3 className="font-semibold text-sm">{recipe.name}</h3>
-              <p className="text-xs text-gray-500">
-                Yield por lote: {recipe.yieldQuantity} {recipe.yieldUnit}
-                {recipe.wastePct > 0 && (
-                  <span className="ml-1 text-warning">· Merma: {recipe.wastePct}%</span>
-                )}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Batch Count */}
-        <Input
-          label="Cantidad de lotes"
-          type="number"
-          value={batchCount}
-          onChange={(e) => handleBatchChange(Number(e.target.value))}
-          min={1}
-        />
-
-        {/* Total Production */}
-        <div className="text-sm text-gray-600">
-          Producirás: <strong>{recipe.yieldQuantity * batchCount} {recipe.yieldUnit}</strong>
-        </div>
-
-        {/* Ingredient Availability */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Ingredientes</h4>
-          {isChecking ? (
-            <div className="flex justify-center py-4">
-              <Spinner size="sm" />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {ingredientAvailability.map((item) => (
-                <div
-                  key={item.productId}
-                  className={`flex items-center justify-between p-2 rounded-lg text-sm ${
-                    item.sufficient
-                      ? 'bg-success/5 border border-success/20'
-                      : 'bg-danger/5 border border-danger/20'
-                  }`}
-                >
-                  <span className="truncate flex-1">{item.productName}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`font-mono text-xs ${item.sufficient ? 'text-success' : 'text-danger'}`}>
-                      {item.needed} / {item.available} {item.unit}
-                    </span>
-                    {item.sufficient ? (
-                      <CheckCircle2 size={14} className="text-success" />
-                    ) : (
-                      <XCircle size={14} className="text-danger" />
+        {confirmStep ? (
+          <Alert variant="warning" icon={<HelpCircle size={20} />} title={`¿Estás seguro de producir ${batchCount} lote(s)?`}>
+            <p>Se descontarán los ingredientes del inventario y se creará stock de producto terminado. Esta acción no se puede deshacer.</p>
+            <p className="mt-1"><strong>{recipe.name}</strong> · {recipe.yieldQuantity * batchCount} {recipe.yieldUnit} · ${estimatedCost.toFixed(2)}</p>
+          </Alert>
+        ) : (
+          <>
+            {/* Recipe Info */}
+            <Card className="p-3 bg-primary/5 border-primary/20">
+              <div className="flex items-center gap-2">
+                <Utensils size={18} className="text-primary" />
+                <div>
+                  <h3 className="font-semibold text-sm">{recipe.name}</h3>
+                  <p className="text-xs text-gray-500">
+                    Yield por lote: {recipe.yieldQuantity} {recipe.yieldUnit}
+                    {recipe.wastePct > 0 && (
+                      <span className="ml-1 text-warning">· Merma: {recipe.wastePct}%</span>
                     )}
-                  </div>
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            </Card>
 
-        {/* Cost Estimate */}
-        {estimatedCost > 0 && (
-          <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600">Costo estimado:</span>
-            <span className="font-semibold text-sm">${estimatedCost.toFixed(2)}</span>
-          </div>
-        )}
+            {/* Batch Count */}
+            <Input
+              label="Cantidad de lotes (máx 1000)"
+              type="number"
+              value={batchCount}
+              onChange={(e) => handleBatchChange(Number(e.target.value))}
+              min={1}
+              max={1000}
+            />
+
+            {/* Total Production */}
+            <div className="text-sm text-gray-600">
+              Producirás: <strong>{recipe.yieldQuantity * batchCount} {recipe.yieldUnit}</strong>
+            </div>
+
+            {/* Ingredient Availability */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Ingredientes</h4>
+              {isChecking ? (
+                <div className="flex justify-center py-4">
+                  <Spinner size="sm" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {ingredientAvailability.map((item) => (
+                    <div
+                      key={item.productId}
+                      className={`flex items-center justify-between p-2 rounded-lg text-sm ${
+                        item.sufficient
+                          ? 'bg-success/5 border border-success/20'
+                          : 'bg-danger/5 border border-danger/20'
+                      }`}
+                    >
+                      <span className="truncate flex-1">{item.productName}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`font-mono text-xs ${item.sufficient ? 'text-success' : 'text-danger'}`}>
+                          {item.needed} / {item.available} {item.unit}
+                        </span>
+                        {item.sufficient ? (
+                          <CheckCircle2 size={14} className="text-success" />
+                        ) : (
+                          <XCircle size={14} className="text-danger" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Cost Estimate */}
+            {estimatedCost > 0 && (
+              <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-600">Costo estimado:</span>
+                <span className="font-semibold text-sm">${estimatedCost.toFixed(2)}</span>
+              </div>
+            )}
 
         {/* Warning */}
         {!allIngredientsAvailable && !isChecking && ingredientAvailability.length > 0 && (
-          <div className="flex items-start gap-2 p-3 bg-danger/5 border border-danger/20 rounded-lg">
-            <AlertTriangle size={16} className="text-danger shrink-0 mt-0.5" />
-            <p className="text-xs text-danger">
-              No hay suficiente stock de algunos ingredientes. Ajusta la cantidad de lotes o repone inventario.
-            </p>
-          </div>
+          <Alert variant="warning" icon={<AlertTriangle size={16} />}>
+            No hay suficiente stock de algunos ingredientes. Ajusta la cantidad de lotes o repone inventario.
+          </Alert>
         )}
 
         {/* Error */}
         {error && (
-          <div className="p-3 bg-danger/5 border border-danger/20 rounded-lg">
-            <p className="text-xs text-danger">{error}</p>
-          </div>
+          <Alert variant="error">
+            {error}
+          </Alert>
+        )}
+          </>
         )}
       </div>
     </Modal>

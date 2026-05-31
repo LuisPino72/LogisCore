@@ -83,6 +83,7 @@ function fuzzyMatchCategory(input: string, existing: string[]): string | null {
 function parseNumber(value: string | undefined, fallback: number): number {
   if (!value || value.trim() === '') return fallback;
   let cleaned = value.trim();
+  // eslint-disable-next-line security/detect-unsafe-regex
   if (/^-?\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(cleaned)) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
   } else if (/^-?\d+,\d{1,2}$/.test(cleaned)) {

@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
-import { getDb, isDbClosing } from '../../../services/dexie/db';
+import { getDb, isDbClosing, type DexieProductPresentation } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
@@ -513,7 +513,7 @@ export const inventoryService = {
                 sortOrder: i,
                 updatedAt: now,
               };
-              await db.productPresentations.update(existingId, patchData as any);
+              await db.productPresentations.update(existingId, patchData as unknown as Partial<DexieProductPresentation>);
               await syncQueue.enqueue('product_presentations', 'UPDATE', existingId, toSnake(patchData as unknown as Record<string, unknown>), tenantId);
             } else {
               // Crear nueva presentación
@@ -532,7 +532,7 @@ export const inventoryService = {
                 updatedAt: now,
               };
 
-              await db.productPresentations.add(record as any);
+              await db.productPresentations.add(record as unknown as DexieProductPresentation);
               await syncQueue.enqueue('product_presentations', 'CREATE', presId, toSnake(record), tenantId);
             }
           }

@@ -18,6 +18,7 @@ import type {
   CreatePurchaseOrderInput,
   ReceivePurchaseOrderInput,
 } from '../../../specs/purchases';
+import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import { convertToStorage } from '../../inventory/types';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 
@@ -105,7 +106,16 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
-    const existing = await db.suppliers.get(id);
+
+    // Validar con Zod
+    if (input.name !== undefined || input.phone !== undefined) {
+      const partial = CreateSupplierInputSchema.partial().safeParse(input);
+      if (!partial.success) {
+        return failure(new AppError('SUPPLIER_INVALID_INPUT', partial.error.issues[0]?.message || 'Datos inválidos.'));
+      }
+    }
+
+    const existing = await db.suppliers.where({ id }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
     if (!existing) {
       return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
     }
@@ -123,7 +133,7 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
-    const supplier = await db.suppliers.get(id);
+    const supplier = await db.suppliers.where({ id }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
     if (!supplier) {
       return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
     }
@@ -190,6 +200,31 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
+
+    // P6: Validar que supplierId exista
+    const supplier = await db.suppliers.where({ id: input.supplierId }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
+    if (!supplier) {
+      return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'El proveedor seleccionado no existe.'));
+    }
+
+    // P5: Validar productos duplicados
+    const productIds = input.items.map((i) => i.productId);
+    if (new Set(productIds).size !== productIds.length) {
+      return failure(new AppError('PURCHASE_DUPLICATE_PRODUCTS', 'No puede haber dos items del mismo producto en la orden.'));
+    }
+
+    // P6: Validar que todos los productIds existan
+    const invalidProducts: string[] = [];
+    for (const item of input.items) {
+      const product = await db.products.where({ id: item.productId }).filter((p) => p.tenantId === tenantId && !p.deletedAt).first();
+      if (!product) {
+        invalidProducts.push(item.productId.slice(0, 8));
+      }
+    }
+    if (invalidProducts.length > 0) {
+      return failure(new AppError('PURCHASE_INVALID_PRODUCTS', `Productos no encontrados: ${invalidProducts.join(', ')}`));
+    }
+
     const id = generateId();
     const now = new Date().toISOString();
 
@@ -255,8 +290,8 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
-    const order = await db.purchaseOrders.get(id);
-    if (!order || order.deletedAt) {
+    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+    if (!order) {
       return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
     }
     if (order.status !== 'draft') {
@@ -266,6 +301,16 @@ export const purchaseService = {
     if (!input.items || input.items.length === 0) {
       return failure(new AppError('PURCHASE_UPDATE_NO_ITEMS', 'La orden debe tener al menos un producto.'));
     }
+
+    // Validar productos duplicados
+    const productIds = input.items.map((i) => i.productId);
+    if (new Set(productIds).size !== productIds.length) {
+      return failure(new AppError('PURCHASE_DUPLICATE_PRODUCTS', 'No puede haber dos items del mismo producto en la orden.'));
+    }
+
+    // Preservar createdAt original de items existentes
+    const existingItems = await db.purchaseOrderItems.where({ orderId: id }).toArray();
+    const existingItemByProductId = new Map(existingItems.map((i) => [i.productId, i]));
 
     const now = new Date().toISOString();
     const totalUsd = input.items.reduce((sum, item) => sum + item.totalCostUsd, 0);
@@ -287,7 +332,7 @@ export const purchaseService = {
       costUsdPerUnit: preciseRound(item.totalCostUsd / item.quantity, 2),
       receivedQuantity: 0,
       totalUsd: item.totalCostUsd,
-      createdAt: now,
+      createdAt: existingItemByProductId.get(item.productId)?.createdAt ?? now,
     }));
 
     try {
@@ -322,8 +367,8 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
-    const order = await db.purchaseOrders.get(id);
-    if (!order || order.deletedAt) {
+    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+    if (!order) {
       return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
     }
     const deletedAt = new Date().toISOString();
@@ -340,8 +385,8 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
-    const order = await db.purchaseOrders.get(id);
-    if (!order || order.deletedAt) {
+    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+    if (!order) {
       return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
     }
     if (order.status !== 'draft') {
@@ -367,8 +412,8 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
-    const order = await db.purchaseOrders.get(id);
-    if (!order || order.deletedAt) {
+    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+    if (!order) {
       return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
     }
     if (order.status === 'received' || order.status === 'cancelled') {
@@ -378,6 +423,13 @@ export const purchaseService = {
       return failure(new AppError(PurchaseErrors.ORDER_INVALID_STATUS, 'La orden debe estar confirmada para recibir.'));
     }
 
+    // P6: Validar que supplierId exista
+    const supplier = await db.suppliers.where({ id: order.supplierId }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
+    if (!supplier) {
+      return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'El proveedor de la orden ya no existe.'));
+    }
+
+    // Validar que supplierId y productIds existan en la orden
     const items = await db.purchaseOrderItems.where({ orderId: id }).toArray();
     const itemMap = new Map(items.map((i) => [i.id, i]));
 
@@ -429,7 +481,8 @@ export const purchaseService = {
         db.expenses,
       ], async () => {
         for (const rec of input.items) {
-          const item = itemMap.get(rec.itemId);
+          // P3: Re-leer item dentro de la transacción para evitar doble recepción
+          const item = await db.purchaseOrderItems.get(rec.itemId);
           if (!item) continue;
 
           const newReceivedQty = item.receivedQuantity + rec.receivedQuantity;
@@ -440,6 +493,7 @@ export const purchaseService = {
           } as unknown as Record<string, unknown>), tenantId);
 
           if (rec.receivedQuantity > 0) {
+            // P4: Re-leer product dentro de la transacción para WAC preciso
             const product = await db.products.get(item.productId);
             if (!product) continue;
 
@@ -554,8 +608,8 @@ export const purchaseService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
-    const order = await db.purchaseOrders.get(id);
-    if (!order || order.deletedAt) {
+    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+    if (!order) {
       return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
     }
     if (order.status !== 'draft' && order.status !== 'confirmed') {
@@ -650,10 +704,10 @@ export const purchaseService = {
     return success(result);
   },
 
-  async getOrderById(id: string): Promise<Result<PurchaseOrderWithItems, AppError>> {
+  async getOrderById(id: string, tenantId: string): Promise<Result<PurchaseOrderWithItems, AppError>> {
     const db = getDb();
-    const order = await db.purchaseOrders.get(id);
-    if (!order || order.deletedAt) {
+    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+    if (!order) {
       return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
     }
 

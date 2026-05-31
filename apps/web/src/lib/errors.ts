@@ -157,9 +157,6 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   TAX_RULE_TENANT_ID_MUST_BE_SLUG: makeError('TAX_RULE_TENANT_ID_MUST_BE_SLUG', 'INVC-020', 'En Dexie, tenant_id debe ser slug.', 'INVOICING'),
 
   // ===== PURCHASES =====
-  PURCHASE_NOT_CONFIRMED: makeError('PURCHASE_NOT_CONFIRMED', 'PUR-001', 'La orden debe estar confirmada para recibir.', 'PURCHASES'),
-  PURCHASE_RECEIVING_TOTALS_MISMATCH: makeError('PURCHASE_RECEIVING_TOTALS_MISMATCH', 'PUR-002', 'Los totales de recepción no cuadran.', 'PURCHASES'),
-
   // ===== REPORTS =====
   EXCHANGE_RATE_NOT_FOUND: makeError('EXCHANGE_RATE_NOT_FOUND', 'RPT-001', 'Tasa de cambio no disponible para el período.', 'REPORTS'),
   BALANCE_SHEET_IMBALANCED: makeError('BALANCE_SHEET_IMBALANCED', 'RPT-002', 'El Balance General no cuadra.', 'REPORTS'),

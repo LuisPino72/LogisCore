@@ -268,7 +268,6 @@ export const reportsService = {
       let totalDiscountBs = 0;
       let totalIvaBs = 0;
       let totalIvaUsd = 0;
-      let totalIgtfBs = 0;
       const productProfitMap = new Map<string, { name: string; profit: number }>();
 
       let totalDiscountUsdAccum = 0;
@@ -278,7 +277,6 @@ export const reportsService = {
         if (sale.ivaBs && sale.exchangeRate > 0) {
           totalIvaUsd += preciseRound(sale.ivaBs / sale.exchangeRate, 2);
         }
-        totalIgtfBs += sale.igtfBs || 0;
         totalDiscountBs += sale.discountBs || 0;
         const saleUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
         totalSalesUsd += saleUsd;
@@ -312,7 +310,6 @@ export const reportsService = {
       totalCostBs = preciseRound(totalCostBs, 2);
       totalCostUsd = preciseRound(totalCostUsd, 2);
       totalIvaBs = preciseRound(totalIvaBs, 2);
-      totalIgtfBs = preciseRound(totalIgtfBs, 2);
       const effectiveRevenueBs = preciseRound(totalRevenueBs - (totalDiscountBs || 0), 2);
       const effectiveRevenueUsd = preciseRound(totalRevenueUsd - (totalDiscountUsdAccum || 0), 2);
       const grossProfitBs = preciseRound(effectiveRevenueBs - totalCostBs, 2);
@@ -1129,7 +1126,7 @@ export const reportsService = {
 
       const total = salesData.length;
       let cumulative = 0;
-      let result: TicketDistributionItem[] = RANGES.map((r, i) => {
+      const result: TicketDistributionItem[] = RANGES.map((r, i) => {
         cumulative += buckets[i];
         return {
           range: r.label,

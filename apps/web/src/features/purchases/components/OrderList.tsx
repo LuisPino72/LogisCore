@@ -147,6 +147,7 @@ const ORDERS_PAGE_SIZE = 20;
 
 export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onReceive, onCancel, onEdit, onDeleteOrder, tenantId }: OrderListProps) {
   const [receiveOrderId, setReceiveOrderId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [page, setPage] = useState(1);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -266,7 +267,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                 <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
                     {order.status === 'draft' && (
                       <>
-                        <Button variant="primary" size="sm" onClick={() => onConfirm(order.id, tenantId)} disabled={!isOnline}>
+                        <Button variant="primary" size="sm" onClick={() => setConfirmId(order.id)} disabled={!isOnline}>
                           <CheckCircle size={14} />
                           <span className="ml-1">Confirmar</span>
                         </Button>
@@ -307,6 +308,28 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
           order={receivingOrder}
           tenantId={tenantId}
         />
+      )}
+
+      {confirmId && (
+        <Modal isOpen={!!confirmId} onClose={() => setConfirmId(null)} title="Confirmar Orden">
+          <div className="p-4">
+            <p className="text-sm text-gray-600 mb-4">
+              ¿Estás seguro de confirmar esta orden de compra?<br />
+              Una vez confirmada, podrás recibir la mercancía.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setConfirmId(null)}>
+                Cancelar
+              </Button>
+              <Button variant="primary" onClick={() => {
+                onConfirm(confirmId, tenantId);
+                setConfirmId(null);
+              }}>
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       <OrderDetailModal order={detailOrder} isOpen={!!detailOrder} onClose={() => setDetailOrder(null)} />
