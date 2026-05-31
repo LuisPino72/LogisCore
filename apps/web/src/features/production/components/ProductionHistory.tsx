@@ -1,4 +1,5 @@
-import { Badge, Card, EmptyState } from '../../../common/components';
+import { useState, useMemo } from 'react';
+import { Badge, Card, EmptyState, Pagination } from '../../../common/components';
 import { History, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import type { Recipe, ProductionOrder } from '../types';
 
@@ -6,6 +7,8 @@ interface ProductionHistoryProps {
   orders: ProductionOrder[];
   recipes: Recipe[];
 }
+
+const PAGE_SIZE = 10;
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'danger' | 'warning' | 'info' | 'neutral'; icon: React.ReactNode }> = {
   draft: { label: 'Borrador', variant: 'neutral', icon: <Clock size={12} /> },
@@ -16,6 +19,14 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'dange
 };
 
 export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.ceil(orders.length / PAGE_SIZE);
+  const paginatedOrders = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return orders.slice(start, start + PAGE_SIZE);
+  }, [orders, page]);
+
   if (orders.length === 0) {
     return (
       <EmptyState
@@ -44,10 +55,10 @@ export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-gray-700 mb-2">
-        Últimas {orders.length} órdenes
+        {orders.length} orden(es) en total
       </h3>
 
-      {orders.map((order) => {
+      {paginatedOrders.map((order) => {
         const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.draft;
 
         return (
@@ -76,6 +87,8 @@ export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
           </Card>
         );
       })}
+
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

@@ -131,17 +131,10 @@ function DashboardLayout() {
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
   const role = session?.role ?? null;
 
-  const knownModulePaths = ['/dashboard', '/inventory', '/gastos', '/purchases', '/pos', '/reports'];
+  const knownModulePaths = ['/dashboard', '/inventory', '/production', '/gastos', '/purchases', '/pos', '/reports'];
   const isKnownModulePath = knownModulePaths.some(
     (p) => location.pathname === p || location.pathname.startsWith(p + '/')
   );
-  if (!isKnownModulePath) {
-    return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
-  }
-
-  const sidebarModules = role === 'employee'
-    ? ALL_MODULES.filter((m) => EMPLOYEE_ALLOWED.has(m.id))
-    : ALL_MODULES;
 
   const effectiveTenantId = useTenantResolution({ session, selectedTenantSlug, isAdminViewingTenant });
 
@@ -162,6 +155,14 @@ function DashboardLayout() {
       logger.error('Auth', 'Error al cerrar sesión', result.error.message);
     }
   }, []);
+
+  if (!isKnownModulePath) {
+    return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
+  }
+
+  const sidebarModules = role === 'employee'
+    ? ALL_MODULES.filter((m) => EMPLOYEE_ALLOWED.has(m.id))
+    : ALL_MODULES;
 
   return (
     <>
@@ -222,9 +223,11 @@ function DashboardLayout() {
         )}
         {activeModule === 'production' && (
           <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <ProductionPage tenantId={effectiveTenantId} />
-            </Suspense>
+            <ErrorBoundary moduleName="Producción">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <ProductionPage tenantId={effectiveTenantId} />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         )}
         {activeModule === 'gastos' && (

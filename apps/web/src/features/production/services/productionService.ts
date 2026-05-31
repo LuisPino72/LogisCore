@@ -434,6 +434,12 @@ export const productionService = {
     if (recipe.mode !== 'batch') {
       return failure(new AppError(ProductionErrors.ORDER_RECIPE_NOT_BATCH, 'Esta receta es de ensamblaje, no de producción por lotes.'));
     }
+    if (!recipe.isActive) {
+      return failure(new AppError('PRODUCTION_RECIPE_INACTIVE', 'Esta receta está desactivada. Actívala antes de producir.'));
+    }
+    if (input.batchCount > 1000) {
+      return failure(new AppError('PRODUCTION_BATCH_COUNT_TOO_HIGH', 'No se pueden producir más de 1000 lotes por orden.'));
+    }
 
     // 2. Get recipe lines
     const lines = await db.recipeLines
@@ -745,7 +751,8 @@ export const productionService = {
     tenantId: string,
     userId: string,
     saleItems: Array<{ productId: string; quantity: number; productName?: string }>,
-  ): Promise<Result<void, AppError>> {
+    override: boolean = false,
+  ): Promise<Result<{ overrides: Array<{ productName: string; ingredientName: string; needed: number; available: number }> }, AppError>> {
     const db = getDb();
     const now = new Date().toISOString();
 
@@ -774,21 +781,32 @@ export const productionService = {
       }
     }
 
-    if (assemblyItems.length === 0) return success(undefined);
+    if (assemblyItems.length === 0) return success({ overrides: [] });
 
-    // Check availability first
+    // Check availability and collect shortages
+    const overrides: Array<{ productName: string; ingredientName: string; needed: number; available: number }> = [];
+
     for (const item of assemblyItems) {
       const wasteMultiplier = 1 + (item.recipe.wastePct / 100);
       for (const line of item.lines) {
         const needed = Math.ceil(line.quantity * item.quantity * wasteMultiplier);
         const product = await db.products.get(line.productId);
         if (!product || product.stock < needed) {
-          return failure(
-            new AppError(
-              ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK,
-              `Stock insuficiente de "${product?.name || 'Desconocido'}" para ${item.productName || item.productId}.`,
-            ),
-          );
+          if (!override) {
+            return failure(
+              new AppError(
+                ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK,
+                `Stock insuficiente de "${product?.name || 'Desconocido'}" para ${item.productName || item.productId}.`,
+              ),
+            );
+          }
+          // Track override
+          overrides.push({
+            productName: item.productName || item.productId,
+            ingredientName: product?.name || 'Desconocido',
+            needed,
+            available: product?.stock || 0,
+          });
         }
       }
     }
@@ -837,14 +855,16 @@ export const productionService = {
 
         await outboxService.enqueue('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, {
           itemsCount: assemblyItems.length,
+          overrideCount: overrides.length,
         });
       });
 
       await emitWithAudit('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, {
         itemsCount: assemblyItems.length,
+        overrideCount: overrides.length,
       }, { userId, tenantId });
 
-      return success(undefined);
+      return success({ overrides });
     } catch (err) {
       if (err instanceof AppError) return failure(err);
       logger.error(PRODUCTION_MODULE, 'Error en consumeForAssembly:', err);

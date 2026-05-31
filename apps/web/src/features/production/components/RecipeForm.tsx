@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChefHat, Plus, Trash2 } from 'lucide-react';
+import { ChefHat, Plus, Trash2, AlertTriangle, Info } from 'lucide-react';
 import { Button, Card, Modal, Input, SearchableSelect, Spinner } from '../../../common/components';
 import { useRecipeForm } from '../hooks/useRecipeForm';
 import { useProductionStore } from '../stores/productionStore';
@@ -15,7 +15,7 @@ interface RecipeFormProps {
 
 export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProps) {
   const {
-    form, errors,
+    form, errors, warnings,
     updateField, addLine, updateLine, removeLine,
     validate, toInput,
     getAvailableIngredients, getAvailableProducts,
@@ -119,8 +119,28 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   }
 
   return (
-    <Modal isOpen={true} onClose={onClose} title={recipe ? 'Editar Receta' : 'Nueva Receta'}>
-      <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={recipe ? 'Editar Receta' : 'Nueva Receta'}
+      footer={
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex items-center gap-2"
+          >
+            {isSubmitting ? <Spinner size="sm" /> : <ChefHat size={16} />}
+            {recipe ? 'Guardar Cambios' : 'Crear Receta'}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
         {/* Basic Info */}
         <div className="space-y-3">
           <Input
@@ -138,6 +158,24 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             placeholder="Selecciona el producto que se crea"
           />
           {errors.productId && <p className="text-xs text-danger mt-1">{errors.productId}</p>}
+
+          {/* Warnings */}
+          {warnings.length > 0 && (
+            <div className="space-y-1">
+              {warnings.map((w, i) => (
+                <div key={i} className={`flex items-start gap-2 p-2 rounded-lg text-xs ${
+                  w.type === 'warning' ? 'bg-warning/5 border border-warning/20' : 'bg-info/5 border border-info/20'
+                }`}>
+                  {w.type === 'warning' ? (
+                    <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
+                  ) : (
+                    <Info size={14} className="text-info shrink-0 mt-0.5" />
+                  )}
+                  <span className={w.type === 'warning' ? 'text-warning' : 'text-info'}>{w.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -275,22 +313,6 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           onChange={(e) => updateField('notes', e.target.value)}
           placeholder="Instrucciones adicionales..."
         />
-      </div>
-
-      {/* Fixed Footer */}
-      <div className="border-t p-4 flex gap-2 justify-end sticky bottom-0 bg-white">
-        <Button variant="ghost" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="flex items-center gap-2"
-        >
-          {isSubmitting ? <Spinner size="sm" /> : <ChefHat size={16} />}
-          {recipe ? 'Guardar Cambios' : 'Crear Receta'}
-        </Button>
       </div>
     </Modal>
   );

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ChefHat, Plus, History, Utensils } from 'lucide-react';
-import { Button, Card, EmptyState, BottomNav, Spinner } from '../../../common/components';
+import { ChefHat, Plus, History, Utensils, Package } from 'lucide-react';
+import { Button, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding } from '../../../common/components';
 import { useProduction } from '../hooks/useProduction';
 import { RecipeList } from '../components/RecipeList';
 import { RecipeForm } from '../components/RecipeForm';
@@ -164,6 +164,28 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
           onClose={handleProduceModalClose}
         />
       )}
+
+      <ModuleOnboarding
+        moduleId="production"
+        steps={[
+          {
+            title: 'Crea tus Recetas',
+            description: 'Define los ingredientes y cantidades necesarias para producir cada producto. Puedes elegir entre producción por lotes o ensamblaje.',
+            icon: <ChefHat size={24} className="text-white" />,
+          },
+          {
+            title: 'Produce con Un Toque',
+            description: 'Selecciona una receta, indica cuántos lotes quieres hacer y el sistema descuenta los ingredientes automáticamente.',
+            icon: <Utensils size={24} className="text-white" />,
+          },
+          {
+            title: 'Control de Stock',
+            description: 'El producto terminado se agrega a tu inventario listo para vender. Los ingredientes se descuentan con trazabilidad FIFO.',
+            icon: <Package size={24} className="text-white" />,
+          },
+        ]}
+        onComplete={() => {}}
+      />
     </div>
   );
 }

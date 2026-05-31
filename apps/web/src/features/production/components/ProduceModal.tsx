@@ -81,8 +81,28 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Producir">
-      <div className="p-4 space-y-4">
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Producir"
+      footer={
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleProduce}
+            disabled={isProducing || isChecking || !allIngredientsAvailable}
+            className="flex items-center gap-2"
+          >
+            {isProducing ? <Spinner size="sm" /> : <Utensils size={16} />}
+            Producir
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
         {/* Recipe Info */}
         <Card className="p-3 bg-primary/5 border-primary/20">
           <div className="flex items-center gap-2">
@@ -172,22 +192,6 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
             <p className="text-xs text-danger">{error}</p>
           </div>
         )}
-      </div>
-
-      {/* Fixed Footer */}
-      <div className="border-t p-4 flex gap-2 justify-end sticky bottom-0 bg-white">
-        <Button variant="ghost" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleProduce}
-          disabled={isProducing || isChecking || !allIngredientsAvailable}
-          className="flex items-center gap-2"
-        >
-          {isProducing ? <Spinner size="sm" /> : <Utensils size={16} />}
-          Producir
-        </Button>
       </div>
     </Modal>
   );
