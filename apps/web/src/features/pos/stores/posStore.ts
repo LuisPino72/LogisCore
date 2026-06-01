@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { preciseRound } from '@logiscore/shared';
-import type { PosState, PaymentMethod, ParkedCart, PresentationSelection } from '../types';
+import type { PosState, PaymentMethod, ParkedCart, PresentationSelection, CashRegister } from '../types';
+import type { SaleItem } from '../types';
 import type { Product } from '../../../specs/inventory';
 import type { Presentation } from '../../../specs/inventory';
+import { type Result, type AppError, success, failure, AppError as AppErrorClass } from '@logiscore/core';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
 import { exchangeRateService } from '../../../features/exchange/services/exchangeRateService';
@@ -32,9 +34,14 @@ interface PosStore extends PosState {
   deleteParkedCart: (id: string) => Promise<void>;
   toggleFavorite: (tenantId: string, productId: string) => Promise<void>;
   isFavorite: (productId: string) => boolean;
-  completeSale: (tenantId: string, paymentMethod: PaymentMethod, userId: string) => Promise<string | false>;
-  openCashRegister: (tenantId: string, openingBalance: number, userId: string) => Promise<boolean>;
-  closeCashRegister: (tenantId: string, declaredClosingBalance: number, userId: string) => Promise<boolean>;
+  completeSale: (tenantId: string, paymentMethod: PaymentMethod, userId: string) => Promise<Result<string, AppError>>;
+  openCashRegister: (tenantId: string, openingBalance: number, userId: string) => Promise<Result<CashRegister, AppError>>;
+  closeCashRegister: (tenantId: string, declaredClosingBalance: number, userId: string) => Promise<Result<CashRegister, AppError>>;
+  voidSale: (saleId: string, tenantId: string, userId: string) => Promise<Result<void, AppError>>;
+  getTodaySoldProducts: (tenantId: string, maxProducts?: number) => Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>>;
+  saleItems: SaleItem[];
+  saleItemsLoading: boolean;
+  fetchSaleItems: (saleId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -49,6 +56,8 @@ const initialState: PosState = {
   salesHistoryTotal: 0,
   salesHistoryLoading: false,
   activeParkedCartId: null,
+  saleItems: [],
+  saleItemsLoading: false,
   loading: false,
   error: null,
   searchQuery: '',
@@ -162,7 +171,7 @@ export const usePosStore = create<PosStore>()(
       get().fetchParkedCarts(tenantId);
       return true;
     }
-    console.error('[completeSale] Error:', result.error);
+    console.error('[parkCart] Error:', result.error);
     set({ loading: false, error: result.error.message });
     return false;
   },
@@ -350,7 +359,7 @@ export const usePosStore = create<PosStore>()(
     const { cart, exchangeRate: cachedRate } = get();
     if (cart.length === 0) {
       set({ error: 'No hay productos en el carrito.' });
-      return false;
+      return failure(new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.'));
     }
 
     let exchangeRate = cachedRate ?? 0;
@@ -363,7 +372,7 @@ export const usePosStore = create<PosStore>()(
 
     if (!exchangeRate || exchangeRate <= 0) {
       set({ error: 'No hay tasa de cambio disponible. Configúrala antes de vender.', loading: false });
-      return false;
+      return failure(new AppErrorClass('SALE_FAILED', 'No hay tasa de cambio disponible. Configúrala antes de vender.'));
     }
 
     const { discount } = get();
@@ -388,10 +397,10 @@ export const usePosStore = create<PosStore>()(
         const remaining = get().parkedCarts.filter((p) => p.id !== activeId);
         set({ parkedCarts: remaining });
       }
-      return result.data.id;
+      return success(result.data.id);
     }
     set({ loading: false, error: result.error.message });
-    return false;
+    return failure(new AppErrorClass('SALE_FAILED', result.error.message));
   },
 
   openCashRegister: async (tenantId, openingBalance, userId) => {
@@ -399,15 +408,15 @@ export const usePosStore = create<PosStore>()(
     const rate = get().exchangeRate;
     if (!rate || rate <= 0) {
       set({ error: 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.', loading: false });
-      return false;
+      return failure(new AppErrorClass('SALE_FAILED', 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.'));
     }
     const result = await posService.openCashRegister({ tenantId, userId, openingBalanceBs: openingBalance, openingRate: rate });
     if (result.ok) {
       set({ cashRegister: result.data, loading: false });
-      return true;
+      return success(result.data);
     }
     set({ loading: false, error: result.error.message });
-    return false;
+    return failure(new AppErrorClass('SALE_FAILED', result.error.message));
   },
 
   closeCashRegister: async (tenantId, declaredClosingBalance, userId) => {
@@ -415,15 +424,42 @@ export const usePosStore = create<PosStore>()(
     const rate = get().exchangeRate;
     if (!rate || rate <= 0) {
       set({ error: 'No hay tasa de cambio disponible. Verifique la tasa antes de cerrar la caja.', loading: false });
-      return false;
+      return failure(new AppErrorClass('SALE_FAILED', 'No hay tasa de cambio disponible. Verifique la tasa antes de cerrar la caja.'));
     }
     const result = await posService.closeCashRegister({ tenantId, userId, declaredClosingBalanceBs: declaredClosingBalance, closingRate: rate });
     if (result.ok) {
       set({ cashRegister: result.data, loading: false });
-      return true;
+      return success(result.data);
     }
     set({ loading: false, error: result.error.message });
-    return false;
+    return failure(new AppErrorClass('SALE_FAILED', result.error.message));
+  },
+
+  voidSale: async (saleId, tenantId, userId) => {
+    const result = await posService.voidSale(saleId, tenantId, userId);
+    if (result.ok) {
+      set({ error: null });
+      return result;
+    }
+    set({ error: result.error.message });
+    return result;
+  },
+
+  getTodaySoldProducts: async (tenantId, maxProducts?) => {
+    return posService.getTodaySoldProducts(tenantId, maxProducts);
+  },
+
+  saleItems: [],
+  saleItemsLoading: false,
+
+  fetchSaleItems: async (saleId) => {
+    set({ saleItemsLoading: true });
+    const result = await posService.getSaleItems(saleId);
+    if (result.ok) {
+      set({ saleItems: result.data, saleItemsLoading: false });
+    } else {
+      set({ saleItems: [], saleItemsLoading: false });
+    }
   },
 
   reset: () => set(initialState),

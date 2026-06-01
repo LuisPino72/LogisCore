@@ -1,5 +1,5 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
-import { preciseRound, toSnake, generateId, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
+import { preciseRound, toSnake, generateId } from '@logiscore/shared';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
 import type { DexieCashRegister, LogisCoreDB } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -13,13 +13,51 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { isSameDayVzla, startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import { PosErrors } from '../../../specs/pos/errors';
 import { InventoryErrors } from '../../../specs/inventory/errors';
-import { CreateSaleInputSchema } from '../../../specs/pos';
+import { CreateSaleInputSchema, calculateSaleTotals } from '../../../specs/pos';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
 import { useAuthStore } from '../../auth/stores/authStore';
 
+type VerificationProduct = {
+  productId: string;
+  productName: string;
+  productSku: string;
+  isWeighted: boolean;
+  unit: string;
+  logicalStock: number;
+  soldToday: number;
+  isLowStock: boolean;
+  isZeroStock: boolean;
+};
+
 const MODULE_NAME = 'POS';
+
+async function getRoleFromSession(): Promise<Result<string, AppError>> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión.'));
+
+    const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const role = decoded.app_metadata?.role || decoded.role;
+
+    if (!role) return failure(new AppError('AUTH_ERROR', 'No se pudo determinar el rol.'));
+    return success(role as string);
+  } catch {
+    return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
+  }
+}
+
+async function requireRole(...allowedRoles: string[]): Promise<Result<string, AppError>> {
+  const roleResult = await getRoleFromSession();
+  if (!roleResult.ok) return failure(roleResult.error);
+
+  if (!allowedRoles.includes(roleResult.data)) {
+    return failure(new AppError('FORBIDDEN', `Solo los roles [${allowedRoles.join(', ')}] pueden realizar esta acción.`));
+  }
+
+  return roleResult;
+}
 
 async function autoCloseRegister(
   db: LogisCoreDB,
@@ -89,6 +127,16 @@ async function autoCloseRegister(
 }
 
 export const posService = {
+  /**
+   * Obtiene la caja registradora actual del tenant.
+   *
+   * Patrón cache-first: Lee de Dexie (offline) primero.
+   * Si no hay datos locales, consulta Supabase como fallback.
+   * Los datos remotos se copian a Dexie para futuras consultas.
+   *
+   * ⚠️ Nota: Si el usuario está offline y no hay datos locales,
+   * la función retornará null (no error).
+   */
   async getCashRegister(tenantId: string): Promise<Result<CashRegister | null, AppError>> {
     try {
       const db = getDb();
@@ -173,6 +221,16 @@ export const posService = {
     }
   },
 
+  /**
+   * Obtiene productos disponibles para venta.
+   *
+   * Patrón cache-first: Lee de Dexie (offline) primero.
+   * Si no hay datos locales, consulta Supabase como fallback.
+   * Los datos remotos se copian a Dexie para futuras consultas.
+   *
+   * ⚠️ Nota: Si el usuario está offline y no hay datos locales,
+   * la función retornará un array vacío (no error).
+   */
   async getProductsForSale(tenantId: string): Promise<Result<Product[], AppError>> {
     try {
       const db = getDb();
@@ -286,50 +344,20 @@ export const posService = {
       }
     }
 
-    let subtotalBs = 0;
-    let subtotalTaxableBs = 0;
-    for (const item of items) {
-      const isTaxable = item.isTaxable !== undefined ? item.isTaxable : true;
-      const lineBs = preciseRound(item.unitPriceUsd * item.quantity * rawExchangeRate, 2);
-      subtotalBs += lineBs;
-      if (isTaxable) subtotalTaxableBs += lineBs;
-    }
-    subtotalBs = preciseRound(subtotalBs, 2);
-    subtotalTaxableBs = preciseRound(subtotalTaxableBs, 2);
+    const totals = calculateSaleTotals(
+      items.map((i) => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: i.isTaxable })),
+      rawExchangeRate,
+      paymentMethod,
+      input.discountType && input.discountValue != null ? { type: input.discountType, value: input.discountValue } : null,
+    );
+    const { subtotalBs, igtfBs, ivaBs, discountBs } = totals;
 
-    const igtfBs = paymentMethod === 'efectivo_usd'
-      ? preciseRound(subtotalBs * IGTF_RATE, 2)
-      : 0;
-
-    // Calcular descuento si aplica
-    let discountBs = 0;
     let discountType: string | undefined;
     let discountValue: number | undefined;
-    let ivaBase = subtotalTaxableBs;
-
     if (input.discountType && input.discountValue != null && input.discountValue > 0) {
       discountType = input.discountType;
       discountValue = input.discountValue;
-
-      if (discountType === 'percentage') {
-        const pct = Math.min(discountValue, 100);
-        discountBs = preciseRound(subtotalBs * pct / 100, 2);
-        const taxableDiscount = preciseRound(subtotalTaxableBs * pct / 100, 2);
-        ivaBase = subtotalTaxableBs - taxableDiscount;
-      } else if (discountType === 'fixed') {
-        discountBs = preciseRound(discountValue * rawExchangeRate, 2);
-        if (subtotalBs > 0) {
-          const taxableRatio = subtotalTaxableBs / subtotalBs;
-          const taxableDiscount = preciseRound(discountBs * taxableRatio, 2);
-          ivaBase = subtotalTaxableBs - taxableDiscount;
-        }
-      }
-
-      discountBs = Math.min(discountBs, subtotalBs);
-      ivaBase = Math.max(0, ivaBase);
     }
-
-    const ivaBs = preciseRound(ivaBase * IVA_RATE, 2);
 
     const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
 
@@ -601,20 +629,8 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, openingBalanceBs, openingRate } = input;
 
-    // --- ROLE CHECK: Only owner or admin ---
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para abrir la caja.'));
-      
-      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      const role = decoded.app_metadata?.role || decoded.role;
-      
-      if (role !== 'owner' && role !== 'admin') {
-        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden abrir la caja.'));
-      }
-    } catch {
-      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
-    }
+    const roleCheck = await requireRole('owner', 'admin');
+    if (!roleCheck.ok) return failure(roleCheck.error);
 
     if (!openingBalanceBs || openingBalanceBs <= 0) {
       return failure(new AppError(PosErrors.BOX_OPENING_BALANCE_REQUIRED, 'Debe ingresar un monto inicial para abrir la caja.'));
@@ -924,18 +940,8 @@ export const posService = {
   },
 
   async voidSale(saleId: string, tenantId: string, userId: string): Promise<Result<void, AppError>> {
-    // Role check: solo owner o admin pueden anular ventas
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para anular la venta.'));
-      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      const role = decoded.app_metadata?.role || decoded.role;
-      if (role !== 'owner' && role !== 'admin') {
-        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden anular ventas.'));
-      }
-    } catch {
-      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
-    }
+    const roleCheck = await requireRole('owner', 'admin');
+    if (!roleCheck.ok) return failure(roleCheck.error);
 
     try {
       const db = getDb();
@@ -1076,20 +1082,8 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, declaredClosingBalanceBs, closingRate } = input;
 
-    // --- ROLE CHECK: Only owner or admin ---
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para cerrar la caja.'));
-      
-      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      const role = decoded.app_metadata?.role || decoded.role;
-      
-      if (role !== 'owner' && role !== 'admin') {
-        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden cerrar la caja.'));
-      }
-    } catch {
-      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
-    }
+    const roleCheck = await requireRole('owner', 'admin');
+    if (!roleCheck.ok) return failure(roleCheck.error);
 
 
     const cashReg = await db.cashRegisters
@@ -1236,6 +1230,7 @@ export const posService = {
   async deleteParkedCart(id: string): Promise<Result<void, AppError>> {
     try {
       const db = getDb();
+      // Efímero: carritos en cola no se sincronizan ni necesitan soft delete
       await db.parkedCarts.delete(id);
       return success(undefined);
     } catch (err) {
@@ -1246,31 +1241,15 @@ export const posService = {
 
   // ===== FAVORITES =====
 
-  getFavoritesStorageKey(tenantId: string): string {
-    return `sasa-favorites-${tenantId}`;
-  },
-
-  async persistFavoritesToStorage(tenantId: string): Promise<void> {
-    try {
-      const db = getDb();
-      const favs = await db.productFavorites.where({ tenantId }).toArray();
-      localStorage.setItem(`sasa-favorites-${tenantId}`, JSON.stringify(favs.map((f) => f.productId)));
-    } catch {
-      // Silencioso: si la DB se está cerrando, ignoramos
-    }
-  },
-
   async toggleFavorite(tenantId: string, productId: string): Promise<Result<boolean, AppError>> {
     try {
       const db = getDb();
       const existing = await db.productFavorites.get([productId, tenantId]);
       if (existing) {
         await db.productFavorites.delete([productId, tenantId]);
-        await this.persistFavoritesToStorage(tenantId);
         return success(false);
       }
       await db.productFavorites.add({ productId, tenantId, createdAt: new Date().toISOString() });
-      await this.persistFavoritesToStorage(tenantId);
       return success(true);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en toggleFavorite:', err);
@@ -1281,23 +1260,7 @@ export const posService = {
   async getFavorites(tenantId: string): Promise<Result<Set<string>, AppError>> {
     try {
       const db = getDb();
-      let favs = await db.productFavorites.where({ tenantId }).toArray();
-
-      if (favs.length === 0) {
-        const stored = localStorage.getItem(`sasa-favorites-${tenantId}`);
-        if (stored) {
-          try {
-            const productIds: string[] = JSON.parse(stored);
-            for (const pid of productIds) {
-              await db.productFavorites.add({ productId: pid, tenantId, createdAt: new Date().toISOString() });
-            }
-            favs = await db.productFavorites.where({ tenantId }).toArray();
-          } catch {
-            // Silencioso: datos corruptos en localStorage
-          }
-        }
-      }
-
+      const favs = await db.productFavorites.where({ tenantId }).toArray();
       return success(new Set(favs.map((f) => f.productId)));
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getFavorites:', err);
@@ -1312,27 +1275,34 @@ export const posService = {
     try {
       const todayStart = startOfDayVzla();
       const todayEnd = endOfDayVzla();
+      const db = getDb();
 
-      const salesResult = await this.getSalesHistory(tenantId, 0, 1000, todayStart, todayEnd);
-      if (!salesResult.ok) return failure(salesResult.error);
+      const sales = await db.sales
+        .where({ tenantId })
+        .filter((s) => {
+          if (s.deletedAt || s.status !== 'completed') return false;
+          return s.createdAt >= todayStart && s.createdAt <= todayEnd;
+        })
+        .toArray();
+
+      if (sales.length === 0) return success([]);
+
+      const saleIds = sales.map((s) => s.id);
+      const allItems = await db.saleItems.where('saleId').anyOf(saleIds).toArray();
 
       const productMap = new Map<string, { productId: string; productName: string; productSku: string; quantity: number }>();
 
-      for (const sale of salesResult.data.sales) {
-        const itemsResult = await this.getSaleItems(sale.id);
-        if (!itemsResult.ok) continue;
-        for (const item of itemsResult.data) {
-          const existing = productMap.get(item.productId);
-          if (existing) {
-            existing.quantity += item.quantity;
-          } else {
-            productMap.set(item.productId, {
-              productId: item.productId,
-              productName: item.productName,
-              productSku: item.productSku,
-              quantity: item.quantity,
-            });
-          }
+      for (const item of allItems) {
+        const existing = productMap.get(item.productId);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          productMap.set(item.productId, {
+            productId: item.productId,
+            productName: item.productName,
+            productSku: item.productSku,
+            quantity: item.quantity,
+          });
         }
       }
 
@@ -1344,6 +1314,62 @@ export const posService = {
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getTodaySoldProducts:', err);
       return failure(new AppError('TOP_SOLD_FETCH_FAILED', 'Error al obtener productos más vendidos.'));
+    }
+  },
+
+  async getVerificationProducts(tenantId: string): Promise<Result<VerificationProduct[], AppError>> {
+    try {
+      const db = getDb();
+      const [soldResult, lowStockResult, zeroStockRows] = await Promise.all([
+        this.getTodaySoldProducts(tenantId, 10),
+        (await import('../../inventory/services/inventoryService')).inventoryService.getLowStockProducts(tenantId),
+        db.products.where({ tenantId }).filter((p) => !p.deletedAt && p.stock === 0).toArray(),
+      ]);
+
+      const productIds = new Set<string>();
+      if (soldResult.ok) for (const p of soldResult.data) productIds.add(p.productId);
+      if (lowStockResult.ok) for (const p of lowStockResult.data) productIds.add(p.id);
+      for (const p of zeroStockRows) productIds.add(p.id);
+
+      if (productIds.size === 0) return success([]);
+
+      const soldMap = new Map<string, number>();
+      if (soldResult.ok) for (const p of soldResult.data) soldMap.set(p.productId, p.quantity);
+
+      const lowStockIds = new Set<string>();
+      if (lowStockResult.ok) for (const p of lowStockResult.data) lowStockIds.add(p.id);
+
+      const zeroStockIds = new Set(zeroStockRows.map((p) => p.id));
+
+      const products = await db.products
+        .where({ tenantId })
+        .filter((p) => !p.deletedAt && productIds.has(p.id))
+        .toArray();
+
+      const verified = products.map((p) => ({
+        productId: p.id,
+        productName: p.name,
+        productSku: p.sku ?? '',
+        isWeighted: p.isWeighted,
+        unit: p.unit,
+        logicalStock: p.stock,
+        soldToday: parseFloat((soldMap.get(p.id) ?? 0).toFixed(2)),
+        isLowStock: lowStockIds.has(p.id),
+        isZeroStock: zeroStockIds.has(p.id),
+      }));
+
+      verified.sort((a, b) => {
+        if (a.isZeroStock && !b.isZeroStock) return -1;
+        if (!a.isZeroStock && b.isZeroStock) return 1;
+        if (a.isLowStock && !b.isLowStock) return -1;
+        if (!a.isLowStock && b.isLowStock) return 1;
+        return b.soldToday - a.soldToday;
+      });
+
+      return success(verified);
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getVerificationProducts:', err);
+      return failure(new AppError('VERIFICATION_FETCH_FAILED', 'Error al cargar productos para verificación.'));
     }
   },
 };

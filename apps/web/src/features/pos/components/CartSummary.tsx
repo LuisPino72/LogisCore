@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { preciseRound, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
 import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
-import { METADATA_PAGOS, PAYMENT_METHODS } from '../../../specs/pos';
+import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals, IGTF_RATE } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface CartSummaryProps {
@@ -37,48 +36,11 @@ export function CartSummary({
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [discountInput, setDiscountInput] = useState('');
 
-  const subtotalUsd = items.reduce(
-    (sum, item) => sum + item.totalPriceUsd,
-    0,
-  );
-  const subtotalBs = exchangeRateBs > 0 ? subtotalUsd * exchangeRateBs : 0;
+  const totals = calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount);
+  const { subtotalUsd, subtotalBs, igtfBs, ivaBs, discountBs, discountUsd, totalBs, totalUsd, ivaUsd } = totals;
+  const ivaBase = totals.ivaBase;
 
-  const igtfBs = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 ? preciseRound(subtotalBs * IGTF_RATE, 2) : 0;
-  const igtfUsd = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && exchangeRateBs > 0 ? preciseRound(igtfBs / exchangeRateBs, 2) : 0;
-
-  const subtotalTaxableBs = items.reduce((sum, item) => {
-    if (item.isTaxable === false) return sum;
-    return sum + item.totalPriceUsd * exchangeRateBs;
-  }, 0);
-
-  let discountBs = 0;
-  let discountUsd = 0;
-  let ivaBase = subtotalTaxableBs;
-
-  if (discount) {
-    if (discount.type === 'percentage') {
-      const pct = Math.min(discount.value, 100);
-      discountBs = preciseRound(subtotalBs * pct / 100, 2);
-      const taxableDiscount = preciseRound(subtotalTaxableBs * pct / 100, 2);
-      ivaBase = subtotalTaxableBs - taxableDiscount;
-    } else {
-      discountBs = preciseRound(discount.value * exchangeRateBs, 2);
-      if (subtotalBs > 0) {
-        const taxableRatio = subtotalTaxableBs / subtotalBs;
-        const taxableDiscount = preciseRound(discountBs * taxableRatio, 2);
-        ivaBase = subtotalTaxableBs - taxableDiscount;
-      }
-    }
-    discountBs = Math.min(discountBs, subtotalBs);
-    ivaBase = Math.max(0, ivaBase);
-    discountUsd = exchangeRateBs > 0 ? preciseRound(discountBs / exchangeRateBs, 2) : 0;
-  }
-
-  const ivaBs = preciseRound(ivaBase * IVA_RATE, 2);
-  const ivaUsd = exchangeRateBs > 0 ? preciseRound(ivaBs / exchangeRateBs, 2) : 0;
-
-  const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
-  const totalUsd = exchangeRateBs > 0 ? preciseRound(totalBs / exchangeRateBs, 2) : (subtotalUsd - discountUsd);
+  const igtfUsd = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && exchangeRateBs > 0 ? (igtfBs / exchangeRateBs) : 0;
 
   const handleApplyDiscount = () => {
     const val = parseFloat(discountInput);

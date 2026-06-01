@@ -12,8 +12,6 @@ export { ParkedCartsList } from './components/ParkedCartsList';
 export { SalesHistory } from './components/SalesHistory';
 
 export { usePos } from './hooks/usePos';
-export { useCashRegister } from './hooks/useCashRegister';
 export { usePosStore } from './stores/posStore';
-export { posService } from './services/posService';
 
 export type { Sale, SaleItem, CashRegister, CartItem, CreateSaleInput, PaymentMethod, PosState } from './types';

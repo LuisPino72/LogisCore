@@ -3,8 +3,9 @@ import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spin
 import { useToastStore } from '../../../stores/toastStore';
 import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
-import { usePosStore } from '../stores/posStore';
-import { useCashRegister } from '../hooks/useCashRegister';
+import { usePosNavigation } from '../hooks/usePosNavigation';
+import { usePosModals } from '../hooks/usePosModals';
+import { usePosVerification } from '../hooks/usePosVerification';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
 import { WeightEntryModal } from './WeightEntryModal';
@@ -19,7 +20,6 @@ import { PresentationSelector } from './PresentationSelector';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
-import { posService } from '../services/posService';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
@@ -27,6 +27,7 @@ import { isSameDayVzla } from '../../../lib/date';
 import { preciseRound } from '@logiscore/shared';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { failure, AppError } from '@logiscore/core';
 
 interface PosPageProps {
   tenantId: string | null;
@@ -35,39 +36,41 @@ interface PosPageProps {
 
 export function PosPage({ tenantId }: PosPageProps) {
   const {
-    products, cart, cashRegister, loading, error, searchQuery, parkedCarts, favoriteProductIds, salesHistory, salesHistoryTotal, salesHistoryLoading,
+    products, cart, cashRegister, isOpen, loading, error, searchQuery, parkedCarts, favoriteProductIds, salesHistory, salesHistoryTotal, salesHistoryLoading,
     addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     completeSale, openCashRegister, closeCashRegister, parkCart, loadParkedCart, deleteParkedCart,
-    toggleFavorite, fetchSalesHistory, search, userId, role, exchangeRate,
+    toggleFavorite, fetchSalesHistory, voidSale, getTodaySoldProducts,
+    search, userId, role, exchangeRate,
     getPresentations,
   } = usePos(tenantId);
 
   const { addToast } = useToastStore();
 
-  const { isOpen } = useCashRegister();
+  const { activeTab, mobileCartOpen, switchToSell, switchToHistory, toggleMobileCart, closeMobileCart } = usePosNavigation();
+  const {
+    showWeightModal, weightingProduct, weightingQty, setWeightingQty,
+    showCashModal, cashMode,
+    showParkModal,
+    showBarcodeScanner, setShowBarcodeScanner,
+    selectedProductForPres,
+    voidConfirmId, setVoidConfirmId,
+    completedSale, setCompletedSale,
+    openWeightModal, closeWeightModal,
+    openCashModal, closeCashModal,
+    openParkModal, closeParkModal,
+    openPresModal, closePresModal,
+  } = usePosModals();
+  const {
+    showVerifyConfirm, showVerifyModal, verifyLoading, setVerifyLoading,
+    verifyCounts, cashError, setCashError,
+    openVerifyConfirm, closeVerifyConfirm, openVerifyModal, closeVerifyModal,
+  } = usePosVerification();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [showWeightModal, setShowWeightModal] = useState(false);
-  const [showCashModal, setShowCashModal] = useState(false);
-  const [showParkModal, setShowParkModal] = useState(false);
-  const [cashMode, setCashMode] = useState<'open' | 'close'>('open');
-  const [weightingProduct, setWeightingProduct] = useState<Product | null>(null);
-  const [weightingQty, setWeightingQty] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
-  const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'sell' | 'history'>('sell');
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
-  const [showVerifyConfirm, setShowVerifyConfirm] = useState(false);
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [verifyCounts, setVerifyCounts] = useState({ sold: 0, lowStock: 0 });
-  const [cashError, setCashError] = useState<string | null>(null);
-  const [selectedProductForPres, setSelectedProductForPres] = useState<Product | null>(null);
-  const [completedSale, setCompletedSale] = useState<{ saleId: string; subtotalBs: number; totalUsd: number; totalBs: number; paymentMethod: PaymentMethod; items: Array<{ name: string; quantity: number; unitPriceUsd: number; totalPriceUsd: number; presentationName?: string; unit?: string }>; exchangeRate: number } | null>(null);
 
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
@@ -96,20 +99,18 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleAddToCart = useCallback(
     (product: Product) => {
       if (product.isWeighted) {
-        setWeightingProduct(product);
-        setWeightingQty('');
-        setShowWeightModal(true);
+        openWeightModal(product);
         return;
       }
       const presList = getPresentations(product.id);
       if (presList.length > 0) {
-        setSelectedProductForPres(product);
+        openPresModal(product);
         return;
       }
       addToCart(product, 1);
       addToast({ type: 'success', message: `${product.name} agregado`, duration: 1500 });
     },
-    [addToCart, addToast, getPresentations],
+    [addToCart, addToast, getPresentations, openWeightModal, openPresModal],
   );
 
   const handleWeightedConfirm = useCallback(() => {
@@ -117,18 +118,17 @@ export function PosPage({ tenantId }: PosPageProps) {
     const qty = parseFloat(weightingQty);
     if (!qty || qty <= 0) return;
     addToCart(weightingProduct, qty);
-    setShowWeightModal(false);
-    setWeightingProduct(null);
-    setWeightingQty('');
+    closeWeightModal();
     addToast({ type: 'success', message: `${weightingProduct.name} agregado`, duration: 1500 });
-  }, [weightingProduct, weightingQty, addToCart, addToast]);
+  }, [weightingProduct, weightingQty, addToCart, addToast, closeWeightModal]);
 
   const handlePay = useCallback(async () => {
     if (!tenantId || !userId || !paymentMethod) return;
     setProcessing(true);
     try {
-      const saleId = await completeSale(tenantId, paymentMethod, userId);
-      if (saleId) {
+      const saleResult = await completeSale(tenantId, paymentMethod, userId);
+      if (saleResult.ok) {
+        const saleId = saleResult.data;
         const totalUsd = cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
         const totalBs = exchangeRateBs > 0 ? preciseRound(totalUsd * exchangeRateBs, 2) : 0;
         const subtotalBs = totalBs;
@@ -143,10 +143,9 @@ export function PosPage({ tenantId }: PosPageProps) {
         setCompletedSale({ saleId, subtotalBs, totalUsd, totalBs, paymentMethod, items, exchangeRate: exchangeRateBs });
         setPaymentMethod(null);
         clearCart();
-        setMobileCartOpen(false);
+        closeMobileCart();
       } else {
-        const store = usePosStore.getState();
-        addToast({ type: 'error', message: store.error || 'Error al completar la venta.', duration: 5000 });
+        addToast({ type: 'error', message: saleResult.error?.message || 'Error al completar la venta.', duration: 5000 });
       }
     } catch (err) {
       logger.error('POS', 'Error inesperado al procesar el pago', err);
@@ -157,89 +156,84 @@ export function PosPage({ tenantId }: PosPageProps) {
   }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs]);
 
   const handleOpenCash = useCallback(async () => {
-    setCashMode('open');
     setCashError(null);
-    setShowCashModal(true);
-  }, []);
+    openCashModal('open');
+  }, [openCashModal, setCashError]);
 
   const handleCloseCash = useCallback(async () => {
     if (!tenantId) return;
     setCashError(null);
     setVerifyLoading(true);
-    setShowVerifyConfirm(true);
+    openVerifyConfirm({ sold: 0, lowStock: 0 });
     try {
       const [soldResult, lowStockResult] = await Promise.all([
-        posService.getTodaySoldProducts(tenantId, 10),
+        getTodaySoldProducts(tenantId, 10),
         inventoryService.getLowStockProducts(tenantId),
       ]);
       const soldCount = soldResult.ok ? soldResult.data.length : 0;
       const lowStockCount = lowStockResult.ok ? lowStockResult.data.length : 0;
-      setVerifyCounts({ sold: soldCount, lowStock: lowStockCount });
 
       if (soldCount === 0 && lowStockCount === 0) {
-        setShowVerifyConfirm(false);
-        setCashMode('close');
-        setShowCashModal(true);
+        closeVerifyConfirm();
+        openCashModal('close');
         return;
       }
+      openVerifyConfirm({ sold: soldCount, lowStock: lowStockCount });
     } catch {
-      setVerifyCounts({ sold: 0, lowStock: 0 });
-      setShowVerifyConfirm(false);
-      setCashMode('close');
-      setShowCashModal(true);
+      closeVerifyConfirm();
+      openCashModal('close');
     } finally {
       setVerifyLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, getTodaySoldProducts, openVerifyConfirm, closeVerifyConfirm, openCashModal, setCashError, setVerifyLoading]);
 
   const handleVerifyYes = useCallback(() => {
-    setShowVerifyConfirm(false);
-    setShowVerifyModal(true);
-  }, []);
+    openVerifyModal();
+  }, [openVerifyModal]);
 
   const handleVerifyNo = useCallback(() => {
-    setShowVerifyConfirm(false);
-    setCashMode('close');
-    setShowCashModal(true);
-  }, []);
+    closeVerifyConfirm();
+    openCashModal('close');
+  }, [closeVerifyConfirm, openCashModal]);
 
   const handleVerifyComplete = useCallback(() => {
-    setShowVerifyModal(false);
-    setCashMode('close');
-    setShowCashModal(true);
-  }, []);
+    closeVerifyModal();
+    openCashModal('close');
+  }, [closeVerifyModal, openCashModal]);
 
   const handleVerifyClose = useCallback(() => {
-    setShowVerifyModal(false);
-  }, []);
+    closeVerifyModal();
+  }, [closeVerifyModal]);
 
   const handleCashOpenSubmit = useCallback(
     async (balance: number) => {
-      if (!tenantId || !userId) return false;
-      const ok = await openCashRegister(tenantId, balance, userId);
-      if (!ok) {
-        setCashError(usePosStore.getState().error);
+      if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Faltan datos.'));
+      const result = await openCashRegister(tenantId, balance, userId);
+      if (!result.ok) {
+        setCashError(result.error?.message ?? 'Error al abrir la caja.');
+        return failure(result.error);
       }
-      return ok;
+      return { ok: true as const, data: undefined as void };
     },
     [tenantId, userId, openCashRegister],
   );
 
   const handleCashCloseSubmit = useCallback(
     async (declared: number) => {
-      if (!tenantId || !userId) return false;
-      const ok = await closeCashRegister(tenantId, declared, userId);
-      if (!ok) {
-        setCashError(usePosStore.getState().error);
+      if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Faltan datos.'));
+      const result = await closeCashRegister(tenantId, declared, userId);
+      if (!result.ok) {
+        setCashError(result.error?.message ?? 'Error al cerrar la caja.');
+        return failure(result.error);
       }
-      return ok;
+      return { ok: true as const, data: undefined as void };
     },
     [tenantId, userId, closeCashRegister],
   );
 
   const handlePark = useCallback(() => {
-    setShowParkModal(true);
-  }, []);
+    openParkModal();
+  }, [openParkModal]);
 
   const handleParkConfirm = useCallback(
     async (name: string) => {
@@ -248,21 +242,21 @@ export function PosPage({ tenantId }: PosPageProps) {
       const ok = await parkCart(tenantId, name);
       setProcessing(false);
       if (ok) {
-        setShowParkModal(false);
+        closeParkModal();
         setPaymentMethod(null);
-        setMobileCartOpen(false);
+        closeMobileCart();
       }
     },
-    [tenantId, parkCart],
+    [tenantId, parkCart, closeParkModal, closeMobileCart],
   );
 
   const handleLoadParked = useCallback(
     (parked: ParkedCart) => {
       loadParkedCart(parked);
       setPaymentMethod(null);
-      setMobileCartOpen(true);
+      toggleMobileCart();
     },
-    [loadParkedCart],
+    [loadParkedCart, toggleMobileCart],
   );
 
   const handleBarcodeScan = useCallback(
@@ -290,7 +284,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const handleConfirmVoid = useCallback(async () => {
     if (!voidConfirmId || !tenantId || !userId) return;
-    const result = await posService.voidSale(voidConfirmId, tenantId, userId);
+    const result = await voidSale(voidConfirmId, tenantId, userId);
     setVoidConfirmId(null);
     if (result.ok) {
       addToast({ type: 'success', message: 'Venta anulada. Stock restaurado.', duration: 4000 });
@@ -331,7 +325,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Tooltip content="Registrar ventas" position="bottom">
               <button
                 type="button"
-                onClick={() => setActiveTab('sell')}
+                onClick={() => switchToSell()}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95 ${
                   activeTab === 'sell'
                     ? 'bg-white text-primary shadow-sm'
@@ -345,7 +339,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             <Tooltip content="Ventas realizadas y anulaciones" position="bottom">
               <button
                 type="button"
-                onClick={() => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); }}
+                onClick={() => { switchToHistory(); if (tenantId) fetchSalesHistory(tenantId); }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95 ${
                   activeTab === 'history'
                     ? 'bg-white text-primary shadow-sm'
@@ -461,7 +455,7 @@ export function PosPage({ tenantId }: PosPageProps) {
           loading={processing}
           isMobileOpen={mobileCartOpen}
           itemCount={cartItemCount}
-          onMobileToggle={() => setMobileCartOpen((v) => !v)}
+          onMobileToggle={toggleMobileCart}
         />
       )}
 
@@ -469,17 +463,14 @@ export function PosPage({ tenantId }: PosPageProps) {
       <BottomNav
         activeId={activeTab}
         items={[
-          { id: 'sell', label: 'Vender', icon: <Package size={20} />, onClick: () => setActiveTab('sell') },
-          { id: 'history', label: 'Historial', icon: <HistoryIcon size={20} />, onClick: () => { setActiveTab('history'); if (tenantId) fetchSalesHistory(tenantId); } },
+          { id: 'sell', label: 'Vender', icon: <Package size={20} />, onClick: () => switchToSell() },
+          { id: 'history', label: 'Historial', icon: <HistoryIcon size={20} />, onClick: () => { switchToHistory(); if (tenantId) fetchSalesHistory(tenantId); } },
         ]}
       />
 
       <WeightEntryModal
         isOpen={showWeightModal}
-        onClose={() => {
-          setShowWeightModal(false);
-          setWeightingProduct(null);
-        }}
+        onClose={closeWeightModal}
         onConfirm={handleWeightedConfirm}
         loading={false}
         product={weightingProduct}
@@ -489,7 +480,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
       <CashRegisterModal
         isOpen={showCashModal}
-        onClose={() => { setShowCashModal(false); setCashError(null); }}
+        onClose={() => { closeCashModal(); setCashError(null); }}
         mode={cashMode}
         currentSalesCount={cashRegister?.totalSalesCount ?? 0}
         currentSalesBs={cashRegister?.totalSalesBs ?? 0}
@@ -513,7 +504,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
       <Modal
         isOpen={showVerifyConfirm}
-        onClose={() => setShowVerifyConfirm(false)}
+        onClose={closeVerifyConfirm}
         title="Verificar inventario"
         size="sm"
       >
@@ -546,7 +537,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
       <ParkCartModal
         isOpen={showParkModal}
-        onClose={() => setShowParkModal(false)}
+        onClose={closeParkModal}
         onConfirm={handleParkConfirm}
         loading={processing}
       />
@@ -601,7 +592,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
       <PresentationSelector
         isOpen={selectedProductForPres !== null}
-        onClose={() => setSelectedProductForPres(null)}
+        onClose={closePresModal}
         product={selectedProductForPres}
         presentations={selectedProductForPres ? getPresentations(selectedProductForPres.id) : []}
         onSelect={(_product, selection) => {

@@ -4,9 +4,8 @@ import { Eye, Ban, Calendar } from 'lucide-react';
 import { useDebounce } from '../../../common/hooks/useDebounce';
 import { EventBus } from '@logiscore/core';
 import type { Column } from '../../../common/components';
-import type { Sale, SaleItem } from '../types';
+import type { Sale } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
-import { posService } from '../services/posService';
 import { usePosStore } from '../stores/posStore';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
@@ -25,8 +24,6 @@ interface SalesHistoryProps {
 export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid }: SalesHistoryProps) {
   const [page, setPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
-  const [itemsLoading, setItemsLoading] = useState(false);
   const [sortKey, setSortKey] = useState<string>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [startDate, setStartDate] = useState('');
@@ -36,6 +33,9 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   const debouncedEndDate = useDebounce(endDate, 400);
 
   const fetchSalesHistory = usePosStore((s) => s.fetchSalesHistory);
+  const saleItems = usePosStore((s) => s.saleItems);
+  const saleItemsLoading = usePosStore((s) => s.saleItemsLoading);
+  const fetchSaleItems = usePosStore((s) => s.fetchSaleItems);
 
   const handleSort = useCallback((key: string) => {
     setSortDirection((prev) => (sortKey === key ? (prev === 'asc' ? 'desc' : 'asc') : 'desc'));
@@ -61,10 +61,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
 
   const handleView = async (sale: Sale) => {
     setSelectedSale(sale);
-    setItemsLoading(true);
-    const result = await posService.getSaleItems(sale.id);
-    if (result.ok) setSaleItems(result.data);
-    setItemsLoading(false);
+    await fetchSaleItems(sale.id);
   };
 
   const columns: Column<Sale>[] = [
@@ -206,7 +203,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
 
       <Modal
         isOpen={!!selectedSale}
-        onClose={() => { setSelectedSale(null); setSaleItems([]); }}
+        onClose={() => { setSelectedSale(null); usePosStore.setState({ saleItems: [] }); }}
         title="Detalle de venta"
       >
         {selectedSale && (
@@ -219,7 +216,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
 
             <div className="border-t border-border pt-2">
               <h4 className="text-sm font-semibold mb-2">Productos</h4>
-              {itemsLoading ? (
+              {saleItemsLoading ? (
                 <p className="text-xs text-gray-400">Cargando...</p>
               ) : (
                 <div className="space-y-1.5">

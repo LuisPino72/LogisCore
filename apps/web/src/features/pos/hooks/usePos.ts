@@ -29,6 +29,8 @@ export function usePos(tenantId: string | null) {
   const deleteParkedCart = usePosStore((s) => s.deleteParkedCart);
   const toggleFavorite = usePosStore((s) => s.toggleFavorite);
   const fetchSalesHistory = usePosStore((s) => s.fetchSalesHistory);
+  const voidSale = usePosStore((s) => s.voidSale);
+  const getTodaySoldProducts = usePosStore((s) => s.getTodaySoldProducts);
   const fetchProducts = usePosStore((s) => s.fetchProducts);
   const fetchCashRegister = usePosStore((s) => s.fetchCashRegister);
   const fetchExchangeRate = usePosStore((s) => s.fetchExchangeRate);
@@ -62,76 +64,60 @@ export function usePos(tenantId: string | null) {
 
   useEffect(() => {
     const subs: ReturnType<typeof EventBus.on>[] = [];
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
-    subs.push(
-      EventBus.on('SALE.COMPLETED', () => {
+    const debouncedRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
         if (tenantId) {
           fetchProducts(tenantId);
           fetchCashRegister(tenantId);
-          fetchExchangeRate(tenantId);
         }
-      }),
-    );
+      }, 300);
+    };
 
-    subs.push(
-      EventBus.on('INVENTORY.UPDATED', () => {
-        if (tenantId) fetchProducts(tenantId);
-      }),
-    );
+    const debouncedRefreshProducts = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        if (tenantId) fetchProducts(tenantId, true);
+      }, 300);
+    };
 
-    subs.push(
-      EventBus.on('INVENTORY.CREATED', () => {
-        if (tenantId) fetchProducts(tenantId);
-      }),
-    );
+    subs.push(EventBus.on('SALE.COMPLETED', () => {
+      if (tenantId) {
+        fetchProducts(tenantId);
+        fetchCashRegister(tenantId);
+        fetchExchangeRate(tenantId);
+      }
+    }));
 
-    subs.push(
-      EventBus.on('INVENTORY.DELETED', () => {
-        if (tenantId) fetchProducts(tenantId);
-      }),
-    );
+    subs.push(EventBus.on('INVENTORY.UPDATED', debouncedRefreshProducts));
+    subs.push(EventBus.on('INVENTORY.CREATED', debouncedRefreshProducts));
+    subs.push(EventBus.on('INVENTORY.DELETED', debouncedRefreshProducts));
+    subs.push(EventBus.on('INVENTORY.ADJUSTMENT', debouncedRefreshProducts));
+    subs.push(EventBus.on('PURCHASE.RECEIVED', debouncedRefreshProducts));
 
-    subs.push(
-      EventBus.on('INVENTORY.ADJUSTMENT', () => {
-        if (tenantId) fetchProducts(tenantId);
-      }),
-    );
+    subs.push(EventBus.on('BOX.OPENED', debouncedRefresh));
+    subs.push(EventBus.on('BOX.CLOSED', debouncedRefresh));
 
-    subs.push(
-      EventBus.on('PURCHASE.RECEIVED', () => {
-        if (tenantId) fetchProducts(tenantId);
-      }),
-    );
+    subs.push(EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
+      const { table } = payload as { table?: string };
+      if ((table === '*' || table === 'products') && tenantId) {
+        fetchProducts(tenantId, true);
+      }
+      if ((table === '*' || table === 'product_presentations') && tenantId) {
+        fetchPresentations(tenantId);
+      }
+      if ((table === '*' || table === 'cash_registers') && tenantId) {
+        fetchCashRegister(tenantId, true);
+      }
+    }));
 
-    subs.push(
-      EventBus.on('BOX.OPENED', () => {
-        if (tenantId) fetchCashRegister(tenantId);
-      }),
-    );
-
-    subs.push(
-      EventBus.on('BOX.CLOSED', () => {
-        if (tenantId) fetchCashRegister(tenantId);
-      }),
-    );
-
-    subs.push(
-      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
-        const { table } = payload as { table?: string };
-        if ((table === '*' || table === 'products') && tenantId) {
-          fetchProducts(tenantId, true);
-        }
-        if ((table === '*' || table === 'product_presentations') && tenantId) {
-          fetchPresentations(tenantId);
-        }
-        if ((table === '*' || table === 'cash_registers') && tenantId) {
-          fetchCashRegister(tenantId, true);
-        }
-      }),
-    );
-
-    return () => subs.forEach((s) => EventBus.off(s));
-  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate]);
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      subs.forEach((s) => EventBus.off(s));
+    };
+  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate, fetchPresentations]);
 
   const searchRef = useRef(0);
 
@@ -154,7 +140,9 @@ export function usePos(tenantId: string | null) {
     addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     completeSale, openCashRegister, closeCashRegister,
     parkCart, loadParkedCart, deleteParkedCart,
-    toggleFavorite, fetchSalesHistory, fetchPresentations, getPresentations, presentationsMap, reset,
+    toggleFavorite, fetchSalesHistory, voidSale, getTodaySoldProducts,
+    fetchPresentations, getPresentations, presentationsMap, reset,
+    isOpen: cashRegister?.isOpen ?? false,
     search,
     refresh: doRefresh,
     userId: session?.userId ?? null,

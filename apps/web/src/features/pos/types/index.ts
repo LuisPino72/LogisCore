@@ -36,4 +36,6 @@ export interface PosState {
   searchQuery: string;
   presentationsMap: Record<string, Presentation[]>;
   discount: { type: 'percentage' | 'fixed'; value: number } | null;
+  saleItems: SaleItem[];
+  saleItemsLoading: boolean;
 }

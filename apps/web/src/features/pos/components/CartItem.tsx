@@ -1,10 +1,11 @@
-import { memo, useState, useRef, useCallback } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { Button, Input } from '../../../common/components';
 import { Trash2, Minus, Plus } from 'lucide-react';
 import type { CartItem } from '../types';
 import { formatUsd, formatBs } from '@/lib/formatBs';
 import { preciseRound } from '@logiscore/shared';
 import { usePosStore } from '../stores/posStore';
+import { useRepeatButton } from '../hooks/useRepeatButton';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -14,13 +15,6 @@ interface CartItemRowProps {
 
 const WEIGHABLE_PRESETS = [0.5, 1, 2, 5];
 
-function getAcceleration(elapsed: number): { mult: number; interval: number } {
-  if (elapsed < 2000) return { mult: 1, interval: 250 };
-  if (elapsed < 4000) return { mult: 2, interval: 200 };
-  if (elapsed < 6000) return { mult: 4, interval: 150 };
-  return { mult: 8, interval: 100 };
-}
-
 export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
   const step = item.isWeighted ? 0.01 : 1;
   const decimals = item.isWeighted ? 2 : 0;
@@ -28,17 +22,8 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
   const priceBs = exchangeRate && exchangeRate > 0 ? formatBs(item.totalPriceUsd * exchangeRate) : null;
 
   const [localQty, setLocalQty] = useState<string | null>(null);
-  const [isRepeating, setIsRepeating] = useState<'plus' | 'minus' | null>(null);
 
-  const qtyRef = useRef(item.quantity);
-  qtyRef.current = item.quantity;
-
-  const repeatRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; startTime: number }>({
-    timer: null,
-    startTime: 0,
-  });
-
-  const wasHoldingRef = useRef(false);
+  const qtyRef = { current: item.quantity };
 
   const applyDelta = useCallback((delta: number) => {
     setLocalQty(null);
@@ -47,39 +32,9 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     onUpdateQuantity(item.productId, next, item.presentationId);
   }, [step, decimals, onUpdateQuantity, item.productId]);
 
-  const stopRepeat = useCallback(() => {
-    if (repeatRef.current.timer) {
-      clearTimeout(repeatRef.current.timer);
-      repeatRef.current.timer = null;
-    }
-    setIsRepeating(null);
-  }, []);
-
-  const startHold = useCallback((delta: number) => {
-    stopRepeat();
-    wasHoldingRef.current = false;
-    setIsRepeating(delta > 0 ? 'plus' : 'minus');
-    repeatRef.current.startTime = Date.now();
-
-    const tick = () => {
-      wasHoldingRef.current = true;
-      const elapsed = Date.now() - repeatRef.current.startTime;
-      const { mult, interval } = getAcceleration(elapsed);
-      const acceleratedStep = parseFloat((step * mult).toFixed(2));
-      applyDelta(delta > 0 ? acceleratedStep : -acceleratedStep);
-      repeatRef.current.timer = setTimeout(tick, interval);
-    };
-
-    repeatRef.current.timer = setTimeout(tick, 500);
-  }, [applyDelta, step, stopRepeat]);
-
-  const handleClick = useCallback((delta: number) => {
-    if (wasHoldingRef.current) {
-      wasHoldingRef.current = false;
-      return;
-    }
-    applyDelta(delta);
-  }, [applyDelta]);
+  const { startHold, stopRepeat, handleClick, isRepeating } = useRepeatButton({
+    onAction: applyDelta,
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;

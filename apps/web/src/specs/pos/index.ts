@@ -132,3 +132,6 @@ export const METADATA_PAGOS = {
   tarjeta_bs: { label: 'Tarjeta', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
   efectivo_usd: { label: 'Efectivo $', moneda: 'USD', requiereVuelto: true, aplicaIgtf: true },
 } as const;
+
+export { calculateSaleTotals } from './utils';
+export type { SaleTotals } from './utils';

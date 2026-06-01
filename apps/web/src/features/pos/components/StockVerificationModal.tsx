@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Input, Spinner } from '../../../common/components';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../inventory/services/inventoryService';
-import { getDb } from '../../../services/dexie/db';
 import { displayStock } from '../../inventory/types';
 import { useToastStore } from '../../../stores/toastStore';
 
@@ -47,78 +46,22 @@ export function StockVerificationModal({
     setError(null);
 
     try {
-      const db = getDb();
-      const [soldResult, lowStockResult, zeroStockRows] = await Promise.all([
-        posService.getTodaySoldProducts(tenantId, 10),
-        inventoryService.getLowStockProducts(tenantId),
-        db.products.where({ tenantId }).filter((p) => !p.deletedAt && p.stock === 0).toArray(),
-      ]);
-
-      const productIds = new Set<string>();
-
-      if (soldResult.ok) {
-        for (const p of soldResult.data) productIds.add(p.productId);
+      const result = await posService.getVerificationProducts(tenantId);
+      if (result.ok) {
+        const verified = result.data.map((item) => ({
+          ...item,
+          physicalInput: item.logicalStock.toString(),
+        }));
+        setItems(verified);
+      } else {
+        setError(result.error.message);
       }
-      if (lowStockResult.ok) {
-        for (const p of lowStockResult.data) productIds.add(p.id);
-      }
-      for (const p of zeroStockRows) productIds.add(p.id);
-
-      if (productIds.size === 0) {
-        setLoading(false);
-        onComplete();
-        return;
-      }
-
-      const soldMap = new Map<string, number>();
-      if (soldResult.ok) {
-        for (const p of soldResult.data) {
-          soldMap.set(p.productId, p.quantity);
-        }
-      }
-
-      const lowStockIds = new Set<string>();
-      if (lowStockResult.ok) {
-        for (const p of lowStockResult.data) lowStockIds.add(p.id);
-      }
-
-      const zeroStockIds = new Set(zeroStockRows.map((p) => p.id));
-
-      const products = await db.products
-        .where({ tenantId })
-        .filter((p) => !p.deletedAt && productIds.has(p.id))
-        .toArray();
-
-      const verified: VerificationItem[] = products.map((p) => {
-        return {
-          productId: p.id,
-          productName: p.name,
-          productSku: p.sku ?? '',
-          isWeighted: p.isWeighted,
-          unit: p.unit,
-          logicalStock: p.stock,
-          physicalInput: parseFloat(displayStock(p.stock, p.unit)).toString(),
-          soldToday: parseFloat((soldMap.get(p.id) ?? 0).toFixed(2)),
-          isLowStock: lowStockIds.has(p.id),
-          isZeroStock: zeroStockIds.has(p.id),
-        };
-      });
-
-      verified.sort((a, b) => {
-        if (a.isZeroStock && !b.isZeroStock) return -1;
-        if (!a.isZeroStock && b.isZeroStock) return 1;
-        if (a.isLowStock && !b.isLowStock) return -1;
-        if (!a.isLowStock && b.isLowStock) return 1;
-        return b.soldToday - a.soldToday;
-      });
-
-      setItems(verified);
     } catch {
       setError('Error al cargar productos para verificación.');
     } finally {
       setLoading(false);
     }
-  }, [tenantId, onComplete]);
+  }, [tenantId]);
 
   useEffect(() => {
     if (isOpen) loadProducts();

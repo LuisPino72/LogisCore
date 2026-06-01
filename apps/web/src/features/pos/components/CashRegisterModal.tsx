@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Modal, Input, Button } from '../../../common/components';
 import { formatBs } from '@/lib/formatBs';
+import type { Result, AppError } from '@logiscore/core';
 
 type CashMode = 'open' | 'close';
 
@@ -13,8 +14,8 @@ interface CashRegisterModalProps {
   currentIgtfBs: number;
   openingBalanceBs: number | null;
   exchangeRate: number | null;
-  onOpenCash: (balance: number) => Promise<boolean>;
-  onCloseCash: (declared: number) => Promise<boolean>;
+  onOpenCash: (balance: number) => Promise<Result<void, AppError>>;
+  onCloseCash: (declared: number) => Promise<Result<void, AppError>>;
   error?: string | null;
   loading: boolean;
   disabled?: boolean;
@@ -45,8 +46,8 @@ export function CashRegisterModal({
       return;
     }
     setLocalError('');
-    const ok = await onOpenCash(parsed);
-    if (ok) {
+    const result = await onOpenCash(parsed);
+    if (result.ok) {
       setBalance('');
       onClose();
     }
@@ -59,8 +60,8 @@ export function CashRegisterModal({
       return;
     }
     setLocalError('');
-    const ok = await onCloseCash(parsed);
-    if (ok) {
+    const result = await onCloseCash(parsed);
+    if (result.ok) {
       setDeclaredClosing('');
       onClose();
     }
