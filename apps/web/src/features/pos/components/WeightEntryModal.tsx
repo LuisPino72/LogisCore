@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Product } from '../../../specs/inventory';
 import { formatUsd } from '@/lib/formatBs';
 
-interface PaymentModalProps {
+interface WeightEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -13,7 +13,7 @@ interface PaymentModalProps {
   onQuantityChange: (qty: string) => void;
 }
 
-export function PaymentModal({
+export function WeightEntryModal({
   isOpen,
   onClose,
   onConfirm,
@@ -21,7 +21,7 @@ export function PaymentModal({
   product,
   quantity,
   onQuantityChange,
-}: PaymentModalProps) {
+}: WeightEntryModalProps) {
   const [error, setError] = useState('');
 
   const handleConfirm = () => {

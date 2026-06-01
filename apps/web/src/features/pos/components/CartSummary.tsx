@@ -3,7 +3,7 @@ import { preciseRound, IGTF_RATE, IVA_RATE } from '@logiscore/shared';
 import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
-import { METADATA_PAGOS, PAYMENT_METHODS } from '../../../specs/sales';
+import { METADATA_PAGOS, PAYMENT_METHODS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface CartSummaryProps {

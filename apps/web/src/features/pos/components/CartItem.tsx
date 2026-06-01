@@ -108,6 +108,14 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
   };
 
   const handleBlur = () => {
+    const raw = localQty;
+    if (raw !== null && raw !== undefined) {
+      const val = parseFloat(raw);
+      if (!val || val <= 0) {
+        // Reset to 1 (minimum valid) if user typed 0 or cleared
+        onUpdateQuantity(item.productId, 1, item.presentationId);
+      }
+    }
     setLocalQty(null);
   };
 

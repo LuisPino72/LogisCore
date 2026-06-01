@@ -277,6 +277,15 @@ export const posService = {
       return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Datos de venta invalidos: ' + parsed.error.issues.map((e: { message: string }) => e.message).join(', ')));
     }
 
+    // Validate item coherence: totalPriceUsd must equal quantity * unitPriceUsd (tolerance 0.01)
+    for (const item of items) {
+      const expected = preciseRound(item.quantity * item.unitPriceUsd, 2);
+      const diff = Math.abs(item.totalPriceUsd - expected);
+      if (diff > 0.01) {
+        return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, `Inconsistencia en "${item.name}": precio total no coincide con cantidad × precio unitario.`));
+      }
+    }
+
     let subtotalBs = 0;
     let subtotalTaxableBs = 0;
     for (const item of items) {
@@ -770,7 +779,20 @@ export const posService = {
 
       const localSales = await db.sales
         .where({ tenantId })
-        .filter((r) => !r.deletedAt && r.status === 'completed')
+        .filter((r) => {
+          if (r.deletedAt || r.status !== 'completed') return false;
+          if (startDate) {
+            const saleDate = new Date(r.createdAt);
+            if (saleDate < new Date(startDate)) return false;
+          }
+          if (endDate) {
+            const saleDate = new Date(r.createdAt);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            if (saleDate > end) return false;
+          }
+          return true;
+        })
         .toArray();
 
       const total = localSales.length;
@@ -807,23 +829,12 @@ export const posService = {
         }
       }
 
-      let filtered = localSales;
-      if (startDate) {
-        const start = new Date(startDate);
-        filtered = filtered.filter((r) => new Date(r.createdAt) >= start);
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        filtered = filtered.filter((r) => new Date(r.createdAt) <= end);
-      }
+      localSales.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-      const paged = filtered.slice(offset, offset + limit);
+      const paged = localSales.slice(offset, offset + limit);
 
       return success({
-        total: filtered.length,
+        total: localSales.length,
         sales: paged.map((r) => ({
           id: r.id,
           tenantId: r.tenantId,
@@ -943,11 +954,17 @@ export const posService = {
       const now = new Date().toISOString();
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
-      // Buscar caja abierta para revertir totales
-      const cashReg = await db.cashRegisters
+      // Buscar caja que estaba abierta al momento de la venta (no la que está abierta ahora)
+      const saleTs = new Date(sale.createdAt).getTime();
+      const allRegisters = await db.cashRegisters
         .where({ tenantId })
-        .filter((r) => !r.deletedAt && r.isOpen)
-        .first();
+        .filter((r) => !r.deletedAt)
+        .toArray();
+      const cashReg = allRegisters.find((r) => {
+        const opened = r.openedAt ? new Date(r.openedAt).getTime() : 0;
+        const closed = r.closedAt ? new Date(r.closedAt).getTime() : Infinity;
+        return opened <= saleTs && (r.isOpen || closed >= saleTs);
+      }) ?? allRegisters.find((r) => r.isOpen);
 
       await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.syncQueue, db.outbox], async () => {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });

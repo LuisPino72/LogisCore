@@ -4,7 +4,7 @@ export { ProductCard } from './components/ProductCard';
 export { CartPanel } from './components/CartPanel';
 export { CartItemRow } from './components/CartItem';
 export { CartSummary } from './components/CartSummary';
-export { PaymentModal } from './components/PaymentModal';
+export { WeightEntryModal } from './components/WeightEntryModal';
 export { CashRegisterModal } from './components/CashRegisterModal';
 export { CashStatusBadge } from './components/CashStatusBadge';
 export { ParkCartModal } from './components/ParkCartModal';

@@ -7,7 +7,7 @@ import { usePosStore } from '../stores/posStore';
 import { useCashRegister } from '../hooks/useCashRegister';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
-import { PaymentModal } from './PaymentModal';
+import { WeightEntryModal } from './WeightEntryModal';
 import { CashRegisterModal } from './CashRegisterModal';
 import { CashStatusBadge } from './CashStatusBadge';
 import { ParkCartModal } from './ParkCartModal';
@@ -25,7 +25,7 @@ import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
 import { isSameDayVzla } from '../../../lib/date';
 import { preciseRound } from '@logiscore/shared';
-import { METADATA_PAGOS } from '../../../specs/sales';
+import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface PosPageProps {
@@ -474,7 +474,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         ]}
       />
 
-      <PaymentModal
+      <WeightEntryModal
         isOpen={showWeightModal}
         onClose={() => {
           setShowWeightModal(false);
@@ -605,7 +605,6 @@ export function PosPage({ tenantId }: PosPageProps) {
         product={selectedProductForPres}
         presentations={selectedProductForPres ? getPresentations(selectedProductForPres.id) : []}
         onSelect={(_product, selection) => {
-          handleAddToCart(_product);
           addToCart(_product, 1, selection);
         }}
       />

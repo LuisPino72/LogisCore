@@ -98,6 +98,13 @@ export const usePosStore = create<PosStore>()(
   },
 
   setDiscount: (type, value) => {
+    if (value <= 0) return;
+    if (type === 'percentage' && (value > 100 || value < 0)) return;
+    if (type === 'fixed') {
+      const { cart } = get();
+      const subtotalUsd = cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
+      if (value > subtotalUsd) return;
+    }
     set({ discount: { type, value } });
   },
 

@@ -8,7 +8,7 @@ import type { Sale, SaleItem } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
 import { posService } from '../services/posService';
 import { usePosStore } from '../stores/posStore';
-import { METADATA_PAGOS } from '../../../specs/sales';
+import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 const PAGE_SIZE = 20;

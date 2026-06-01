@@ -123,3 +123,12 @@ export const CloseCashRegisterInputSchema = z.object({
 });
 
 export type CloseCashRegisterInput = z.infer<typeof CloseCashRegisterInputSchema>;
+
+// ===== Payment Metadata =====
+
+export const METADATA_PAGOS = {
+  efectivo_bs: { label: 'Efectivo', moneda: 'Bs', requiereVuelto: true, aplicaIgtf: false },
+  pago_movil: { label: 'P Móvil', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
+  tarjeta_bs: { label: 'Tarjeta', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
+  efectivo_usd: { label: 'Efectivo $', moneda: 'USD', requiereVuelto: true, aplicaIgtf: true },
+} as const;
