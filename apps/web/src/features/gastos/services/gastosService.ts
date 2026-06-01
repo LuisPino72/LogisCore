@@ -1,7 +1,9 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { getDb, type DexieExpense } from '../../../services/dexie/db';
 import { preciseRound, generateId, toSnake } from '@logiscore/shared';
-import type { Gasto, CreateGastoInput, UpdateGastoInput } from '../types';
+import type { Gasto } from '../types';
+import { CreateGastoInputSchema, UpdateGastoInputSchema } from '../../../specs/gastos/index';
+import { GASTOS_ERRORS } from '../../../specs/gastos/errors';
 import { useNotificationStore } from '../../../stores/notificationStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -64,42 +66,47 @@ export const gastosService = {
       return success(mapped);
     } catch (err) {
       console.error('[gastosService.getAll]', err);
-      return failure(new AppError('GASTOS_FETCH_FAILED', 'Error al obtener gastos.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_FETCH_FAILED.code, GASTOS_ERRORS.GASTOS_FETCH_FAILED.message));
     }
   },
 
-  async getById(_tenantId: string, id: string): Promise<Result<Gasto | null, AppError>> {
+  async getById(tenantId: string, id: string): Promise<Result<Gasto | null, AppError>> {
     try {
       const db = getDb();
       const expense = await db.expenses.get(id);
-      if (!expense || expense.deletedAt) return success(null);
+      if (!expense || expense.deletedAt || expense.tenantId !== tenantId) return success(null);
       return success(mapExpense(expense));
     } catch (err) {
       console.error('[gastosService.getById]', err);
-      return failure(new AppError('GASTOS_FETCH_FAILED', 'Error al obtener el gasto.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_FETCH_FAILED.code, GASTOS_ERRORS.GASTOS_FETCH_FAILED.message));
     }
   },
 
-  async create(tenantId: string, userId: string, input: CreateGastoInput): Promise<Result<Gasto, AppError>> {
+  async create(tenantId: string, userId: string, input: unknown): Promise<Result<Gasto, AppError>> {
+    const parsed = CreateGastoInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_INVALID_CATEGORY.code, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
     try {
       const db = getDb();
       const now = new Date().toISOString();
-      const amountBs = preciseRound(input.amountUsd * input.exchangeRate, 2);
+      const data = parsed.data;
+      const amountBs = preciseRound(data.amountUsd * data.exchangeRate, 2);
 
       const expense: DexieExpense = {
         id: generateId(),
         tenantId,
         createdByUserId: userId,
-        category: input.category,
-        amountUsd: input.amountUsd,
-        exchangeRate: input.exchangeRate,
+        category: data.category,
+        amountUsd: data.amountUsd,
+        exchangeRate: data.exchangeRate,
         amountBs,
-        description: input.description,
-        date: input.date,
-        isRecurring: input.isRecurring,
-        recurrenceType: input.isRecurring ? input.recurrenceType ?? 'monthly' : undefined,
-        nextDueDate: input.isRecurring ? input.date : undefined,
-        status: input.status ?? 'paid',
+        description: data.description,
+        date: data.date,
+        isRecurring: data.isRecurring,
+        recurrenceType: data.isRecurring ? data.recurrenceType ?? 'monthly' : undefined,
+        nextDueDate: data.isRecurring ? data.date : undefined,
+        status: data.status ?? 'paid',
         createdAt: now,
         updatedAt: now,
       };
@@ -110,42 +117,47 @@ export const gastosService = {
       return success(mapExpense(expense));
     } catch (err) {
       console.error('[gastosService.create]', err);
-      return failure(new AppError('GASTOS_CREATE_FAILED', 'Error al crear el gasto.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_CREATE_FAILED.code, GASTOS_ERRORS.GASTOS_CREATE_FAILED.message));
     }
   },
 
-  async update(tenantId: string, id: string, input: UpdateGastoInput): Promise<Result<Gasto, AppError>> {
+  async update(tenantId: string, id: string, input: unknown): Promise<Result<Gasto, AppError>> {
+    const parsed = UpdateGastoInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_UPDATE_FAILED.code, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
     try {
       const db = getDb();
       const existing = await db.expenses.get(id);
       if (!existing || existing.deletedAt || existing.tenantId !== tenantId) {
-        return failure(new AppError('GASTOS_NOT_FOUND', 'Gasto no encontrado.'));
+        return failure(new AppError(GASTOS_ERRORS.GASTOS_NOT_FOUND.code, GASTOS_ERRORS.GASTOS_NOT_FOUND.message));
       }
 
+      const data = parsed.data;
       const now = new Date().toISOString();
-      const isPayingPending = existing.status === 'pending' && input.status === 'paid';
+      const isPayingPending = existing.status === 'pending' && data.status === 'paid';
       const currentRate = isPayingPending ? useExchangeRateStore.getState().rate : undefined;
-      const effectiveAmountUsd = input.amountUsd ?? existing.amountUsd;
+      const effectiveAmountUsd = data.amountUsd ?? existing.amountUsd;
 
       const updated: Partial<DexieExpense> = {
-        ...input,
-        exchangeRate: isPayingPending && currentRate ? currentRate : input.exchangeRate,
+        ...data,
+        exchangeRate: isPayingPending && currentRate ? currentRate : data.exchangeRate,
         amountBs: isPayingPending && currentRate
           ? preciseRound(effectiveAmountUsd * currentRate, 2)
-          : input.amountUsd !== undefined && input.exchangeRate !== undefined
-            ? preciseRound(input.amountUsd * input.exchangeRate, 2)
-            : input.amountBs ?? existing.amountBs,
+          : data.amountUsd !== undefined && data.exchangeRate !== undefined
+            ? preciseRound(data.amountUsd * data.exchangeRate, 2)
+            : data.amountBs ?? existing.amountBs,
         updatedAt: now,
       };
 
       await db.expenses.update(id, updated);
       const result = await db.expenses.get(id);
       await syncQueue.enqueue('expenses', 'UPDATE', id, { id, ...toSnake(updated as unknown as Record<string, unknown>) }, tenantId);
-      await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(input) });
+      await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
       return success(mapExpense(result!));
     } catch (err) {
       console.error('[gastosService.update]', err);
-      return failure(new AppError('GASTOS_UPDATE_FAILED', 'Error al actualizar el gasto.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_UPDATE_FAILED.code, GASTOS_ERRORS.GASTOS_UPDATE_FAILED.message));
     }
   },
 
@@ -154,7 +166,7 @@ export const gastosService = {
       const db = getDb();
       const existing = await db.expenses.get(id);
       if (!existing || existing.deletedAt || existing.tenantId !== tenantId) {
-        return failure(new AppError('GASTOS_NOT_FOUND', 'Gasto no encontrado.'));
+        return failure(new AppError(GASTOS_ERRORS.GASTOS_NOT_FOUND.code, GASTOS_ERRORS.GASTOS_NOT_FOUND.message));
       }
       const now = new Date().toISOString();
       await db.expenses.update(id, { deletedAt: now, updatedAt: now });
@@ -163,7 +175,7 @@ export const gastosService = {
       return success(undefined);
     } catch (err) {
       console.error('[gastosService.remove]', err);
-      return failure(new AppError('GASTOS_DELETE_FAILED', 'Error al eliminar el gasto.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_DELETE_FAILED.code, GASTOS_ERRORS.GASTOS_DELETE_FAILED.message));
     }
   },
 
@@ -181,7 +193,7 @@ export const gastosService = {
       return success(sorted);
     } catch (err) {
       console.error('[gastosService.getRecurringTemplates]', err);
-      return failure(new AppError('GASTOS_FETCH_FAILED', 'Error al obtener gastos recurrentes.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_FETCH_FAILED.code, GASTOS_ERRORS.GASTOS_FETCH_FAILED.message));
     }
   },
 
@@ -274,7 +286,7 @@ export const gastosService = {
       return success(generated);
     } catch (err) {
       console.error('[gastosService.checkAndGenerateRecurring]', err);
-      return failure(new AppError('GASTOS_RECURRING_FAILED', 'Error al generar gastos recurrentes.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_RECURRING_FAILED.code, GASTOS_ERRORS.GASTOS_RECURRING_FAILED.message));
     }
   },
 
@@ -293,7 +305,7 @@ export const gastosService = {
       return success({ totalUsd: preciseRound(totalUsd, 2), totalBs: preciseRound(totalBs, 2) });
     } catch (err) {
       console.error('[gastosService.getMonthlyOperatingExpenses]', err);
-      return failure(new AppError('GASTOS_FETCH_FAILED', 'Error al obtener gastos operativos.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_FETCH_FAILED.code, GASTOS_ERRORS.GASTOS_FETCH_FAILED.message));
     }
   },
 
@@ -303,7 +315,7 @@ export const gastosService = {
       const instances = await db.expenses
         .where('parentExpenseId')
         .equals(templateId)
-        .filter((e) => e.date === occurrenceDate && e.status === 'pending')
+        .filter((e) => e.date === occurrenceDate && e.status === 'pending' && e.tenantId === tenantId)
         .toArray();
 
       for (const inst of instances) {
@@ -315,7 +327,7 @@ export const gastosService = {
       return success(undefined);
     } catch (err) {
       console.error('[gastosService.cancelOccurrence]', err);
-      return failure(new AppError('GASTOS_CANCEL_FAILED', 'Error al cancelar la ocurrencia.'));
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_CANCEL_FAILED.code, GASTOS_ERRORS.GASTOS_CANCEL_FAILED.message));
     }
   },
 };
