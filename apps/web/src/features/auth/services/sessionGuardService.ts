@@ -17,6 +17,8 @@ function deviceLabel(): string {
 class SessionGuardService {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private token: string | null = null;
+  private heartbeatFailures = 0;
+  private static readonly MAX_HEARTBEAT_FAILURES = 3;
 
   getSessionToken(): string | null {
     if (!this.token) {
@@ -72,7 +74,16 @@ class SessionGuardService {
   private async sendHeartbeat(): Promise<void> {
     const token = this.getSessionToken();
     if (!token || !navigator.onLine) return;
-    await supabase.rpc('session_heartbeat', { p_session_token: token });
+    try {
+      await supabase.rpc('session_heartbeat', { p_session_token: token });
+      this.heartbeatFailures = 0;
+    } catch {
+      this.heartbeatFailures++;
+      if (this.heartbeatFailures >= SessionGuardService.MAX_HEARTBEAT_FAILURES) {
+        this.clearToken();
+        this.stopHeartbeat();
+      }
+    }
   }
 
   async release(): Promise<void> {

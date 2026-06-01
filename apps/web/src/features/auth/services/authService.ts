@@ -1,4 +1,4 @@
-import { type UserSession, AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
+import { type UserSession, AppError, Result, success, failure } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { initDb, setDbClosing, getDb, resetDbInstance } from '../../../services/dexie/db';
@@ -11,7 +11,9 @@ import { offlineGrace } from './offlineGraceService';
 
 function decodeJWTPayload(token: string): Record<string, unknown> {
   try {
-    const payload = token.split('.')[1];
+    const parts = token.split('.');
+    if (parts.length !== 3) return {};
+    const payload = parts[1];
     const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
     return JSON.parse(json);
   } catch {
@@ -118,6 +120,10 @@ export const authService = {
     const isAdmin = role === 'admin';
 
     // --- Offline bootstrap dentro de gracia ---
+    // DISEÑO: Offline bypass session claim intencionalmente.
+    // En offline no podemos verificar sesiones remotas. El usuario
+    // opera con datos locales y la gracia offline (6h) limita el riesgo.
+    // Al reconectarse, sessionGuard.claim() validará duplicados.
     if (!navigator.onLine) {
       if (offlineGrace.isExpired()) {
         return failure(new AppError('OFFLINE_GRACE_EXPIRED', 'Tu período sin conexión expiró. Conecta a internet para continuar.'));
@@ -233,15 +239,10 @@ export const authService = {
   },
 
   async signOut(): Promise<Result<void, AppError>> {
-    // 1. Emitir evento de navegación para limpiar UI inmediatamente
-    EventBus.emit(SystemEvents.USER_LOGOUT);
-
-    // 2. Obtener sesión para auditoría (directo, sin bootstrap para evitar re-claim)
     const { data: { session } } = await supabase.auth.getSession();
     const auditRole = session ? extractRole(session) : null;
     const isAdmin = auditRole === 'admin';
 
-    // 3. Audit trail
     if (session) {
       await emitWithAudit('USER.LOGOUT', 'AUTH', { email: session.user.email ?? '' }, {
         userId: session.user.id,
@@ -249,7 +250,6 @@ export const authService = {
       });
     }
 
-    // 4. Liberar sesión activa (admin exento)
     if (!isAdmin) {
       await sessionGuard.release();
     }
@@ -308,7 +308,32 @@ export const authService = {
       return success(null);
     }
 
-    return this.bootstrapSession();
+    const role = extractRole(session);
+    if (!role) return success(null);
+
+    const isAdmin = role === 'admin';
+
+    if (!isAdmin) {
+      sessionGuard.restoreSessionToken();
+      const claimResult = await sessionGuard.claim(false);
+      if (!claimResult.ok) {
+        await supabase.auth.signOut();
+        return success(null);
+      }
+    }
+
+    const userSession = await buildUserSession(session);
+
+    if (userSession.tenantSlug) {
+      offlineGrace.extend(userSession.tenantSlug);
+    }
+
+    if (userSession.tenantId) {
+      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
+      if (!subCheck.ok) return subCheck;
+    }
+
+    return success(userSession);
   },
 
   async checkSubscriptionActive(tenantId: string): Promise<Result<void, AppError>> {
@@ -319,7 +344,10 @@ export const authService = {
       .is('deleted_at', null)
       .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      return failure(new AppError('AUTH_SUBSCRIPTION_CHECK_FAILED', 'Error al verificar suscripción.'));
+    }
+    if (!data) {
       return success(undefined);
     }
 
