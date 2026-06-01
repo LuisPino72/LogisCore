@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Result, AppError } from '@logiscore/core';
 import { KeyRound, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, DataTable, Pagination, Tooltip } from '../../../common/components';
@@ -61,7 +61,7 @@ export function UserSection({
     return result;
   }, [resetPassword, addToast]);
 
-  const columns: Column<UserRole>[] = [
+  const columns: Column<UserRole>[] = useMemo(() => [
     { key: 'email', header: 'Email' },
     { key: 'role', header: 'Rol' },
     { key: 'createdAt', header: 'Creado', hideOnMobile: true },
@@ -94,7 +94,7 @@ export function UserSection({
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <>

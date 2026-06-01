@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CreditCard, RefreshCw } from 'lucide-react';
 import { Badge, Button, Card, DataTable, Pagination } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
@@ -26,7 +26,7 @@ export function SubscriptionSection({ subscriptions, onRenew }: SubscriptionSect
   const totalPages = Math.max(1, Math.ceil(subscriptions.length / PAGE_SIZE));
   const paginated = subscriptions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const columns: Column<SubscriptionView>[] = [
+  const columns: Column<SubscriptionView>[] = useMemo(() => [
     { key: 'tenantName', header: 'Local' },
     {
       key: 'plan',
@@ -86,7 +86,7 @@ export function SubscriptionSection({ subscriptions, onRenew }: SubscriptionSect
         );
       },
     },
-  ];
+  ], []);
 
   return (
     <>

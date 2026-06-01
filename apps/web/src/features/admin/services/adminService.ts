@@ -316,6 +316,10 @@ export const adminService = {
       return failure(new AppError('UNAUTHORIZED', 'No autenticado'));
     }
 
+    if (!existing.tenant_id) {
+      return failure(new AppError('TENANT_NOT_FOUND', 'Empleado sin tenant asociado'));
+    }
+
     const { error } = await supabase
       .from('user_roles')
       .update({ deleted_at: new Date().toISOString() })

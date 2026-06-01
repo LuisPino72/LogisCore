@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import type { Result, AppError } from '@logiscore/core';
 import {
@@ -144,7 +144,7 @@ export function TenantSection({
     setShowAddFromEdit(true);
   }, []);
 
-  const columns: Column<Tenant>[] = [
+  const columns: Column<Tenant>[] = useMemo(() => [
     { key: 'name', header: 'Nombre' },
     { key: 'rif', header: 'RIF', hideOnMobile: true },
     { key: 'slug', header: 'Slug', hideOnMobile: true },
@@ -200,7 +200,7 @@ export function TenantSection({
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <>

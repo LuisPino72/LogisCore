@@ -35,7 +35,7 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
       });
       setError(null);
     }
-  }, [tenant]);
+  }, [tenant?.id, tenant?.name, tenant?.rif, tenant?.direccion, tenant?.telefono]);
 
   const handleSave = async () => {
     if (!tenant) return;

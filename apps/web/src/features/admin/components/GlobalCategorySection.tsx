@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Edit2, Trash2, Tags } from 'lucide-react';
 import { Button, Card, DataTable, Pagination, SearchInput } from '../../../common/components';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
@@ -43,7 +43,7 @@ export function GlobalCategorySection({
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const columns: Column<GlobalCategory>[] = [
+  const columns: Column<GlobalCategory>[] = useMemo(() => [
     { key: 'name', header: 'Nombre' },
     {
       key: 'createdAt',
@@ -65,7 +65,7 @@ export function GlobalCategorySection({
         </div>
       ),
     },
-  ];
+  ], []);
 
   return (
     <>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { useTenantFilters } from '../hooks/useTenantFilters';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { ArrowLeft, Building2, CreditCard, Plus, Store, Tags, UsersRound } from 'lucide-react';
 import { AppShell, BottomNav, Button, Card, EmptyState, Spinner, LogoutButton } from '../../../common/components';
 import { TenantSection } from './TenantSection';
@@ -14,7 +16,21 @@ const ADMIN_PAGE_SIZE = 10;
 
 type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories';
 
+const TABS = [
+  { id: 'tenants' as Sheet, label: 'Locales', icon: <Building2 size={20} /> },
+  { id: 'all-users' as Sheet, label: 'Usuarios', icon: <UsersRound size={20} /> },
+  { id: 'subscriptions' as Sheet, label: 'Suscripciones', icon: <CreditCard size={20} /> },
+  { id: 'global-categories' as Sheet, label: 'Categorías', icon: <Tags size={20} /> },
+] as const;
+
 export function AdminPanelPage() {
+  // Defense-in-depth: AdminRoute en App.tsx ya protege esta ruta,
+  // pero verificamos aquí también por seguridad en capas.
+  const role = useAuthStore((s) => s.session?.role);
+  if (role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
   const {
     tenants, users, allUsers, subscriptions, globalCategories, analytics, isLoading, error,
     fetchTenants, fetchUsers, fetchAllUsers, fetchSubscriptions, fetchGlobalCategories, fetchAnalytics,
@@ -110,13 +126,6 @@ export function AdminPanelPage() {
     );
   }
 
-  const tabs = [
-    { id: 'tenants' as Sheet, label: 'Locales', icon: <Building2 size={20} /> },
-    { id: 'all-users' as Sheet, label: 'Usuarios', icon: <UsersRound size={20} /> },
-    { id: 'subscriptions' as Sheet, label: 'Suscripciones', icon: <CreditCard size={20} /> },
-    { id: 'global-categories' as Sheet, label: 'Categorías', icon: <Tags size={20} /> },
-  ];
-
   return (
     <AppShell
       topBar={
@@ -134,7 +143,7 @@ export function AdminPanelPage() {
       }
     >
       <div className="hidden sm:flex items-center gap-1 border-b border-gray-200 bg-white sticky top-0 z-10 max-w-6xl mx-auto">
-        {tabs.map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
