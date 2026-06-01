@@ -63,7 +63,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
         setLoadingRecipe(false);
       });
     }
-  }, [recipe]);
+  }, [recipe, getRecipeWithLines, updateField, addLine, updateLine]);
 
   const availableProducts = getAvailableProducts();
   const availableIngredients = getAvailableIngredients();

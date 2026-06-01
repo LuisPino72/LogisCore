@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { AppError } from '@logiscore/core';
 import type {
   RecipeSchema,
   RecipeLineSchema,
@@ -26,7 +27,7 @@ export interface ProductionState {
   recipes: Recipe[];
   productionOrders: ProductionOrder[];
   loading: boolean;
-  error: string | null;
+  error: AppError | null;
 }
 
 export interface RecipeFilters {

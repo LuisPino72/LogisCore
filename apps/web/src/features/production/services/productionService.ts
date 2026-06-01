@@ -2,8 +2,7 @@ import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
-import { outboxService } from '../../../services/outbox/outboxService';
-import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { emitWithPersistence } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
@@ -154,6 +153,7 @@ export const productionService = {
     }));
 
     try {
+      const ev = emitWithPersistence('PRODUCTION.CREATED', PRODUCTION_MODULE, { recipeId, name: input.name, productId: input.productId }, { userId, tenantId });
       await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
         await db.recipes.add(recipe);
         await syncQueue.enqueue('recipes', 'CREATE', recipeId, toSnake(recipe as unknown as Record<string, unknown>), tenantId);
@@ -163,10 +163,10 @@ export const productionService = {
           await syncQueue.enqueue('recipe_lines', 'CREATE', line.id, toSnake(line as unknown as Record<string, unknown>), tenantId);
         }
 
-        await outboxService.enqueue('PRODUCTION.CREATED', PRODUCTION_MODULE, { recipeId, name: input.name, productId: input.productId });
+        await ev.enqueueInTransaction();
       });
 
-      await emitWithAudit('PRODUCTION.CREATED', PRODUCTION_MODULE, { recipeId, name: input.name }, { userId, tenantId });
+      await ev.auditAfterTransaction();
 
       return success(toRecipe(recipe as unknown as Record<string, unknown>));
     } catch (err) {
@@ -197,6 +197,22 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
     }
 
+    // C6: Validate ingredients BEFORE transaction
+    if (input.lines) {
+      for (const line of input.lines) {
+        const lineRaw = line as Record<string, unknown>;
+        if (!lineRaw.id) {
+          const ingredient = await db.products.get(line.productId);
+          if (!ingredient || ingredient.deletedAt) {
+            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
+          }
+          if (ingredient.productType && ingredient.productType === 'producto_terminado') {
+            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
+          }
+        }
+      }
+    }
+
     const now = new Date().toISOString();
     const updated: DexieRecipe = {
       ...existing,
@@ -210,27 +226,13 @@ export const productionService = {
     };
 
     try {
+      const ev = emitWithPersistence('PRODUCTION.UPDATED', PRODUCTION_MODULE, { recipeId: id, changes: Object.keys(input) }, { userId: undefined, tenantId });
       await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
         await db.recipes.put(updated);
         await syncQueue.enqueue('recipes', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
 
     // Update lines if provided
     if (input.lines) {
-          // Validate new ingredients exist and have valid productType
-          for (const line of input.lines) {
-            const lineRaw = line as Record<string, unknown>;
-            if (!lineRaw.id) {
-              // New line — validate ingredient
-              const ingredient = await db.products.get(line.productId);
-              if (!ingredient || ingredient.deletedAt) {
-                return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
-              }
-              if (ingredient.productType && ingredient.productType === 'producto_terminado') {
-                return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
-              }
-            }
-          }
-
           const existingLines = await db.recipeLines
             .where({ recipeId: id })
             .filter((l) => !l.deletedAt)
@@ -281,10 +283,10 @@ export const productionService = {
           }
         }
 
-        await outboxService.enqueue('PRODUCTION.UPDATED', PRODUCTION_MODULE, { recipeId: id, changes: Object.keys(input) });
+        await ev.enqueueInTransaction();
       });
 
-      await emitWithAudit('PRODUCTION.UPDATED', PRODUCTION_MODULE, { recipeId: id }, { tenantId });
+      await ev.auditAfterTransaction();
       return success(toRecipe(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en updateRecipe:', err);
@@ -308,13 +310,14 @@ export const productionService = {
       .filter((o) => !o.deletedAt && (o.status === 'confirmed' || o.status === 'in_progress'))
       .count();
     if (activeOrders > 0) {
-      return failure(new AppError('PRODUCTION_RECIPE_HAS_ORDERS', `No se puede eliminar: tiene ${activeOrders} orden(es) de producción activa(s).`));
+      return failure(new AppError(ProductionErrors.RECIPE_HAS_ORDERS, `No se puede eliminar: tiene ${activeOrders} orden(es) de producción activa(s).`));
     }
 
     const deletedAt = new Date().toISOString();
     const lines = await db.recipeLines.where({ recipeId: id }).filter((l) => !l.deletedAt).toArray();
 
     try {
+      const ev = emitWithPersistence('PRODUCTION.DELETED', PRODUCTION_MODULE, { recipeId: id, cascadeLines: lines.length }, { userId: undefined, tenantId });
       await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
         for (const line of lines) {
           await db.recipeLines.update(line.id, { deletedAt });
@@ -323,14 +326,14 @@ export const productionService = {
 
         await db.recipes.update(id, { deletedAt });
         await syncQueue.enqueue('recipes', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-        await outboxService.enqueue('PRODUCTION.DELETED', PRODUCTION_MODULE, { recipeId: id });
+        await ev.enqueueInTransaction();
       });
 
-      await emitWithAudit('PRODUCTION.DELETED', PRODUCTION_MODULE, { recipeId: id, cascadeLines: lines.length }, { tenantId });
+      await ev.auditAfterTransaction();
       return success(undefined);
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en deleteRecipe:', err);
-      return failure(new AppError('PRODUCTION_RECIPE_DELETE_FAILED', 'Error al eliminar la receta.'));
+      return failure(new AppError(ProductionErrors.RECIPE_DELETE_FAILED, 'Error al eliminar la receta.'));
     }
   },
 
@@ -361,12 +364,17 @@ export const productionService = {
   },
 
   async getRecipeById(id: string): Promise<Result<Recipe, AppError>> {
-    const db = getDb();
-    const recipe = await db.recipes.get(id);
-    if (!recipe || recipe.deletedAt) {
-      return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
+    try {
+      const db = getDb();
+      const recipe = await db.recipes.get(id);
+      if (!recipe || recipe.deletedAt) {
+        return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
+      }
+      return success(toRecipe(recipe as unknown as Record<string, unknown>));
+    } catch (err) {
+      logger.error(PRODUCTION_MODULE, 'Error en getRecipeById:', err);
+      return failure(new AppError('RECIPE_FETCH_FAILED', 'Error al cargar la receta.'));
     }
-    return success(toRecipe(recipe as unknown as Record<string, unknown>));
   },
 
   async getRecipeWithLines(recipeId: string): Promise<Result<RecipeWithLines, AppError>> {
@@ -393,71 +401,83 @@ export const productionService = {
     recipeId: string,
     batchCount: number,
   ): Promise<Result<IngredientAvailability[], AppError>> {
-    const db = getDb();
-    const recipe = await db.recipes.get(recipeId);
-    if (!recipe || recipe.deletedAt) {
-      return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
+    try {
+      const db = getDb();
+      const recipe = await db.recipes.get(recipeId);
+      if (!recipe || recipe.deletedAt) {
+        return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
+      }
+
+      const lines = await db.recipeLines
+        .where({ recipeId })
+        .filter((l) => !l.deletedAt)
+        .toArray();
+
+      const wasteMultiplier = 1 + (recipe.wastePct / 100);
+      const result: IngredientAvailability[] = [];
+
+      for (const line of lines) {
+        const needed = Math.ceil(line.quantity * batchCount * wasteMultiplier);
+        const product = await db.products.get(line.productId);
+        const available = product ? product.stock : 0;
+        const productName = product ? product.name : 'Desconocido';
+
+        result.push({
+          productId: line.productId,
+          productName,
+          needed,
+          available,
+          unit: line.unit,
+          sufficient: available >= needed,
+        });
+      }
+
+      return success(result);
+    } catch (err) {
+      logger.error(PRODUCTION_MODULE, 'Error en checkIngredientsAvailability:', err);
+      return failure(new AppError('PRODUCTION_AVAILABILITY_CHECK_FAILED', 'Error al verificar disponibilidad de ingredientes.'));
     }
-
-    const lines = await db.recipeLines
-      .where({ recipeId })
-      .filter((l) => !l.deletedAt)
-      .toArray();
-
-    const wasteMultiplier = 1 + (recipe.wastePct / 100);
-    const result: IngredientAvailability[] = [];
-
-    for (const line of lines) {
-      const needed = Math.ceil(line.quantity * batchCount * wasteMultiplier);
-      const product = await db.products.get(line.productId);
-      const available = product ? product.stock : 0;
-      const productName = product ? product.name : 'Desconocido';
-
-      result.push({
-        productId: line.productId,
-        productName,
-        needed,
-        available,
-        unit: line.unit,
-        sufficient: available >= needed,
-      });
-    }
-
-    return success(result);
   },
 
   async calculateRecipeCost(
     recipeId: string,
     batchCount: number,
   ): Promise<Result<number, AppError>> {
-    const db = getDb();
-    const recipe = await db.recipes.get(recipeId);
-    if (!recipe || recipe.deletedAt) {
-      return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
-    }
-
-    const lines = await db.recipeLines
-      .where({ recipeId })
-      .filter((l) => !l.deletedAt)
-      .toArray();
-
-    const wasteMultiplier = 1 + (recipe.wastePct / 100);
-    let totalCost = 0;
-
-    for (const line of lines) {
-      const needed = line.quantity * batchCount * wasteMultiplier;
-      const product = await db.products.get(line.productId);
-      if (product && product.costPrice != null && product.costPrice > 0) {
-        // costPrice is in display units ($/kg or $/unidad)
-        // For weighted products, convert needed (storage units) to display units for cost calc
-        const costPerStorageUnit = product.isWeighted
-          ? product.costPrice / 1000  // $/kg → $/g
-          : product.costPrice;         // $/unidad
-        totalCost += needed * costPerStorageUnit;
+    try {
+      const db = getDb();
+      const recipe = await db.recipes.get(recipeId);
+      if (!recipe || recipe.deletedAt) {
+        return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
       }
-    }
 
-    return success(preciseRound(totalCost, 2));
+      const lines = await db.recipeLines
+        .where({ recipeId })
+        .filter((l) => !l.deletedAt)
+        .toArray();
+
+      if (lines.length === 0) {
+        return failure(new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, 'La receta no tiene ingredientes para calcular costo.'));
+      }
+
+      const wasteMultiplier = 1 + (recipe.wastePct / 100);
+      let totalCost = 0;
+
+      for (const line of lines) {
+        const needed = line.quantity * batchCount * wasteMultiplier;
+        const product = await db.products.get(line.productId);
+        if (product && product.costPrice != null && product.costPrice > 0) {
+          const costPerStorageUnit = product.isWeighted
+            ? product.costPrice / 1000
+            : product.costPrice;
+          totalCost += needed * costPerStorageUnit;
+        }
+      }
+
+      return success(preciseRound(totalCost, 2));
+    } catch (err) {
+      logger.error(PRODUCTION_MODULE, 'Error en calculateRecipeCost:', err);
+      return failure(new AppError('PRODUCTION_COST_CALC_FAILED', 'Error al calcular costo de la receta.'));
+    }
   },
 
   async createOrder(
@@ -563,6 +583,13 @@ export const productionService = {
 
     try {
       const orderId = generateId();
+      const ev = emitWithPersistence('PRODUCTION.COMPLETED', PRODUCTION_MODULE, {
+        orderId,
+        recipeId: input.recipeId,
+        productId: recipe.productId,
+        batchCount: input.batchCount,
+        quantityTarget,
+      }, { userId, tenantId });
 
       await db.transaction('rw', [
         db.productionOrders, db.products, db.inventoryMovements,
@@ -651,7 +678,7 @@ export const productionService = {
             tenantId,
             productId: recipe.productId,
             userId,
-            type: 'purchase' as const,
+            type: 'production_output' as const,
             quantity: quantityTarget,
             previousStock: prevStock,
             newStock,
@@ -662,24 +689,11 @@ export const productionService = {
         }
 
         // d. Outbox event
-        await outboxService.enqueue('PRODUCTION.COMPLETED', PRODUCTION_MODULE, {
-          orderId,
-          recipeId: input.recipeId,
-          productId: recipe.productId,
-          batchCount: input.batchCount,
-          quantityTarget,
-        });
+        await ev.enqueueInTransaction();
       });
 
       // 7. Audit event
-      await emitWithAudit('PRODUCTION.COMPLETED', PRODUCTION_MODULE, {
-        orderId,
-        recipeId: input.recipeId,
-        productId: recipe.productId,
-        batchCount: input.batchCount,
-        quantityTarget,
-        totalIngredientCost,
-      }, { userId, tenantId });
+      await ev.auditAfterTransaction();
 
       return success(toProductionOrder({
         id: orderId, tenantId, recipeId: input.recipeId, productId: recipe.productId,
@@ -710,6 +724,7 @@ export const productionService = {
     const now = new Date().toISOString();
 
     try {
+      const ev = emitWithPersistence('PRODUCTION.ORDER_CANCELLED', PRODUCTION_MODULE, { orderId }, { userId: undefined, tenantId });
       await db.transaction('rw', [
         db.productionOrders, db.products, db.inventoryMovements,
         db.inventoryLots, db.syncQueue, db.outbox,
@@ -775,15 +790,26 @@ export const productionService = {
             await db.inventoryMovements.add(movement);
             await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
           }
+
+          // C4: Revert finished product lot
+          const finishedLots = await db.inventoryLots
+            .where({ productId: order.productId })
+            .filter((l) => !l.deletedAt && l.createdAt >= order.createdAt && l.createdAt <= now)
+            .toArray();
+          const lotToRevert = finishedLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+          if (lotToRevert && lotToRevert.remainingQuantity === lotToRevert.quantityAdded) {
+            await db.inventoryLots.update(lotToRevert.id, { deletedAt: now, remainingQuantity: 0 });
+            await syncQueue.enqueue('inventory_lots', 'UPDATE', lotToRevert.id, { id: lotToRevert.id, deleted_at: now, remaining_quantity: 0 }, tenantId);
+          }
         }
 
         // Update order status
         await db.productionOrders.update(orderId, { status: 'cancelled', updatedAt: now });
         await syncQueue.enqueue('production_orders', 'UPDATE', orderId, { id: orderId, status: 'cancelled', updated_at: now }, tenantId);
-        await outboxService.enqueue('PRODUCTION.ORDER_CANCELLED', PRODUCTION_MODULE, { orderId });
+        await ev.enqueueInTransaction();
       });
 
-      await emitWithAudit('PRODUCTION.ORDER_CANCELLED', PRODUCTION_MODULE, { orderId }, { tenantId });
+      await ev.auditAfterTransaction();
       return success(undefined);
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en cancelOrder:', err);
@@ -887,6 +913,10 @@ export const productionService = {
 
     // Consume ingredients in transaction
     try {
+      const ev = emitWithPersistence('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, {
+        itemsCount: assemblyItems.length,
+        overrideCount: overrides.length,
+      }, { userId, tenantId });
       await db.transaction('rw', [
         db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox,
       ], async () => {
@@ -927,16 +957,10 @@ export const productionService = {
           }
         }
 
-        await outboxService.enqueue('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, {
-          itemsCount: assemblyItems.length,
-          overrideCount: overrides.length,
-        });
+        await ev.enqueueInTransaction();
       });
 
-      await emitWithAudit('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, {
-        itemsCount: assemblyItems.length,
-        overrideCount: overrides.length,
-      }, { userId, tenantId });
+      await ev.auditAfterTransaction();
 
       return success({ overrides });
     } catch (err) {
@@ -946,14 +970,6 @@ export const productionService = {
     }
   },
   // ===== INTERNAL HELPERS =====
-
-  consumeFifoInternal(
-    productId: string,
-    quantity: number,
-    tenantId: string,
-  ): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
-    return consumeFifoInternal(productId, quantity, tenantId);
-  },
 };
 
 async function consumeFifoInternal(

@@ -51,7 +51,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
     if (result.ok) {
       set({ recipes: result.data, loading: false });
     } else {
-      set({ loading: false, error: result.error.message });
+      set({ loading: false, error: result.error });
     }
   },
 
@@ -62,7 +62,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       set((s) => ({ recipes: [result.data, ...s.recipes], loading: false }));
       return result.data;
     }
-    set({ loading: false, error: result.error.message });
+    set({ loading: false, error: result.error });
     return null;
   },
 
@@ -75,7 +75,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       }));
       return true;
     }
-    set({ error: result.error.message });
+    set({ error: result.error });
     return false;
   },
 
@@ -86,14 +86,14 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       set((s) => ({ recipes: s.recipes.filter((r) => r.id !== id), loading: false }));
       return true;
     }
-    set({ loading: false, error: result.error.message });
+    set({ loading: false, error: result.error });
     return false;
   },
 
   getRecipeWithLines: async (recipeId) => {
     const result = await productionService.getRecipeWithLines(recipeId);
     if (result.ok) return result.data;
-    set({ error: result.error.message });
+    set({ error: result.error });
     return null;
   },
 
@@ -105,7 +105,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
     if (result.ok) {
       set({ productionOrders: result.data, loading: false });
     } else {
-      set({ loading: false, error: result.error.message });
+      set({ loading: false, error: result.error });
     }
   },
 
@@ -116,7 +116,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       set((s) => ({ productionOrders: [result.data, ...s.productionOrders], loading: false }));
       return result.data;
     }
-    set({ loading: false, error: result.error.message });
+    set({ loading: false, error: result.error });
     return null;
   },
 
@@ -131,7 +131,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       }));
       return true;
     }
-    set({ error: result.error.message });
+    set({ error: result.error });
     return false;
   },
 
@@ -140,7 +140,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   checkIngredientsAvailability: async (recipeId, batchCount) => {
     const result = await productionService.checkIngredientsAvailability(recipeId, batchCount);
     if (result.ok) return result.data;
-    set({ error: result.error.message });
+    set({ error: result.error });
     return [];
   },
 

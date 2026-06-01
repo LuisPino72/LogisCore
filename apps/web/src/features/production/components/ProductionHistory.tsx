@@ -21,6 +21,14 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'dange
 export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
   const [page, setPage] = useState(1);
 
+  const recipeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const recipe of recipes) {
+      map.set(recipe.id, recipe.name);
+    }
+    return map;
+  }, [recipes]);
+
   const totalPages = Math.ceil(orders.length / PAGE_SIZE);
   const paginatedOrders = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -36,11 +44,6 @@ export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
       />
     );
   }
-
-  const getRecipeName = (recipeId: string) => {
-    const recipe = recipes.find((r) => r.id === recipeId);
-    return recipe?.name || 'Desconocida';
-  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -67,7 +70,7 @@ export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-medium text-sm truncate">
-                    {getRecipeName(order.recipeId)}
+                    {recipeMap.get(order.recipeId) || 'Desconocida'}
                   </h4>
                   <Badge variant={statusConfig.variant} className="shrink-0">
                     <span className="flex items-center gap-1">

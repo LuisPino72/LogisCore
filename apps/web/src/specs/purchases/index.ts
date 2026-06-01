@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+// Schemas Zod — la fuente de verdad en runtime. schema.json es solo referencial.
 /** Purchases Spec - PURCH-001..005 */
 
 export const SupplierSchema = z.object({
@@ -32,6 +33,7 @@ export const PurchaseOrderItemSchema = z.object({
   receivedQuantity: z.number().min(0).default(0),
   totalUsd: z.number().positive(),
   createdAt: z.string().datetime(),
+  deletedAt: z.string().datetime().optional(),
 });
 
 export type PurchaseOrderItem = z.infer<typeof PurchaseOrderItemSchema>;

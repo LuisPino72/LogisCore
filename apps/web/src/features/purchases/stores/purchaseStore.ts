@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import type { Supplier, PurchaseOrderWithItems, CreateSupplierInput, CreatePurchaseOrderInput, ReceivePurchaseOrderInput, PurchaseOrderStatus } from '../../../specs/purchases';
 import { purchaseService } from '../services/purchaseService';
+import { inventoryService } from '../../inventory/services/inventoryService';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
+import type { Product } from '../../../specs/inventory';
+import type { Presentation } from '../../inventory/types';
 import type { TabKey, TabState } from '../types';
 
 const DEFAULT_TAB_STATE: TabState = { searchQuery: '', statusFilter: 'all', dateFilter: '' };
@@ -16,6 +20,9 @@ interface PurchaseStore {
   saveTabState: (tab: TabKey, state: Partial<TabState>) => void;
   fetchSuppliers: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchOrders: (tenantId: string, status?: PurchaseOrderStatus, silent?: boolean) => Promise<void>;
+  resolvePreSelectedProducts: (tenantId: string, productIds: string[]) => Promise<Product[]>;
+  fetchProductsForOrder: (tenantId: string) => Promise<{ ok: true; data: Product[] } | { ok: false; error: { message: string } }>;
+  fetchPresentationsForProduct: (productId: string) => Promise<{ ok: true; data: Presentation[] } | { ok: false; error: { message: string } }>;
   createSupplier: (tenantId: string, userId: string, input: CreateSupplierInput) => Promise<string | null>;
   updateSupplier: (id: string, input: Partial<CreateSupplierInput>, tenantId: string) => Promise<boolean>;
   deleteSupplier: (id: string, tenantId: string) => Promise<boolean>;
@@ -57,8 +64,8 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     if (!silent) set({ loading: true, error: null });
     const result = await purchaseService.getSuppliers(tenantId);
     if (result.ok) {
-      set({ suppliers: result.data, loading: false });
-    } else {
+      set({ suppliers: result.data, ...(!silent && { loading: false }) });
+    } else if (!silent) {
       set({ loading: false, error: result.error.message });
     }
   },
@@ -68,13 +75,31 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     try {
       const result = await purchaseService.getOrders(tenantId, status);
       if (result.ok) {
-        set({ orders: result.data, loading: false });
-      } else {
+        set({ orders: result.data, ...(!silent && { loading: false }) });
+      } else if (!silent) {
         set({ loading: false, error: result.error.message });
       }
     } catch (err) {
-      set({ loading: false, error: err instanceof Error ? err.message : 'Error al cargar órdenes' });
+      if (!silent) {
+        set({ loading: false, error: err instanceof Error ? err.message : 'Error al cargar órdenes' });
+      }
     }
+  },
+
+  resolvePreSelectedProducts: async (tenantId, productIds) => {
+    const result = await inventoryService.getProducts(tenantId);
+    if (result.ok) {
+      return result.data.filter((p) => productIds.includes(p.id));
+    }
+    return [];
+  },
+
+  fetchProductsForOrder: async (tenantId) => {
+    return inventoryService.getProducts(tenantId);
+  },
+
+  fetchPresentationsForProduct: async (productId) => {
+    return inventoryService.getPresentationsForProduct(productId);
   },
 
   createSupplier: async (tenantId, userId, input) => {
@@ -154,7 +179,8 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
 
   receiveOrder: async (id, input, tenantId, userId) => {
     set({ loading: true, error: null });
-    const result = await purchaseService.receiveOrder(id, input, tenantId, userId);
+    const rate = useExchangeRateStore.getState().rate ?? 1;
+    const result = await purchaseService.receiveOrder(id, input, tenantId, userId, rate);
     if (result.ok) {
       await get().fetchOrders(tenantId);
       return true;

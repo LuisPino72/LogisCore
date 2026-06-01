@@ -23,7 +23,6 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   const [isProducing, setIsProducing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
   const fetchAvailability = useCallback(async (count: number) => {
     if (!recipe || count <= 0) return;
@@ -44,11 +43,8 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
 
   // Initial fetch on mount
   useEffect(() => {
-    if (!initialized) {
-      setInitialized(true);
-      fetchAvailability(1);
-    }
-  }, [initialized, fetchAvailability]);
+    fetchAvailability(1);
+  }, []);
 
   const handleBatchChange = async (value: number) => {
     if (value > 0) {

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Receipt, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Modal } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
+import { formatDate } from '../../../lib/formatDate';
 import type { Gasto } from '../types';
 import { getExpenseCategoryLabel } from '../types';
 
@@ -18,11 +19,6 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warni
   pending: { label: 'Pendiente', variant: 'warning', dot: 'bg-warning' },
   cancelled: { label: 'Cancelado', variant: 'danger', dot: 'bg-danger' },
 };
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }: GastoListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);

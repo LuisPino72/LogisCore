@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Package, Truck } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
-import { inventoryService } from '../../inventory/services/inventoryService';
+import { usePurchaseStore } from '../stores/purchaseStore';
 import type { PurchaseOrderWithItems } from '../../../specs/purchases';
 import type { Product } from '../../../specs/inventory';
 import { formatUsd } from '@/lib/formatBs';
@@ -32,7 +32,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
     if (!isOpen) return;
     submittedRef.current = false;
     const productIds = order.items.map((i) => i.productId);
-    inventoryService.getProducts(tenantId).then((res) => {
+    usePurchaseStore.getState().fetchProductsForOrder(tenantId).then((res) => {
       if (res.ok) {
         const map = new Map<string, Product>();
         for (const p of res.data) {

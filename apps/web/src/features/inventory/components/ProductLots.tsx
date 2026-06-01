@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, Calendar, Layers } from 'lucide-react';
 import { Card, Badge, Spinner, EmptyState } from '@/common/components';
+import { formatDate } from '../../../lib/formatDate';
 import { inventoryService } from '../services/inventoryService';
 import type { ActiveLot } from '../types';
 import { gramsToKg, mlToLt } from '../types';
@@ -9,10 +10,6 @@ interface ProductLotsProps {
   productId: string;
   tenantId: string;
   unit?: string;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
 function displayQty(value: number, unit?: string): string {

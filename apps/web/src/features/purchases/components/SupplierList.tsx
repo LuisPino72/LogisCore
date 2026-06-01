@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Truck, Trash2, Phone, Pencil, ShoppingCart } from 'lucide-react';
 import { Button, Badge, EmptyState, Pagination } from '../../../common/components';
 import type { Supplier } from '../../../specs/purchases';
+import { getInitials } from '../../../lib/utils';
 
 interface SupplierListProps {
   suppliers: Supplier[];
@@ -10,17 +11,6 @@ interface SupplierListProps {
   activeOrdersBySupplier?: Record<string, number>;
   onEdit: (supplier: Supplier) => void;
   onDelete: (id: string, name: string) => void;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 const SUPPLIERS_PAGE_SIZE = 20;

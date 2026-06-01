@@ -20,7 +20,6 @@ import type {
 } from '../../../specs/purchases';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import { convertToStorage } from '../../inventory/types';
-import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 
 const PURCHASES_MODULE = 'PURCHASES';
 
@@ -90,6 +89,7 @@ export const purchaseService = {
         await syncQueue.enqueue('suppliers', 'CREATE', id, toSnake({ ...supplier, tenantId } as unknown as Record<string, unknown>), tenantId);
         await outboxService.enqueue('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name });
       });
+      // @event PURCHASE.SUPPLIER_CREATED — sin consumidores activos (auditoría únicamente)
       await emitWithAudit('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name }, { userId, tenantId });
       return success(supplier);
     } catch (err) {
@@ -103,58 +103,70 @@ export const purchaseService = {
     input: Partial<CreateSupplierInput>,
     tenantId: string,
   ): Promise<Result<Supplier, AppError>> {
-    const networkCheck = requireNetwork();
-    if (!networkCheck.ok) return failure(networkCheck.error);
-    const db = getDb();
+    try {
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return failure(networkCheck.error);
+      const db = getDb();
 
-    // Validar con Zod
-    if (input.name !== undefined || input.phone !== undefined) {
-      const partial = CreateSupplierInputSchema.partial().safeParse(input);
-      if (!partial.success) {
-        return failure(new AppError('SUPPLIER_INVALID_INPUT', partial.error.issues[0]?.message || 'Datos inválidos.'));
+      // Validar con Zod
+      if (input.name !== undefined || input.phone !== undefined) {
+        const partial = CreateSupplierInputSchema.partial().safeParse(input);
+        if (!partial.success) {
+          return failure(new AppError('SUPPLIER_INVALID_INPUT', partial.error.issues[0]?.message || 'Datos inválidos.'));
+        }
       }
-    }
 
-    const existing = await db.suppliers.where({ id }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
-    if (!existing) {
-      return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
+      const existing = await db.suppliers.where({ id }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
+      if (!existing) {
+        return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
+      }
+      const updated = { ...existing, ...input };
+      await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
+        await db.suppliers.put(updated);
+        await syncQueue.enqueue('suppliers', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
+        await outboxService.enqueue('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id });
+      });
+      // @event PURCHASE.SUPPLIER_UPDATED — sin consumidores activos (auditoría únicamente)
+      await emitWithAudit('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
+      return success(toSupplier(updated as unknown as Record<string, unknown>));
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en updateSupplier:', err);
+      return failure(new AppError('SUPPLIER_UPDATE_ERROR', 'Error al actualizar proveedor.'));
     }
-    const updated = { ...existing, ...input };
-    await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
-      await db.suppliers.put(updated);
-      await syncQueue.enqueue('suppliers', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id });
-    });
-    await emitWithAudit('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
-    return success(toSupplier(updated as unknown as Record<string, unknown>));
   },
 
   async softDeleteSupplier(id: string, tenantId: string): Promise<Result<void, AppError>> {
-    const networkCheck = requireNetwork();
-    if (!networkCheck.ok) return failure(networkCheck.error);
-    const db = getDb();
-    const supplier = await db.suppliers.where({ id }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
-    if (!supplier) {
-      return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
+    try {
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return failure(networkCheck.error);
+      const db = getDb();
+      const supplier = await db.suppliers.where({ id }).filter((s) => s.tenantId === tenantId && !s.deletedAt).first();
+      if (!supplier) {
+        return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
+      }
+
+      const ordersWithSupplier = await db.purchaseOrders
+        .where({ tenantId })
+        .filter((o) => o.supplierId === id && !o.deletedAt)
+        .count();
+
+      if (ordersWithSupplier > 0) {
+        return failure(new AppError(PurchaseErrors.SUPPLIER_HAS_ORDERS, `No se puede eliminar: tiene ${ordersWithSupplier} orden(es) asociada(s).`));
+      }
+
+      const deletedAt = new Date().toISOString();
+      await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
+        await db.suppliers.update(id, { deletedAt });
+        await syncQueue.enqueue('suppliers', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+        await outboxService.enqueue('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id });
+      });
+      // @event PURCHASE.SUPPLIER_DELETED — sin consumidores activos (auditoría únicamente)
+      await emitWithAudit('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
+      return success(undefined);
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en softDeleteSupplier:', err);
+      return failure(new AppError('SUPPLIER_DELETE_ERROR', 'Error al eliminar proveedor.'));
     }
-
-    const ordersWithSupplier = await db.purchaseOrders
-      .where({ tenantId })
-      .filter((o) => o.supplierId === id && !o.deletedAt)
-      .count();
-
-    if (ordersWithSupplier > 0) {
-      return failure(new AppError(PurchaseErrors.SUPPLIER_HAS_ORDERS, `No se puede eliminar: tiene ${ordersWithSupplier} orden(es) asociada(s).`));
-    }
-
-    const deletedAt = new Date().toISOString();
-    await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
-      await db.suppliers.update(id, { deletedAt });
-      await syncQueue.enqueue('suppliers', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-      await outboxService.enqueue('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id });
-    });
-    await emitWithAudit('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
-    return success(undefined);
   },
 
   async getSuppliers(tenantId: string): Promise<Result<Supplier[], AppError>> {
@@ -165,6 +177,8 @@ export const purchaseService = {
       .toArray();
 
     if (rows.length === 0) {
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return success([]);
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
       const { data, error } = await supabase
         .from('suppliers')
@@ -273,6 +287,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.CREATED', PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd });
       });
 
+      // @event PURCHASE.CREATED — sin consumidores activos (auditoría únicamente)
       await emitWithAudit('PURCHASE.CREATED', PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd }, { userId, tenantId });
       return success(order);
     } catch (err) {
@@ -339,8 +354,8 @@ export const purchaseService = {
       await db.transaction('rw', [db.purchaseOrders, db.purchaseOrderItems, db.syncQueue, db.outbox], async () => {
         const oldItems = await db.purchaseOrderItems.where({ orderId: id }).toArray();
         for (const old of oldItems) {
-          await db.purchaseOrderItems.delete(old.id);
-          await syncQueue.enqueue('purchase_order_items', 'DELETE', old.id, { id: old.id }, tenantId);
+          await db.purchaseOrderItems.update(old.id, { deletedAt: now });
+          await syncQueue.enqueue('purchase_order_items', 'DELETE', old.id, { id: old.id, deleted_at: now }, tenantId);
         }
 
         const supplierId = input.supplierId ?? order.supplierId;
@@ -355,6 +370,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.UPDATED', PURCHASES_MODULE, { orderId: id });
       });
 
+      // @event PURCHASE.UPDATED — sin consumidores activos (auditoría únicamente)
       await emitWithAudit('PURCHASE.UPDATED', PURCHASES_MODULE, { orderId: id }, { userId, tenantId });
       return success(toOrder({ ...order, totalUsd } as unknown as Record<string, unknown>));
     } catch (err) {
@@ -364,43 +380,55 @@ export const purchaseService = {
   },
 
   async softDeleteOrder(id: string, tenantId: string): Promise<Result<void, AppError>> {
-    const networkCheck = requireNetwork();
-    if (!networkCheck.ok) return failure(networkCheck.error);
-    const db = getDb();
-    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
-    if (!order) {
-      return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
+    try {
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return failure(networkCheck.error);
+      const db = getDb();
+      const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+      if (!order) {
+        return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
+      }
+      const deletedAt = new Date().toISOString();
+      await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
+        await db.purchaseOrders.update(id, { deletedAt });
+        await syncQueue.enqueue('purchase_orders', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
+        await outboxService.enqueue('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id });
+      });
+      // @event PURCHASE.DELETED — sin consumidores activos (auditoría únicamente)
+      await emitWithAudit('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id }, { tenantId });
+      return success(undefined);
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en softDeleteOrder:', err);
+      return failure(new AppError('ORDER_DELETE_ERROR', 'Error al eliminar orden.'));
     }
-    const deletedAt = new Date().toISOString();
-    await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
-      await db.purchaseOrders.update(id, { deletedAt });
-      await syncQueue.enqueue('purchase_orders', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-      await outboxService.enqueue('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id });
-    });
-    await emitWithAudit('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id }, { tenantId });
-    return success(undefined);
   },
 
   async confirmOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
-    const networkCheck = requireNetwork();
-    if (!networkCheck.ok) return failure(networkCheck.error);
-    const db = getDb();
-    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
-    if (!order) {
-      return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
-    }
-    if (order.status !== 'draft') {
-      return failure(new AppError(PurchaseErrors.ORDER_INVALID_STATUS, 'Solo órdenes en borrador pueden ser confirmadas.'));
-    }
+    try {
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return failure(networkCheck.error);
+      const db = getDb();
+      const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+      if (!order) {
+        return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
+      }
+      if (order.status !== 'draft') {
+        return failure(new AppError(PurchaseErrors.ORDER_INVALID_STATUS, 'Solo órdenes en borrador pueden ser confirmadas.'));
+      }
 
-    const updated = { ...order, status: 'confirmed' as const, updatedAt: new Date().toISOString() };
-    await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
-      await db.purchaseOrders.put(updated);
-      await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id });
-    });
-    await emitWithAudit('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id }, { tenantId });
-    return success(toOrder(updated as unknown as Record<string, unknown>));
+      const updated = { ...order, status: 'confirmed' as const, updatedAt: new Date().toISOString() };
+      await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
+        await db.purchaseOrders.put(updated);
+        await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
+        await outboxService.enqueue('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id });
+      });
+      // @event PURCHASE.CONFIRMED — sin consumidores activos (auditoría únicamente)
+      await emitWithAudit('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id }, { tenantId });
+      return success(toOrder(updated as unknown as Record<string, unknown>));
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en confirmOrder:', err);
+      return failure(new AppError('ORDER_CONFIRM_ERROR', 'Error al confirmar orden.'));
+    }
   },
 
   async receiveOrder(
@@ -408,6 +436,7 @@ export const purchaseService = {
     input: ReceivePurchaseOrderInput,
     tenantId: string,
     userId: string,
+    exchangeRate: number,
   ): Promise<Result<PurchaseOrder, AppError>> {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -573,7 +602,7 @@ export const purchaseService = {
           totalReceivedUsd += preciseRound(rec.receivedQuantity * (item.costUsdPerUnit ?? 0), 2);
         }
         if (totalReceivedUsd > 0) {
-          const currentRate = useExchangeRateStore.getState().rate ?? 1;
+          const currentRate = exchangeRate;
           const expenseId = generateId();
           const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
           const expense: DexieExpense = {
@@ -605,25 +634,31 @@ export const purchaseService = {
   },
 
   async cancelOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
-    const networkCheck = requireNetwork();
-    if (!networkCheck.ok) return failure(networkCheck.error);
-    const db = getDb();
-    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
-    if (!order) {
-      return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
-    }
-    if (order.status !== 'draft' && order.status !== 'confirmed') {
-      return failure(new AppError(PurchaseErrors.ORDER_CANCEL_NOT_ALLOWED, 'Solo borradores o confirmadas pueden cancelarse.'));
-    }
+    try {
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return failure(networkCheck.error);
+      const db = getDb();
+      const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+      if (!order) {
+        return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
+      }
+      if (order.status !== 'draft' && order.status !== 'confirmed') {
+        return failure(new AppError(PurchaseErrors.ORDER_CANCEL_NOT_ALLOWED, 'Solo borradores o confirmadas pueden cancelarse.'));
+      }
 
-    const updated = { ...order, status: 'cancelled' as const, updatedAt: new Date().toISOString() };
-    await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
-      await db.purchaseOrders.put(updated);
-      await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id });
-    });
-    await emitWithAudit('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id }, { tenantId });
-    return success(toOrder(updated as unknown as Record<string, unknown>));
+      const updated = { ...order, status: 'cancelled' as const, updatedAt: new Date().toISOString() };
+      await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
+        await db.purchaseOrders.put(updated);
+        await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
+        await outboxService.enqueue('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id });
+      });
+      // @event PURCHASE.CANCELLED — sin consumidores activos (auditoría únicamente)
+      await emitWithAudit('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id }, { tenantId });
+      return success(toOrder(updated as unknown as Record<string, unknown>));
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en cancelOrder:', err);
+      return failure(new AppError('ORDER_CANCEL_ERROR', 'Error al cancelar orden.'));
+    }
   },
 
   async getOrders(tenantId: string, status?: PurchaseOrder['status']): Promise<Result<PurchaseOrderWithItems[], AppError>> {
@@ -635,6 +670,8 @@ export const purchaseService = {
       .toArray();
 
     if (rows.length === 0) {
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return success([]);
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
       const { data, error } = await supabase
         .from('purchase_orders')
@@ -705,19 +742,24 @@ export const purchaseService = {
   },
 
   async getOrderById(id: string, tenantId: string): Promise<Result<PurchaseOrderWithItems, AppError>> {
-    const db = getDb();
-    const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
-    if (!order) {
-      return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
+    try {
+      const db = getDb();
+      const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+      if (!order) {
+        return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
+      }
+
+      const items = await db.purchaseOrderItems.where({ orderId: id }).toArray();
+      const supplier = await db.suppliers.get(order.supplierId);
+
+      return success({
+        ...toOrder(order as unknown as Record<string, unknown>),
+        items: items.map((i) => toOrderItem(i as unknown as Record<string, unknown>)),
+        supplierName: supplier?.name,
+      });
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en getOrderById:', err);
+      return failure(new AppError('ORDER_FETCH_ERROR', 'Error al obtener la orden.'));
     }
-
-    const items = await db.purchaseOrderItems.where({ orderId: id }).toArray();
-    const supplier = await db.suppliers.get(order.supplierId);
-
-    return success({
-      ...toOrder(order as unknown as Record<string, unknown>),
-      items: items.map((i) => toOrderItem(i as unknown as Record<string, unknown>)),
-      supplierName: supplier?.name,
-    });
   },
 };

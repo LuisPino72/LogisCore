@@ -11,7 +11,7 @@ import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
 import { OrderList } from './OrderList';
 import { OrderForm } from './OrderForm';
-import { inventoryService } from '../../inventory/services/inventoryService';
+import { usePurchaseStore } from '../stores/purchaseStore';
 import type { Product } from '../../../specs/inventory';
 import type { TabKey } from '../types';
 import type { CreateSupplierInput, CreatePurchaseOrderInput, Supplier, PurchaseOrderWithItems, PurchaseOrderStatus } from '../../../specs/purchases';
@@ -65,9 +65,8 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   useEffect(() => {
     const state = location.state as { preSelectedProductIds?: string[] } | null;
     if (state?.preSelectedProductIds?.length && tenantId) {
-      inventoryService.getProducts(tenantId).then((res) => {
-        if (res.ok) {
-          const selected = res.data.filter((p) => state.preSelectedProductIds!.includes(p.id));
+      usePurchaseStore.getState().resolvePreSelectedProducts(tenantId, state.preSelectedProductIds).then((selected) => {
+        if (selected.length > 0) {
           setPreSelectedProducts(selected);
           setEditOrder(null);
           setShowOrderForm(true);

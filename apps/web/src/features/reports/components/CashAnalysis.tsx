@@ -1,5 +1,6 @@
 import { Card, Badge } from '@/common/components';
 import { TrendingUp, TrendingDown, Minus, DollarSign } from 'lucide-react';
+import { formatDate } from '../../../lib/formatDate';
 import type { CashRegisterSummaryData } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
@@ -52,10 +53,6 @@ function DiffIndicator({ differenceBs, differenceUsd }: { differenceBs: number |
       </div>
     </div>
   );
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
 export function CashAnalysis({ data, loading }: CashAnalysisProps) {

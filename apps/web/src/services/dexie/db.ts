@@ -57,7 +57,7 @@ export interface DexieInventoryMovement {
   tenantId: string;
   productId: string;
   userId: string;
-  type: 'sale' | 'purchase' | 'adjustment';
+  type: 'sale' | 'purchase' | 'adjustment' | 'production_output';
   quantity: number;
   previousStock: number;
   newStock: number;

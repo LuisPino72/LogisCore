@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Truck, Package, FileText, DollarSign } from 'lucide-react';
 import { Button, Input, Modal, SearchableSelect } from '../../../common/components';
-import { inventoryService } from '../../inventory/services/inventoryService';
+import { usePurchaseStore } from '../stores/purchaseStore';
 import type { Product, Presentation } from '../../inventory/types';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
 import { formatUsd } from '@/lib/formatBs';
@@ -66,7 +66,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
 
   useEffect(() => {
     if (isOpen) {
-      inventoryService.getProducts(tenantId).then((res) => {
+      usePurchaseStore.getState().fetchProductsForOrder(tenantId).then((res) => {
         if (res.ok) setProducts(res.data);
       });
       if (editOrder) {
@@ -110,7 +110,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
 
   const loadPresentations = async (productId: string) => {
     if (!productId || presentationsByProduct[productId]) return;
-    const result = await inventoryService.getPresentationsForProduct(productId);
+    const result = await usePurchaseStore.getState().fetchPresentationsForProduct(productId);
     if (result.ok && result.data.length > 0) {
       setPresentationsByProduct(prev => ({ ...prev, [productId]: result.data }));
     }
