@@ -37,7 +37,7 @@ import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
 import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
 import { useExchangeRateStore } from './features/exchange/stores/exchangeRateStore';
 import { NotificationBell } from './common/components/NotificationBell';
-import { useSystemNotifications } from './features/gastos/hooks/useSystemNotifications';
+import { useSystemNotifications } from './features/system/hooks/useSystemNotifications';
 
 const DashboardPage = lazy(() => import('./features/dashboard').then((m) => ({ default: m.DashboardPage })));
 const InventoryPage = lazy(() => import('./features/inventory').then((m) => ({ default: m.InventoryPage })));

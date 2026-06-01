@@ -4,8 +4,6 @@ import { preciseRound, generateId, toSnake } from '@logiscore/shared';
 import type { Gasto } from '../types';
 import { CreateGastoInputSchema, UpdateGastoInputSchema } from '../../../specs/gastos/index';
 import { GASTOS_ERRORS } from '../../../specs/gastos/errors';
-import { useNotificationStore } from '../../../stores/notificationStore';
-import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 
@@ -121,7 +119,7 @@ export const gastosService = {
     }
   },
 
-  async update(tenantId: string, id: string, input: unknown): Promise<Result<Gasto, AppError>> {
+  async update(tenantId: string, id: string, input: unknown, currentRate?: number): Promise<Result<Gasto, AppError>> {
     const parsed = UpdateGastoInputSchema.safeParse(input);
     if (!parsed.success) {
       return failure(new AppError(GASTOS_ERRORS.GASTOS_UPDATE_FAILED.code, parsed.error.issues[0]?.message || 'Datos inválidos.'));
@@ -136,14 +134,14 @@ export const gastosService = {
       const data = parsed.data;
       const now = new Date().toISOString();
       const isPayingPending = existing.status === 'pending' && data.status === 'paid';
-      const currentRate = isPayingPending ? useExchangeRateStore.getState().rate : undefined;
+      const effectiveRate = isPayingPending ? currentRate : undefined;
       const effectiveAmountUsd = data.amountUsd ?? existing.amountUsd;
 
       const updated: Partial<DexieExpense> = {
         ...data,
-        exchangeRate: isPayingPending && currentRate ? currentRate : data.exchangeRate,
-        amountBs: isPayingPending && currentRate
-          ? preciseRound(effectiveAmountUsd * currentRate, 2)
+        exchangeRate: isPayingPending && effectiveRate ? effectiveRate : data.exchangeRate,
+        amountBs: isPayingPending && effectiveRate
+          ? preciseRound(effectiveAmountUsd * effectiveRate, 2)
           : data.amountUsd !== undefined && data.exchangeRate !== undefined
             ? preciseRound(data.amountUsd * data.exchangeRate, 2)
             : data.amountBs ?? existing.amountBs,
@@ -197,7 +195,7 @@ export const gastosService = {
     }
   },
 
-  async checkAndGenerateRecurring(tenantId: string): Promise<Result<Gasto[], AppError>> {
+  async checkAndGenerateRecurring(tenantId: string): Promise<Result<{ generated: Gasto[]; upcoming: { category: string; description?: string; id: string; date: string }[] }, AppError>> {
     try {
       const db = getDb();
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -214,7 +212,6 @@ export const gastosService = {
       const generated: Gasto[] = [];
 
       for (const tpl of dueTemplates) {
-        // Skip if an instance already exists for this template + date (prevents duplicates)
         const existingInstance = await db.expenses
           .where('parentExpenseId')
           .equals(tpl.id)
@@ -271,19 +268,14 @@ export const gastosService = {
         )
         .toArray();
 
-      for (const tpl of remindingTemplates) {
-        const store = useNotificationStore.getState();
-        store.setTenantId(tenantId);
-        await store.addNotification({
-          type: 'recurring_expense_reminder',
-          title: 'Gasto recurrente próximo',
-          message: `${tpl.category} - ${tpl.description || 'Sin descripción'} vence mañana`,
-          actionLabel: 'Cancelar ocurrencia',
-          actionPayload: { expenseId: tpl.id, date: tomorrow },
-        });
-      }
+      const upcoming = remindingTemplates.map((tpl) => ({
+        category: tpl.category,
+        description: tpl.description,
+        id: tpl.id,
+        date: tomorrow,
+      }));
 
-      return success(generated);
+      return success({ generated, upcoming });
     } catch (err) {
       console.error('[gastosService.checkAndGenerateRecurring]', err);
       return failure(new AppError(GASTOS_ERRORS.GASTOS_RECURRING_FAILED.code, GASTOS_ERRORS.GASTOS_RECURRING_FAILED.message));

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const EXPENSE_CATEGORIES = [
   'LUZ', 'AGUA', 'GAS', 'INTERNET',
   'ALQUILER', 'NOMINA',
-  'IMPUESTOS', 'OTROS',
+  'IMPUESTOS', 'COMPRA_INVENTARIO', 'OTROS',
 ] as const;
 
 export const ExpenseCategorySchema = z.enum(EXPENSE_CATEGORIES);

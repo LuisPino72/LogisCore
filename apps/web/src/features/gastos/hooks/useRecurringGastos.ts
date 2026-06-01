@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { EventBus } from '@logiscore/core';
 import { useGastosStore } from '../stores/gastosStore';
 import { gastosService } from '../services/gastosService';
+import { useNotificationStore } from '../../../stores/notificationStore';
 
 export function useRecurringGastos(tenantId: string | null) {
   const { recurringTemplates, setRecurringTemplates } = useGastosStore();
@@ -16,7 +17,20 @@ export function useRecurringGastos(tenantId: string | null) {
 
   const checkAndGenerate = useCallback(async () => {
     if (!tenantId) return;
-    await gastosService.checkAndGenerateRecurring(tenantId);
+    const result = await gastosService.checkAndGenerateRecurring(tenantId);
+    if (result.ok && result.data.upcoming.length > 0) {
+      const store = useNotificationStore.getState();
+      store.setTenantId(tenantId);
+      for (const tpl of result.data.upcoming) {
+        await store.addNotification({
+          type: 'recurring_expense_reminder',
+          title: 'Gasto recurrente próximo',
+          message: `${tpl.category} - ${tpl.description || 'Sin descripción'} vence mañana`,
+          actionLabel: 'Cancelar ocurrencia',
+          actionPayload: { expenseId: tpl.id, date: tpl.date },
+        });
+      }
+    }
     await fetchTemplates();
   }, [tenantId, fetchTemplates]);
 

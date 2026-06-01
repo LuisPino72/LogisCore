@@ -1,20 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
-import { getDb } from '../../../services/dexie/db';
 import { useNotificationStore } from '../../../stores/notificationStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
+import { systemNotificationService } from '../services/systemNotificationService';
 
 const HIGH_SALE_THRESHOLD_USD = 100;
 
 async function checkLowStock(tenantId: string): Promise<void> {
   try {
-    const db = getDb();
-    const lowStock = await db.products
-      .where('tenantId')
-      .equals(tenantId)
-      .filter((p) => !p.deletedAt && !!p.stockMin && p.stockMin > 0 && p.stock <= p.stockMin)
-      .toArray();
-
+    const lowStock = await systemNotificationService.getLowStockProducts(tenantId);
     for (const product of lowStock) {
       await useNotificationStore.getState().addNotification({
         type: 'low_stock',
@@ -29,13 +23,7 @@ async function checkLowStock(tenantId: string): Promise<void> {
 
 async function checkLowStockZero(tenantId: string): Promise<void> {
   try {
-    const db = getDb();
-    const agotados = await db.products
-      .where('tenantId')
-      .equals(tenantId)
-      .filter((p) => !p.deletedAt && p.stock === 0)
-      .toArray();
-
+    const agotados = await systemNotificationService.getZeroStockProducts(tenantId);
     for (const product of agotados) {
       await useNotificationStore.getState().addNotification({
         type: 'product_agotado',
@@ -54,13 +42,7 @@ async function checkOpenRegister(tenantId: string): Promise<void> {
     const hour = now.getHours();
     if (hour !== 23) return;
 
-    const db = getDb();
-    const openReg = await db.cashRegisters
-      .where('tenantId')
-      .equals(tenantId)
-      .filter((r) => !r.deletedAt && r.isOpen)
-      .first();
-
+    const openReg = await systemNotificationService.getOpenCashRegister(tenantId);
     if (openReg) {
       await useNotificationStore.getState().addNotification({
         type: 'open_register',

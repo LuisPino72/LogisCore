@@ -3,6 +3,7 @@ import { type Result, failure, AppError, EventBus } from '@logiscore/core';
 import { useGastosStore } from '../stores/gastosStore';
 import { gastosService } from '../services/gastosService';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import type { Gasto, CreateGastoInput, UpdateGastoInput } from '../types';
 
 export function useGastos(tenantId: string | null) {
@@ -66,7 +67,9 @@ export function useGastos(tenantId: string | null) {
 
   const updateGasto = useCallback(async (id: string, input: UpdateGastoInput): Promise<Result<Gasto, AppError>> => {
     if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));
-    const result = await gastosService.update(tenantId, id, input);
+    const isPayingPending = input.status === 'paid';
+    const currentRate = isPayingPending ? useExchangeRateStore.getState().rate ?? undefined : undefined;
+    const result = await gastosService.update(tenantId, id, input, currentRate);
     if (result.ok) {
       await fetchGastos();
     }

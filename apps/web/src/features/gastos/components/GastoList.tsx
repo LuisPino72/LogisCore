@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Receipt, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Modal } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
@@ -28,7 +28,10 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
   const [confirmPayTarget, setConfirmPayTarget] = useState<{ id: string; category: string; amountUsd: number } | null>(null);
 
-  const sorted = [...gastos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sorted = useMemo(
+    () => [...gastos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [gastos]
+  );
 
   if (loading && gastos.length === 0) {
     return (

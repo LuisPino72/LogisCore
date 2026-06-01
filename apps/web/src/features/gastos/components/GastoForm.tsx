@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Button, Input, Modal, Select, Textarea, Toggle, SearchableSelect } from '@/common/components';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
@@ -31,14 +31,6 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
 
   const hasUnsavedChanges = category !== '' || amountUsd !== '' || description !== '' || isRecurring;
 
-  const initialValues = useRef<{
-    category: string; amountUsd: string; description: string;
-    isRecurring: boolean; recurrenceType: 'monthly' | 'yearly';
-  }>({
-    category: '', amountUsd: '', description: '',
-    isRecurring: false, recurrenceType: 'monthly',
-  });
-
   useEffect(() => {
     if (isOpen) {
       setCategory('');
@@ -46,10 +38,6 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
       setDescription('');
       setIsRecurring(false);
       setRecurrenceType('monthly');
-      initialValues.current = {
-        category: '', amountUsd: '', description: '',
-        isRecurring: false, recurrenceType: 'monthly',
-      };
       setError('');
       setConfirmClose(false);
     }
