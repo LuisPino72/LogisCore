@@ -16,15 +16,17 @@ export function useTenantResolution({
   const [effectiveTenantId, setEffectiveTenantId] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     if (session?.tenantId) {
       setEffectiveTenantId(session.tenantId);
     } else if (isAdminViewingTenant && selectedTenantSlug) {
       TenantTranslator.slugToUuid(selectedTenantSlug)
-        .then((uuid) => setEffectiveTenantId(uuid))
-        .catch(() => setEffectiveTenantId(null));
+        .then((uuid) => { if (!cancelled) setEffectiveTenantId(uuid); })
+        .catch(() => { if (!cancelled) setEffectiveTenantId(null); });
     } else {
       setEffectiveTenantId(null);
     }
+    return () => { cancelled = true; };
   }, [session?.tenantId, selectedTenantSlug, isAdminViewingTenant]);
 
   return effectiveTenantId;

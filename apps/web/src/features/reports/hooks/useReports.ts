@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { Result, AppError } from '@logiscore/core';
 import { EventBus } from '@logiscore/core';
 import { reportsService } from '../services/reportsService';
@@ -234,17 +234,27 @@ export function useReports(tenantId: string | null) {
   }, [tenantId, refetch]);
 
   const topCategories = state.topCategories;
-  const worstCategories = topCategories.length > 5
-    ? [...topCategories].reverse().slice(0, 5)
-    : [...topCategories].reverse();
 
-  const worstProducts = state.topProducts.length > 5
-    ? [...state.topProducts].sort((a, b) => a.profitBs - b.profitBs).slice(0, 5)
-    : [];
+  const worstCategories = useMemo(() =>
+    topCategories.length > 5
+      ? [...topCategories].reverse().slice(0, 5)
+      : [...topCategories].reverse(),
+    [topCategories]
+  );
 
-  const topByVolume = [...state.topProducts]
-    .sort((a, b) => b.quantitySold - a.quantitySold)
-    .slice(0, 5);
+  const worstProducts = useMemo(() =>
+    state.topProducts.length > 5
+      ? [...state.topProducts].sort((a, b) => a.profitBs - b.profitBs).slice(0, 5)
+      : [],
+    [state.topProducts]
+  );
+
+  const topByVolume = useMemo(() =>
+    [...state.topProducts]
+      .sort((a, b) => b.quantitySold - a.quantitySold)
+      .slice(0, 5),
+    [state.topProducts]
+  );
 
   return {
     filters, setFilters, activeTab, setActiveTab,

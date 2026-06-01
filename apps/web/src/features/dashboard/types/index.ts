@@ -10,6 +10,12 @@ export interface SubscriptionResponse {
   expires_at: string | null;
 }
 
+export interface TopProduct {
+  productId: string;
+  name: string;
+  totalQty: number;
+}
+
 export interface DashboardState {
   tenantInfo: TenantInfoResponse | null;
   employees: number;
@@ -18,3 +24,5 @@ export interface DashboardState {
   loading: boolean;
   error: string | null;
 }
+
+export type { Product } from '../../inventory/types';

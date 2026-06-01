@@ -210,30 +210,31 @@ export const dashboardService = {
       const startOfDay = startOfDayVzla();
       const endOfDay = startOfNextDayVzla();
 
-      // Intentamos primero Dexie para rapidez offline
-      const db = getDb();
-      const localSales = await db.sales
-        .where('[tenantId+createdAt]')
-        .between([tenantId, startOfDay], [tenantId, endOfDay])
-        .filter((s) => !s.deletedAt && s.status === 'completed' && !s.voidedAt)
-        .toArray();
+      if (isDbReady()) {
+        const db = getDb();
+        const localSales = await db.sales
+          .where('[tenantId+createdAt]')
+          .between([tenantId, startOfDay], [tenantId, endOfDay])
+          .filter((s) => !s.deletedAt && s.status === 'completed' && !s.voidedAt)
+          .toArray();
 
-      if (localSales.length > 0) {
-        const saleIds = [...new Set(localSales.map((s) => s.id))];
-        const items = saleIds.length > 0
-          ? await db.saleItems.where('saleId').anyOf(saleIds).toArray()
-          : [];
+        if (localSales.length > 0) {
+          const saleIds = [...new Set(localSales.map((s) => s.id))];
+          const items = saleIds.length > 0
+            ? await db.saleItems.where('saleId').anyOf(saleIds).toArray()
+            : [];
 
-        let totalEarnings = 0;
-        for (const item of items) {
-          const revenue = item.totalPriceUsd;
-          const cost = calcItemCost(item.quantity, item.costUsdPerUnit);
-          totalEarnings += revenue - cost;
+          let totalEarnings = 0;
+          for (const item of items) {
+            const revenue = item.totalPriceUsd;
+            const cost = calcItemCost(item.quantity, item.costUsdPerUnit);
+            totalEarnings += revenue - cost;
+          }
+          return success(preciseRound(totalEarnings, 2));
         }
-        return success(preciseRound(totalEarnings, 2));
       }
 
-      // Fallback a Supabase si Dexie está vacío (recuperar datos de sesión anterior)
+      // Fallback a Supabase si Dexie no está listo o está vacío
       const { data: cloudSales, error: cloudError } = await supabase
         .from('sales')
         .select('id, total_bs, igtf_bs, exchange_rate, created_at')

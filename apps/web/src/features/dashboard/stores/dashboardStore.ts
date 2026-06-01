@@ -1,11 +1,17 @@
 import { create } from 'zustand';
-import type { DashboardState } from '../types';
+import type { DashboardState, TopProduct, Product } from '../types';
 import { dashboardService } from '../services/dashboardService';
 
 const FETCH_COOLDOWN_MS = 2000;
 
 export interface DashboardStore extends DashboardState {
+  topProducts: TopProduct[];
+  topProductsLoading: boolean;
+  lowStockProducts: Product[];
+  lowStockLoading: boolean;
   fetchDashboard: (tenantId: string) => Promise<void>;
+  fetchTopProducts: (tenantId: string) => Promise<void>;
+  fetchLowStock: (tenantId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -23,6 +29,10 @@ let lastFetchTenant: string | null = null;
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
   ...initialState,
+  topProducts: [],
+  topProductsLoading: false,
+  lowStockProducts: [],
+  lowStockLoading: false,
 
   fetchDashboard: async (tenantId: string) => {
     const now = Date.now();
@@ -57,9 +67,27 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     });
   },
 
+  fetchTopProducts: async (tenantId: string) => {
+    set({ topProductsLoading: true });
+    const result = await dashboardService.getTopProducts(tenantId);
+    set({
+      topProducts: result.ok ? result.data : [],
+      topProductsLoading: false,
+    });
+  },
+
+  fetchLowStock: async (tenantId: string) => {
+    set({ lowStockLoading: true });
+    const result = await dashboardService.getLowStockProducts(tenantId);
+    set({
+      lowStockProducts: result.ok ? result.data : [],
+      lowStockLoading: false,
+    });
+  },
+
   reset: () => {
     lastFetchAt = 0;
     lastFetchTenant = null;
-    set(initialState);
+    set({ ...initialState, topProducts: [], topProductsLoading: false, lowStockProducts: [], lowStockLoading: false });
   },
 }));

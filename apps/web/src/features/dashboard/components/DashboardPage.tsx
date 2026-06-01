@@ -4,9 +4,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { EmptyState, Card, Badge } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp } from 'lucide-react';
-import { dashboardService } from '../services/dashboardService';
 import { displayStock } from '../../inventory/types';
-import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { EventBus } from '@logiscore/core';
 
 interface DashboardPageProps {
@@ -48,19 +46,19 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     tenantInfo,
     subscription,
     error: dashboardError,
+    topProducts,
+    topProductsLoading,
+    lowStockProducts,
+    lowStockLoading,
+    fetchTopProducts,
+    fetchLowStock,
   } = useDashboard(tenantId);
 
-  const lowStock = useInventoryStore((s) => s.lowStockProducts);
-  const fetchLowStock = useInventoryStore((s) => s.fetchLowStock);
-  const [topProducts, setTopProducts] = useState<{ productId: string; name: string; totalQty: number }[]>([]);
-  const [dataLoading, setDataLoading] = useState(false);
-  const [lowStockLoading, setLowStockLoading] = useState(true);
   const [showAllLowStock, setShowAllLowStock] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
-    setLowStockLoading(true);
-    fetchLowStock(tenantId).finally(() => setLowStockLoading(false));
+    fetchLowStock(tenantId);
     const sub1 = EventBus.on('SYNC.REFRESH_PRODUCTS', () => fetchLowStock(tenantId));
     const sub2 = EventBus.on('SALE.COMPLETED', () => fetchLowStock(tenantId));
     return () => {
@@ -71,12 +69,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
   useEffect(() => {
     if (!tenantId) return;
-    setDataLoading(true);
-    dashboardService.getTopProducts(tenantId).then((top) => {
-      if (top.ok) setTopProducts(top.data);
-      setDataLoading(false);
-    });
-  }, [tenantId]);
+    fetchTopProducts(tenantId);
+  }, [tenantId, fetchTopProducts]);
 
   const topQty = topProducts.length > 0 ? topProducts[0].totalQty : 1;
 
@@ -106,7 +100,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
               <h3 className="text-sm font-title font-bold text-gray-900">Productos más vendidos</h3>
             </div>
 
-            {dataLoading ? (
+            {topProductsLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex items-center gap-3">
@@ -180,8 +174,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                 <AlertTriangle size={16} className="text-warning" />
               </div>
               <h3 className="text-sm font-title font-bold text-gray-900">Stock bajo</h3>
-              {lowStock.length > 0 && (
-                <Badge variant="warning">{lowStock.length}</Badge>
+              {lowStockProducts.length > 0 && (
+                <Badge variant="warning">{lowStockProducts.length}</Badge>
               )}
             </div>
 
@@ -194,9 +188,9 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                   </div>
                 ))}
               </div>
-            ) : lowStock.length > 0 ? (
+            ) : lowStockProducts.length > 0 ? (
               <div className="space-y-2">
-                {(showAllLowStock ? lowStock : lowStock.slice(0, 5)).map((p) => {
+                {(showAllLowStock ? lowStockProducts : lowStockProducts.slice(0, 5)).map((p) => {
                   const isZero = p.stock <= 0;
                   const stockMin = p.stockMin ?? 1;
                   const pct = stockMin > 0 ? Math.min((p.stock / stockMin) * 100, 100) : 0;
@@ -224,7 +218,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                     </div>
                   );
                 })}
-                {lowStock.length > 5 && (
+                {lowStockProducts.length > 5 && (
                   <button
                     type="button"
                     onClick={() => setShowAllLowStock(!showAllLowStock)}
@@ -233,7 +227,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                     {showAllLowStock ? (
                       <>Mostrar menos <ChevronUp size={14} /></>
                     ) : (
-                      <>Ver {lowStock.length - 5} más <ChevronDown size={14} /></>
+                      <>Ver {lowStockProducts.length - 5} más <ChevronDown size={14} /></>
                     )}
                   </button>
                 )}

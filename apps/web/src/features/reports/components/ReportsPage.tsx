@@ -4,12 +4,12 @@ import type { Column } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
+import { useDrillDown } from '../hooks/useDrillDown';
 import { useToastStore } from '../../../stores/toastStore';
 import { ExportButton } from './ExportButton';
 import { ExecutiveSummary } from './ExecutiveSummary';
 import { InsightsCarousel } from './InsightsCarousel';
 import { PrintView } from './PrintView';
-import { reportsService } from '../services/reportsService';
 import type { ReportTimeRange, ReportTab, DrillDownType } from '../types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import '../print.css';
@@ -36,6 +36,132 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
 ];
 
+const PAYMENT_LABELS: Record<string, string> = {
+  efectivo_bs: 'Efectivo Bs',
+  pago_movil: 'Pago Móvil',
+  tarjeta_bs: 'Tarjeta Bs',
+  efectivo_usd: 'Efectivo $',
+};
+
+const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
+  title: string;
+  columns: Column<Record<string, unknown>>[];
+  footerSummary?: (data: Record<string, unknown>[]) => { label: string; value: ReactNode }[];
+}> = {
+  ventas: {
+    title: 'Ventas Totales',
+    columns: [
+      { key: 'date', header: 'Fecha' },
+      { key: 'time', header: 'Hora', hideOnMobile: true },
+      { key: 'itemCount', header: 'Items', className: 'text-center' },
+      { key: 'totalBs', header: 'Total Bs', render: (item) => formatBs(item.totalBs as number) },
+      { key: 'totalUsd', header: 'Total $', render: (item) => formatUsd(item.totalUsd as number) },
+      { key: 'paymentMethod', header: 'Pago', render: (item) => PAYMENT_LABELS[item.paymentMethod as string] ?? item.paymentMethod as string, hideOnMobile: true },
+    ],
+    footerSummary: (data) => {
+      const totalBs = data.reduce((s, d) => s + (d.totalBs as number), 0);
+      const totalUsd = data.reduce((s, d) => s + (d.totalUsd as number), 0);
+      return [
+        { label: 'Total Bs', value: formatBs(totalBs) },
+        { label: 'Total $', value: formatUsd(totalUsd) },
+        { label: 'Transacciones', value: String(data.length) },
+      ];
+    },
+  },
+  ganancia: {
+    title: 'Ganancia Bruta por Producto',
+    columns: [
+      { key: 'name', header: 'Producto', render: (item) => <span className="wrap-break-word">{item.name as string}</span> },
+      { key: 'quantitySold', header: 'Cant', className: 'text-center' },
+      { key: 'revenueBs', header: 'Ingreso Bs', render: (item) => formatBs(item.revenueBs as number), hideOnMobile: true },
+      { key: 'revenueUsd', header: 'Ingreso $', render: (item) => formatUsd(item.revenueUsd as number), hideOnMobile: true },
+      { key: 'costBs', header: 'Costo Bs', render: (item) => formatBs(item.costBs as number), hideOnMobile: true },
+      { key: 'costUsd', header: 'Costo $', render: (item) => formatUsd(item.costUsd as number), hideOnMobile: true },
+      { key: 'profitBs', header: 'Ganancia Bs', render: (item) => formatBs(item.profitBs as number) },
+      { key: 'profitUsd', header: 'Ganancia $', render: (item) => formatUsd(item.profitUsd as number) },
+      { key: 'marginPercent', header: 'Margen', render: (item) => `${item.marginPercent}%`, className: 'text-right' },
+    ],
+    footerSummary: (data) => {
+      const totalRevenue = data.reduce((s, d) => s + (d.revenueBs as number), 0);
+      const totalRevenueUsd = data.reduce((s, d) => s + (d.revenueUsd as number), 0);
+      const totalCost = data.reduce((s, d) => s + (d.costBs as number), 0);
+      const totalCostUsd = data.reduce((s, d) => s + (d.costUsd as number), 0);
+      const totalProfit = data.reduce((s, d) => s + (d.profitBs as number), 0);
+      const totalProfitUsd = data.reduce((s, d) => s + (d.profitUsd as number), 0);
+      return [
+        { label: 'Ingreso', value: `${formatBs(totalRevenue)} / ${formatUsd(totalRevenueUsd)}` },
+        { label: 'Costo', value: `${formatBs(totalCost)} / ${formatUsd(totalCostUsd)}` },
+        { label: 'Ganancia', value: `${formatBs(totalProfit)} / ${formatUsd(totalProfitUsd)}` },
+      ];
+    },
+  },
+  gastos: {
+    title: 'Gasto Total',
+    columns: [
+      { key: 'label', header: 'Tipo de Gasto' },
+      { key: 'amountBs', header: 'Monto Bs', render: (item) => formatBs(item.amountBs as number) },
+      { key: 'amountUsd', header: 'Monto $', render: (item) => formatUsd(item.amountUsd as number) },
+    ],
+    footerSummary: (data) => {
+      const totalBs = data.reduce((s, d) => s + (d.amountBs as number), 0);
+      const totalUsd = data.reduce((s, d) => s + (d.amountUsd as number), 0);
+      return [
+        { label: 'Total Bs', value: formatBs(totalBs) },
+        { label: 'Total $', value: formatUsd(totalUsd) },
+      ];
+    },
+  },
+  ticket: {
+    title: 'Distribución de Tickets',
+    columns: [
+      { key: 'range', header: 'Rango' },
+      { key: 'count', header: 'Ventas', className: 'text-center' },
+      { key: 'percentage', header: '%', render: (item) => `${item.percentage}%`, className: 'text-center' },
+      { key: 'cumulative', header: 'Acumulado', render: (item) => `${item.cumulative}%`, hideOnMobile: true },
+    ],
+  },
+  topProducto: {
+    title: 'Productos más Rentables',
+    columns: [
+      { key: 'name', header: 'Producto', render: (item) => <span className="wrap-break-word">{item.name as string}</span> },
+      { key: 'quantitySold', header: 'Cant', className: 'text-center' },
+      { key: 'revenueBs', header: 'Ingreso Bs', render: (item) => formatBs(item.revenueBs as number), hideOnMobile: true },
+      { key: 'costBs', header: 'Costo Bs', render: (item) => formatBs(item.costBs as number), hideOnMobile: true },
+      { key: 'profitBs', header: 'Ganancia Bs', render: (item) => formatBs(item.profitBs as number) },
+      { key: 'marginPercent', header: 'Margen', render: (item) => `${item.marginPercent}%`, className: 'text-right' },
+    ],
+    footerSummary: (data) => {
+      const totalRevenue = data.reduce((s, d) => s + (d.revenueBs as number), 0);
+      const totalCost = data.reduce((s, d) => s + (d.costBs as number), 0);
+      const totalProfit = data.reduce((s, d) => s + (d.profitBs as number), 0);
+      return [
+        { label: 'Ingreso', value: formatBs(totalRevenue) },
+        { label: 'Costo', value: formatBs(totalCost) },
+        { label: 'Ganancia', value: formatBs(totalProfit) },
+      ];
+    },
+  },
+  descuentos: {
+    title: 'Descuentos Aplicados',
+    columns: [
+      { key: 'date', header: 'Fecha', render: (item) => new Date(item.date as string).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit' }) },
+      { key: 'subtotalBs', header: 'Subtotal', render: (item) => formatBs(item.subtotalBs as number), hideOnMobile: true },
+      { key: 'discountBs', header: 'Descuento', render: (item) => <span className="text-danger font-bold">-{formatBs(item.discountBs as number)}</span> },
+      { key: 'totalBs', header: 'Total', render: (item) => formatBs(item.totalBs as number) },
+    ],
+    footerSummary: (data) => {
+      const totalDiscountBs = data.reduce((s, d) => s + (d.discountBs as number), 0);
+      const totalDiscountUsd = data.reduce((s, d) => s + (d.discountUsd as number), 0);
+      const totalSubtotal = data.reduce((s, d) => s + (d.subtotalBs as number), 0);
+      return [
+        { label: 'Subtotal', value: formatBs(totalSubtotal) },
+        { label: 'Descuento total', value: <span className="text-danger font-bold">-{formatBs(totalDiscountBs)}</span> },
+        { label: 'Descuento USD', value: <span className="text-danger">-{formatUsd(totalDiscountUsd)}</span> },
+      ];
+    },
+  },
+};
+
 interface ReportsPageProps {
   tenantId: string | null;
 }
@@ -44,20 +170,6 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
   const role = useAuthStore((s) => s.session?.role);
   const { addToast } = useToastStore();
   const isOwner = role === 'owner' || role === 'admin';
-
-  if (!isOwner) {
-    return (
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-        <Card>
-          <EmptyState
-            icon={<ShieldBan size={48} />}
-            title="Acceso restringido"
-            description="Solo el propietario del local puede acceder a los reportes."
-          />
-        </Card>
-      </div>
-    );
-  }
 
   const {
     filters,
@@ -78,222 +190,9 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     expenseBreakdown,
   } = useReports(tenantId);
 
+  const { activeDrillDown, drillDownData, drillDownLoading, openDrillDown, closeDrillDown } = useDrillDown(tenantId, filters);
+
   const [showCustomDate, setShowCustomDate] = useState(false);
-
-  const [activeDrillDown, setActiveDrillDown] = useState<DrillDownType | null>(null);
-  const [drillDownData, setDrillDownData] = useState<Record<string, unknown>[]>([]);
-  const [drillDownLoading, setDrillDownLoading] = useState(false);
-
-  const PAYMENT_LABELS: Record<string, string> = {
-    efectivo_bs: 'Efectivo Bs',
-    pago_movil: 'Pago Móvil',
-    tarjeta_bs: 'Tarjeta Bs',
-    efectivo_usd: 'Efectivo $',
-  };
-
-  const drillDownConfigs: Record<DrillDownType, {
-    title: string;
-    columns: Column<Record<string, unknown>>[];
-    footerSummary?: (data: Record<string, unknown>[]) => { label: string; value: ReactNode }[];
-  }> = {
-    ventas: {
-      title: 'Ventas Totales',
-      columns: [
-        { key: 'date', header: 'Fecha' },
-        { key: 'time', header: 'Hora', hideOnMobile: true },
-        { key: 'itemCount', header: 'Items', className: 'text-center' },
-        { key: 'totalBs', header: 'Total Bs', render: (item) => formatBs(item.totalBs as number) },
-        { key: 'totalUsd', header: 'Total $', render: (item) => formatUsd(item.totalUsd as number) },
-        { key: 'paymentMethod', header: 'Pago', render: (item) => PAYMENT_LABELS[item.paymentMethod as string] ?? item.paymentMethod as string, hideOnMobile: true },
-      ],
-      footerSummary: (data) => {
-        const totalBs = data.reduce((s, d) => s + (d.totalBs as number), 0);
-        const totalUsd = data.reduce((s, d) => s + (d.totalUsd as number), 0);
-        return [
-          { label: 'Total Bs', value: formatBs(totalBs) },
-          { label: 'Total $', value: formatUsd(totalUsd) },
-          { label: 'Transacciones', value: String(data.length) },
-        ];
-      },
-    },
-    ganancia: {
-      title: 'Ganancia Bruta por Producto',
-      columns: [
-        { key: 'name', header: 'Producto', render: (item) => <span className="wrap-break-word">{item.name as string}</span> },
-        { key: 'quantitySold', header: 'Cant', className: 'text-center' },
-        { key: 'revenueBs', header: 'Ingreso Bs', render: (item) => formatBs(item.revenueBs as number), hideOnMobile: true },
-        { key: 'revenueUsd', header: 'Ingreso $', render: (item) => formatUsd(item.revenueUsd as number), hideOnMobile: true },
-        { key: 'costBs', header: 'Costo Bs', render: (item) => formatBs(item.costBs as number), hideOnMobile: true },
-        { key: 'costUsd', header: 'Costo $', render: (item) => formatUsd(item.costUsd as number), hideOnMobile: true },
-        { key: 'profitBs', header: 'Ganancia Bs', render: (item) => formatBs(item.profitBs as number) },
-        { key: 'profitUsd', header: 'Ganancia $', render: (item) => formatUsd(item.profitUsd as number) },
-        { key: 'marginPercent', header: 'Margen', render: (item) => `${item.marginPercent}%`, className: 'text-right' },
-      ],
-      footerSummary: (data) => {
-        const totalRevenue = data.reduce((s, d) => s + (d.revenueBs as number), 0);
-        const totalRevenueUsd = data.reduce((s, d) => s + (d.revenueUsd as number), 0);
-        const totalCost = data.reduce((s, d) => s + (d.costBs as number), 0);
-        const totalCostUsd = data.reduce((s, d) => s + (d.costUsd as number), 0);
-        const totalProfit = data.reduce((s, d) => s + (d.profitBs as number), 0);
-        const totalProfitUsd = data.reduce((s, d) => s + (d.profitUsd as number), 0);
-        return [
-          { label: 'Ingreso', value: `${formatBs(totalRevenue)} / ${formatUsd(totalRevenueUsd)}` },
-          { label: 'Costo', value: `${formatBs(totalCost)} / ${formatUsd(totalCostUsd)}` },
-          { label: 'Ganancia', value: `${formatBs(totalProfit)} / ${formatUsd(totalProfitUsd)}` },
-        ];
-      },
-    },
-    gastos: {
-      title: 'Gasto Total',
-      columns: [
-        { key: 'label', header: 'Tipo de Gasto' },
-        { key: 'amountBs', header: 'Monto Bs', render: (item) => formatBs(item.amountBs as number) },
-        { key: 'amountUsd', header: 'Monto $', render: (item) => formatUsd(item.amountUsd as number) },
-      ],
-      footerSummary: (data) => {
-        const totalBs = data.reduce((s, d) => s + (d.amountBs as number), 0);
-        const totalUsd = data.reduce((s, d) => s + (d.amountUsd as number), 0);
-        return [
-          { label: 'Total Bs', value: formatBs(totalBs) },
-          { label: 'Total $', value: formatUsd(totalUsd) },
-        ];
-      },
-    },
-    ticket: {
-      title: 'Distribución de Tickets',
-      columns: [
-        { key: 'range', header: 'Rango' },
-        { key: 'count', header: 'Ventas', className: 'text-center' },
-        { key: 'percentage', header: '%', render: (item) => `${item.percentage}%`, className: 'text-center' },
-        { key: 'cumulative', header: 'Acumulado', render: (item) => `${item.cumulative}%`, hideOnMobile: true },
-      ],
-    },
-    topProducto: {
-      title: 'Productos más Rentables',
-      columns: [
-        { key: 'name', header: 'Producto', render: (item) => <span className="wrap-break-word">{item.name as string}</span> },
-        { key: 'quantitySold', header: 'Cant', className: 'text-center' },
-        { key: 'revenueBs', header: 'Ingreso Bs', render: (item) => formatBs(item.revenueBs as number), hideOnMobile: true },
-        { key: 'costBs', header: 'Costo Bs', render: (item) => formatBs(item.costBs as number), hideOnMobile: true },
-        { key: 'profitBs', header: 'Ganancia Bs', render: (item) => formatBs(item.profitBs as number) },
-        { key: 'marginPercent', header: 'Margen', render: (item) => `${item.marginPercent}%`, className: 'text-right' },
-      ],
-      footerSummary: (data) => {
-        const totalRevenue = data.reduce((s, d) => s + (d.revenueBs as number), 0);
-        const totalCost = data.reduce((s, d) => s + (d.costBs as number), 0);
-        const totalProfit = data.reduce((s, d) => s + (d.profitBs as number), 0);
-        return [
-          { label: 'Ingreso', value: formatBs(totalRevenue) },
-          { label: 'Costo', value: formatBs(totalCost) },
-          { label: 'Ganancia', value: formatBs(totalProfit) },
-        ];
-      },
-    },
-    descuentos: {
-      title: 'Descuentos Aplicados',
-      columns: [
-        { key: 'date', header: 'Fecha', render: (item) => new Date(item.date as string).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit' }) },
-        { key: 'subtotalBs', header: 'Subtotal', render: (item) => formatBs(item.subtotalBs as number), hideOnMobile: true },
-        { key: 'discountBs', header: 'Descuento', render: (item) => <span className="text-danger font-bold">-{formatBs(item.discountBs as number)}</span> },
-        { key: 'totalBs', header: 'Total', render: (item) => formatBs(item.totalBs as number) },
-      ],
-      footerSummary: (data) => {
-        const totalDiscountBs = data.reduce((s, d) => s + (d.discountBs as number), 0);
-        const totalDiscountUsd = data.reduce((s, d) => s + (d.discountUsd as number), 0);
-        const totalSubtotal = data.reduce((s, d) => s + (d.subtotalBs as number), 0);
-        return [
-          { label: 'Subtotal', value: formatBs(totalSubtotal) },
-          { label: 'Descuento total', value: <span className="text-danger font-bold">-{formatBs(totalDiscountBs)}</span> },
-          { label: 'Descuento USD', value: <span className="text-danger">-{formatUsd(totalDiscountUsd)}</span> },
-        ];
-      },
-    },
-  };
-
-  const handleKpiClick = useCallback(async (type: DrillDownType) => {
-    if (!tenantId) return;
-    setActiveDrillDown(type);
-    setDrillDownLoading(true);
-
-    try {
-      let result;
-      if (type === 'ventas') {
-        result = await reportsService.getSalesDetail(tenantId, filters);
-      } else if (type === 'ganancia' || type === 'topProducto') {
-        result = await reportsService.getTopProducts(tenantId, filters, 50);
-      } else if (type === 'gastos') {
-        result = await reportsService.getExpenseBreakdown(tenantId, filters);
-      } else if (type === 'ticket') {
-        result = await reportsService.getTicketDistribution(tenantId, filters);
-      } else if (type === 'descuentos') {
-        result = await reportsService.getDiscountBreakdown(tenantId, filters);
-      }
-
-      if (result?.ok) {
-        setDrillDownData(result.data as unknown as Record<string, unknown>[]);
-      } else {
-        setDrillDownData([]);
-      }
-    } catch {
-      setDrillDownData([]);
-    } finally {
-      setDrillDownLoading(false);
-    }
-  }, [tenantId, filters]);
-
-  const getSubtitle = (): string => {
-    const rangeLabels: Record<string, string> = {
-      today: 'Hoy',
-      yesterday: 'Ayer',
-      last7days: 'Últimos 7 días',
-      thisMonth: 'Este mes',
-      lastMonth: 'Mes pasado',
-      custom: 'Personalizado',
-    };
-    return rangeLabels[filters.timeRange] ?? '';
-  };
-
-  const renderTicketDistribution = (data: Record<string, unknown>[]) => {
-    if (data.length === 0) return null;
-    const maxCount = Math.max(...data.map((d) => d.count as number), 1);
-    return (
-      <div className="space-y-2 pt-2">
-        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Distribución</p>
-        {data.map((item, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <span className="text-xs text-text-secondary w-24 shrink-0 text-right">{item.range as string}</span>
-            <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary/60 rounded-full transition-all duration-300"
-                style={{ width: `${((item.count as number) / maxCount) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs font-semibold text-gray-700 w-8 text-right">{item.count as number}</span>
-            <span className="text-xs text-text-secondary w-12 text-right">{String(item.percentage)}%</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const handleTimeRangeChange = (value: string) => {
-    const range = value as ReportTimeRange;
-    if (range === 'custom') {
-      setShowCustomDate(true);
-      setFilters({ timeRange: 'custom' });
-    } else {
-      setShowCustomDate(false);
-      setFilters({ timeRange: range });
-    }
-  };
-
-  const bottomNavItems: BottomNavItem[] = TABS.map((tab) => ({
-    id: tab.id,
-    label: tab.label,
-    icon: tab.icon,
-    onClick: () => setActiveTab(tab.id),
-  }));
-
   const printRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -369,6 +268,73 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       setIsGeneratingPdf(false);
     }
   }, [addToast]);
+
+  if (!isOwner) {
+    return (
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        <Card>
+          <EmptyState
+            icon={<ShieldBan size={48} />}
+            title="Acceso restringido"
+            description="Solo el propietario del local puede acceder a los reportes."
+          />
+        </Card>
+      </div>
+    );
+  }
+
+  const handleTimeRangeChange = (value: string) => {
+    const range = value as ReportTimeRange;
+    if (range === 'custom') {
+      setShowCustomDate(true);
+      setFilters({ timeRange: 'custom' });
+    } else {
+      setShowCustomDate(false);
+      setFilters({ timeRange: range });
+    }
+  };
+
+  const getSubtitle = (): string => {
+    const rangeLabels: Record<string, string> = {
+      today: 'Hoy',
+      yesterday: 'Ayer',
+      last7days: 'Últimos 7 días',
+      thisMonth: 'Este mes',
+      lastMonth: 'Mes pasado',
+      custom: 'Personalizado',
+    };
+    return rangeLabels[filters.timeRange] ?? '';
+  };
+
+  const renderTicketDistribution = (data: Record<string, unknown>[]) => {
+    if (data.length === 0) return null;
+    const maxCount = Math.max(...data.map((d) => d.count as number), 1);
+    return (
+      <div className="space-y-2 pt-2">
+        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Distribución</p>
+        {data.map((item, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <span className="text-xs text-text-secondary w-24 shrink-0 text-right">{item.range as string}</span>
+            <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary/60 rounded-full transition-all duration-300"
+                style={{ width: `${((item.count as number) / maxCount) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs font-semibold text-gray-700 w-8 text-right">{item.count as number}</span>
+            <span className="text-xs text-text-secondary w-12 text-right">{String(item.percentage)}%</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const bottomNavItems: BottomNavItem[] = TABS.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    icon: tab.icon,
+    onClick: () => setActiveTab(tab.id),
+  }));
 
   return (
     <>
@@ -468,17 +434,14 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       <div className="hidden sm:flex items-center gap-1 bg-surface-alt/80 rounded-xl p-1 shadow-sm">
         {TABS.map((tab) => (
           <Tooltip key={tab.id} content={`Ver ${tab.label.toLowerCase()}`} position="bottom">
-            <button
+            <Button
+              variant={activeTab === tab.id ? 'primary' : 'ghost'}
+              size="sm"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === tab.id
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-text-secondary hover:text-gray-700'
-              }`}
             >
               {tab.icon}
               {tab.label}
-            </button>
+            </Button>
           </Tooltip>
         ))}
       </div>
@@ -487,7 +450,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       <div className="space-y-4 sm:space-y-6">
         <div className={`print-section ${activeTab !== 'summary' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-            <ExecutiveSummary data={summary} loading={loading} onKpiClick={handleKpiClick} />
+            <ExecutiveSummary data={summary} loading={loading} onKpiClick={openDrillDown} />
             <ExpenseBreakdownChart data={expenseBreakdown} loading={loading} />
           </Suspense>
         </div>
@@ -559,13 +522,13 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
 
       <DrillDownModal
         isOpen={!!activeDrillDown}
-        onClose={() => setActiveDrillDown(null)}
-        title={activeDrillDown ? drillDownConfigs[activeDrillDown].title : ''}
+        onClose={closeDrillDown}
+        title={activeDrillDown ? DRILL_DOWN_CONFIGS[activeDrillDown].title : ''}
         subtitle={activeDrillDown ? getSubtitle() : undefined}
-        columns={activeDrillDown ? drillDownConfigs[activeDrillDown].columns : []}
+        columns={activeDrillDown ? DRILL_DOWN_CONFIGS[activeDrillDown].columns : []}
         data={drillDownData}
         loading={drillDownLoading}
-        footerSummary={activeDrillDown && drillDownConfigs[activeDrillDown].footerSummary ? drillDownConfigs[activeDrillDown].footerSummary(drillDownData) : undefined}
+        footerSummary={activeDrillDown && DRILL_DOWN_CONFIGS[activeDrillDown].footerSummary ? DRILL_DOWN_CONFIGS[activeDrillDown].footerSummary(drillDownData) : undefined}
       >
         {activeDrillDown === 'ticket' && renderTicketDistribution(drillDownData)}
       </DrillDownModal>
