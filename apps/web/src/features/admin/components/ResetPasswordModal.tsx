@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { Alert, Modal, Input, Button } from '../../../common/components';
+import { ResetPasswordSchema } from '../../../specs/admin/index';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   userEmail: string;
   userName: string;
-  onReset: (newPassword: string) => Promise<Result<void, AppError>>;
+  userId: string;
+  onReset: (userId: string, newPassword: string) => Promise<Result<void, AppError>>;
 }
 
-export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, onReset }: ResetPasswordModalProps) {
+export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, userId, onReset }: ResetPasswordModalProps) {
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
@@ -24,13 +26,14 @@ export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, onRes
   }, [isOpen]);
 
   const handleSubmit = async () => {
-    if (!newPassword || newPassword.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.');
+    setError(null);
+    const parsed = ResetPasswordSchema.safeParse({ userId, newPassword });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message || 'Datos inválidos.');
       return;
     }
     setIsResetting(true);
-    setError(null);
-    const result = await onReset(newPassword);
+    const result = await onReset(parsed.data.userId, parsed.data.newPassword);
     setIsResetting(false);
     if (result.ok) {
       onClose();

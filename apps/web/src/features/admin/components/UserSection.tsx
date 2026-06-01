@@ -15,7 +15,7 @@ interface UserSectionProps {
   users: UserRole[];
   selectedTenantId: string | null;
   selectedTenantName: string;
-  addEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
+  addEmployee: (payload: unknown) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
   removeEmployee: (userRoleId: string) => Promise<Result<unknown, AppError>>;
   resetPassword: (userId: string, newPassword: string) => Promise<Result<void, AppError>>;
   showAddEmployeeModal: boolean;
@@ -53,14 +53,13 @@ export function UserSection({
     }
   }, [deleteTarget, removeEmployee, addToast]);
 
-  const handleResetPassword = useCallback(async (newPassword: string): Promise<Result<void, AppError>> => {
-    if (!resetTarget) return { ok: false, error: { message: 'Sin objetivo', code: 'UNKNOWN' } as AppError };
-    const result = await resetPassword(resetTarget.userId, newPassword);
+  const handleResetPassword = useCallback(async (userId: string, newPassword: string): Promise<Result<void, AppError>> => {
+    const result = await resetPassword(userId, newPassword);
     if (result.ok) {
       addToast({ type: 'success', message: 'Contraseña restablecida exitosamente.', duration: 4000 });
     }
     return result;
-  }, [resetTarget, resetPassword, addToast]);
+  }, [resetPassword, addToast]);
 
   const columns: Column<UserRole>[] = [
     { key: 'email', header: 'Email' },
@@ -147,6 +146,7 @@ export function UserSection({
         onClose={() => setResetTarget(null)}
         userEmail={resetTarget?.email ?? ''}
         userName={resetTarget?.name ?? ''}
+        userId={resetTarget?.userId ?? ''}
         onReset={handleResetPassword}
       />
     </>

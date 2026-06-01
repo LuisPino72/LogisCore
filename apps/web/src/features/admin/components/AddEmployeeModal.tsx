@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { Modal, Input, Button } from '../../../common/components';
+import { CreateEmployeeInputSchema } from '../types';
 
 interface EmployeeForm {
   email: string;
@@ -15,7 +16,7 @@ interface AddEmployeeModalProps {
   onClose: () => void;
   tenantId: string | null;
   tenantName: string;
-  onAddEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
+  onAddEmployee: (payload: unknown) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
 }
 
 export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddEmployee }: AddEmployeeModalProps) {
@@ -41,13 +42,14 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
     if (!tenantId) return;
     setError(null);
 
-    if (!employee.email || !employee.password || !employee.name) {
-      setError('Todos los campos del empleado son obligatorios');
+    const parsed = CreateEmployeeInputSchema.safeParse({ ...employee, tenantId });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message || 'Datos inválidos.');
       return;
     }
 
     setIsSubmitting(true);
-    const result = await onAddEmployee({ ...employee, tenantId });
+    const result = await onAddEmployee(parsed.data);
     setIsSubmitting(false);
 
     if (result.ok) {

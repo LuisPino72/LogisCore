@@ -19,10 +19,20 @@ function decodeJWTPayload(token: string): Record<string, unknown> {
   }
 }
 
+function isJWTExpired(token: string): boolean {
+  const decoded = decodeJWTPayload(token);
+  const exp = decoded.exp as number | undefined;
+  if (!exp) return false;
+  return Date.now() >= exp * 1000;
+}
+
+function sanitizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function extractRole(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']): string | null {
   if (!session) return null;
-  // Session.app_metadata es raw_app_meta_data de auth.users (NO tiene role del hook)
-  // El hook inyecta role en el JWT claims.app_metadata
+  if (isJWTExpired(session.access_token)) return null;
   const decoded = decodeJWTPayload(session.access_token);
   const jwtAppMeta = decoded.app_metadata as Record<string, unknown> | undefined;
   const jwtRole = jwtAppMeta?.role as string | undefined;
@@ -32,6 +42,7 @@ function extractRole(session: Awaited<ReturnType<typeof supabase.auth.getSession
 
 function extractTenantId(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']): string | null {
   if (!session) return null;
+  if (isJWTExpired(session.access_token)) return null;
   const decoded = decodeJWTPayload(session.access_token);
   const jwtAppMeta = decoded.app_metadata as Record<string, unknown> | undefined;
   const jwtTenantId = jwtAppMeta?.tenant_id as string | undefined;
@@ -84,6 +95,10 @@ export const authService = {
     const { data: { session }, error } = await supabase.auth.getSession();
 
     if (error || !session) {
+      return success(null);
+    }
+
+    if (isJWTExpired(session.access_token)) {
       return success(null);
     }
 
@@ -148,7 +163,8 @@ export const authService = {
   },
 
   async login(email: string, password: string): Promise<Result<UserSession, AppError>> {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const sanitizedEmail = sanitizeEmail(email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: sanitizedEmail, password });
 
     if (error) {
       return failure(mapSupabaseAuthError(error));
@@ -188,7 +204,7 @@ export const authService = {
       if (!subCheck.ok) return subCheck;
     }
 
-    await emitWithAudit('USER.LOGIN', 'AUTH', { email, role: userSession.role, tenantSlug: userSession.tenantSlug }, {
+    await emitWithAudit('USER.LOGIN', 'AUTH', { email: sanitizedEmail, role: userSession.role, tenantSlug: userSession.tenantSlug }, {
       userId: userSession.userId,
       tenantUuid: userSession.tenantId ?? null,
     });

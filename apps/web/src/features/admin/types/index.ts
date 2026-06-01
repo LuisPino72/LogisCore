@@ -9,9 +9,17 @@ export const CreateTenantInputSchema = z.object({
 
 export type CreateTenantInput = z.infer<typeof CreateTenantInputSchema>;
 
+const passwordSchema = z.string()
+  .min(8, 'Mínimo 8 caracteres')
+  .max(100)
+  .regex(/[A-Z]/, 'Debe contener una mayúscula')
+  .regex(/[a-z]/, 'Debe contener una minúscula')
+  .regex(/[0-9]/, 'Debe contener un número')
+  .regex(/[^A-Za-z0-9]/, 'Debe contener un símbolo');
+
 export const CreateOwnerInputSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
+  password: passwordSchema,
   name: z.string().min(1, 'Nombre requerido'),
   tenantId: z.string().uuid('ID de tenant inválido'),
 }).strict();
@@ -20,7 +28,7 @@ export type CreateOwnerInput = z.infer<typeof CreateOwnerInputSchema>;
 
 export const CreateEmployeeInputSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
+  password: passwordSchema,
   name: z.string().min(1, 'Nombre requerido'),
   tenantId: z.string().uuid('ID de tenant inválido'),
 }).strict();
@@ -29,7 +37,7 @@ export type CreateEmployeeInput = z.infer<typeof CreateEmployeeInputSchema>;
 
 export const EdgeCreateUserSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
-  password: z.string().min(6, 'Password mínimo 6 caracteres').max(20, 'Password máximo 20 caracteres'),
+  password: passwordSchema,
   name: z.string().min(1, 'Nombre requerido'),
 }).strict();
 
@@ -42,6 +50,15 @@ export const CreateTenantWithUsersInputSchema = z.object({
 }).strict();
 
 export type CreateTenantWithUsersInput = z.infer<typeof CreateTenantWithUsersInputSchema>;
+
+export const UpdateTenantSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  rif: z.string().regex(/^[VJEGP]\d{9}$/).optional(),
+  direccion: z.string().max(200).optional(),
+  telefono: z.string().regex(/^(\+58|0)\d{10}$/).optional(),
+}).strict();
+
+export type UpdateTenantInput = z.infer<typeof UpdateTenantSchema>;
 
 export interface Tenant {
   id: string;

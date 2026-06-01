@@ -58,7 +58,7 @@ interface TenantSectionProps {
   softDeleteTenant: (id: string) => Promise<Result<unknown, AppError>>;
   hardDeleteTenant: (id: string) => Promise<Result<unknown, AppError>>;
   restoreTenant: (id: string) => Promise<unknown>;
-  addEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
+  addEmployee: (payload: unknown) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
   fetchAnalytics: (tenantId: string) => Promise<void>;
   analytics: TenantAnalytics | null;
   showCreateModal: boolean;

@@ -5,6 +5,7 @@ import { logger } from '../../../lib/logger';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { getDb, isDbReady, type DexieTenantRef } from '../../../services/dexie/db';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
+import { ValidateDashboardTenantSchema, TenantInfoSchema, SubscriptionInfoSchema } from '../../../specs/dashboard/index';
 import type { TenantInfoResponse, SubscriptionResponse } from '../types';
 import { startOfDayVzla, startOfNextDayVzla } from '../../../lib/date';
 import type { Product } from '../../../specs/inventory';
@@ -64,6 +65,10 @@ function readCachedEmployeeCount(): number | null {
 
 export const dashboardService = {
   async getTenantInfo(tenantId: string): Promise<Result<TenantInfoResponse | null, AppError>> {
+    const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(DashboardErrors.TENANT_INFO_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     const { data, error } = await supabase
       .from('tenants')
       .select('name, slug, rif')
@@ -72,6 +77,11 @@ export const dashboardService = {
       .single();
 
     if (!error && data) {
+      const parsed = TenantInfoSchema.safeParse(data);
+      if (parsed.success) {
+        await cacheTenantInfo(tenantId, parsed.data);
+        return success(parsed.data);
+      }
       await cacheTenantInfo(tenantId, data);
       return success(data);
     }
@@ -84,6 +94,10 @@ export const dashboardService = {
   },
 
   async getSubscriptionInfo(tenantId: string): Promise<Result<SubscriptionResponse | null, AppError>> {
+    const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(DashboardErrors.SUBSCRIPTION_INFO_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     const { data, error } = await supabase
       .from('subscriptions')
       .select('plan, status, expires_at')
@@ -91,6 +105,11 @@ export const dashboardService = {
       .single();
 
     if (!error && data) {
+      const parsed = SubscriptionInfoSchema.safeParse(data);
+      if (parsed.success) {
+        localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(parsed.data));
+        return success(parsed.data);
+      }
       localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(data));
       return success(data);
     }
@@ -103,6 +122,10 @@ export const dashboardService = {
   },
 
   async getEmployeeCount(tenantId: string): Promise<Result<number, AppError>> {
+    const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(DashboardErrors.EMPLOYEES_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     const { count, error } = await supabase
       .from('user_roles')
       .select('id', { count: 'exact', head: true })
@@ -123,10 +146,18 @@ export const dashboardService = {
   },
 
   async getLowStockProducts(tenantId: string): Promise<Result<Product[], AppError>> {
+    const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     return inventoryService.getLowStockProducts(tenantId);
   },
 
   async getTopProducts(tenantId: string, limit = 5): Promise<Result<{ productId: string; name: string; totalQty: number }[], AppError>> {
+    const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     if (!navigator.onLine) return success([]);
     try {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
@@ -170,6 +201,10 @@ export const dashboardService = {
   },
 
   async getTodayEarnings(tenantId: string): Promise<Result<number, AppError>> {
+    const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     try {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
       const startOfDay = startOfDayVzla();

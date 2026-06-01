@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { adminService } from '../services/adminService';
-import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory, CreateGlobalCategoryInput } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory } from '../types';
 
 interface UseAdminPanelReturn {
   tenants: Tenant[];
@@ -21,15 +21,15 @@ interface UseAdminPanelReturn {
   fetchDashboardStats: () => Promise<void>;
   fetchAnalytics: (tenantId: string) => Promise<void>;
   renewSubscription: (tenantId: string) => Promise<Result<void, AppError>>;
-  createTenant: (payload: CreateTenantWithUsersInput) => Promise<Result<CreateTenantResponse, AppError>>;
-  addEmployee: (payload: { email: string; password: string; name: string; tenantId: string }) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
-  updateTenant: (id: string, data: Partial<Pick<Tenant, 'name' | 'rif'>>) => Promise<Result<Tenant, AppError>>;
+  createTenant: (payload: unknown) => Promise<Result<CreateTenantResponse, AppError>>;
+  addEmployee: (payload: unknown) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
+  updateTenant: (id: string, data: unknown) => Promise<Result<Tenant, AppError>>;
   removeEmployee: (userRoleId: string) => Promise<Result<void, AppError>>;
   softDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
   hardDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
   restoreTenant: (id: string) => Promise<Result<void, AppError>>;
   resetPassword: (userId: string, newPassword: string) => Promise<Result<void, AppError>>;
-  createGlobalCategory: (input: CreateGlobalCategoryInput) => Promise<Result<GlobalCategory, AppError>>;
+  createGlobalCategory: (input: unknown) => Promise<Result<GlobalCategory, AppError>>;
   updateGlobalCategory: (id: string, name: string) => Promise<Result<GlobalCategory, AppError>>;
   deleteGlobalCategory: (id: string) => Promise<Result<void, AppError>>;
 }
@@ -81,7 +81,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     setIsLoading(false);
   }, []);
 
-  const createTenant = useCallback(async (payload: CreateTenantWithUsersInput) => {
+  const createTenant = useCallback(async (payload: unknown) => {
     const result = await adminService.createTenant(payload);
     if (result.ok) {
       await fetchTenants();
@@ -89,15 +89,16 @@ export function useAdminPanel(): UseAdminPanelReturn {
     return result;
   }, [fetchTenants]);
 
-  const addEmployee = useCallback(async (payload: { email: string; password: string; name: string; tenantId: string }) => {
+  const addEmployee = useCallback(async (payload: unknown) => {
     const result = await adminService.addEmployee(payload);
     if (result.ok) {
-      await fetchUsers(payload.tenantId);
+      const data = payload as { tenantId: string };
+      await fetchUsers(data.tenantId);
     }
     return result;
   }, [fetchUsers]);
 
-  const updateTenant = useCallback(async (id: string, data: Partial<Pick<Tenant, 'name' | 'rif'>>) => {
+  const updateTenant = useCallback(async (id: string, data: unknown) => {
     const result = await adminService.updateTenant(id, data);
     if (result.ok) {
       await fetchTenants();
@@ -180,7 +181,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     setIsLoading(false);
   }, []);
 
-  const createGlobalCategory = useCallback(async (input: CreateGlobalCategoryInput) => {
+  const createGlobalCategory = useCallback(async (input: unknown) => {
     const result = await adminService.createGlobalCategory(input);
     if (result.ok) {
       await fetchGlobalCategories();

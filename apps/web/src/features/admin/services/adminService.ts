@@ -1,7 +1,9 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { startOfDayVzla } from '../../../lib/date';
-import type { Tenant, UserRole, GlobalUser, CreateTenantWithUsersInput, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory, CreateGlobalCategoryInput } from '../types';
+import type { Tenant, UserRole, GlobalUser, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory } from '../types';
+import { CreateTenantWithUsersInputSchema, CreateEmployeeInputSchema, UpdateTenantSchema, CreateGlobalCategorySchema } from '../types';
+import { ResetPasswordSchema, RestoreTenantSchema } from '../../../specs/admin/index';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
@@ -182,7 +184,11 @@ export const adminService = {
     }
   },
 
-  async createTenant(payload: CreateTenantWithUsersInput): Promise<Result<CreateTenantResponse, AppError>> {
+  async createTenant(payload: unknown): Promise<Result<CreateTenantResponse, AppError>> {
+    const parsed = CreateTenantWithUsersInputSchema.safeParse(payload);
+    if (!parsed.success) {
+      return failure(new AppError(AdminErrors.ADMIN_USER_CREATE_FAILED, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
     const tokenResult = await getAdminToken();
     if (!tokenResult.ok) return tokenResult;
 
@@ -193,7 +199,7 @@ export const adminService = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${tokenResult.data}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsed.data),
       });
 
       if (!response.ok) {
@@ -224,10 +230,15 @@ export const adminService = {
     }
   },
 
-  async addEmployee(payload: { email: string; password: string; name: string; tenantId: string }): Promise<Result<{ id: string; email: string; name: string }, AppError>> {
+  async addEmployee(payload: unknown): Promise<Result<{ id: string; email: string; name: string }, AppError>> {
+    const parsed = CreateEmployeeInputSchema.safeParse(payload);
+    if (!parsed.success) {
+      return failure(new AppError(AdminErrors.ADMIN_USER_CREATE_FAILED, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
     const tokenResult = await getAdminToken();
     if (!tokenResult.ok) return tokenResult;
 
+    const data = parsed.data;
     try {
       const response = await fetch(EDGE_FUNCTIONS.createTenant, {
         method: 'POST',
@@ -238,8 +249,8 @@ export const adminService = {
         body: JSON.stringify({
           tenant: null,
           owner: null,
-          employees: [{ email: payload.email, password: payload.password, name: payload.name }],
-          existingTenantId: payload.tenantId,
+          employees: [{ email: data.email, password: data.password, name: data.name }],
+          existingTenantId: data.tenantId,
         }),
       });
 
@@ -259,10 +270,14 @@ export const adminService = {
     }
   },
 
-  async updateTenant(id: string, data: Partial<Pick<Tenant, 'name' | 'rif' | 'direccion' | 'telefono'>>): Promise<Result<Tenant, AppError>> {
+  async updateTenant(id: string, data: unknown): Promise<Result<Tenant, AppError>> {
+    const parsed = UpdateTenantSchema.safeParse(data);
+    if (!parsed.success) {
+      return failure(new AppError(AdminErrors.TENANT_NOT_FOUND, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
     const { data: updated, error } = await supabase
       .from('tenants')
-      .update(data)
+      .update(parsed.data)
       .eq('id', id)
       .select('id, name, slug, rif, direccion, telefono, created_at')
       .single();
@@ -346,6 +361,10 @@ export const adminService = {
   },
 
   async renewSubscription(tenantId: string): Promise<Result<void, AppError>> {
+    const parsed = RestoreTenantSchema.safeParse({ tenantId });
+    if (!parsed.success) {
+      return failure(new AppError(AdminErrors.SUBSCRIPTION_RENEW_FAILED, parsed.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     const { data: current } = await supabase
       .from('subscriptions')
       .select('expires_at')
@@ -382,6 +401,10 @@ export const adminService = {
   },
 
   async restoreTenant(id: string): Promise<Result<void, AppError>> {
+    const parsed = RestoreTenantSchema.safeParse({ tenantId: id });
+    if (!parsed.success) {
+      return failure(new AppError(AdminErrors.ADMIN_RESTORE_FAILED, parsed.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     const { error } = await supabase.rpc('restore_tenant_cascade', { p_tenant_id: id });
 
     if (error) {
@@ -392,6 +415,10 @@ export const adminService = {
   },
 
   async resetPassword(userId: string, newPassword: string): Promise<Result<void, AppError>> {
+    const parsed = ResetPasswordSchema.safeParse({ userId, newPassword });
+    if (!parsed.success) {
+      return failure(new AppError(AdminErrors.ADMIN_RESET_PASS_FAILED, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
     const tokenResult = await getAdminToken();
     if (!tokenResult.ok) return tokenResult;
 
@@ -404,7 +431,7 @@ export const adminService = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${tokenResult.data}`,
           },
-          body: JSON.stringify({ userId, newPassword }),
+          body: JSON.stringify({ userId: parsed.data.userId, newPassword: parsed.data.newPassword }),
         },
       );
 
@@ -481,10 +508,14 @@ export const adminService = {
     return success(categories);
   },
 
-  async createGlobalCategory(input: CreateGlobalCategoryInput): Promise<Result<GlobalCategory, AppError>> {
+  async createGlobalCategory(input: unknown): Promise<Result<GlobalCategory, AppError>> {
+    const parsed = CreateGlobalCategorySchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(new AppError(AdminErrors.ADMIN_USER_CREATE_FAILED, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
     const { data, error } = await supabase
       .from('categories')
-      .insert({ name: input.name, is_predefined: true, tenant_id: null })
+      .insert({ name: parsed.data.name, is_predefined: true, tenant_id: null })
       .select('id, name, created_at, updated_at')
       .single();
 
