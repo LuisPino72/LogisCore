@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { CreateProductInputSchema, CreatePresentationInputSchema } from '../../../specs/inventory';
 import type { ProductFormData, CreateProductInput, CreatePresentationInput } from '../types';
 import { useInventoryStore } from '../stores/inventoryStore';
-import { supabase } from '../../../services/supabase/client';
-import { getDb } from '../../../services/dexie/db';
+import { inventoryService } from '../services/inventoryService';
 
 type PresentationFormData = CreatePresentationInput & { id?: string };
 
@@ -122,9 +121,9 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       setPresentationsLoading(true);
       const load = async () => {
         try {
-          const existing = await useInventoryStore.getState().fetchPresentations(options.editProductId!);
-          if (existing.length > 0) {
-            const mapped = existing.map(p => ({
+          const result = await inventoryService.getPresentationsForProduct(options.editProductId!);
+          if (result.ok && result.data.length > 0) {
+            const mapped = result.data.map(p => ({
               id: p.id,
               name: p.name,
               priceUsd: p.priceUsd,
@@ -134,46 +133,6 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
               barcode: p.barcode || undefined,
               stockInicial: 0,
             }));
-            setPresentations(mapped);
-            return;
-          }
-          // Fallback: si Dexie está vacío, intentar desde Supabase directo
-          const { data: remotePres } = await supabase
-            .from('product_presentations')
-            .select('*')
-            .eq('product_id', options.editProductId!)
-            .is('deleted_at', null)
-            .order('sort_order', { ascending: true });
-
-          if (remotePres && remotePres.length > 0) {
-            const db = getDb();
-            const now = new Date().toISOString();
-            const mapped = remotePres.map(p => ({
-              id: p.id,
-              name: p.name,
-              priceUsd: p.price_usd,
-              unitMultiplier: p.unit_multiplier,
-              stockType: 'shared' as const,
-              sortOrder: p.sort_order ?? 0,
-              barcode: p.barcode || undefined,
-              stockInicial: 0,
-            }));
-            // Sembrar en Dexie para que estén disponibles offline
-            for (const pres of remotePres) {
-              await db.productPresentations.put({
-                id: pres.id,
-                tenantId: '',
-                productId: pres.product_id,
-                name: pres.name,
-                priceUsd: pres.price_usd,
-                unitMultiplier: pres.unit_multiplier,
-                stockType: pres.stock_type || 'shared',
-                barcode: pres.barcode,
-                sortOrder: pres.sort_order,
-                createdAt: pres.created_at,
-                updatedAt: pres.updated_at ?? now,
-              });
-            }
             setPresentations(mapped);
           }
         } finally {

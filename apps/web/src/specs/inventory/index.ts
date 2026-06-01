@@ -18,6 +18,7 @@ export const ProductSchema = z.object({
   isTaxable: z.boolean().default(true),
   isSellable: z.boolean().default(true),
   unit: z.union([z.enum(PESABLE_UNITS), z.literal('unidad')]),
+  /** Stock en unidades de almacenamiento (gramos para kg, mililitros para lt, unidades para unidad) */
   stock: z.number().int().min(0),
   stockMin: z.number().int().min(0).optional(),
   imageUrl: z.string().optional(),
@@ -84,6 +85,7 @@ export type Category = z.infer<typeof CategorySchema>;
 
 export const InventoryMovementSchema = z.object({
   id: z.string().uuid(),
+  tenantId: z.string().uuid(),
   productId: z.string().uuid(),
   type: z.enum(['sale', 'purchase', 'adjustment']),
   quantity: z.number(),

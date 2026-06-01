@@ -7,7 +7,6 @@ import { useInventory } from '../hooks/useInventory';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
-import { inventoryService } from '../services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
@@ -16,6 +15,7 @@ import { CategoryManager } from './CategoryManager';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
 import { CSVUploadModal } from './CSVUploadModal';
+import { useStockAdjustment } from '../hooks/useStockAdjustment';
 import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
 
 
@@ -35,7 +35,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const {
     products, categories, loading, activeTab, setActiveTab,
     createProduct, updateProduct, deleteProduct, createCategory, updateCategory, deleteCategory, adjustStock, createProductWithPresentations,
-    updateProductImageUrl,
+    uploadProductImage,
     search, refresh, userId, role, tabStates, saveTabState,
   } = useInventory(tenantId);
 
@@ -44,21 +44,27 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const isOnline = useOnlineStatus();
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [showAdjustment, setShowAdjustment] = useState(false);
-  const [adjProductId, setAdjProductId] = useState<string>('');
-  const [adjMode, setAdjMode] = useState<'sumar' | 'restar' | ''>('');
-  const [adjQuantity, setAdjQuantity] = useState('');
-  const [adjReasonType, setAdjReasonType] = useState<string>('');
-  const [adjCostTotal, setAdjCostTotal] = useState('');
-  const [adjShowCostInput, setAdjShowCostInput] = useState(false);
-  const [adjHasCost, setAdjHasCost] = useState(true);
-  const [adjError, setAdjError] = useState('');
-  const [adjSubmitting, setAdjSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
   const [showCsvImport, setShowCsvImport] = useState(false);
+
+  const handleAdjustStock = async (productId: string, quantity: number, reasonType: AdjustmentReason, costTotal?: number) => {
+    if (!tenantId || !userId) return false;
+    return adjustStock({ productId, quantity, reasonType, costTotal, userId, tenantId });
+  };
+
+  const {
+    showAdjustment, adjProductId, adjMode, adjQuantity, adjReasonType,
+    adjCostTotal, adjShowCostInput, adjHasCost, adjError, adjSubmitting,
+    openAdjustment, closeAdjustment, setAdjMode, setAdjQuantity, setAdjReasonType,
+    setAdjCostTotal, setAdjShowCostInput, setAdjError, handleSubmitAdjustment, checkProductCost,
+  } = useStockAdjustment({
+    products,
+    onAdjustStock: handleAdjustStock,
+    onSuccess: () => addToast({ type: 'success', message: 'Stock ajustado correctamente', duration: 3000 }),
+  });
   
 
   const navigate = useNavigate();
@@ -99,12 +105,11 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (product) {
       addToast({ type: 'success', message: 'Producto creado exitosamente.', duration: 3000 });
       if (imageFile) {
-        const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, product.id);
-        if (imgResult.ok) {
-          updateProductImageUrl(product.id, imgResult.data);
+        const publicUrl = await uploadProductImage(imageFile, tenantId, product.id);
+        if (publicUrl) {
           EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
         } else {
-          addToast({ type: 'warning', message: `Producto creado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
+          addToast({ type: 'warning', message: 'Producto creado, pero la imagen no se pudo subir.', duration: 5000 });
         }
       }
     } else {
@@ -124,22 +129,16 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     }
     addToast({ type: 'success', message: 'Producto actualizado exitosamente.', duration: 3000 });
     if (imageFile) {
-      const imgResult = await inventoryService.uploadProductImage(imageFile, tenantId, editProduct.id);
-      if (imgResult.ok) {
-        updateProductImageUrl(editProduct.id, imgResult.data);
+      const publicUrl = await uploadProductImage(imageFile, tenantId, editProduct.id);
+      if (publicUrl) {
         EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
       } else {
-        addToast({ type: 'warning', message: `Producto actualizado, pero la imagen no se pudo subir: ${imgResult.error?.message}`, duration: 5000 });
+        addToast({ type: 'warning', message: 'Producto actualizado, pero la imagen no se pudo subir.', duration: 5000 });
       }
     }
     setEditProduct(null);
     setShowProductForm(false);
     return true;
-  };
-
-  const handleAdjustStock = async (productId: string, quantity: number, reasonType: AdjustmentReason, costTotal?: number) => {
-    if (!tenantId || !userId) return false;
-    return adjustStock({ productId, quantity, reasonType, costTotal, userId, tenantId });
   };
 
   const handleConfirmDelete = async () => {
@@ -162,68 +161,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const openEditProduct = (product: Product) => {
     setEditProduct(product);
     setShowProductForm(true);
-  };
-
-  const handleSubmitAdjustment = async () => {
-    if (!adjMode) { setAdjError('Selecciona si quieres sumar o restar stock'); return; }
-    const rawQty = parseFloat(adjQuantity);
-    if (isNaN(rawQty) || rawQty <= 0) { setAdjError('Ingresa una cantidad válida mayor a 0'); return; }
-    if (!adjReasonType) { setAdjError('Selecciona un motivo para el ajuste'); return; }
-
-    const product = products.find((p) => p.id === adjProductId);
-    if (product && !product.isWeighted && rawQty !== Math.floor(rawQty)) {
-      setAdjError('Los productos por unidad solo aceptan números enteros');
-      return;
-    }
-    if (product?.isWeighted && adjQuantity && !/^\d+\.?\d{0,2}$/.test(adjQuantity)) {
-      setAdjError('Los productos pesables aceptan máximo 2 decimales');
-      return;
-    }
-
-    if (adjMode === 'restar') {
-      if (product) {
-        const maxStock = product.unit === 'kg' || product.unit === 'lt'
-          ? (product.stock / 1000) : product.stock;
-        if (rawQty > maxStock) {
-          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : 'unidades';
-          setAdjError(`No puedes restar más de ${maxStock} ${unitLabel} (stock actual)`);
-          return;
-        }
-      }
-    }
-
-    const qty = adjMode === 'restar' ? -rawQty : rawQty;
-
-    setAdjSubmitting(true);
-    setAdjError('');
-    const ok = await handleAdjustStock(
-      adjProductId,
-      qty,
-      adjReasonType as AdjustmentReason,
-      adjShowCostInput && adjCostTotal ? parseFloat(adjCostTotal) : undefined,
-    );
-    setAdjSubmitting(false);
-
-    if (ok) {
-      addToast({ type: 'success', message: 'Stock ajustado correctamente', duration: 3000 });
-      setAdjQuantity('');
-      setAdjReasonType('');
-      setAdjCostTotal('');
-      setAdjShowCostInput(false);
-      setAdjHasCost(true);
-      setAdjMode('');
-      setAdjProductId('');
-      setShowAdjustment(false);
-    } else {
-      setAdjError('Error al ajustar stock. Verifica el stock disponible.');
-    }
-  };
-
-  const checkProductCost = async (productId: string) => {
-    const result = await inventoryService.getProductLots(productId);
-    if (result.ok) {
-      setAdjHasCost(result.data.some((l) => (l.costUsdPerUnit ?? 0) > 0));
-    }
   };
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -355,12 +292,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               onEditProduct={openEditProduct}
               onRequestDelete={(id, name) => setConfirmDelete({ type: 'product', id, name })}
               onAdjust={async (id) => {
-                setAdjProductId(id);
-                setAdjMode('');
-                setAdjReasonType('');
-                setAdjQuantity('');
                 await checkProductCost(id);
-                setShowAdjustment(true);
+                openAdjustment(id);
               }}
               onViewLots={(id) => setSelectedProductLotsId(id)}
               onRefresh={refresh}
@@ -406,7 +339,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               {!isOwner ? (
                 <p className="text-sm text-text-secondary text-center py-4">Solo el propietario puede ver el historial.</p>
               ) : (
-                <MovementHistory products={products} />
+                <MovementHistory products={products} tenantId={tenantId} />
               )}
             </div>
           </div>
@@ -456,13 +389,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           { value: 'consumo_interno', label: 'Consumo interno' },
           { value: 'otros', label: 'Otros' },
         ];
-
-        const closeAdjustment = () => {
-          setShowAdjustment(false);
-          setAdjProductId('');
-          setAdjHasCost(true);
-          setAdjMode('');
-        };
 
         return (
           <Modal

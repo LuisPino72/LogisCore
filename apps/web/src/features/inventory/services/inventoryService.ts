@@ -13,7 +13,8 @@ import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage } from '../types';
-import { useAuthStore } from '../../auth/stores/authStore';
+import { extractRole } from '../../auth/services/authService';
+import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './mappers';
 
 const INVENTORY_MODULE = 'INVENTORY';
 
@@ -30,82 +31,44 @@ async function deleteStorageImage(imageUrl: string, token?: string): Promise<voi
     const filePath = parts[1];
 
     const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
-    await fetch(storageUrl, {
+    const res = await fetch(storageUrl, {
       method: 'DELETE',
       headers: {
         apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         Authorization: `Bearer ${token}`,
       },
     });
+    if (!res.ok) {
+      logger.error(INVENTORY_MODULE, `Error al eliminar imagen de storage: HTTP ${res.status}`, imageUrl);
+    }
   } catch (err) {
-    logger.warn(INVENTORY_MODULE, 'Error al eliminar imagen de storage:', err);
+    logger.error(INVENTORY_MODULE, 'Error al eliminar imagen de storage:', err);
   }
 }
 
-function toNumber(val: unknown): number {
-  if (val == null) return 0;
-  if (typeof val === 'number') return val;
-  const n = Number(val);
-  return isNaN(n) ? 0 : n;
-}
+async function migrateProductTenantIds(
+  db: ReturnType<typeof getDb>,
+  tenantId: string,
+): Promise<boolean> {
+  const allLocal = await db.products.toArray();
+  const hasCorrupted = allLocal.length > 0 && allLocal.every(r => !r.tenantId);
+  if (hasCorrupted) {
+    await db.products.clear();
+    return true;
+  }
 
-function toProduct(raw: Record<string, unknown>): Product {
-  return {
-    id: raw.id as string,
-    name: raw.name as string,
-    sku: raw.sku as string,
-    priceUsd: toNumber(raw.priceUsd),
-    categoryId: raw.categoryId as string | undefined,
-    isWeighted: raw.isWeighted as boolean,
-    isTaxable: raw.isTaxable !== undefined ? !!raw.isTaxable : true,
-    isSellable: raw.isSellable !== undefined ? !!raw.isSellable : true,
-    unit: raw.unit as Product['unit'],
-    stock: toNumber(raw.stock),
-    stockMin: raw.stockMin != null ? toNumber(raw.stockMin) : undefined,
-    imageUrl: (raw.imageUrl as string | undefined) ?? undefined,
-    costPrice: raw.costPrice != null ? toNumber(raw.costPrice) : undefined,
-    deletedAt: raw.deletedAt as string | undefined,
-  };
-}
+  const authIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
+  const needsMigration = allLocal.some(r => !r.deletedAt && r.tenantId && r.tenantId !== tenantId);
+  if (!needsMigration) return false;
 
-function toCategory(raw: Record<string, unknown>): Category {
-  return {
-    id: raw.id as string,
-    name: raw.name as string,
-    isPredefined: raw.isPredefined as boolean | undefined,
-  };
-}
-
-function toMovement(raw: Record<string, unknown>): InventoryMovement {
-  return {
-    id: raw.id as string,
-    productId: raw.productId as string,
-    type: raw.type as InventoryMovement['type'],
-    quantity: raw.quantity as number,
-    previousStock: raw.previousStock as number,
-    newStock: raw.newStock as number,
-    createdAt: raw.createdAt as string,
-    userId: raw.userId as string,
-    reason: raw.reason as string | undefined,
-    reasonType: raw.reasonType as string | undefined,
-    costUsd: raw.costUsd as number | undefined,
-  };
-}
-
-function toPresentation(raw: Record<string, unknown>): Presentation {
-  return {
-    id: raw.id as string,
-    productId: raw.productId as string,
-    name: raw.name as string,
-    priceUsd: raw.priceUsd as number,
-    unitMultiplier: raw.unitMultiplier as number,
-    stockType: 'shared',
-    barcode: raw.barcode as string | undefined,
-    sortOrder: raw.sortOrder as number,
-    createdAt: raw.createdAt as string,
-    updatedAt: raw.updatedAt as string,
-    deletedAt: raw.deletedAt as string | undefined,
-  };
+  for (const r of allLocal) {
+    if (r.deletedAt || !r.tenantId || r.tenantId === tenantId) continue;
+    const otherIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.tenantId as string);
+    if (authIsUuid !== otherIsUuid) {
+      await db.products.update(r.id!, { tenantId });
+    }
+  }
+  return true;
 }
 
 async function getAllPresentations(tenantId: string): Promise<Result<Presentation[], AppError>> {
@@ -549,10 +512,43 @@ export const inventoryService = {
   async getPresentationsForProduct(productId: string): Promise<Result<Presentation[], AppError>> {
     const db = getDb();
     try {
-      const rows = await db.productPresentations
+      let rows = await db.productPresentations
         .where({ productId })
         .filter((p) => !p.deletedAt)
         .sortBy('sortOrder');
+
+      // If local is empty, try pulling from Supabase
+      if (rows.length === 0 && !isDbClosing()) {
+        const { data: remotePres, error } = await supabase
+          .from('product_presentations')
+          .select('*')
+          .eq('product_id', productId)
+          .is('deleted_at', null)
+          .order('sort_order', { ascending: true });
+
+        if (!error && remotePres && remotePres.length > 0 && !isDbClosing()) {
+          const now = new Date().toISOString();
+          for (const pres of remotePres) {
+            await db.productPresentations.put({
+              id: pres.id,
+              tenantId: '',
+              productId: pres.product_id,
+              name: pres.name,
+              priceUsd: pres.price_usd,
+              unitMultiplier: pres.unit_multiplier,
+              stockType: pres.stock_type || 'shared',
+              barcode: pres.barcode,
+              sortOrder: pres.sort_order,
+              createdAt: pres.created_at,
+              updatedAt: pres.updated_at ?? now,
+            });
+          }
+          rows = await db.productPresentations
+            .where({ productId })
+            .filter((p) => !p.deletedAt)
+            .sortBy('sortOrder');
+        }
+      }
 
       return success(rows.map((r) => toPresentation(r as unknown as Record<string, unknown>)));
     } catch (err) {
@@ -673,7 +669,7 @@ export const inventoryService = {
 
     // Validar que no tenga stock > 0
     if (product.stock > 0) {
-      return failure(new AppError('PRODUCT_HAS_STOCK', `No se puede eliminar: el producto tiene ${product.stock} unidades en inventario. Ajuste el stock a cero primero.`));
+      return failure(new AppError(InventoryErrors.PRODUCT_HAS_STOCK, `No se puede eliminar: el producto tiene ${product.stock} unidades en inventario. Ajuste el stock a cero primero.`));
     }
 
     // Validar que no tenga órdenes de compra activas (draft, confirmed o partially_received)
@@ -722,23 +718,7 @@ export const inventoryService = {
     try {
       const db = getDb();
 
-      const allLocal = await db.products.toArray();
-      const hasCorrupted = allLocal.length > 0 && allLocal.every(r => !r.tenantId);
-      if (hasCorrupted) {
-        await db.products.clear();
-      }
-
-      const authIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
-      const needsMigration = allLocal.some(r => !r.deletedAt && r.tenantId && r.tenantId !== tenantId);
-      if (needsMigration) {
-        for (const r of allLocal) {
-          if (r.deletedAt || !r.tenantId || r.tenantId === tenantId) continue;
-          const otherIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.tenantId as string);
-          if (authIsUuid !== otherIsUuid) {
-            await db.products.update(r.id!, { tenantId });
-          }
-        }
-      }
+      await migrateProductTenantIds(db, tenantId);
 
       let rows = await db.products
         .where({ tenantId })
@@ -866,6 +846,16 @@ export const inventoryService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
+
+    const normalizedName = input.name.trim().toLowerCase();
+    const existing = await db.categories
+      .where({ tenantId: input.tenantId })
+      .filter((c) => !c.deletedAt && c.name.trim().toLowerCase() === normalizedName)
+      .first();
+    if (existing) {
+      return failure(new AppError('CATEGORY_DUPLICATE', `Ya existe una categoría llamada "${input.name.trim()}".`));
+    }
+
     const id = generateId();
     const cat = { id, name: input.name, tenantId: input.tenantId };
     await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
@@ -953,8 +943,7 @@ export const inventoryService = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para ajustar stock.'));
-      const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-      const role = decoded.app_metadata?.role || decoded.role;
+      const role = extractRole(session);
       if (role !== 'owner' && role !== 'admin') {
         return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden ajustar stock.'));
       }
@@ -1044,11 +1033,7 @@ export const inventoryService = {
         };
         await db.inventoryMovements.add(movement);
  
-        if (storageQuantity > 0) {
-          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
-        } else {
-          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
-        }
+        await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
 
         // Enqueue product update so stock syncs to Supabase
         const updatedProduct = await db.products.get(input.productId);
@@ -1318,7 +1303,7 @@ export const inventoryService = {
     return success(consumed);
   },
 
-  async getMovementHistory(productId: string): Promise<Result<InventoryMovement[], AppError>> {
+  async getMovementHistory(productId: string, tenantId: string): Promise<Result<InventoryMovement[], AppError>> {
     const db = getDb();
     let rows = await db.inventoryMovements
       .where({ productId })
@@ -1327,18 +1312,17 @@ export const inventoryService = {
 
     // If local is empty, try pulling from Supabase
     if (rows.length === 0) {
-      const tenantUuid = useAuthStore.getState().session?.tenantId;
       const query = supabase
         .from('inventory_movements')
         .select('*')
         .eq('product_id', productId);
-      if (tenantUuid) query.eq('tenant_id', tenantUuid);
+      if (tenantId) query.eq('tenant_id', tenantId);
       const { data, error } = await query;
 
       if (!error && data && data.length > 0) {
         for (const mov of data) {
           await db.inventoryMovements.add({
-            id: mov.id, tenantId: tenantUuid ?? '',
+            id: mov.id, tenantId: tenantId ?? '',
             productId: mov.product_id,
             userId: mov.user_id,
             type: mov.type,

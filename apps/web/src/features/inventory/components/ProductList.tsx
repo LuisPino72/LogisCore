@@ -7,8 +7,7 @@ import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
 import type { Product, Category, TabState, StockFilter, ProductTypeFilter } from '../types';
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
-import { getDb } from '../../../services/dexie/db';
-import { supabase } from '../../../services/supabase/client';
+import { useInventoryStore } from '../stores/inventoryStore';
 
 interface ProductListProps {
   products: Product[];
@@ -92,11 +91,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
     setVariantModalProductId(productId);
     setVariantModalLoading(true);
     try {
-      const db = getDb();
-      const pres = await db.productPresentations
-        .where({ productId })
-        .filter(p => !p.deletedAt)
-        .sortBy('sortOrder');
+      const pres = await useInventoryStore.getState().fetchPresentationsForProduct(productId);
       setVariantModalData(pres.map(p => ({ name: p.name, priceUsd: p.priceUsd })));
     } catch {
       setVariantModalData([]);
@@ -112,45 +107,8 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
   useEffect(() => {
     const load = async () => {
       try {
-        const db = getDb();
-        const pres = await db.productPresentations
-          .filter(p => !p.deletedAt)
-          .toArray();
-        
-        if (pres.length > 0) {
-          setProductIdsWithVariants(new Set(pres.map(p => p.productId)));
-          return;
-        }
-
-        // Fallback: si Dexie está vacío, intentar desde Supabase
-        if (products.length > 0) {
-          const { data: remotePres } = await supabase
-            .from('product_presentations')
-            .select('id, product_id')
-            .is('deleted_at', null)
-            .eq('tenant_id', tenantId);
-
-          if (remotePres && remotePres.length > 0) {
-            const ids = new Set(remotePres.map(p => p.product_id));
-            setProductIdsWithVariants(ids);
-            
-            // Sembrar en Dexie para que no vuelva a ocurrir
-            for (const p of remotePres) {
-              await db.productPresentations.put({
-                id: p.id,
-                tenantId,
-                productId: p.product_id,
-                name: '',
-                priceUsd: 0,
-                unitMultiplier: 1,
-                stockType: 'shared',
-                sortOrder: 0,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              });
-            }
-          }
-        }
+        const ids = await useInventoryStore.getState().fetchAllPresentationProductIds(tenantId);
+        setProductIdsWithVariants(ids);
       } catch {
         // silent
       }

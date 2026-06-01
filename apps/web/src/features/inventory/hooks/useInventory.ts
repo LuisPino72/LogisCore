@@ -41,6 +41,7 @@ export function useInventory(tenantId: string | null) {
     if (!tenantId) return;
 
     const sub1 = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+      if (!tenantId) return;
       const { table } = payload as { table?: string };
       if (!table || table === '*' || ['products', 'categories', 'inventory_movements', 'inventory_lots'].includes(table)) {
         doFetch(undefined, true);
@@ -48,10 +49,12 @@ export function useInventory(tenantId: string | null) {
     });
 
     const sub2 = EventBus.on('SALE.COMPLETED', () => {
+      if (!tenantId) return;
       doFetch(undefined, true);
     });
 
     const sub3 = EventBus.on('PURCHASE.RECEIVED', () => {
+      if (!tenantId) return;
       doFetch(undefined, true);
     });
 

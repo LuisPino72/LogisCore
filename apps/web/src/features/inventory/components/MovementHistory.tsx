@@ -10,6 +10,7 @@ import type { InventoryMovement } from '../../../specs/inventory';
 
 interface MovementHistoryProps {
   products: Product[];
+  tenantId: string;
 }
 
 const REASON_TYPE_LABELS: Record<string, string> = {
@@ -53,7 +54,7 @@ function getTypeBadge(type: string): 'success' | 'warning' | 'danger' | 'info' {
 
 const MOVEMENTS_PAGE_SIZE = 20;
 
-export function MovementHistory({ products }: MovementHistoryProps) {
+export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [page, setPage] = useState(1);
@@ -78,6 +79,8 @@ export function MovementHistory({ products }: MovementHistoryProps) {
 
   const filteredProducts = useFuzzySearch(products, productSearch, { keys: ['name', 'sku'] });
 
+  const productMap = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+
   const handleProductChange = async (productId: string) => {
     setSelectedProductId(productId);
     setPage(1);
@@ -85,7 +88,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
     setProductSearch('');
     if (!productId) { setMovements([]); return; }
     setLoading(true);
-    const result = await inventoryService.getMovementHistory(productId);
+    const result = await inventoryService.getMovementHistory(productId, tenantId);
     if (result.ok) setMovements(result.data);
     setLoading(false);
   };
@@ -98,7 +101,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       key: 'type',
       header: 'Movimiento',
       render: (mov) => {
-        const prod = products.find((p) => p.id === mov.productId);
+        const prod = productMap.get(mov.productId);
         const sign = mov.type === 'sale' ? -1 : (mov.type === 'purchase' ? 1 : Math.sign(mov.quantity));
         const signedQty = Math.abs(mov.quantity) * sign;
         return (
@@ -122,7 +125,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
       header: 'Stock',
       hideOnMobile: true,
       render: (mov) => {
-        const prod = products.find((p) => p.id === mov.productId);
+        const prod = productMap.get(mov.productId);
         if (!prod?.isWeighted) {
           return <span className="text-xs text-gray-600">{mov.previousStock} → {mov.newStock}</span>;
         }
@@ -144,7 +147,7 @@ export function MovementHistory({ products }: MovementHistoryProps) {
         </span>
       ),
     },
-  ], [products]);
+  ], [productMap]);
 
   if (loading) {
     return (

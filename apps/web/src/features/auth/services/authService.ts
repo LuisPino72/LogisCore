@@ -32,7 +32,7 @@ function sanitizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function extractRole(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']): string | null {
+export function extractRole(session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']): string | null {
   if (!session) return null;
   if (isJWTExpired(session.access_token)) return null;
   const decoded = decodeJWTPayload(session.access_token);

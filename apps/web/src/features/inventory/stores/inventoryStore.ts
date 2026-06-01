@@ -28,9 +28,12 @@ interface InventoryStore extends InventoryState {
     presentations: CreatePresentationInput[],
   ) => Promise<Product | null>;
   fetchPresentations: (productId: string) => Promise<Presentation[]>;
+  fetchPresentationsForProduct: (productId: string) => Promise<Presentation[]>;
+  fetchAllPresentationProductIds: (tenantId: string) => Promise<Set<string>>;
   updatePresentation: (tenantId: string, presentationId: string, input: UpdatePresentationInput) => Promise<boolean>;
   deletePresentation: (tenantId: string, presentationId: string) => Promise<boolean>;
   updateProductImageUrl: (productId: string, imageUrl: string) => void;
+  uploadProductImage: (file: File, tenantId: string, productId: string) => Promise<string | null>;
   refresh: (tenantId: string, userId: string) => Promise<void>;
   reset: () => void;
 }
@@ -87,6 +90,15 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
         p.id === productId ? { ...p, imageUrl } : p
       ),
     }));
+  },
+
+  uploadProductImage: async (file, tenantId, productId) => {
+    const result = await inventoryService.uploadProductImage(file, tenantId, productId);
+    if (result.ok) {
+      get().updateProductImageUrl(productId, result.data);
+      return result.data;
+    }
+    return null;
   },
 
   fetchCategories: async (tenantId, silent = false) => {
@@ -218,6 +230,22 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     }
     set({ error: result.error.message });
     return [];
+  },
+
+  fetchPresentationsForProduct: async (productId) => {
+    const result = await inventoryService.getPresentationsForProduct(productId);
+    if (result.ok) {
+      return result.data;
+    }
+    return [];
+  },
+
+  fetchAllPresentationProductIds: async (tenantId) => {
+    const result = await inventoryService.getAllPresentations(tenantId);
+    if (result.ok) {
+      return new Set(result.data.map(p => p.productId));
+    }
+    return new Set();
   },
 
   updatePresentation: async (tenantId, presentationId, input) => {
