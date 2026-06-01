@@ -4,6 +4,7 @@ import { getDb, type DexieSale } from '../../../services/dexie/db';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
+import { ReportsFiltersSchema, ValidateTenantInputSchema, TopProductsLimitSchema } from '../../../specs/reports/index';
 import { logger } from '../../../lib/logger';
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import type {
@@ -255,6 +256,14 @@ async function getRateForDate(tenantId: string, date: string): Promise<number> {
 
 export const reportsService = {
   async getExecutiveSummary(tenantId: string, filters: ReportFilters): Promise<Result<ExecutiveSummaryData, AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
@@ -413,6 +422,14 @@ export const reportsService = {
   },
 
   async getProfitOverTime(tenantId: string, filters: ReportFilters): Promise<Result<DailyProfitPoint[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
@@ -465,6 +482,18 @@ export const reportsService = {
   },
 
   async getTopProducts(tenantId: string, filters: ReportFilters, limit = 10): Promise<Result<TopProductData[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
+    const limitCheck = TopProductsLimitSchema.safeParse(limit);
+    if (!limitCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_LIMIT_INVALID, limitCheck.error.issues[0]?.message || 'Límite inválido.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
@@ -524,6 +553,14 @@ export const reportsService = {
   },
 
   async getTopCategories(tenantId: string, filters: ReportFilters): Promise<Result<TopCategoryData[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const salesData = await fetchSalesWithItems(tenantId, start, end);
@@ -615,6 +652,14 @@ export const reportsService = {
   },
 
   async getPaymentBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<PaymentBreakdownData[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const db = getDb();
@@ -690,6 +735,14 @@ export const reportsService = {
   },
 
   async getCashAnalysis(tenantId: string, filters: ReportFilters): Promise<Result<CashRegisterSummaryData[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const db = getDb();
@@ -849,6 +902,10 @@ export const reportsService = {
   
 
   async getNonSellableExpenses(tenantId: string, start: string, end: string): Promise<Result<{ totalUsd: number; totalBs: number }, AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     try {
       const db = getDb();
       const nsProducts = await db.products
@@ -886,6 +943,10 @@ export const reportsService = {
   },
 
   async getAdjustmentLossExpenses(tenantId: string, start: string, end: string): Promise<Result<AdjustmentLossExpenses, AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
     try {
       const db = getDb();
       const movements = await db.inventoryMovements
@@ -942,6 +1003,14 @@ export const reportsService = {
   },
 
   async getSalesDetail(tenantId: string, filters: ReportFilters): Promise<Result<SaleDetail[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
@@ -968,6 +1037,14 @@ export const reportsService = {
   },
 
   async getExpenseBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<ExpenseBreakdownItem[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
@@ -1062,6 +1139,14 @@ export const reportsService = {
   },
 
   async getTicketDistribution(tenantId: string, filters: ReportFilters): Promise<Result<TicketDistributionItem[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const db = getDb();
@@ -1149,6 +1234,14 @@ export const reportsService = {
   },
 
   async getDiscountBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<DiscountBreakdownItem[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    const filtersCheck = ReportsFiltersSchema.safeParse(filters);
+    if (!filtersCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
+    }
     try {
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
