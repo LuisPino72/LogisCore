@@ -24,7 +24,11 @@ class OfflineGraceService {
 
   private save(): void {
     if (!this.state) return;
-    localStorage.setItem(GRACE_KEY, JSON.stringify(this.state));
+    try {
+      localStorage.setItem(GRACE_KEY, JSON.stringify(this.state));
+    } catch {
+      // localStorage unavailable or quota exceeded — non-critical
+    }
   }
 
   extend(tenantSlug: string): void {
@@ -53,7 +57,11 @@ class OfflineGraceService {
 
   clear(): void {
     this.state = null;
-    localStorage.removeItem(GRACE_KEY);
+    try {
+      localStorage.removeItem(GRACE_KEY);
+    } catch {
+      // localStorage unavailable — non-critical
+    }
   }
 }
 

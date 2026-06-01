@@ -22,22 +22,34 @@ class SessionGuardService {
 
   getSessionToken(): string | null {
     if (!this.token) {
-      this.token = localStorage.getItem(SESSION_TOKEN_KEY);
+      try {
+        this.token = localStorage.getItem(SESSION_TOKEN_KEY);
+      } catch {
+        // localStorage unavailable — non-critical
+      }
     }
     return this.token;
   }
 
   generateSessionToken(): string {
     this.token = crypto.randomUUID();
-    localStorage.setItem(SESSION_TOKEN_KEY, this.token);
+    try {
+      localStorage.setItem(SESSION_TOKEN_KEY, this.token);
+    } catch {
+      // localStorage unavailable — non-critical
+    }
     return this.token;
   }
 
   restoreSessionToken(): string | null {
-    const stored = localStorage.getItem(SESSION_TOKEN_KEY);
-    if (stored) {
-      this.token = stored;
-      return stored;
+    try {
+      const stored = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (stored) {
+        this.token = stored;
+        return stored;
+      }
+    } catch {
+      // localStorage unavailable — non-critical
     }
     return null;
   }
@@ -117,7 +129,11 @@ class SessionGuardService {
 
   private clearToken(): void {
     this.token = null;
-    localStorage.removeItem(SESSION_TOKEN_KEY);
+    try {
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+    } catch {
+      // localStorage unavailable — non-critical
+    }
   }
 }
 

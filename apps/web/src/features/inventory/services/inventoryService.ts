@@ -740,8 +740,8 @@ export const inventoryService = {
         if (!error && data && data.length > 0) {
           try {
             const [lotsResponse, presResponse] = await Promise.all([
-              supabase.from('inventory_lots').select('*').eq('tenant_id', tenantId).in('product_id', data.map((p: Record<string, unknown>) => p.id)),
-              supabase.from('product_presentations').select('*').eq('tenant_id', tenantId).in('product_id', data.map((p: Record<string, unknown>) => p.id)).is('deleted_at', null)
+              supabase.from('inventory_lots').select('*').eq('tenant_id', tenantUuid).in('product_id', data.map((p: Record<string, unknown>) => p.id)),
+              supabase.from('product_presentations').select('*').eq('tenant_id', tenantUuid).in('product_id', data.map((p: Record<string, unknown>) => p.id)).is('deleted_at', null)
             ]);
 
             const lots = lotsResponse.data;
@@ -1316,7 +1316,10 @@ export const inventoryService = {
         .from('inventory_movements')
         .select('*')
         .eq('product_id', productId);
-      if (tenantId) query.eq('tenant_id', tenantId);
+      if (tenantId) {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+        query.eq('tenant_id', tenantUuid);
+      }
       const { data, error } = await query;
 
       if (!error && data && data.length > 0) {

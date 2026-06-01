@@ -107,10 +107,18 @@ export const dashboardService = {
     if (!error && data) {
       const parsed = SubscriptionInfoSchema.safeParse(data);
       if (parsed.success) {
-        localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(parsed.data));
+        try {
+          localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(parsed.data));
+        } catch {
+          // localStorage unavailable or quota exceeded — non-critical
+        }
         return success(parsed.data);
       }
-      localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(data));
+      try {
+        localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(data));
+      } catch {
+        // localStorage unavailable or quota exceeded — non-critical
+      }
       return success(data);
     }
 
@@ -134,7 +142,11 @@ export const dashboardService = {
       .is('deleted_at', null);
 
     if (!error) {
-      localStorage.setItem(CACHE_EMP_KEY, String(count ?? 0));
+      try {
+        localStorage.setItem(CACHE_EMP_KEY, String(count ?? 0));
+      } catch {
+        // localStorage unavailable or quota exceeded — non-critical
+      }
       return success(count ?? 0);
     }
 
@@ -167,7 +179,7 @@ export const dashboardService = {
         .select('product_id, product_name, quantity')
         .eq('tenant_id', tenantUuid)
         .is('deleted_at', null)
-        .limit(10000);
+        .limit(1000); // Reduced from 10000; consider SQL view for production
 
       if (error) {
         return failure(new AppError('DASHBOARD_TOP_PRODUCTS_FAILED', 'Error al cargar productos más vendidos'));

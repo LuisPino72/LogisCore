@@ -16,7 +16,26 @@ function buildFilters(state: ReturnType<typeof useInventoryStore.getState>, filt
 const DEBOUNCE_MS = 300;
 
 export function useInventory(tenantId: string | null) {
-  const store = useInventoryStore();
+  const products = useInventoryStore((s) => s.products);
+  const categories = useInventoryStore((s) => s.categories);
+  const loading = useInventoryStore((s) => s.loading);
+  const activeTab = useInventoryStore((s) => s.activeTab);
+  const tabStates = useInventoryStore((s) => s.tabStates);
+  const setActiveTab = useInventoryStore((s) => s.setActiveTab);
+  const saveTabState = useInventoryStore((s) => s.saveTabState);
+  const fetchProducts = useInventoryStore((s) => s.fetchProducts);
+  const fetchCategories = useInventoryStore((s) => s.fetchCategories);
+  const fetchLowStock = useInventoryStore((s) => s.fetchLowStock);
+  const createProduct = useInventoryStore((s) => s.createProduct);
+  const updateProduct = useInventoryStore((s) => s.updateProduct);
+  const deleteProduct = useInventoryStore((s) => s.deleteProduct);
+  const createCategory = useInventoryStore((s) => s.createCategory);
+  const updateCategory = useInventoryStore((s) => s.updateCategory);
+  const deleteCategory = useInventoryStore((s) => s.deleteCategory);
+  const adjustStock = useInventoryStore((s) => s.adjustStock);
+  const createProductWithPresentations = useInventoryStore((s) => s.createProductWithPresentations);
+  const uploadProductImage = useInventoryStore((s) => s.uploadProductImage);
+  const setSearchQuery = useInventoryStore((s) => s.setSearchQuery);
   const session = useAuthStore((s) => s.session);
   const initialFetchDone = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -25,9 +44,9 @@ export function useInventory(tenantId: string | null) {
     if (!tenantId) return;
     const effectiveFilters = buildFilters(useInventoryStore.getState(), filters);
     await Promise.all([
-      store.fetchProducts(tenantId, effectiveFilters, silent),
-      store.fetchCategories(tenantId, silent),
-      store.fetchLowStock(tenantId, silent),
+      fetchProducts(tenantId, effectiveFilters, silent),
+      fetchCategories(tenantId, silent),
+      fetchLowStock(tenantId, silent),
     ]);
   }, [tenantId]);
 
@@ -67,12 +86,12 @@ export function useInventory(tenantId: string | null) {
 
   const search = useCallback((query: string, categoryId?: string) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    store.setSearchQuery(query);
-    store.saveTabState(store.activeTab as TabKey, { searchQuery: query, filterCategory: categoryId || '' });
+    setSearchQuery(query);
+    saveTabState(activeTab as TabKey, { searchQuery: query, filterCategory: categoryId || '' });
 
     debounceTimer.current = setTimeout(() => {
       if (!tenantId) return;
-      store.fetchProducts(tenantId, { query: query || undefined, categoryId });
+      fetchProducts(tenantId, { query: query || undefined, categoryId });
     }, DEBOUNCE_MS);
   }, [tenantId]);
 
@@ -82,10 +101,24 @@ export function useInventory(tenantId: string | null) {
   }, [doFetch]);
 
   return {
-    ...store,
+    products,
+    categories,
+    loading,
+    activeTab,
+    setActiveTab,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    adjustStock,
+    createProductWithPresentations,
+    uploadProductImage,
     search,
     refresh,
-    saveTabState: store.saveTabState,
+    tabStates,
+    saveTabState,
     userId: session?.userId,
     role: session?.role,
   };

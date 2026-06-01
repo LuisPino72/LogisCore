@@ -254,6 +254,18 @@ async function getRateForDate(tenantId: string, date: string): Promise<number> {
   return 0;
 }
 
+// Module-level cache for exchange rates to avoid N+1 queries
+const rateCache = new Map<string, number>();
+
+async function getRateForDateCached(tenantId: string, date: string): Promise<number> {
+  if (rateCache.size > 500) rateCache.clear();
+  const key = `${tenantId}:${date}`;
+  if (rateCache.has(key)) return rateCache.get(key)!;
+  const rate = await getRateForDate(tenantId, date);
+  rateCache.set(key, rate);
+  return rate;
+}
+
 export const reportsService = {
   async getExecutiveSummary(tenantId: string, filters: ReportFilters): Promise<Result<ExecutiveSummaryData, AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
@@ -929,7 +941,7 @@ export const reportsService = {
         const lotUsd = lot.quantityAdded * cost;
         totalUsd += lotUsd;
 
-        const rate = await getRateForDate(tenantId, lot.createdAt);
+        const rate = await getRateForDateCached(tenantId, lot.createdAt);
         if (rate > 0) totalBs += lotUsd * rate;
       }
       totalUsd = preciseRound(totalUsd, 2);
@@ -977,7 +989,7 @@ export const reportsService = {
         byReason[reason].count += 1;
         totalUsd += mov.costUsd!;
 
-        const rate = await getRateForDate(tenantId, mov.createdAt);
+        const rate = await getRateForDateCached(tenantId, mov.createdAt);
         if (rate > 0) {
           const movBs = preciseRound(mov.costUsd! * rate, 2);
           byReason[reason].totalBs += movBs;

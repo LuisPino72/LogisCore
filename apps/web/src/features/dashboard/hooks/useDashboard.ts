@@ -3,17 +3,27 @@ import { EventBus } from '@logiscore/core';
 import { useDashboardStore } from '../stores/dashboardStore';
 
 export function useDashboard(tenantId: string | null) {
-  const store = useDashboardStore();
+  const tenantInfo = useDashboardStore((s) => s.tenantInfo);
+  const subscription = useDashboardStore((s) => s.subscription);
+  const error = useDashboardStore((s) => s.error);
+  const topProducts = useDashboardStore((s) => s.topProducts);
+  const topProductsLoading = useDashboardStore((s) => s.topProductsLoading);
+  const lowStockProducts = useDashboardStore((s) => s.lowStockProducts);
+  const lowStockLoading = useDashboardStore((s) => s.lowStockLoading);
+  const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
+  const fetchTopProducts = useDashboardStore((s) => s.fetchTopProducts);
+  const fetchLowStock = useDashboardStore((s) => s.fetchLowStock);
+  const reset = useDashboardStore((s) => s.reset);
   const mountedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
     if (tenantId) {
-      store.fetchDashboard(tenantId);
+      fetchDashboard(tenantId);
     }
     return () => {
       mountedRef.current = false;
-      store.reset();
+      reset();
     };
   }, [tenantId]);
 
@@ -21,7 +31,7 @@ export function useDashboard(tenantId: string | null) {
     if (!tenantId) return;
     const handler = () => {
       if (mountedRef.current) {
-        store.fetchDashboard(tenantId);
+        fetchDashboard(tenantId);
       }
     };
     const sub1 = EventBus.on('SALE.COMPLETED', handler);
@@ -32,5 +42,15 @@ export function useDashboard(tenantId: string | null) {
     };
   }, [tenantId]);
 
-  return store;
+  return {
+    tenantInfo,
+    subscription,
+    error,
+    topProducts,
+    topProductsLoading,
+    lowStockProducts,
+    lowStockLoading,
+    fetchTopProducts,
+    fetchLowStock,
+  };
 }

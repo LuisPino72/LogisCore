@@ -16,10 +16,14 @@ export function LoginPage() {
   const { login, isLoggingIn, loginError, fieldErrors, clearLoginError } = useAuthStore();
 
   useEffect(() => {
-    const remembered = localStorage.getItem(REMEMBERED_EMAIL_KEY);
-    if (remembered) {
-      setEmail(remembered);
-      setRememberMe(true);
+    try {
+      const remembered = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+      if (remembered) {
+        setEmail(remembered);
+        setRememberMe(true);
+      }
+    } catch {
+      // localStorage unavailable — non-critical
     }
   }, []);
 
@@ -29,10 +33,14 @@ export function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (rememberMe) {
-      localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
-    } else {
-      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+      } else {
+        localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      }
+    } catch {
+      // localStorage unavailable or quota exceeded — non-critical
     }
     login(email, password);
   };

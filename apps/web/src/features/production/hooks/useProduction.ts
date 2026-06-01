@@ -4,15 +4,21 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useProductionStore } from '../stores/productionStore';
 
 export function useProduction(tenantId: string | null) {
-  const store = useProductionStore();
+  const recipes = useProductionStore((s) => s.recipes);
+  const productionOrders = useProductionStore((s) => s.productionOrders);
+  const loading = useProductionStore((s) => s.loading);
+  const activeTab = useProductionStore((s) => s.activeTab);
+  const setActiveTab = useProductionStore((s) => s.setActiveTab);
+  const fetchRecipes = useProductionStore((s) => s.fetchRecipes);
+  const fetchOrders = useProductionStore((s) => s.fetchOrders);
   const session = useAuthStore((s) => s.session);
   const initialFetchDone = useRef(false);
 
   const doFetch = useCallback(async (silent = false) => {
     if (!tenantId) return;
     await Promise.all([
-      store.fetchRecipes(tenantId, undefined, silent),
-      store.fetchOrders(tenantId, undefined, silent),
+      fetchRecipes(tenantId, undefined, silent),
+      fetchOrders(tenantId, undefined, silent),
     ]);
   }, [tenantId]);
 
@@ -53,7 +59,11 @@ export function useProduction(tenantId: string | null) {
   }, [doFetch]);
 
   return {
-    ...store,
+    recipes,
+    productionOrders,
+    loading,
+    activeTab,
+    setActiveTab,
     refresh,
     userId: session?.userId,
     role: session?.role,

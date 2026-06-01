@@ -17,6 +17,7 @@ import { CreateSaleInputSchema, calculateSaleTotals } from '../../../specs/pos';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
+import { extractRole } from '../../auth/services/authService';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 type VerificationProduct = {
@@ -37,14 +38,11 @@ async function getRoleFromSession(): Promise<Result<string, AppError>> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión.'));
-
-    const decoded = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const role = decoded.app_metadata?.role || decoded.role;
-
-    if (!role) return failure(new AppError('AUTH_ERROR', 'No se pudo determinar el rol.'));
-    return success(role as string);
+    const role = extractRole(session);
+    if (!role) return failure(new AppError('AUTH_NO_ROLE', 'No se encontró el rol del usuario.'));
+    return success(role);
   } catch {
-    return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
+    return failure(new AppError('AUTH_ERROR', 'Error al obtener la sesión.'));
   }
 }
 

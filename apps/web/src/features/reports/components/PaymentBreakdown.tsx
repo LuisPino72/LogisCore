@@ -9,6 +9,23 @@ interface PaymentBreakdownProps {
   loading: boolean;
 }
 
+function CustomCenterLabel({ totalBs }: { totalBs: number }) {
+  return (
+    <text
+      x="50%"
+      y="50%"
+      textAnchor="middle"
+      dominantBaseline="central"
+    >
+      <tspan x="50%" dy="-0.4em" className="fill-gray-500" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
+      <tspan x="50%" dy="1.4em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 800 }}>
+        {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
+      </tspan>
+      <tspan x="50%" dy="1.3em" className="fill-gray-500" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
+    </text>
+  );
+}
+
 export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   const [ready, containerRef] = useChartReady();
 
@@ -45,21 +62,6 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
 
   const totalBs = data.reduce((s, d) => s + d.totalBs, 0);
 
-  const CustomCenterLabel = () => (
-    <text
-      x="50%"
-      y="50%"
-      textAnchor="middle"
-      dominantBaseline="central"
-    >
-      <tspan x="50%" dy="-0.4em" className="fill-gray-500" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
-      <tspan x="50%" dy="1.4em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 800 }}>
-        {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
-      </tspan>
-      <tspan x="50%" dy="1.3em" className="fill-gray-500" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
-    </text>
-  );
-
   return (
     <Card className="p-4">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">M&eacute;todos de Pago</h3>
@@ -86,7 +88,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
               formatter={(value, name) => [formatBs(Number(value)), name]}
               contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 11 }}
             />
-            <CustomCenterLabel />
+            <CustomCenterLabel totalBs={totalBs} />
           </PieChart>
         </ResponsiveContainer>
         ) : <div className="h-48 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded-full" /></div>}
