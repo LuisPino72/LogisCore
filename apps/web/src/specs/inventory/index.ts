@@ -25,6 +25,7 @@ export const ProductSchema = z.object({
   costPrice: z.number().min(0).optional(),
   productType: ProductTypeEnum.default('materia_prima').optional(),
   deletedAt: z.string().datetime().optional(),
+  hasAssemblyRecipe: z.boolean().optional(),
 });
 
 export type Product = z.infer<typeof ProductSchema>;

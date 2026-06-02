@@ -108,4 +108,54 @@ describe('posStore', () => {
     expect(cart).toHaveLength(1);
     expect(cart[0].quantity).toBe(5);
   });
+
+  // ===== ASSEMBLY (Ensamblaje) — SPEC-ID: ASSEMBLY-001 =====
+
+  it('should add assembly product even with stock 0', () => {
+    const assemblyProduct = makeProduct({
+      id: '00000000-0000-0000-0000-000000000099',
+      name: 'Combo Ensamblaje',
+      stock: 0,
+      hasAssemblyRecipe: true,
+    });
+    usePosStore.getState().addToCart(assemblyProduct, 1);
+    const { cart, error } = usePosStore.getState();
+    expect(cart).toHaveLength(1);
+    expect(cart[0].quantity).toBe(1);
+    expect(error).toBeNull();
+  });
+
+  it('should not limit assembly product quantity by stock', () => {
+    const assemblyProduct = makeProduct({
+      id: '00000000-0000-0000-0000-000000000099',
+      name: 'Combo Ensamblaje',
+      stock: 0,
+      hasAssemblyRecipe: true,
+    });
+    usePosStore.getState().addToCart(assemblyProduct, 5);
+    const { cart } = usePosStore.getState();
+    expect(cart).toHaveLength(1);
+    expect(cart[0].quantity).toBe(5);
+  });
+
+  it('should accumulate assembly product quantity without stock limit', () => {
+    const assemblyProduct = makeProduct({
+      id: '00000000-0000-0000-0000-000000000099',
+      name: 'Combo Ensamblaje',
+      stock: 0,
+      hasAssemblyRecipe: true,
+    });
+    usePosStore.getState().addToCart(assemblyProduct, 3);
+    usePosStore.getState().addToCart(assemblyProduct, 4);
+    const { cart } = usePosStore.getState();
+    expect(cart).toHaveLength(1);
+    expect(cart[0].quantity).toBe(7);
+  });
+
+  it('should still block non-assembly products exceeding stock', () => {
+    usePosStore.getState().addToCart(makeProduct({ stock: 5 }), 10);
+    const { cart, error } = usePosStore.getState();
+    expect(cart).toHaveLength(0);
+    expect(error).toBeTruthy();
+  });
 });

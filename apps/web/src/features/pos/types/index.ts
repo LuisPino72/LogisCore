@@ -5,6 +5,8 @@ import type { CartItem as SpecCartItem, Sale, SaleItem, CashRegister, CreateSale
 export type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod };
 export type CartItem = SpecCartItem;
 
+export type ProductWithAssembly = Product & { hasAssemblyRecipe?: boolean };
+
 export interface PresentationSelection {
   id: string;
   name: string;
@@ -37,4 +39,5 @@ export interface PosState {
   discount: { type: 'percentage' | 'fixed'; value: number } | null;
   saleItems: SaleItem[];
   saleItemsLoading: boolean;
+  assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }>;
 }

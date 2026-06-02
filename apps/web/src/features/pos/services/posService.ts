@@ -232,9 +232,15 @@ export const posService = {
   async getProductsForSale(tenantId: string): Promise<Result<Product[], AppError>> {
     try {
       const db = getDb();
+      const assemblyRecipes = await db.recipes
+        .where({ mode: 'assembly' as const })
+        .filter(r => !r.deletedAt && r.isActive)
+        .toArray();
+      const assemblyProductIds = new Set(assemblyRecipes.map(r => r.productId));
+
       let rows = await db.products
         .where({ tenantId })
-        .filter((p) => !p.deletedAt && p.stock > 0 && p.isSellable !== false)
+        .filter((p) => !p.deletedAt && p.isSellable !== false && (p.stock > 0 || assemblyProductIds.has(p.id)))
         .toArray();
 
       if (rows.length === 0) {
@@ -275,7 +281,7 @@ export const posService = {
           }
           rows = await db.products
             .where({ tenantId })
-            .filter((p) => !p.deletedAt && p.stock > 0 && p.isSellable !== false)
+            .filter((p) => !p.deletedAt && p.isSellable !== false && (p.stock > 0 || assemblyProductIds.has(p.id)))
             .toArray();
         }
       }
@@ -294,6 +300,7 @@ export const posService = {
         stockMin: r.stockMin,
         deletedAt: r.deletedAt,
         imageUrl: r.imageUrl,
+        hasAssemblyRecipe: assemblyProductIds.has(r.id),
       })));
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getProductsForSale:', err);
@@ -363,6 +370,23 @@ export const posService = {
     const now = new Date().toISOString();
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
+    // Identificar items assembly vs normales
+    const assemblyItems: Array<{ productId: string; quantity: number; productName?: string }> = [];
+    const normalItems: typeof items = [];
+
+    for (const item of items) {
+      const recipe = await db.recipes
+        .where({ productId: item.productId, mode: 'assembly' as const })
+        .filter(r => !r.deletedAt && r.isActive)
+        .first();
+
+      if (recipe) {
+        assemblyItems.push({ productId: item.productId, quantity: item.quantity, productName: item.name });
+      } else {
+        normalItems.push(item);
+      }
+    }
+
     try {
       await db.transaction('rw', [
         db.sales,
@@ -371,6 +395,8 @@ export const posService = {
         db.inventoryLots,
         db.products,
         db.cashRegisters,
+        db.recipes,
+        db.recipeLines,
         db.syncQueue,
         db.outbox,
       ], async () => {
@@ -409,7 +435,7 @@ export const posService = {
         if (discountBs > 0) saleSnakePayload.discount_bs = discountBs;
         await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake(saleSnakePayload), tenantId);
 
-        for (const cartItem of items) {
+        for (const cartItem of normalItems) {
           const product = await db.products.get(cartItem.productId);
           if (!product || product.deletedAt) {
             throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
@@ -546,6 +572,143 @@ export const posService = {
 
           await syncQueue.enqueue('products', 'UPDATE', cartItem.productId, toSnake({ id: cartItem.productId, stock: newStock } as unknown as Record<string, unknown>), tenantId);
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
+        }
+
+        // Crear saleItems para items assembly (consumo de ingredientes dentro de transacción)
+        for (const assemblyItem of assemblyItems) {
+          const product = await db.products.get(assemblyItem.productId);
+          if (!product) {
+            throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no encontrado.`);
+          }
+
+          const recipe = await db.recipes
+            .where({ productId: assemblyItem.productId, mode: 'assembly' as const })
+            .filter(r => !r.deletedAt && r.isActive)
+            .first();
+
+          if (!recipe) {
+            throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no tiene receta de ensamblaje.`);
+          }
+
+          const recipeLines = await db.recipeLines
+            .where({ recipeId: recipe.id })
+            .filter(l => !l.deletedAt)
+            .toArray();
+
+          if (recipeLines.length === 0) {
+            throw new AppError(
+              'ASSEMBLY_NO_INGREDIENTS',
+              `La receta de ensamblaje de "${assemblyItem.productName}" no tiene ingredientes. Edite la receta antes de vender.`,
+            );
+          }
+
+          // Verificar y consumir ingredientes en un solo paso atómico
+          const wasteMultiplier = 1 + (recipe.wastePct / 100);
+          let totalIngredientCost = 0;
+          for (const line of recipeLines) {
+            const needed = Math.ceil(line.quantity * assemblyItem.quantity * wasteMultiplier);
+            const ingredient = await db.products.get(line.productId);
+            if (!ingredient || ingredient.stock < needed) {
+              throw new AppError(
+                'ASSEMBLY_INSUFFICIENT_STOCK',
+                `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${assemblyItem.productName}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`,
+              );
+            }
+
+            // Consumir inmediatamente después de verificar
+            const previousStock = ingredient.stock;
+            const newStock = Math.max(0, previousStock - needed);
+
+            await db.products.update(line.productId, { stock: newStock });
+            await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+
+            // Consumo FIFO del ingrediente
+            let toConsume = needed;
+            let lotCost = 0;
+            const lots = await db.inventoryLots
+              .where({ productId: line.productId })
+              .filter(l => l.remainingQuantity > 0)
+              .sortBy('createdAt');
+
+            for (const lot of lots) {
+              if (toConsume <= 0) break;
+              const currentLot = await db.inventoryLots.get(lot.id);
+              if (!currentLot || currentLot.remainingQuantity <= 0) continue;
+              if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
+                throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto en consumo FIFO.');
+              }
+              const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
+              const newVersion = (currentLot.version ?? 0) + 1;
+              lotCost += consumeQty * (currentLot.costUsdPerUnit ?? 0);
+              await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion });
+              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion } as unknown as Record<string, unknown>), tenantId);
+              toConsume -= consumeQty;
+            }
+
+            if (toConsume > 0) {
+              throw new AppError('INVENTORY_STOCK_INSUFFICIENT', `Stock insuficiente de "${ingredient.name}" (lotes agotados).`);
+            }
+
+            totalIngredientCost += lotCost;
+
+            // Movement de consumo
+            const movementId = generateId();
+            await db.inventoryMovements.add({
+              id: movementId,
+              tenantId,
+              productId: line.productId,
+              userId,
+              type: 'adjustment' as const,
+              quantity: -needed,
+              previousStock,
+              newStock,
+              reasonType: 'consumo_interno',
+              createdAt: now,
+            });
+            await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
+              id: movementId, tenant_id: tenantUuid, product_id: line.productId, user_id: userId,
+              type: 'adjustment', quantity: -needed, previous_stock: previousStock, new_stock: newStock,
+              reason_type: 'consumo_interno', created_at: now,
+            } as unknown as Record<string, unknown>), tenantId);
+          }
+
+          // Crear saleItem para el producto ensamblado
+          const cartItemData = items.find(i => i.productId === assemblyItem.productId);
+          const costUsdPerUnit = assemblyItem.quantity > 0 ? preciseRound(totalIngredientCost / assemblyItem.quantity, 4) : 0;
+
+          const saleItemId = generateId();
+          await db.saleItems.add({
+            id: saleItemId,
+            tenantId,
+            saleId,
+            productId: assemblyItem.productId,
+            productName: product.name,
+            productSku: product.sku,
+            quantity: assemblyItem.quantity,
+            unitPriceUsd: cartItemData?.unitPriceUsd ?? 0,
+            totalPriceUsd: cartItemData?.totalPriceUsd ?? 0,
+            costUsdPerUnit,
+            isWeighted: false,
+            unit: product.unit,
+            unitMultiplier: 1,
+            createdAt: now,
+          });
+
+          await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
+            id: saleItemId,
+            tenant_id: tenantUuid,
+            sale_id: saleId,
+            product_id: assemblyItem.productId,
+            product_name: product.name,
+            product_sku: product.sku,
+            quantity: assemblyItem.quantity,
+            unit_price_usd: cartItemData?.unitPriceUsd ?? 0,
+            total_price_usd: cartItemData?.totalPriceUsd ?? 0,
+            cost_usd_per_unit: costUsdPerUnit,
+            is_weighted: false,
+            unit: product.unit,
+            created_at: now,
+          } as unknown as Record<string, unknown>), tenantId);
         }
 
         const updatedCashReg = {
@@ -970,66 +1133,139 @@ export const posService = {
         return opened <= saleTs && (r.isOpen || closed >= saleTs);
       }) ?? allRegisters.find((r) => r.isOpen);
 
-      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });
 
         for (const item of items) {
           const product = await db.products.get(item.productId);
           if (!product || product.deletedAt) continue;
 
-          const previousStock = product.stock;
-          const baseQty = product.isWeighted
-            ? convertToStorage(item.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
-            : Math.round(item.quantity);
-          const storageQty = baseQty * (item.unitMultiplier || 1);
-          const newStock = previousStock + storageQty;
-          await db.products.update(item.productId, { stock: newStock });
+          // Detectar si es producto assembly
+          const assemblyRecipe = await db.recipes
+            .where({ productId: item.productId, mode: 'assembly' as const })
+            .filter(r => !r.deletedAt && r.isActive)
+            .first();
 
-          const lots = await db.inventoryLots
-            .where({ productId: item.productId })
-            .filter((l) => l.remainingQuantity >= 0)
-            .toArray();
-          lots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          if (assemblyRecipe) {
+            // C1: Revertir ingredientes en vez del producto terminado
+            const recipeLines = await db.recipeLines
+              .where({ recipeId: assemblyRecipe.id })
+              .filter(l => !l.deletedAt)
+              .toArray();
 
-          let toRestore = storageQty;
-          for (const lot of lots) {
-            if (toRestore <= 0) break;
-            const currentLot = await db.inventoryLots.get(lot.id);
-            if (!currentLot) continue;
-            // Optimistic locking: verificar que el lote no haya sido restaurado ya
-            if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) continue;
-            const consumedFromLot = currentLot.quantityAdded - currentLot.remainingQuantity;
-            if (consumedFromLot <= 0) continue;
-            const restoreAmount = Math.min(toRestore, consumedFromLot);
-            const newRemaining = currentLot.remainingQuantity + restoreAmount;
-            const newVersion = (currentLot.version ?? 0) + 1;
-            await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
-            await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
-              id: lot.id, remainingQuantity: newRemaining, version: newVersion,
+            const wasteMultiplier = 1 + (assemblyRecipe.wastePct / 100);
+
+            for (const line of recipeLines) {
+              const ingredient = await db.products.get(line.productId);
+              if (!ingredient) continue;
+
+              const needed = Math.ceil(line.quantity * item.quantity * wasteMultiplier);
+              const previousStock = ingredient.stock;
+              const newStock = previousStock + needed;
+
+              await db.products.update(line.productId, { stock: newStock });
+              await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+
+              // Restaurar lotes FIFO del ingrediente (más recientes primero)
+              const ingredientLots = await db.inventoryLots
+                .where({ productId: line.productId })
+                .filter(l => l.remainingQuantity >= 0)
+                .toArray();
+              ingredientLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+              let toRestore = needed;
+              for (const lot of ingredientLots) {
+                if (toRestore <= 0) break;
+                const currentLot = await db.inventoryLots.get(lot.id);
+                if (!currentLot) continue;
+                if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) continue;
+                const consumedFromLot = currentLot.quantityAdded - currentLot.remainingQuantity;
+                if (consumedFromLot <= 0) continue;
+                const restoreAmount = Math.min(toRestore, consumedFromLot);
+                const newRemaining = currentLot.remainingQuantity + restoreAmount;
+                const newVersion = (currentLot.version ?? 0) + 1;
+                await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
+                await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
+                  id: lot.id, remainingQuantity: newRemaining, version: newVersion,
+                } as unknown as Record<string, unknown>), tenantId);
+                toRestore -= restoreAmount;
+              }
+
+              // Movimiento de reversión de ingrediente
+              const movementId = generateId();
+              await db.inventoryMovements.add({
+                id: movementId,
+                tenantId,
+                productId: line.productId,
+                userId,
+                type: 'adjustment',
+                quantity: needed,
+                previousStock,
+                newStock,
+                reason: `Anulación venta assembly #${saleId.slice(0, 8)}`,
+                createdAt: now,
+              });
+              await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
+                id: movementId, tenantId, productId: line.productId, userId,
+                type: 'adjustment', quantity: needed, previousStock, newStock,
+                reason: `Anulación venta assembly #${saleId.slice(0, 8)}`, createdAt: now,
+              } as unknown as Record<string, unknown>), tenantId);
+            }
+          } else {
+            // Producto normal: revertir stock del producto
+            const previousStock = product.stock;
+            const baseQty = product.isWeighted
+              ? convertToStorage(item.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
+              : Math.round(item.quantity);
+            const storageQty = baseQty * (item.unitMultiplier || 1);
+            const newStock = previousStock + storageQty;
+            await db.products.update(item.productId, { stock: newStock });
+
+            const lots = await db.inventoryLots
+              .where({ productId: item.productId })
+              .filter((l) => l.remainingQuantity >= 0)
+              .toArray();
+            lots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+            let toRestore = storageQty;
+            for (const lot of lots) {
+              if (toRestore <= 0) break;
+              const currentLot = await db.inventoryLots.get(lot.id);
+              if (!currentLot) continue;
+              if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) continue;
+              const consumedFromLot = currentLot.quantityAdded - currentLot.remainingQuantity;
+              if (consumedFromLot <= 0) continue;
+              const restoreAmount = Math.min(toRestore, consumedFromLot);
+              const newRemaining = currentLot.remainingQuantity + restoreAmount;
+              const newVersion = (currentLot.version ?? 0) + 1;
+              await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
+              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
+                id: lot.id, remainingQuantity: newRemaining, version: newVersion,
+              } as unknown as Record<string, unknown>), tenantId);
+              toRestore -= restoreAmount;
+            }
+
+            const movementId = generateId();
+            await db.inventoryMovements.add({
+              id: movementId,
+              tenantId,
+              productId: item.productId,
+              userId,
+              type: 'adjustment',
+              quantity: storageQty,
+              previousStock,
+              newStock,
+              reason: `Anulación venta #${saleId.slice(0, 8)}`,
+              createdAt: now,
+            });
+
+            await syncQueue.enqueue('products', 'UPDATE', item.productId, toSnake({ id: item.productId, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+            await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
+              id: movementId, tenantId, productId: item.productId, userId,
+              type: 'adjustment', quantity: storageQty, previousStock, newStock,
+              reason: `Anulación venta #${saleId.slice(0, 8)}`, createdAt: now,
             } as unknown as Record<string, unknown>), tenantId);
-            toRestore -= restoreAmount;
           }
-
-          const movementId = generateId();
-          await db.inventoryMovements.add({
-            id: movementId,
-            tenantId,
-            productId: item.productId,
-            userId,
-            type: 'adjustment',
-            quantity: storageQty,
-            previousStock,
-            newStock,
-            reason: `Anulación venta #${saleId.slice(0, 8)}`,
-            createdAt: now,
-          });
-
-          await syncQueue.enqueue('products', 'UPDATE', item.productId, toSnake({ id: item.productId, stock: newStock } as unknown as Record<string, unknown>), tenantId);
-          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
-            id: movementId, tenantId, productId: item.productId, userId,
-            type: 'adjustment', quantity: storageQty, previousStock, newStock,
-            reason: `Anulación venta #${saleId.slice(0, 8)}`, createdAt: now,
-          } as unknown as Record<string, unknown>), tenantId);
         }
 
         // Revertir totales de caja si existe una caja abierta

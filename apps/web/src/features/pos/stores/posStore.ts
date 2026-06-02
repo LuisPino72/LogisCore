@@ -10,6 +10,7 @@ import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
+import { getDb } from '../../../services/dexie/db';
 import type { CreateSaleInput } from '../../../specs/pos';
 
 const MAX_PARKED_CARTS = 10;
@@ -61,6 +62,7 @@ const initialState: PosState = {
   searchQuery: '',
   presentationsMap: {},
   discount: null,
+  assemblyRecipesMap: {},
 };
 
 export const usePosStore = create<PosStore>()(
@@ -76,12 +78,36 @@ export const usePosStore = create<PosStore>()(
     if (result.ok) {
       const favResult = await posService.getFavorites(tenantId);
       const favIds = favResult.ok ? favResult.data : new Set<string>();
+
+      // Cargar recetas assembly y sus ingredientes para pre-validación
+      const recipesMap: PosStore['assemblyRecipesMap'] = {};
+      try {
+        const db = getDb();
+        const assemblyRecipes = await db.recipes
+          .where({ mode: 'assembly' as const })
+          .filter(r => !r.deletedAt && r.isActive)
+          .toArray();
+        for (const recipe of assemblyRecipes) {
+          const lines = await db.recipeLines
+            .where({ recipeId: recipe.id })
+            .filter(l => !l.deletedAt)
+            .toArray();
+          recipesMap[recipe.productId] = {
+            recipeId: recipe.id,
+            wastePct: recipe.wastePct,
+            lines: lines.map(l => ({ productId: l.productId, quantity: l.quantity })),
+          };
+        }
+      } catch {
+        // Offline o DB cerrada — sin pre-validación
+      }
+
       const sorted = [...result.data].sort((a, b) => {
         const aFav = favIds.has(a.id) ? 1 : 0;
         const bFav = favIds.has(b.id) ? 1 : 0;
         return bFav - aFav;
       });
-      set({ products: sorted, favoriteProductIds: favIds, ...(!silent && { loading: false }) });
+      set({ products: sorted, favoriteProductIds: favIds, assemblyRecipesMap: recipesMap, ...(!silent && { loading: false }) });
       imageCacheService.preloadAll(result.data);
     } else if (!silent) {
       set({ loading: false, error: result.error.message });
@@ -200,15 +226,32 @@ export const usePosStore = create<PosStore>()(
     const { cart } = get();
     set({ error: null });
 
-    if (presentation) {
+      if (presentation) {
       const totalConsumption = cart
         .filter((item) => item.productId === product.id)
         .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
       const requestedConsumption = quantity * (presentation.unitMultiplier || 1);
-      if (totalConsumption + requestedConsumption > product.stock) {
+      const isAssembly = product.hasAssemblyRecipe;
+      if (!isAssembly && totalConsumption + requestedConsumption > product.stock) {
         const available = Math.floor((product.stock - totalConsumption) / presentation.unitMultiplier);
         set({ error: `Stock insuficiente. Disponible: ${Math.max(0, available)} unidades.` });
         return;
+      }
+
+      // A2: Pre-validación de ingredientes para productos assembly
+      if (isAssembly) {
+        const recipeData = get().assemblyRecipesMap[product.id];
+        if (recipeData) {
+          const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+          for (const line of recipeData.lines) {
+            const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
+            const ingredient = get().products.find(p => p.id === line.productId);
+            if (!ingredient || ingredient.stock < needed) {
+              set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
+              return;
+            }
+          }
+        }
       }
 
       const displayName = `${product.name} - ${presentation.name}`;
@@ -258,17 +301,35 @@ export const usePosStore = create<PosStore>()(
     // Original behavior for products without presentations
     const currentQtyInCart = cart.find((item) => item.productId === product.id)?.quantity ?? 0;
     const totalRequested = currentQtyInCart + quantity;
-    if (totalRequested > product.stock) {
+    const isAssembly = product.hasAssemblyRecipe;
+    if (!isAssembly && totalRequested > product.stock) {
       const available = product.unit === 'kg' || product.unit === 'lt'
         ? (product.stock / 1000).toFixed(2)
         : product.stock;
       set({ error: `Stock insuficiente. Disponible: ${available} ${product.unit === 'lt' ? 'Lt' : product.unit === 'kg' ? 'Kg' : ''}` });
       return;
     }
+
+    // A2: Pre-validación de ingredientes para productos assembly
+    if (isAssembly) {
+      const recipeData = get().assemblyRecipesMap[product.id];
+      if (recipeData) {
+        const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+        for (const line of recipeData.lines) {
+          const needed = Math.ceil(line.quantity * totalRequested * wasteMultiplier);
+          const ingredient = get().products.find(p => p.id === line.productId);
+          if (!ingredient || ingredient.stock < needed) {
+            set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
+            return;
+          }
+        }
+      }
+    }
     const existing = cart.find((item) => item.productId === product.id);
     if (existing) {
       const foundProduct = get().products.find(p => p.id === product.id);
-      const maxQty = foundProduct?.isWeighted ? (foundProduct?.stock ?? 0) / 1000 : (foundProduct?.stock ?? 0);
+      const isAssemblyProd = foundProduct?.hasAssemblyRecipe;
+      const maxQty = isAssemblyProd ? Infinity : (foundProduct?.isWeighted ? (foundProduct?.stock ?? 0) / 1000 : (foundProduct?.stock ?? 0));
       const newQty = Math.min(preciseRound(existing.quantity + quantity, 2), maxQty);
       set({
         cart: cart.map((item) =>
@@ -278,7 +339,8 @@ export const usePosStore = create<PosStore>()(
         ),
       });
     } else {
-      const maxQty = product.isWeighted ? product.stock / 1000 : product.stock;
+      const isAssemblyProd = product.hasAssemblyRecipe;
+      const maxQty = isAssemblyProd ? Infinity : (product.isWeighted ? product.stock / 1000 : product.stock);
       const finalQty = Math.min(quantity, maxQty);
       set({
         cart: [
@@ -322,15 +384,38 @@ export const usePosStore = create<PosStore>()(
     if (cartItem.presentationId) {
       const product = get().products.find(p => p.id === productId);
       if (!product) { get().removeFromCart(productId, presentationId); return; }
-      const totalConsumption = get().cart
-        .filter((item) => item.productId === productId && item.presentationId !== presentationId)
-        .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
-      const availableBase = Math.max(0, product.stock - totalConsumption);
-      maxQty = Math.floor(availableBase / (cartItem.unitMultiplier || 1));
+      const isAssemblyProd = product.hasAssemblyRecipe;
+      if (isAssemblyProd) {
+        maxQty = Infinity;
+      } else {
+        const totalConsumption = get().cart
+          .filter((item) => item.productId === productId && item.presentationId !== presentationId)
+          .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
+        const availableBase = Math.max(0, product.stock - totalConsumption);
+        maxQty = Math.floor(availableBase / (cartItem.unitMultiplier || 1));
+      }
     } else {
       const product = get().products.find(p => p.id === productId);
       if (!product) { get().removeFromCart(productId, presentationId); return; }
-      maxQty = product.isWeighted ? product.stock / 1000 : product.stock;
+      const isAssemblyProd = product.hasAssemblyRecipe;
+      maxQty = isAssemblyProd ? Infinity : (product.isWeighted ? product.stock / 1000 : product.stock);
+    }
+
+    // A2: Pre-validación de ingredientes para productos assembly
+    const product = get().products.find(p => p.id === productId);
+    if (product?.hasAssemblyRecipe) {
+      const recipeData = get().assemblyRecipesMap[productId];
+      if (recipeData) {
+        const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+        for (const line of recipeData.lines) {
+          const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
+          const ingredient = get().products.find(p => p.id === line.productId);
+          if (!ingredient || ingredient.stock < needed) {
+            set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
+            return;
+          }
+        }
+      }
     }
 
     const finalQty = Math.min(quantity, maxQty);
