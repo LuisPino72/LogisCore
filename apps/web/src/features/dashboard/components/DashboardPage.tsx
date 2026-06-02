@@ -59,11 +59,9 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   useEffect(() => {
     if (!tenantId) return;
     fetchLowStock(tenantId);
-    const sub1 = EventBus.on('SYNC.REFRESH_PRODUCTS', () => fetchLowStock(tenantId));
-    const sub2 = EventBus.on('SALE.COMPLETED', () => fetchLowStock(tenantId));
+    const sub = EventBus.on('SALE.COMPLETED', () => fetchLowStock(tenantId));
     return () => {
-      EventBus.off(sub1);
-      EventBus.off(sub2);
+      EventBus.off(sub);
     };
   }, [tenantId, fetchLowStock]);
 
