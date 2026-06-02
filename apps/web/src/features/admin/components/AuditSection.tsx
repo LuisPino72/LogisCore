@@ -4,7 +4,6 @@ import {
   Badge,
   Card,
   DataTable,
-  EmptyState,
   Pagination,
   SearchableSelect,
   Select,
@@ -197,14 +196,14 @@ export function AuditSection() {
     {
       key: 'createdAt',
       header: 'Fecha',
-      render: (e) => <span className="text-xs text-gray-500">{formatDate(e.createdAt)}</span>,
+      render: (e) => <span className="font-mono text-xs text-gray-500">{formatDate(e.createdAt)}</span>,
     },
     {
       key: 'eventName',
       header: 'Evento',
       render: (e) => (
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{e.eventName}</span>
+        <div className="flex items-center gap-2 border-l-2 border-primary/40 pl-2 min-w-0">
+          <span className="font-mono text-sm font-medium truncate">{e.eventName}</span>
           {severityBadge(e.severity)}
         </div>
       ),
@@ -217,13 +216,13 @@ export function AuditSection() {
     {
       key: 'userId',
       header: 'Usuario',
-      render: (e) => <span className="text-sm text-gray-600 truncate max-w-24">{e.userId || '-'}</span>,
+      render: (e) => <span className="font-mono text-sm text-gray-600 truncate max-w-24">{e.userId || '-'}</span>,
       hideOnMobile: true,
     },
     {
       key: 'tenantId',
       header: 'Tenant',
-      render: (e) => <span className="text-sm text-gray-600 truncate max-w-24">{e.tenantId || '-'}</span>,
+      render: (e) => <span className="font-mono text-sm text-gray-600 truncate max-w-24">{e.tenantId || '-'}</span>,
       hideOnMobile: true,
     },
     {
@@ -237,12 +236,16 @@ export function AuditSection() {
     {
       key: 'createdAt',
       header: 'Fecha',
-      render: (e) => <span className="text-xs text-gray-500">{formatDate(e.createdAt)}</span>,
+      render: (e) => <span className="font-mono text-xs text-gray-500">{formatDate(e.createdAt)}</span>,
     },
     {
       key: 'event',
       header: 'Evento',
-      render: (e) => <span className="text-sm font-medium">{e.event}</span>,
+      render: (e) => (
+        <div className="border-l-2 border-primary/40 pl-2 min-w-0">
+          <span className="font-mono text-sm font-medium truncate block">{e.event}</span>
+        </div>
+      ),
     },
     {
       key: 'module',
@@ -257,37 +260,47 @@ export function AuditSection() {
     {
       key: 'retries',
       header: 'Reintentos',
-      render: (e) => <span className="text-sm">{e.retries}</span>,
+      render: (e) => <span className="font-mono text-sm">{e.retries}</span>,
       hideOnMobile: true,
     },
     {
       key: 'lastError',
       header: 'Error',
       render: (e) => e.lastError
-        ? <span className="text-xs text-red-500 truncate max-w-32" title={e.lastError}>{e.lastError}</span>
+        ? <span className="font-mono text-xs text-red-500 truncate max-w-32" title={e.lastError}>{e.lastError}</span>
         : <span className="text-gray-400">-</span>,
       hideOnMobile: true,
     },
   ], []);
 
+  const activeCount = subTab === 'audit' ? auditEntries.length : outboxEntries.length;
+  const activeCountLabel =
+    subTab === 'audit'
+      ? `${activeCount} evento${activeCount !== 1 ? 's' : ''} de auditoría`
+      : `${activeCount} evento${activeCount !== 1 ? 's' : ''} en outbox`;
+
   return (
-    <Card>
+    <Card className="audit-container @container pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="p-4 pb-0">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+        <div className="relative overflow-hidden flex items-center gap-3 mb-4 rounded-lg bg-linear-to-br from-primary/5 to-transparent p-3">
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle,rgba(13,148,136,0.06)_1px,transparent_1px)] bg-size-[16px_16px]"
+          />
+          <div className="relative w-10 h-10 rounded-xl bg-primary/15 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
             <Shield size={20} className="text-primary" />
           </div>
-          <div>
-            <h2 className="text-lg font-title font-bold text-gray-900">Auditoría</h2>
-            <p className="text-xs text-text-secondary">
-              {auditEntries.length} evento{auditEntries.length !== 1 ? 's' : ''} de auditoría · {outboxEntries.length} en outbox
-            </p>
+          <div className="relative min-w-0">
+            <h2 className="text-[clamp(1.125rem,1rem+0.5vw,1.5rem)] font-title font-bold text-gray-900 leading-tight">
+              Auditoría
+            </h2>
+            <p className="text-xs text-text-secondary font-mono truncate">{activeCountLabel}</p>
           </div>
         </div>
 
         <Tabs tabs={subTabs} activeKey={subTab} onChange={(k) => setSubTab(k as SubTab)} className="mb-4" />
 
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4 @md:flex-nowrap @md:flex-row">
           <Select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as DateRange)}
@@ -332,13 +345,6 @@ export function AuditSection() {
               keyExtractor={(e) => String(e.id)}
               renderCardOnMobile
             />
-            {auditEntries.length === 0 && (
-              <EmptyState
-                icon={<Shield size={32} />}
-                title="Sin eventos de auditoría"
-                description="Los eventos de auditoría aparecerán aquí cuando se registren acciones críticas en el sistema."
-              />
-            )}
             {auditTotalPages > 1 && (
               <Pagination page={auditPage} totalPages={auditTotalPages} onPageChange={setAuditPage} />
             )}
@@ -352,13 +358,6 @@ export function AuditSection() {
               keyExtractor={(e) => String(e.id)}
               renderCardOnMobile
             />
-            {outboxEntries.length === 0 && (
-              <EmptyState
-                icon={<Clock size={32} />}
-                title="Outbox vacío"
-                description="Los eventos pendientes de procesamiento aparecerán aquí."
-              />
-            )}
             {outboxTotalPages > 1 && (
               <Pagination page={outboxPage} totalPages={outboxTotalPages} onPageChange={setOutboxPage} />
             )}
