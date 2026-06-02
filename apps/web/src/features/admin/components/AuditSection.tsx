@@ -12,9 +12,7 @@ import {
 } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import type { Tab } from '../../../common/components/Tabs';
-import { getDb, isDbReady, type DexieAuditEntry } from '../../../services/dexie/db';
-import type { OutboxEntry } from '@logiscore/core';
-import { adminService } from '../services/adminService';
+import { adminService, type AuditEntry, type OutboxEntryRow } from '../services/adminService';
 
 type SubTab = 'audit' | 'outbox';
 type DateRange = 'today' | 'week' | 'month' | 'all';
@@ -82,7 +80,7 @@ function severityBadge(severity: string) {
   }
 }
 
-function outboxStatusBadge(status: OutboxEntry['status']) {
+function outboxStatusBadge(status: string) {
   switch (status) {
     case 'pending':
       return <Badge variant="warning">Pendiente</Badge>;
@@ -97,25 +95,15 @@ function outboxStatusBadge(status: OutboxEntry['status']) {
   }
 }
 
-function auditStatusBadge(status: DexieAuditEntry['status']) {
-  switch (status) {
-    case 'synced':
-      return <Badge variant="success">Sincronizado</Badge>;
-    case 'pending':
-      return <Badge variant="warning">Pendiente</Badge>;
-    default:
-      return <Badge variant="danger">{status}</Badge>;
-  }
-}
-
 export function AuditSection() {
   const [subTab, setSubTab] = useState<SubTab>('audit');
   const [dateRange, setDateRange] = useState<DateRange>('week');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [tenantFilter, setTenantFilter] = useState('');
   const [tenants, setTenants] = useState<Array<{ id: string; name: string }>>([]);
-  const [auditEntries, setAuditEntries] = useState<DexieAuditEntry[]>([]);
-  const [outboxEntries, setOutboxEntries] = useState<OutboxEntry[]>([]);
+  const [userEmailMap, setUserEmailMap] = useState<Map<string, string>>(new Map());
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [outboxEntries, setOutboxEntries] = useState<OutboxEntryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [auditPage, setAuditPage] = useState(1);
   const [outboxPage, setOutboxPage] = useState(1);
@@ -126,41 +114,50 @@ export function AuditSection() {
         setTenants(result.data.map((t) => ({ id: t.id, name: t.name })));
       }
     });
+    adminService.fetchAllUsers().then((result) => {
+      if (result.ok) {
+        const map = new Map<string, string>();
+        result.data.forEach((u) => {
+          if (u.email) map.set(u.userId, u.email);
+        });
+        setUserEmailMap(map);
+      }
+    });
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!isDbReady()) {
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const db = getDb();
       const startDate = getDateRangeStart(dateRange);
 
-      const auditQuery = db.auditEntries.orderBy('createdAt').reverse();
-      const outboxQuery = db.outbox.orderBy('createdAt').reverse();
+      // Audit: leer de Supabase (admin tiene internet estable)
+      const auditResult = await adminService.fetchAuditEntries({
+        dateRange: { start: startDate },
+        module: moduleFilter,
+        tenantId: tenantFilter || null,
+        limit: 500,
+      });
 
-      let auditData = await auditQuery.toArray();
-      let outboxData = await outboxQuery.toArray();
-
-      if (startDate) {
-        auditData = auditData.filter((e) => e.createdAt >= startDate);
-        outboxData = outboxData.filter((e) => e.createdAt >= startDate);
+      if (auditResult.ok) {
+        setAuditEntries(auditResult.data);
+      } else {
+        console.warn('[AuditSection] Error cargando audit:', auditResult.error.message);
+        setAuditEntries([]);
       }
 
-      if (moduleFilter !== 'all') {
-        auditData = auditData.filter((e) => e.module === moduleFilter);
-        outboxData = outboxData.filter((e) => e.module === moduleFilter);
-      }
+      // Outbox: leer de Supabase (cola global de eventos por procesar)
+      const outboxResult = await adminService.fetchOutboxEntries({
+        dateRange: { start: startDate },
+        module: moduleFilter,
+        limit: 200,
+      });
 
-      if (tenantFilter) {
-        auditData = auditData.filter((e) => e.tenantId === tenantFilter);
+      if (outboxResult.ok) {
+        setOutboxEntries(outboxResult.data);
+      } else {
+        console.warn('[AuditSection] Error cargando outbox:', outboxResult.error.message);
+        setOutboxEntries([]);
       }
-
-      setAuditEntries(auditData);
-      setOutboxEntries(outboxData);
     } catch (err) {
       console.warn('[AuditSection] Error cargando datos:', err);
     } finally {
@@ -182,6 +179,12 @@ export function AuditSection() {
     ...tenants.map((t) => ({ value: t.id, label: t.name })),
   ], [tenants]);
 
+  const tenantNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    tenants.forEach((t) => map.set(t.id, t.name));
+    return map;
+  }, [tenants]);
+
   const auditTotalPages = Math.max(1, Math.ceil(auditEntries.length / PAGE_SIZE));
   const outboxTotalPages = Math.max(1, Math.ceil(outboxEntries.length / PAGE_SIZE));
   const paginatedAudit = auditEntries.slice((auditPage - 1) * PAGE_SIZE, auditPage * PAGE_SIZE);
@@ -192,7 +195,7 @@ export function AuditSection() {
     { key: 'outbox', label: 'Outbox', icon: <Clock size={16} /> },
   ], []);
 
-  const auditColumns: Column<DexieAuditEntry>[] = useMemo(() => [
+  const auditColumns: Column<AuditEntry>[] = useMemo(() => [
     {
       key: 'createdAt',
       header: 'Fecha',
@@ -209,30 +212,41 @@ export function AuditSection() {
       ),
     },
     {
-      key: 'module',
+      key: 'eventModule',
       header: 'Módulo',
-      render: (e) => <Badge variant="neutral">{e.module}</Badge>,
+      render: (e) => <Badge variant="neutral">{e.eventModule}</Badge>,
     },
     {
       key: 'userId',
       header: 'Usuario',
-      render: (e) => <span className="font-mono text-sm text-gray-600 truncate max-w-24">{e.userId || '-'}</span>,
+      render: (e) => {
+        const emailFromPayload = (e.payload as Record<string, unknown> | null)?.email as string | undefined;
+        const emailFromMap = e.userId ? userEmailMap.get(e.userId) : undefined;
+        const display = emailFromPayload || emailFromMap || e.userId?.slice(0, 8) || '-';
+        return (
+          <span className="text-sm text-gray-700 truncate max-w-40" title={display}>
+            {display}
+          </span>
+        );
+      },
       hideOnMobile: true,
     },
     {
       key: 'tenantId',
       header: 'Tenant',
-      render: (e) => <span className="font-mono text-sm text-gray-600 truncate max-w-24">{e.tenantId || '-'}</span>,
+      render: (e) => {
+        const name = e.tenantId ? tenantNameMap.get(e.tenantId) : null;
+        return (
+          <span className="text-sm text-gray-700 truncate max-w-40" title={name || e.tenantId || ''}>
+            {name || e.tenantId?.slice(0, 8) || '-'}
+          </span>
+        );
+      },
       hideOnMobile: true,
     },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (e) => auditStatusBadge(e.status),
-    },
-  ], []);
+  ], [tenantNameMap, userEmailMap]);
 
-  const outboxColumns: Column<OutboxEntry>[] = useMemo(() => [
+  const outboxColumns: Column<OutboxEntryRow>[] = useMemo(() => [
     {
       key: 'createdAt',
       header: 'Fecha',

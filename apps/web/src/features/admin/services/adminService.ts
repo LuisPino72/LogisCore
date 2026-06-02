@@ -569,6 +569,101 @@ export const adminService = {
     return success(undefined);
   },
 
+  async fetchAuditEntries(filters?: {
+    dateRange?: { start: string | null };
+    module?: string | null;
+    tenantId?: string | null;
+    limit?: number;
+  }): Promise<Result<AuditEntry[], AppError>> {
+    try {
+      let query = supabase
+        .from('audit_trail')
+        .select('id, event_name, event_module, user_id, payload, severity, created_at, tenant_id')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(filters?.limit ?? 500);
+
+      if (filters?.module && filters.module !== 'all') {
+        query = query.eq('event_module', filters.module);
+      }
+      if (filters?.tenantId) {
+        query = query.eq('tenant_id', filters.tenantId);
+      }
+      if (filters?.dateRange?.start) {
+        query = query.gte('created_at', filters.dateRange.start);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        return failure(new AppError(AdminErrors.AUDIT_FETCH_FAILED, `Error al cargar auditoría: ${error.message}`));
+      }
+
+      const entries: AuditEntry[] = (data ?? []).map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        eventName: row.event_name as string,
+        eventModule: row.event_module as string,
+        userId: row.user_id as string | null,
+        payload: row.payload as Record<string, unknown> | null,
+        severity: row.severity as string,
+        createdAt: row.created_at as string,
+        tenantId: row.tenant_id as string | null,
+      }));
+
+      return success(entries);
+    } catch {
+      return failure(new AppError(AdminErrors.AUDIT_FETCH_FAILED, 'Error inesperado al cargar auditoría'));
+    }
+  },
+
+  async fetchOutboxEntries(filters?: {
+    dateRange?: { start: string | null };
+    module?: string | null;
+    status?: string | null;
+    limit?: number;
+  }): Promise<Result<OutboxEntryRow[], AppError>> {
+    try {
+      let query = supabase
+        .from('outbox')
+        .select('id, event, module, payload, status, retries, last_error, next_retry_at, created_at, processed_at')
+        .order('created_at', { ascending: false })
+        .limit(filters?.limit ?? 200);
+
+      if (filters?.module && filters.module !== 'all') {
+        query = query.eq('module', filters.module);
+      }
+      if (filters?.status && filters.status !== 'all') {
+        query = query.eq('status', filters.status);
+      }
+      if (filters?.dateRange?.start) {
+        query = query.gte('created_at', filters.dateRange.start);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        return failure(new AppError(AdminErrors.OUTBOX_FETCH_FAILED, `Error al cargar outbox: ${error.message}`));
+      }
+
+      const entries: OutboxEntryRow[] = (data ?? []).map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        event: row.event as string,
+        module: row.module as string,
+        payload: row.payload as Record<string, unknown> | null,
+        status: row.status as string,
+        retries: row.retries as number,
+        lastError: row.last_error as string | null,
+        nextRetryAt: row.next_retry_at as string | null,
+        createdAt: row.created_at as string,
+        processedAt: row.processed_at as string | null,
+      }));
+
+      return success(entries);
+    } catch {
+      return failure(new AppError(AdminErrors.OUTBOX_FETCH_FAILED, 'Error inesperado al cargar outbox'));
+    }
+  },
+
   async getTenantAnalytics(tenantId: string): Promise<Result<TenantAnalytics, AppError>> {
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -605,3 +700,27 @@ export const adminService = {
     });
   },
 };
+
+export interface AuditEntry {
+  id: string;
+  eventName: string;
+  eventModule: string;
+  userId: string | null;
+  payload: Record<string, unknown> | null;
+  severity: string;
+  createdAt: string;
+  tenantId: string | null;
+}
+
+export interface OutboxEntryRow {
+  id: string;
+  event: string;
+  module: string;
+  payload: Record<string, unknown> | null;
+  status: string;
+  retries: number;
+  lastError: string | null;
+  nextRetryAt: string | null;
+  createdAt: string;
+  processedAt: string | null;
+}
