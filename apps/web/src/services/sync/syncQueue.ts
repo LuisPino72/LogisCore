@@ -10,6 +10,7 @@ const TABLE_PRIORITY: Record<string, number> = {
   recipe_lines: 87,
   product_presentations: 85,
   suppliers: 80,
+  customers: 78,
   inventory_movements: 75,
   inventory_lots: 70,
   purchase_orders: 65,

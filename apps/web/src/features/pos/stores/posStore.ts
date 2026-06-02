@@ -12,6 +12,7 @@ import { useExchangeRateStore } from '../../../features/exchange/stores/exchange
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import { getDb } from '../../../services/dexie/db';
 import type { CreateSaleInput } from '../../../specs/pos';
+import type { Customer } from '../../../specs/customers';
 
 const MAX_PARKED_CARTS = 10;
 
@@ -42,6 +43,7 @@ interface PosStore extends PosState {
   saleItems: SaleItem[];
   saleItemsLoading: boolean;
   fetchSaleItems: (saleId: string) => Promise<void>;
+  setSelectedCustomer: (customer: Customer | null) => void;
   reset: () => void;
 }
 
@@ -63,6 +65,8 @@ const initialState: PosState = {
   presentationsMap: {},
   discount: null,
   assemblyRecipesMap: {},
+  selectedCustomerId: null,
+  selectedCustomer: null,
 };
 
 export const usePosStore = create<PosStore>()(
@@ -431,8 +435,13 @@ export const usePosStore = create<PosStore>()(
 
   clearCart: () => set({ cart: [] }),
 
+  setSelectedCustomer: (customer) => set({
+    selectedCustomerId: customer?.id ?? null,
+    selectedCustomer: customer,
+  }),
+
   completeSale: async (tenantId, paymentMethod, userId) => {
-    const { cart } = get();
+    const { cart, selectedCustomerId } = get();
     if (cart.length === 0) {
       set({ error: 'No hay productos en el carrito.' });
       return failure(new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.'));
@@ -457,6 +466,7 @@ export const usePosStore = create<PosStore>()(
       items: cart,
       exchangeRate,
       ...(discount && { discountType: discount.type, discountValue: discount.value }),
+      ...(selectedCustomerId && { customerId: selectedCustomerId }),
     };
 
     set({ loading: true, error: null });
@@ -466,7 +476,14 @@ export const usePosStore = create<PosStore>()(
       if (activeId) {
         await posService.deleteParkedCart(activeId);
       }
-      set({ discount: null, loading: false, cart: [], activeParkedCartId: null });
+      set({
+        discount: null,
+        loading: false,
+        cart: [],
+        activeParkedCartId: null,
+        selectedCustomerId: null,
+        selectedCustomer: null,
+      });
       if (activeId) {
         const remaining = get().parkedCarts.filter((p) => p.id !== activeId);
         set({ parkedCarts: remaining });

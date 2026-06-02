@@ -23,6 +23,7 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'categories', timeCol: 'updated_at' },
   { name: 'inventory_lots', timeCol: 'updated_at' },
   { name: 'suppliers', timeCol: 'updated_at' },
+  { name: 'customers', timeCol: 'updated_at' },
   { name: 'purchase_orders', timeCol: 'updated_at' },
   { name: 'cash_registers', timeCol: 'updated_at' },
   { name: 'sales', timeCol: 'updated_at' },

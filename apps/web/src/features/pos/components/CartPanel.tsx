@@ -20,6 +20,9 @@ interface CartPanelProps {
   isMobileOpen: boolean;
   itemCount: number;
   onMobileToggle: () => void;
+  selectedCustomer?: { id: string; name: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
+  onSelectCustomer?: () => void;
+  onClearCustomer?: () => void;
 }
 
 export const CartPanel = memo(function CartPanel({
@@ -36,6 +39,9 @@ export const CartPanel = memo(function CartPanel({
   isMobileOpen,
   itemCount,
   onMobileToggle,
+  selectedCustomer,
+  onSelectCustomer,
+  onClearCustomer,
 }: CartPanelProps) {
   const discount = usePosStore((s) => s.discount);
   const setDiscount = usePosStore((s) => s.setDiscount);
@@ -83,6 +89,9 @@ export const CartPanel = memo(function CartPanel({
               discount={discount}
               onSetDiscount={setDiscount}
               onClearDiscount={clearDiscount}
+              selectedCustomer={selectedCustomer ?? null}
+              onSelectCustomer={onSelectCustomer ?? (() => {})}
+              onClearCustomer={onClearCustomer ?? (() => {})}
             />
           </div>
         )}

@@ -3,6 +3,7 @@ import { usePosStore } from '../stores/posStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
+import type { Customer } from '../../../specs/customers';
 
 export function usePos(tenantId: string | null) {
   const products = usePosStore((s) => s.products);
@@ -38,8 +39,11 @@ export function usePos(tenantId: string | null) {
   const fetchPresentations = usePosStore((s) => s.fetchPresentations);
   const fetchLatestRate = useExchangeRateStore((s) => s.fetchLatest);
   const getPresentations = usePosStore((s) => s.getPresentations);
-  const presentationsMap = usePosStore((s) => s.presentationsMap);
+  const presentacionesMap = usePosStore((s) => s.presentationsMap);
   const setSearchQuery = usePosStore((s) => s.setSearchQuery);
+  const selectedCustomerId = usePosStore((s) => s.selectedCustomerId);
+  const selectedCustomer = usePosStore((s) => s.selectedCustomer);
+  const setSelectedCustomer = usePosStore((s) => s.setSelectedCustomer);
   const reset = usePosStore((s) => s.reset);
 
   const session = useAuthStore((s) => s.session);
@@ -138,11 +142,12 @@ export function usePos(tenantId: string | null) {
     products, cart, cashRegister, exchangeRate, parkedCarts,
     favoriteProductIds, salesHistory, salesHistoryTotal, salesHistoryLoading,
     loading, error, searchQuery,
+    selectedCustomerId, selectedCustomer, setSelectedCustomer: (c: Customer | null) => setSelectedCustomer(c),
     addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     completeSale, openCashRegister, closeCashRegister,
     parkCart, loadParkedCart, deleteParkedCart,
     toggleFavorite, fetchSalesHistory, voidSale, getTodaySoldProducts,
-    fetchPresentations, getPresentations, presentationsMap, reset,
+    fetchPresentations, getPresentations, presentacionesMap, reset,
     isOpen: cashRegister?.isOpen ?? false,
     search,
     refresh: doRefresh,

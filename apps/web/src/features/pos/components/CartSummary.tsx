@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Input } from '../../../common/components';
-import { ShoppingCart, Pause, Percent, DollarSign, X } from 'lucide-react';
+import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals, IGTF_RATE } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
@@ -17,6 +17,9 @@ interface CartSummaryProps {
   discount: { type: 'percentage' | 'fixed'; value: number } | null;
   onSetDiscount: (type: 'percentage' | 'fixed', value: number) => void;
   onClearDiscount: () => void;
+  selectedCustomer: { id: string; name: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
+  onSelectCustomer: () => void;
+  onClearCustomer: () => void;
 }
 
 export function CartSummary({
@@ -31,6 +34,9 @@ export function CartSummary({
   discount,
   onSetDiscount,
   onClearDiscount,
+  selectedCustomer,
+  onSelectCustomer,
+  onClearCustomer,
 }: CartSummaryProps) {
   const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -93,6 +99,35 @@ export function CartSummary({
         <span>Total</span>
         <span>{formatUsd(totalUsd)} / {formatBs(totalBs)}</span>
       </div>
+
+      {selectedCustomer ? (
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
+          <User size={14} className="text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-900 truncate">{selectedCustomer.name}</p>
+            {selectedCustomer.phone && (
+              <p className="text-[10px] text-text-secondary truncate">{selectedCustomer.phone}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClearCustomer}
+            className="p-1 rounded-full hover:bg-danger/10 text-text-secondary hover:text-danger transition-colors shrink-0"
+            title="Quitar cliente"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onSelectCustomer}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-text-secondary border border-border hover:border-primary/30 hover:text-primary transition-colors"
+        >
+          <UserPlus size={14} />
+          Asignar cliente
+        </button>
+      )}
 
       {!discount && items.length > 0 && !showDiscountInput && (
         <button

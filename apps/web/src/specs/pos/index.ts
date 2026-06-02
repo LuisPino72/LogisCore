@@ -44,6 +44,7 @@ export const SaleSchema = z.object({
   discountType: z.enum(['percentage', 'fixed']).optional(),
   discountValue: z.number().min(0).optional(),
   discountBs: z.number().min(0).optional(),
+  customerId: z.string().uuid().optional(),
 });
 
 export type Sale = z.infer<typeof SaleSchema>;
@@ -102,6 +103,7 @@ export const CreateSaleInputSchema = z.object({
   exchangeRate: z.number().positive('Se requiere tasa de cambio'),
   discountType: z.enum(['percentage', 'fixed']).optional(),
   discountValue: z.number().min(0).optional(),
+  customerId: z.string().uuid().optional(),
 });
 
 export type CreateSaleInput = z.infer<typeof CreateSaleInputSchema>;

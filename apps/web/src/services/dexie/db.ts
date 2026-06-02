@@ -99,6 +99,7 @@ export interface DexieSale {
   discountType?: 'percentage' | 'fixed';
   discountValue?: number;
   discountBs?: number;
+  customerId?: string;
 }
 
 export interface DexieSaleItem {
@@ -195,6 +196,20 @@ export interface DexieSupplier {
   tenantId: string;
   name: string;
   phone?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export interface DexieCustomer {
+  id: string;
+  tenantId: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  creditLimit: number;
+  balance: number;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -326,6 +341,7 @@ export class LogisCoreDB extends Dexie {
   productFavorites!: Table<DexieProductFavorite, [string, string]>;
   productImages!: Table<DexieProductImage, string>;
   suppliers!: Table<DexieSupplier, string>;
+  customers!: Table<DexieCustomer, string>;
   purchaseOrders!: Table<DexiePurchaseOrder, string>;
   purchaseOrderItems!: Table<DexiePurchaseOrderItem, string>;
   exchangeRates!: Table<DexieExchangeRate, string>;
@@ -338,7 +354,7 @@ export class LogisCoreDB extends Dexie {
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
-    this.version(16).stores({
+    this.version(17).stores({
       expenses: 'id, tenantId, category, date, status, nextDueDate, isRecurring, parentExpenseId, [tenantId+date], [tenantId+status], [tenantId+deletedAt], [tenantId+isRecurring]',
       exchangeRates: 'id, tenantId, createdAt',
       tenantRefs: 'id, slug, name',
@@ -350,13 +366,14 @@ export class LogisCoreDB extends Dexie {
       categories: 'id, tenantId, [tenantId+deletedAt]',
       inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt]',
       inventoryLots: 'id, tenantId, productId, remainingQuantity, createdAt, [productId+remainingQuantity]',
-      sales: 'id, tenantId, [tenantId+deletedAt], [tenantId+createdAt]',
+      sales: 'id, tenantId, [tenantId+deletedAt], [tenantId+createdAt], customerId',
       saleItems: 'id, tenantId, saleId, productId, [tenantId+deletedAt], [saleId]',
       cashRegisters: 'id, tenantId, [tenantId+deletedAt]',
       parkedCarts: 'id, tenantId, [tenantId+createdAt]',
       productFavorites: '[productId+tenantId], tenantId',
       productImages: 'productId, tenantId, cachedAt',
       suppliers: 'id, tenantId, [tenantId+deletedAt]',
+      customers: 'id, tenantId, name, [tenantId+deletedAt]',
       purchaseOrders: 'id, tenantId, supplierId, status, [tenantId+status], [tenantId+deletedAt]',
       purchaseOrderItems: 'id, orderId, productId, [orderId]',
       auditEntries: '++id, eventName, status, createdAt, [status+createdAt]',

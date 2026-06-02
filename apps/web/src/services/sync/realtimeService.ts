@@ -15,6 +15,8 @@ export type RealtimeTable =
   | 'inventory_movements'
   | 'product_presentations'
   | 'categories'
+  | 'suppliers'
+  | 'customers'
   | 'purchase_orders'
   | 'purchase_order_items'
   | 'recipes'
@@ -30,6 +32,8 @@ export const REALTIME_TABLES: RealtimeTable[] = [
   'inventory_movements',
   'product_presentations',
   'categories',
+  'suppliers',
+  'customers',
   'purchase_orders',
   'purchase_order_items',
   'recipes',

@@ -415,6 +415,7 @@ export const posService = {
           discountType: discountType as 'percentage' | 'fixed' | undefined,
           discountValue: discountValue ?? undefined,
           discountBs: discountBs > 0 ? discountBs : undefined,
+          customerId: input.customerId ?? undefined,
         });
 
         const saleSnakePayload: Record<string, unknown> = {
@@ -433,6 +434,7 @@ export const posService = {
         if (discountType) saleSnakePayload.discount_type = discountType;
         if (discountValue != null) saleSnakePayload.discount_value = discountValue;
         if (discountBs > 0) saleSnakePayload.discount_bs = discountBs;
+        if (input.customerId) saleSnakePayload.customer_id = input.customerId;
         await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake(saleSnakePayload), tenantId);
 
         for (const cartItem of normalItems) {
@@ -775,6 +777,7 @@ export const posService = {
         createdAt: now,
         discountType: discountType as 'percentage' | 'fixed' | undefined,
         discountValue: discountValue ?? undefined,
+        customerId: input.customerId,
       });
     } catch (err) {
       if (err instanceof AppError) return failure(err);

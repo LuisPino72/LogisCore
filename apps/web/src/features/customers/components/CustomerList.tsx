@@ -1,0 +1,137 @@
+import { useState, useEffect } from 'react';
+import { Users, Phone, MapPin, Pencil, Trash2, CreditCard, History } from 'lucide-react';
+import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/components';
+import type { Customer } from '../../../specs/customers';
+import { getInitials } from '../../../lib/utils';
+
+const PAGE_SIZE = 20;
+
+interface CustomerListProps {
+  customers: Customer[];
+  loading: boolean;
+  isOwner: boolean;
+  onEdit: (customer: Customer) => void;
+  onDelete: (id: string, name: string) => void;
+  onViewHistory: (customer: Customer) => void;
+}
+
+export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, onViewHistory }: CustomerListProps) {
+  const [page, setPage] = useState(1);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
+  }, [loading, hasLoadedOnce]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [customers.length]);
+
+  const totalPages = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
+  const pagedCustomers = customers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  if (loading && customers.length === 0 && !hasLoadedOnce) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="skeleton h-16 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (customers.length === 0) {
+    return (
+      <EmptyState
+        icon={<Users size={32} />}
+        title="Todavía no hay clientes"
+        description="Agrega tu primer cliente. Así podrás asociarlo a tus ventas y ver el historial de compras."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {pagedCustomers.map((c) => {
+        const initials = getInitials(c.name);
+        const hasCredit = (c.creditLimit ?? 0) > 0;
+
+        return (
+          <div
+            key={c.id}
+            className="flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-xl border border-gray-100 bg-white sm:hover:shadow-sm sm:hover:border-primary/20 sm:group transition-all duration-200 sm:hover:border-l-primary sm:hover:border-l-3"
+          >
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
+              <span className="text-xs font-bold text-primary">{initials}</span>
+            </div>
+            <div className="min-w-0 flex-1 w-full text-center sm:text-left">
+              <div className="flex items-center justify-center gap-2 sm:justify-start sm:flex-row flex-col">
+                <p className="text-sm font-semibold text-gray-900 wrap-break-word">{c.name}</p>
+                {hasCredit && (
+                  <Badge variant="info" className="flex items-center gap-0.5">
+                    <CreditCard size={10} />
+                    <span>Con crédito</span>
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-center gap-2 sm:justify-start sm:flex-row flex-col">
+                {c.phone && (
+                  <p className="text-xs text-text-secondary flex items-center gap-1">
+                    <Phone size={12} className="shrink-0" />
+                    <span className="wrap-break-word">{c.phone}</span>
+                  </p>
+                )}
+                {c.address && (
+                  <p className="text-xs text-text-secondary flex items-center gap-1">
+                    <MapPin size={12} className="shrink-0" />
+                    <span className="wrap-break-word">{c.address}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <Tooltip content="Ver historial" position="top">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onViewHistory(c)}
+                  className="p-1.5 min-w-8 min-h-8"
+                  title="Ver historial"
+                >
+                  <History size={14} />
+                </Button>
+              </Tooltip>
+              {isOwner && (
+                <>
+                  <Tooltip content="Editar" position="top">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(c)}
+                      className="p-1.5 min-w-8 min-h-8"
+                      title="Editar"
+                    >
+                      <Pencil size={14} />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content="Eliminar" position="top">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(c.id, c.name)}
+                      className="p-1.5 min-w-8 min-h-8 text-danger"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </Tooltip>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+    </div>
+  );
+}

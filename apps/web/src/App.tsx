@@ -31,6 +31,7 @@ import {
   Receipt,
   DollarSign,
   ChefHat,
+  Users,
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
@@ -46,6 +47,7 @@ const PurchasePage = lazy(() => import('./features/purchases').then((m) => ({ de
 const ReportsPage = lazy(() => import('./features/reports').then((m) => ({ default: m.ReportsPage })));
 const GastosPage = lazy(() => import('./features/gastos').then((m) => ({ default: m.GastosPage })));
 const ProductionPage = lazy(() => import('./features/production').then((m) => ({ default: m.ProductionPage })));
+const CustomersPage = lazy(() => import('./features/customers').then((m) => ({ default: m.CustomersPage })));
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
@@ -54,10 +56,11 @@ const ALL_MODULES: SidebarModule[] = [
   { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
   { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
   { id: 'gastos', label: 'Gastos', icon: <Receipt size={20} /> },
+  { id: 'customers', label: 'Clientes', icon: <Users size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
 ];
 
-const EMPLOYEE_ALLOWED = new Set(['pos']);
+const EMPLOYEE_ALLOWED = new Set(['pos', 'customers']);
 
 const MODULE_ROUTE_MAP: Record<string, string> = {
   dashboard: '/dashboard',
@@ -66,6 +69,7 @@ const MODULE_ROUTE_MAP: Record<string, string> = {
   gastos: '/gastos',
   purchases: '/purchases',
   pos: '/pos',
+  customers: '/customers',
   reports: '/reports',
 };
 
@@ -99,6 +103,7 @@ function useSyncModuleFromRoute() {
   if (path.startsWith('/gastos')) return 'gastos';
   if (path.startsWith('/purchases')) return 'purchases';
   if (path.startsWith('/pos')) return 'pos';
+  if (path.startsWith('/customers')) return 'customers';
   if (path.startsWith('/reports')) return 'reports';
   return 'dashboard';
 }
@@ -131,7 +136,7 @@ function DashboardLayout() {
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
   const role = session?.role ?? null;
 
-  const knownModulePaths = ['/dashboard', '/inventory', '/production', '/gastos', '/purchases', '/pos', '/reports'];
+  const knownModulePaths = ['/dashboard', '/inventory', '/production', '/gastos', '/purchases', '/pos', '/customers', '/reports'];
   const isKnownModulePath = knownModulePaths.some(
     (p) => location.pathname === p || location.pathname.startsWith(p + '/')
   );
@@ -248,6 +253,13 @@ function DashboardLayout() {
           <div className="animate-fade-in">
             <Suspense fallback={<ModuleSkeleton />}>
               <PosPage tenantId={effectiveTenantId} />
+            </Suspense>
+          </div>
+        )}
+        {activeModule === 'customers' && (
+          <div className="animate-fade-in">
+            <Suspense fallback={<ModuleSkeleton />}>
+              <CustomersPage tenantId={effectiveTenantId} />
             </Suspense>
           </div>
         )}

@@ -18,6 +18,7 @@ import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
 
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
+import { CustomerPickerModal } from '../../customers/components/CustomerPickerModal';
 import type { Product, Category } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
 import { inventoryService } from '../../inventory/services/inventoryService';
@@ -41,6 +42,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     completeSale, openCashRegister, closeCashRegister, parkCart, loadParkedCart, deleteParkedCart,
     toggleFavorite, fetchSalesHistory, voidSale, getTodaySoldProducts,
     search, userId, role, exchangeRate,
+    selectedCustomer, setSelectedCustomer,
     getPresentations,
   } = usePos(tenantId);
 
@@ -71,6 +73,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
 
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
@@ -456,6 +459,9 @@ export function PosPage({ tenantId }: PosPageProps) {
           isMobileOpen={mobileCartOpen}
           itemCount={cartItemCount}
           onMobileToggle={toggleMobileCart}
+          selectedCustomer={selectedCustomer}
+          onSelectCustomer={() => setShowCustomerPicker(true)}
+          onClearCustomer={() => setSelectedCustomer(null)}
         />
       )}
 
@@ -569,6 +575,16 @@ export function PosPage({ tenantId }: PosPageProps) {
         onClose={() => setShowBarcodeScanner(false)}
         onScan={handleBarcodeScan}
       />
+
+      {tenantId && (
+        <CustomerPickerModal
+          isOpen={showCustomerPicker}
+          onClose={() => setShowCustomerPicker(false)}
+          onSelect={(c) => setSelectedCustomer(c)}
+          tenantId={tenantId}
+          selectedCustomerId={selectedCustomer?.id ?? null}
+        />
+      )}
 
       <Modal
         isOpen={completedSale !== null}
