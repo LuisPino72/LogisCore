@@ -57,6 +57,10 @@ async function checkOpenRegister(tenantId: string): Promise<void> {
 
 export function useSystemNotifications(tenantId: string | null, role: string | null): void {
   const notifiedSales = useRef(new Set<string>());
+  // Refs para evitar checks duplicados cuando el componente se re-monta
+  // (React StrictMode en dev monta/desmonta 2 veces).
+  const stockCheckedFor = useRef<string | null>(null);
+  const zeroStockCheckedFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!tenantId || !role || role === 'employee') return;
@@ -68,8 +72,17 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
       store.loadNotifications(tenantId);
     }
 
-    checkLowStock(tenantId);
-    checkLowStockZero(tenantId);
+    // Solo chequear stock UNA VEZ por tenantId (no en cada re-mount).
+    // Además, addNotification() tiene dedup interno (type+title+message),
+    // así que si por alguna razón se ejecuta 2 veces, no se duplica.
+    if (stockCheckedFor.current !== tenantId) {
+      stockCheckedFor.current = tenantId;
+      checkLowStock(tenantId);
+    }
+    if (zeroStockCheckedFor.current !== tenantId) {
+      zeroStockCheckedFor.current = tenantId;
+      checkLowStockZero(tenantId);
+    }
     checkOpenRegister(tenantId);
 
     const subs: ReturnType<typeof EventBus.on>[] = [];

@@ -42,6 +42,22 @@ export const notificationService = {
   }): Promise<Result<ReturnType<typeof mapNotification>, AppError>> {
     try {
       const db = getDb();
+      // Dedup: si ya existe una notificación no leída con mismo type+title+message,
+      // skip y retorna la existente. Esto evita duplicados cuando el componente
+      // se re-monta (React StrictMode) o el sync pull dispara re-renders.
+      const fingerprint = `${data.type}|${data.title}|${data.message}`;
+      const recent = await db.notifications
+        .where('tenantId')
+        .equals(data.tenantId)
+        .filter((n) => !n.deletedAt && !n.read)
+        .toArray();
+      const existing = recent.find(
+        (n) => `${n.type}|${n.title}|${n.message}` === fingerprint,
+      );
+      if (existing) {
+        return success(mapNotification(existing));
+      }
+
       const id = crypto.randomUUID();
       const createdAt = new Date().toISOString();
       const entry = toDexie({ ...data, id, createdAt, read: false });

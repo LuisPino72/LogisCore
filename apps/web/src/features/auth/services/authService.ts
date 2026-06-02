@@ -1,7 +1,7 @@
 import { type UserSession, AppError, Result, success, failure } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
-import { initDb, setDbClosing, getDb, resetDbInstance } from '../../../services/dexie/db';
+import { initDb, setDbClosing, getDb, isDbReady, resetDbInstance } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
@@ -256,8 +256,16 @@ export const authService = {
 
     // 10. Cerrar DB local SIN destruir — preservar datos offline para próximo login
     offlineGrace.clear();
-    const db = getDb();
-    db.close();
+    try {
+      // Si el admin nunca entró a un tenant, Dexie no se inicializó.
+      // isDbReady() evita el throw de getDb() en ese caso.
+      if (isDbReady()) {
+        const db = getDb();
+        db.close();
+      }
+    } catch {
+      // DB no inicializada o ya cerrándose — ignorar
+    }
     // Resetear referencia para que initDb() cree una nueva instancia en el próximo login
     resetDbInstance();
     TenantTranslator.clearCache();
