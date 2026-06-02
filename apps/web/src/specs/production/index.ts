@@ -25,7 +25,7 @@ export const RecipeSchema = z.object({
   yieldUnit: z.string().min(1),
   wastePct: z.number().min(0).max(100, 'La merma no puede ser mayor a 100%'),
   isActive: z.boolean(),
-  notes: z.string().optional(),
+  notes: z.string().max(25).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
@@ -64,7 +64,7 @@ export const CreateRecipeInputSchema = z.object({
   yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0'),
   yieldUnit: z.string().min(1, 'Selecciona una unidad'),
   wastePct: z.number().min(0).max(100).default(0),
-  notes: z.string().optional(),
+  notes: z.string().max(25).optional(),
   lines: z.array(CreateRecipeLineInputSchema).min(1, 'Debe agregar al menos un ingrediente'),
 });
 
@@ -78,7 +78,7 @@ export const UpdateRecipeInputSchema = z.object({
   yieldUnit: z.string().min(1).optional(),
   wastePct: z.number().min(0).max(100).optional(),
   isActive: z.boolean().optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(25).optional(),
   lines: z.array(CreateRecipeLineInputSchema).optional(),
 });
 
@@ -113,7 +113,7 @@ export const CreateProductionOrderInputSchema = z.object({
   recipeId: z.string().uuid('Selecciona una receta'),
   batchCount: z.number().int().positive('Debe producir al menos 1 lote'),
   plannedDate: z.string().optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(25).optional(),
 });
 
 export type CreateProductionOrderInput = z.infer<typeof CreateProductionOrderInputSchema>;

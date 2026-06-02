@@ -98,8 +98,8 @@ export function usePos(tenantId: string | null) {
     subs.push(EventBus.on('INVENTORY.ADJUSTMENT', debouncedRefreshProducts));
     subs.push(EventBus.on('PURCHASE.RECEIVED', debouncedRefreshProducts));
 
-    subs.push(EventBus.on('BOX.OPENED', debouncedRefresh));
-    subs.push(EventBus.on('BOX.CLOSED', debouncedRefresh));
+    subs.push(EventBus.on(SystemEvents.BOX_OPENED, debouncedRefresh));
+    subs.push(EventBus.on(SystemEvents.BOX_CLOSED, debouncedRefresh));
 
     subs.push(EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
       const { table } = payload as { table?: string };

@@ -149,6 +149,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             onChange={(e) => updateField('name', e.target.value)}
             placeholder="Ej: Pan de Molde"
             error={errors.name}
+            validation={{ required: true, maxLength: 25 }}
           />
 
           <SearchableSelect
@@ -312,6 +313,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           value={form.notes}
           onChange={(e) => updateField('notes', e.target.value)}
           placeholder="Instrucciones adicionales..."
+          validation={{ maxLength: 25 }}
         />
       </div>
     </Modal>

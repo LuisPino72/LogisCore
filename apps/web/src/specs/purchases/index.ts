@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const SupplierSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1, 'Nombre requerido').max(25),
-  phone: z.string().max(50).optional(),
+  phone: z.string().max(14).optional(),
   createdAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
 });
@@ -53,7 +53,7 @@ export const PurchaseOrderSchema = z.object({
   supplierId: z.string().uuid(),
   status: PurchaseOrderStatusSchema,
   totalUsd: z.number().nonnegative(),
-  notes: z.string().max(500).optional(),
+  notes: z.string().max(50).optional(),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -69,7 +69,7 @@ export type PurchaseOrderWithItems = PurchaseOrder & {
 
 export const CreatePurchaseOrderInputSchema = z.object({
   supplierId: z.string().uuid('Selecciona un proveedor'),
-  notes: z.string().max(500).optional(),
+  notes: z.string().max(50).optional(),
   items: z.array(
     z.object({
       productId: z.string().uuid('Selecciona un producto'),

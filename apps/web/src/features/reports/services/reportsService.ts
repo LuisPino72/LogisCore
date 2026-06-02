@@ -373,7 +373,7 @@ export const reportsService = {
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
         .between([tenantId, startNorm], [tenantId, endNorm])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
         .toArray();
       const operatingExpensesUsd = operatingExpenses.reduce((s, e) => s + e.amountUsd, 0);
       const operatingExpensesBs = operatingExpenses.reduce((s, e) => s + e.amountBs, 0);
@@ -1122,7 +1122,7 @@ export const reportsService = {
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
         .between([tenantId, startNorm], [tenantId, endNorm])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
         .toArray();
 
       if (operatingExpenses.length > 0) {

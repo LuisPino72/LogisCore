@@ -1,17 +1,17 @@
 import { z } from 'zod';
 
 export const CreateTenantInputSchema = z.object({
-  name: z.string().min(1, 'Nombre requerido').max(100),
+  name: z.string().min(1, 'Nombre requerido').max(25),
   rif: z.string().regex(/^[VJEGP]\d{9}$/, 'RIF inválido formato J123456789'),
-  direccion: z.string().max(200).optional().default(''),
+  direccion: z.string().max(50).optional().default(''),
   telefono: z.string().regex(/^(\+58|0)\d{10}$/, 'Teléfono inválido').optional().default(''),
 }).strict();
 
 export type CreateTenantInput = z.infer<typeof CreateTenantInputSchema>;
 
-const passwordSchema = z.string()
+export const passwordSchema = z.string()
   .min(8, 'Mínimo 8 caracteres')
-  .max(100)
+  .max(20)
   .regex(/[A-Z]/, 'Debe contener una mayúscula')
   .regex(/[a-z]/, 'Debe contener una minúscula')
   .regex(/[0-9]/, 'Debe contener un número')
@@ -20,7 +20,7 @@ const passwordSchema = z.string()
 export const CreateOwnerInputSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
   password: passwordSchema,
-  name: z.string().min(1, 'Nombre requerido'),
+  name: z.string().min(1, 'Nombre requerido').max(25),
   tenantId: z.string().uuid('ID de tenant inválido'),
 }).strict();
 
@@ -29,7 +29,7 @@ export type CreateOwnerInput = z.infer<typeof CreateOwnerInputSchema>;
 export const CreateEmployeeInputSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
   password: passwordSchema,
-  name: z.string().min(1, 'Nombre requerido'),
+  name: z.string().min(1, 'Nombre requerido').max(25),
   tenantId: z.string().uuid('ID de tenant inválido'),
 }).strict();
 
@@ -38,7 +38,7 @@ export type CreateEmployeeInput = z.infer<typeof CreateEmployeeInputSchema>;
 export const EdgeCreateUserSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
   password: passwordSchema,
-  name: z.string().min(1, 'Nombre requerido'),
+  name: z.string().min(1, 'Nombre requerido').max(25),
 }).strict();
 
 export type EdgeCreateUser = z.infer<typeof EdgeCreateUserSchema>;
@@ -52,9 +52,9 @@ export const CreateTenantWithUsersInputSchema = z.object({
 export type CreateTenantWithUsersInput = z.infer<typeof CreateTenantWithUsersInputSchema>;
 
 export const UpdateTenantSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
+  name: z.string().min(1).max(25).optional(),
   rif: z.string().regex(/^[VJEGP]\d{9}$/).optional(),
-  direccion: z.string().max(200).optional(),
+  direccion: z.string().max(50).optional(),
   telefono: z.string().regex(/^(\+58|0)\d{10}$/).optional(),
 }).strict();
 
@@ -140,3 +140,29 @@ export const CreateGlobalCategorySchema = z.object({
 }).strict();
 
 export type CreateGlobalCategoryInput = z.infer<typeof CreateGlobalCategorySchema>;
+
+// Migrado desde specs/admin/index.ts
+export const RestoreTenantSchema = z.object({
+  tenantId: z.string().uuid(),
+});
+export type RestoreTenant = z.infer<typeof RestoreTenantSchema>;
+
+export const ResetPasswordSchema = z.object({
+  userId: z.string().uuid(),
+  newPassword: passwordSchema,
+});
+export type ResetPassword = z.infer<typeof ResetPasswordSchema>;
+
+export const TenantFilterSchema = z.object({
+  search: z.string().default(''),
+  status: z.enum(['all', 'active', 'inactive']).default('all'),
+  plan: z.string().default('all'),
+});
+export type TenantFilter = z.infer<typeof TenantFilterSchema>;
+
+export const TenantAnalyticsSchema = z.object({
+  monthlySalesCount: z.number().min(0),
+  activeProducts: z.number().min(0),
+  totalUsers: z.number().min(0),
+});
+export type TenantAnalyticsSchemaType = z.infer<typeof TenantAnalyticsSchema>;

@@ -10,6 +10,12 @@ export const ALL_EXPENSE_CATEGORIES = [
   'IMPUESTOS', 'COMPRA_INVENTARIO', 'OTROS'
 ] as const;
 
+export const UI_EXPENSE_CATEGORIES = [
+  'LUZ', 'AGUA', 'GAS', 'INTERNET',
+  'ALQUILER', 'NOMINA',
+  'IMPUESTOS', 'OTROS'
+] as const;
+
 export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   LUZ: 'Luz',
   AGUA: 'Agua',

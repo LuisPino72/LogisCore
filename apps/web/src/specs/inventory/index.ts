@@ -10,7 +10,7 @@ export type ProductType = z.infer<typeof ProductTypeEnum>;
 
 export const ProductSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1, 'Nombre requerido').max(200),
+  name: z.string().min(1, 'Nombre requerido').max(25),
   sku: z.string().min(1, 'SKU requerido').max(18),
   priceUsd: z.number().positive('Precio debe ser mayor a 0').max(999999.99),
   categoryId: z.string().uuid().optional(),
@@ -78,7 +78,7 @@ export type CreateProductWithPresentationsInput = z.infer<typeof CreateProductWi
 
 export const CategorySchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1).max(25),
   isPredefined: z.boolean().optional(),
 });
 

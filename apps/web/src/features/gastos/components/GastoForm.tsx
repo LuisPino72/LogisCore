@@ -3,7 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Button, Input, Modal, Select, Textarea, Toggle, SearchableSelect } from '@/common/components';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { CreateGastoInputSchema } from '../../../specs/gastos';
-import { EXPENSE_CATEGORIES, type ExpenseCategory, type CreateGastoInput } from '../types';
+import { UI_EXPENSE_CATEGORIES, type ExpenseCategory, type CreateGastoInput } from '../types';
 import { formatBs } from '@/lib/formatBs';
 
 interface GastoFormProps {
@@ -129,7 +129,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
                 onChange={setCategory}
                 placeholder="Seleccionar categoría"
                 searchPlaceholder="Buscar categoría..."
-                options={EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+                options={UI_EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
               />
             </div>
           </div>

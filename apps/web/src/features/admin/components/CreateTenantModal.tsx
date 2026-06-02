@@ -152,7 +152,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             showPassword
             value={createForm.owner.password}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, password: e.target.value } }))}
-            validation={{ required: true, minLength: 8, maxLength: 14 }}
+            validation={{ required: true, minLength: 8, maxLength: 20 }}
           />
         </div>
 
@@ -201,7 +201,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 showPassword
                 value={emp.password}
                 onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
-                validation={{ minLength: 8, maxLength: 14 }}
+                validation={{ minLength: 8, maxLength: 20 }}
               />
             </div>
           ))}

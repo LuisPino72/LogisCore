@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { Alert, Modal, Input, Button } from '../../../common/components';
-import { ResetPasswordSchema } from '../../../specs/admin/index';
+import { ResetPasswordSchema } from '../types';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -71,7 +71,7 @@ export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, userI
           placeholder="Mínimo 8 caracteres"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          validation={{ required: true, minLength: 8, maxLength: 14 }}
+          validation={{ required: true, minLength: 8, maxLength: 20 }}
         />
       </div>
     </Modal>

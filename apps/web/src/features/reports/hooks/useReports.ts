@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { Result, AppError } from '@logiscore/core';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { reportsService } from '../services/reportsService';
 import type {
   ReportFilters,
@@ -217,7 +217,7 @@ export function useReports(tenantId: string | null) {
     const events = [
       'SALE.COMPLETED',
       'SALE.VOIDED',
-      'BOX.CLOSED',
+      SystemEvents.BOX_CLOSED,
       'PURCHASE.RECEIVED',
       'INVENTORY.ADJUSTMENT',
       'EXPENSES.CREATED',

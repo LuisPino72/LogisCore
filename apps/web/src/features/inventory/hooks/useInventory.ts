@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useInventoryStore } from '../stores/inventoryStore';
 import type { ProductFilters, TabKey } from '../types';
@@ -82,6 +82,14 @@ export function useInventory(tenantId: string | null) {
       EventBus.off(sub2);
       EventBus.off(sub3);
     };
+  }, [tenantId, doFetch]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const sub = EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => {
+      doFetch(undefined, true);
+    });
+    return () => { EventBus.off(sub); };
   }, [tenantId, doFetch]);
 
   const search = useCallback((query: string, categoryId?: string) => {

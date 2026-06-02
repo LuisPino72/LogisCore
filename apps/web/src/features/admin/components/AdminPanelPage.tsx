@@ -3,24 +3,26 @@ import { Navigate } from 'react-router-dom';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { useTenantFilters } from '../hooks/useTenantFilters';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { ArrowLeft, Building2, CreditCard, Plus, Store, Tags, UsersRound } from 'lucide-react';
+import { ArrowLeft, Building2, CreditCard, Plus, Shield, Store, Tags, UsersRound } from 'lucide-react';
 import { AppShell, BottomNav, Button, Card, EmptyState, Spinner, LogoutButton } from '../../../common/components';
 import { TenantSection } from './TenantSection';
 import { UserSection } from './UserSection';
 import { AllUsersSection } from './AllUsersSection';
 import { SubscriptionSection } from './SubscriptionSection';
 import { GlobalCategorySection } from './GlobalCategorySection';
+import { AuditSection } from './AuditSection';
 import type { Tenant } from '../types';
 
 const ADMIN_PAGE_SIZE = 10;
 
-type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories';
+type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories' | 'audit';
 
 const TABS = [
   { id: 'tenants' as Sheet, label: 'Locales', icon: <Building2 size={20} /> },
   { id: 'all-users' as Sheet, label: 'Usuarios', icon: <UsersRound size={20} /> },
   { id: 'subscriptions' as Sheet, label: 'Suscripciones', icon: <CreditCard size={20} /> },
   { id: 'global-categories' as Sheet, label: 'Categorías', icon: <Tags size={20} /> },
+  { id: 'audit' as Sheet, label: 'Auditoría', icon: <Shield size={20} /> },
 ] as const;
 
 export function AdminPanelPage() {
@@ -222,6 +224,10 @@ export function AdminPanelPage() {
             onCloseCreateModal={() => setShowCreateGlobalCatModal(false)}
           />
         )}
+
+        {activeSheet === 'audit' && (
+          <AuditSection />
+        )}
       </div>
 
       <BottomNav
@@ -231,6 +237,7 @@ export function AdminPanelPage() {
           { id: 'all-users', label: 'Usuarios', icon: <UsersRound size={20} />, onClick: () => setActiveSheet('all-users') },
           { id: 'subscriptions', label: 'Suscripciones', icon: <CreditCard size={20} />, onClick: () => setActiveSheet('subscriptions') },
           { id: 'global-categories', label: 'Categorías', icon: <Tags size={20} />, onClick: () => setActiveSheet('global-categories') },
+          { id: 'audit', label: 'Auditoría', icon: <Shield size={20} />, onClick: () => setActiveSheet('audit') },
         ]}
       />
     </AppShell>

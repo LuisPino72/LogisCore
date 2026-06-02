@@ -7,14 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   CreateTenantInputSchema,
   CreateTenantWithUsersInputSchema,
-} from '../../features/admin/types';
-import { SystemEvents } from '@logiscore/core/src/event-bus';
-import { AdminErrors } from '../../specs/admin/errors';
-import {
   RestoreTenantSchema,
   ResetPasswordSchema,
   TenantAnalyticsSchema,
-} from '../../specs/admin';
+} from '../../features/admin/types';
+import { SystemEvents } from '@logiscore/core/src/event-bus';
+import { AdminErrors } from '../../features/admin/types/errors';
 
 // Mock navigation store
 const mockNavigationStore = {

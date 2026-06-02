@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { useDashboardStore } from '../stores/dashboardStore';
 
 export function useDashboard(tenantId: string | null) {
@@ -40,6 +40,21 @@ export function useDashboard(tenantId: string | null) {
       EventBus.off(sub1);
       EventBus.off(sub2);
     };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const handler = () => {
+      if (mountedRef.current) {
+        fetchDashboard(tenantId);
+      }
+    };
+    const subs = [
+      EventBus.on(SystemEvents.EXPENSES_CREATED, handler),
+      EventBus.on(SystemEvents.EXPENSES_UPDATED, handler),
+      EventBus.on(SystemEvents.EXPENSES_DELETED, handler),
+    ];
+    return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [tenantId]);
 
   return {
