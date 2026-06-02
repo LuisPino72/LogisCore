@@ -4,7 +4,7 @@ import { Trash2, Minus, Plus } from 'lucide-react';
 import type { CartItem } from '../types';
 import { formatUsd, formatBs } from '@/lib/formatBs';
 import { preciseRound } from '@logiscore/shared';
-import { usePosStore } from '../stores/posStore';
+import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { useRepeatButton } from '../hooks/useRepeatButton';
 
 interface CartItemRowProps {
@@ -18,7 +18,7 @@ const WEIGHABLE_PRESETS = [0.5, 1, 2, 5];
 export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQuantity }: CartItemRowProps) {
   const step = item.isWeighted ? 0.01 : 1;
   const decimals = item.isWeighted ? 2 : 0;
-  const exchangeRate = usePosStore((s) => s.exchangeRate);
+  const exchangeRate = useExchangeRateStore((s) => s.rate);
   const priceBs = exchangeRate && exchangeRate > 0 ? formatBs(item.totalPriceUsd * exchangeRate) : null;
 
   const [localQty, setLocalQty] = useState<string | null>(null);

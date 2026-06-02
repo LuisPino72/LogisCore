@@ -17,7 +17,7 @@ import { CreateSaleInputSchema, calculateSaleTotals } from '../../../specs/pos';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
-import { extractRole } from '../../auth/services/authService';
+import { extractRole } from '../../../lib/jwt';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 type VerificationProduct = {

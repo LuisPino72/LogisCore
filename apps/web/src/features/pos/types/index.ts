@@ -24,7 +24,6 @@ export interface PosState {
   products: Product[];
   cart: CartItem[];
   cashRegister: CashRegister | null;
-  exchangeRate: number | null;
   parkedCarts: ParkedCart[];
   favoriteProductIds: Set<string>;
   salesHistory: Sale[];

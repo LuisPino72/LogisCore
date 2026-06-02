@@ -25,7 +25,7 @@ class SessionGuardService {
       try {
         this.token = localStorage.getItem(SESSION_TOKEN_KEY);
       } catch {
-        // localStorage unavailable — non-critical
+        console.debug('[SessionGuard] localStorage error — non-critical');
       }
     }
     return this.token;
@@ -36,7 +36,7 @@ class SessionGuardService {
     try {
       localStorage.setItem(SESSION_TOKEN_KEY, this.token);
     } catch {
-      // localStorage unavailable — non-critical
+      console.debug('[SessionGuard] localStorage error — non-critical');
     }
     return this.token;
   }
@@ -49,7 +49,7 @@ class SessionGuardService {
         return stored;
       }
     } catch {
-      // localStorage unavailable — non-critical
+      console.debug('[SessionGuard] localStorage error — non-critical');
     }
     return null;
   }
@@ -132,7 +132,7 @@ class SessionGuardService {
     try {
       localStorage.removeItem(SESSION_TOKEN_KEY);
     } catch {
-      // localStorage unavailable — non-critical
+      console.debug('[SessionGuard] localStorage error — non-critical');
     }
   }
 }

@@ -8,7 +8,7 @@ import type { Presentation } from '../../../specs/inventory';
 import { type Result, type AppError, success, failure, AppError as AppErrorClass } from '@logiscore/core';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
-import { exchangeRateService } from '../../../features/exchange/services/exchangeRateService';
+import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { CreateSaleInput } from '../../../specs/pos';
 
@@ -22,7 +22,6 @@ interface PosStore extends PosState {
   setSearchQuery: (query: string) => void;
   fetchProducts: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchCashRegister: (tenantId: string, silent?: boolean) => Promise<void>;
-  fetchExchangeRate: (tenantId: string) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
   addToCart: (product: Product, quantity: number, presentation?: PresentationSelection) => void;
@@ -49,7 +48,6 @@ const initialState: PosState = {
   products: [],
   cart: [],
   cashRegister: null,
-  exchangeRate: null,
   parkedCarts: [],
   favoriteProductIds: new Set<string>(),
   salesHistory: [],
@@ -128,13 +126,6 @@ export const usePosStore = create<PosStore>()(
       set({ cashRegister: result.data, ...(!silent && { loading: false }) });
     } else if (!silent) {
       set({ loading: false, error: result.error.message });
-    }
-  },
-
-  fetchExchangeRate: async (tenantId) => {
-    const result = await exchangeRateService.fetchLatest(tenantId);
-    if (result.ok && result.data) {
-      set({ exchangeRate: result.data.rate });
     }
   },
 
@@ -356,18 +347,16 @@ export const usePosStore = create<PosStore>()(
   clearCart: () => set({ cart: [] }),
 
   completeSale: async (tenantId, paymentMethod, userId) => {
-    const { cart, exchangeRate: cachedRate } = get();
+    const { cart } = get();
     if (cart.length === 0) {
       set({ error: 'No hay productos en el carrito.' });
       return failure(new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.'));
     }
 
-    let exchangeRate = cachedRate ?? 0;
+    let exchangeRate = useExchangeRateStore.getState().rate ?? 0;
     if (!exchangeRate || exchangeRate <= 0) {
-      const exchangeRateResult = await exchangeRateService.fetchLatest(tenantId);
-      if (exchangeRateResult.ok && exchangeRateResult.data?.rate) {
-        exchangeRate = exchangeRateResult.data.rate;
-      }
+      await useExchangeRateStore.getState().fetchLatest(tenantId);
+      exchangeRate = useExchangeRateStore.getState().rate ?? 0;
     }
 
     if (!exchangeRate || exchangeRate <= 0) {
@@ -405,7 +394,7 @@ export const usePosStore = create<PosStore>()(
 
   openCashRegister: async (tenantId, openingBalance, userId) => {
     set({ loading: true, error: null });
-    const rate = get().exchangeRate;
+    const rate = useExchangeRateStore.getState().rate;
     if (!rate || rate <= 0) {
       set({ error: 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.', loading: false });
       return failure(new AppErrorClass('SALE_FAILED', 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.'));
@@ -421,7 +410,7 @@ export const usePosStore = create<PosStore>()(
 
   closeCashRegister: async (tenantId, declaredClosingBalance, userId) => {
     set({ loading: true, error: null });
-    const rate = get().exchangeRate;
+    const rate = useExchangeRateStore.getState().rate;
     if (!rate || rate <= 0) {
       set({ error: 'No hay tasa de cambio disponible. Verifique la tasa antes de cerrar la caja.', loading: false });
       return failure(new AppErrorClass('SALE_FAILED', 'No hay tasa de cambio disponible. Verifique la tasa antes de cerrar la caja.'));

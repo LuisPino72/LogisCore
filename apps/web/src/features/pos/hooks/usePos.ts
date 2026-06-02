@@ -1,13 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { usePosStore } from '../stores/posStore';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
 
 export function usePos(tenantId: string | null) {
   const products = usePosStore((s) => s.products);
   const cart = usePosStore((s) => s.cart);
   const cashRegister = usePosStore((s) => s.cashRegister);
-  const exchangeRate = usePosStore((s) => s.exchangeRate);
+  const exchangeRate = useExchangeRateStore((s) => s.rate);
   const parkedCarts = usePosStore((s) => s.parkedCarts);
   const favoriteProductIds = usePosStore((s) => s.favoriteProductIds);
   const salesHistory = usePosStore((s) => s.salesHistory);
@@ -33,9 +34,9 @@ export function usePos(tenantId: string | null) {
   const getTodaySoldProducts = usePosStore((s) => s.getTodaySoldProducts);
   const fetchProducts = usePosStore((s) => s.fetchProducts);
   const fetchCashRegister = usePosStore((s) => s.fetchCashRegister);
-  const fetchExchangeRate = usePosStore((s) => s.fetchExchangeRate);
   const fetchParkedCarts = usePosStore((s) => s.fetchParkedCarts);
   const fetchPresentations = usePosStore((s) => s.fetchPresentations);
+  const fetchLatestRate = useExchangeRateStore((s) => s.fetchLatest);
   const getPresentations = usePosStore((s) => s.getPresentations);
   const presentationsMap = usePosStore((s) => s.presentationsMap);
   const setSearchQuery = usePosStore((s) => s.setSearchQuery);
@@ -50,10 +51,10 @@ export function usePos(tenantId: string | null) {
     await Promise.all([
       fetchProducts(tenantId),
       fetchCashRegister(tenantId),
-      fetchExchangeRate(tenantId),
+      fetchLatestRate(tenantId),
       fetchPresentations(tenantId),
     ]);
-  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate, fetchPresentations]);
+  }, [tenantId, fetchProducts, fetchCashRegister, fetchLatestRate, fetchPresentations]);
 
   useEffect(() => {
     if (!tenantId || initialFetchDone.current) return;
@@ -87,7 +88,7 @@ export function usePos(tenantId: string | null) {
       if (tenantId) {
         fetchProducts(tenantId);
         fetchCashRegister(tenantId);
-        fetchExchangeRate(tenantId);
+        fetchLatestRate(tenantId);
       }
     }));
 
@@ -117,7 +118,7 @@ export function usePos(tenantId: string | null) {
       if (refreshTimer) clearTimeout(refreshTimer);
       subs.forEach((s) => EventBus.off(s));
     };
-  }, [tenantId, fetchProducts, fetchCashRegister, fetchExchangeRate, fetchPresentations]);
+  }, [tenantId, fetchProducts, fetchCashRegister, fetchLatestRate, fetchPresentations]);
 
   const searchRef = useRef(0);
 

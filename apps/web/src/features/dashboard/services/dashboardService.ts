@@ -51,7 +51,9 @@ function readCachedSubscription(): SubscriptionResponse | null {
   try {
     const raw = localStorage.getItem(CACHE_SUB_KEY);
     if (raw) return JSON.parse(raw) as SubscriptionResponse;
-  } catch { /* ignore */ }
+  } catch {
+    console.debug('[DashboardService] localStorage read failed — non-critical');
+  }
   return null;
 }
 
@@ -59,7 +61,9 @@ function readCachedEmployeeCount(): number | null {
   try {
     const raw = localStorage.getItem(CACHE_EMP_KEY);
     if (raw !== null) return Number(raw);
-  } catch { /* ignore */ }
+  } catch {
+    console.debug('[DashboardService] localStorage read failed — non-critical');
+  }
   return null;
 }
 
@@ -110,14 +114,14 @@ export const dashboardService = {
         try {
           localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(parsed.data));
         } catch {
-          // localStorage unavailable or quota exceeded — non-critical
+          console.debug('[DashboardService] localStorage cache write failed — non-critical');
         }
         return success(parsed.data);
       }
       try {
         localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(data));
       } catch {
-        // localStorage unavailable or quota exceeded — non-critical
+        console.debug('[DashboardService] localStorage cache write failed — non-critical');
       }
       return success(data);
     }
@@ -145,7 +149,7 @@ export const dashboardService = {
       try {
         localStorage.setItem(CACHE_EMP_KEY, String(count ?? 0));
       } catch {
-        // localStorage unavailable or quota exceeded — non-critical
+        console.debug('[DashboardService] localStorage cache write failed — non-critical');
       }
       return success(count ?? 0);
     }

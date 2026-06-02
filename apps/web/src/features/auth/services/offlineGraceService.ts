@@ -18,6 +18,7 @@ class OfflineGraceService {
         this.state = JSON.parse(raw) as GraceState;
       }
     } catch {
+      console.debug('[OfflineGrace] localStorage error — non-critical');
       this.state = null;
     }
   }
@@ -27,7 +28,7 @@ class OfflineGraceService {
     try {
       localStorage.setItem(GRACE_KEY, JSON.stringify(this.state));
     } catch {
-      // localStorage unavailable or quota exceeded — non-critical
+      console.debug('[OfflineGrace] localStorage error — non-critical');
     }
   }
 
@@ -60,7 +61,7 @@ class OfflineGraceService {
     try {
       localStorage.removeItem(GRACE_KEY);
     } catch {
-      // localStorage unavailable — non-critical
+      console.debug('[OfflineGrace] localStorage error — non-critical');
     }
   }
 }

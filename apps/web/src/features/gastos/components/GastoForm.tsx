@@ -13,7 +13,7 @@ interface GastoFormProps {
 }
 
 export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
-  const exchangeRateStore = useExchangeRateStore();
+  const rate = useExchangeRateStore((s) => s.rate);
   const [category, setCategory] = useState('');
   const [amountUsd, setAmountUsd] = useState('');
   const [description, setDescription] = useState('');
@@ -24,7 +24,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
   const [confirmClose, setConfirmClose] = useState(false);
 
   const parsedAmount = parseFloat(amountUsd);
-  const currentRate = exchangeRateStore.rate ?? 0;
+  const currentRate = rate ?? 0;
   const bsPreview = !isNaN(parsedAmount) && parsedAmount > 0 && currentRate > 0
     ? parsedAmount * currentRate
     : null;
@@ -74,7 +74,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
     }
 
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-    const currentRate = exchangeRateStore.rate ?? 0;
+    const currentRate = rate ?? 0;
     const payload = {
       category: category as ExpenseCategory,
       amountUsd: parsedAmount,

@@ -23,7 +23,7 @@ export function LoginPage() {
         setRememberMe(true);
       }
     } catch {
-      // localStorage unavailable — non-critical
+      console.debug('[LoginPage] localStorage unavailable — non-critical');
     }
   }, []);
 
@@ -40,7 +40,7 @@ export function LoginPage() {
         localStorage.removeItem(REMEMBERED_EMAIL_KEY);
       }
     } catch {
-      // localStorage unavailable or quota exceeded — non-critical
+      console.debug('[LoginPage] localStorage unavailable — non-critical');
     }
     login(email, password);
   };

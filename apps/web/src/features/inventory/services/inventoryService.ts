@@ -13,7 +13,7 @@ import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage } from '../types';
-import { extractRole } from '../../auth/services/authService';
+import { extractRole } from '../../../lib/jwt';
 import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './mappers';
 
 const INVENTORY_MODULE = 'INVENTORY';

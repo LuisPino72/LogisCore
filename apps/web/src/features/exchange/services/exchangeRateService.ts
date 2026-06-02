@@ -3,7 +3,8 @@ import { supabase } from '../../../services/supabase/client';
 import { getDb, isDbReady } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
-import { DashboardErrors } from '../../../specs/dashboard/errors';
+import { ExchangeRateErrors } from '../../../specs/exchange-rate/errors';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 import type { ExchangeRateResponse } from '../types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -67,10 +68,12 @@ export const exchangeRateService = {
       return success(null);
     }
 
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+
     const { data, error } = await supabase
       .from('exchange_rates')
       .select('id, rate, source, fetched_at, created_at')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenantUuid)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -79,7 +82,7 @@ export const exchangeRateService = {
     if (error) {
       const cached = await readFromDexie(tenantId);
       if (cached) return success(cached);
-      return failure(new AppError(DashboardErrors.TASA_BCV_FETCH_FAILED, 'Error al cargar tasa BCV'));
+      return failure(new AppError(ExchangeRateErrors.EXCHANGE_RATE_API_FAILED, 'Error al cargar tasa BCV'));
     }
 
     if (data) {
@@ -109,7 +112,7 @@ export const exchangeRateService = {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         return failure(new AppError(
-          DashboardErrors.TASA_API_ERROR,
+          ExchangeRateErrors.EXCHANGE_RATE_API_FAILED,
           (body as { message?: string }).message ?? 'Error al consultar API del BCV',
         ));
       }
@@ -119,7 +122,7 @@ export const exchangeRateService = {
       return success(data);
     } catch (err) {
       logger.error('Exchange', 'Error en triggerBcvFetch:', err);
-      return failure(new AppError(DashboardErrors.TASA_API_ERROR, 'Error de conexión al consultar BCV'));
+      return failure(new AppError(ExchangeRateErrors.EXCHANGE_RATE_API_FAILED, 'Error de conexión al consultar BCV'));
     }
   },
 
@@ -128,14 +131,16 @@ export const exchangeRateService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     if (!rate || rate <= 0) {
-      return failure(new AppError(DashboardErrors.TASA_INVALID_RATE, 'La tasa debe ser mayor a 0'));
+      return failure(new AppError(ExchangeRateErrors.EXCHANGE_RATE_INVALID, 'La tasa debe ser mayor a 0'));
     }
+
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     const { data, error } = await supabase
       .from('exchange_rates')
       .upsert(
         {
-          tenant_id: tenantId,
+          tenant_id: tenantUuid,
           rate,
           source: 'manual',
           fetched_at: new Date().toISOString(),
@@ -146,7 +151,7 @@ export const exchangeRateService = {
       .single();
 
     if (error) {
-      return failure(new AppError(DashboardErrors.TASA_BCV_FETCH_FAILED, 'Error al guardar tasa manual'));
+      return failure(new AppError(ExchangeRateErrors.EXCHANGE_RATE_API_FAILED, 'Error al guardar tasa manual'));
     }
 
     if (data) {
