@@ -16,7 +16,25 @@ import { convertToStorage } from '../types';
 import { extractRole } from '../../../lib/jwt';
 import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './mappers';
 
+// AUDIT-BD-001: verified, código usa 'product_presentations' consistentemente (no hay 'from('presentations')' ni '"presentations"' en src)
+
 const INVENTORY_MODULE = 'INVENTORY';
+
+// AUDIT-CRUD-011: Mapear errores de Dexie a códigos específicos en lugar de devolver siempre PRODUCT_SKU_DUPLICATE
+function mapProductError(err: unknown, operation: 'create' | 'createWithPres' | 'update'): AppError {
+  const e = err as { name?: string; message?: string } | null;
+  // Dexie ConstraintError: índice UNIQUE violado (SKU, barcode, etc.)
+  if (e?.name === 'ConstraintError' || (typeof e?.message === 'string' && /unique|constraint/i.test(e.message))) {
+    return new AppError(InventoryErrors.PRODUCT_SKU_DUPLICATE, 'El SKU ya está asignado a otro producto en este tenant.');
+  }
+  if (operation === 'create') {
+    return new AppError(InventoryErrors.PRODUCT_CREATE_FAILED, 'Error al crear producto.');
+  }
+  if (operation === 'createWithPres') {
+    return new AppError(InventoryErrors.PRODUCT_CREATE_FAILED, 'Error al crear producto con presentaciones.');
+  }
+  return new AppError(InventoryErrors.PRODUCT_UPDATE_FAILED, 'Error al actualizar producto.');
+}
 
 /** Tipo para filas de producto que llegan desde Supabase (snake_case).
  *  Mantener sincronizado con el schema de la tabla `products` en Supabase. */
@@ -221,7 +239,8 @@ export const inventoryService = {
       return success(product);
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en createProduct:', err);
-      return failure(new AppError('PRODUCT_SKU_DUPLICATE', 'Error al crear producto. Verifica que el SKU no esté duplicado.'));
+      // AUDIT-CRUD-011: distinguir ConstraintError de otros errores
+      return failure(mapProductError(err, 'create'));
     }
   },
 
@@ -397,7 +416,8 @@ export const inventoryService = {
       });
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en createProductWithPresentations:', err);
-      return failure(new AppError('PRODUCT_SKU_DUPLICATE', 'Error al crear producto con presentaciones. Verifica que el SKU no esté duplicado.'));
+      // AUDIT-CRUD-011: distinguir ConstraintError de otros errores
+      return failure(mapProductError(err, 'createWithPres'));
     }
   },
 
@@ -525,7 +545,8 @@ export const inventoryService = {
       return success(toProduct(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en updateProduct:', err);
-      return failure(new AppError('PRODUCT_SKU_DUPLICATE', 'Error al actualizar. Verifica que el SKU no esté duplicado.'));
+      // AUDIT-CRUD-011: distinguir ConstraintError de otros errores
+      return failure(mapProductError(err, 'update'));
     }
   },
 
@@ -682,7 +703,11 @@ export const inventoryService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const product = await db.products.get(id);
+    // AUDIT-CRUD-004: Tenant-leak fix — filtrar producto por tenantId antes de soft-delete
+    const product = await db.products
+      .where({ tenantId, id })
+      .filter((p) => !p.deletedAt)
+      .first();
     if (!product) {
       return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
     }
@@ -895,6 +920,14 @@ export const inventoryService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
+    // AUDIT-CRUD-005: Tenant-leak fix — validar que la categoría pertenece al tenant antes de update
+    const existing = await db.categories
+      .where({ tenantId, id })
+      .filter((c) => !c.deletedAt)
+      .first();
+    if (!existing) {
+      return failure(new AppError('CATEGORY_NOT_FOUND', 'Categoría no encontrada en este tenant.'));
+    }
     const updated = { name };
     await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
       await db.categories.update(id, updated);

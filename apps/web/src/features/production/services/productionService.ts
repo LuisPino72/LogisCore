@@ -100,9 +100,12 @@ export const productionService = {
     const db = getDb();
     const now = new Date().toISOString();
 
-    // Validate product exists and is not weighted (finished products should be units)
-    const product = await db.products.get(input.productId);
-    if (!product || product.deletedAt) {
+    // AUDIT-CRUD-001: Tenant-leak fix — filtrar producto por tenantId antes de operar
+    const product = await db.products
+      .where({ tenantId, id: input.productId })
+      .filter((p) => !p.deletedAt)
+      .first();
+    if (!product) {
       return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_NOT_FOUND, 'Producto terminado no encontrado.'));
     }
     if (product.productType && product.productType === 'materia_prima') {
@@ -337,8 +340,12 @@ export const productionService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const recipe = await db.recipes.get(id);
-    if (!recipe || recipe.deletedAt) {
+    // AUDIT-CRUD-002: Tenant-leak fix — filtrar receta por tenantId antes de soft-delete
+    const recipe = await db.recipes
+      .where({ tenantId, id })
+      .filter((r) => !r.deletedAt)
+      .first();
+    if (!recipe) {
       return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
     }
 
@@ -401,11 +408,15 @@ export const productionService = {
     }
   },
 
-  async getRecipeById(id: string): Promise<Result<Recipe, AppError>> {
+  async getRecipeById(tenantId: string, id: string): Promise<Result<Recipe, AppError>> {
     try {
       const db = getDb();
-      const recipe = await db.recipes.get(id);
-      if (!recipe || recipe.deletedAt) {
+      // AUDIT-CRUD-003: Tenant-leak fix — filtrar receta por tenantId
+      const recipe = await db.recipes
+        .where({ tenantId, id })
+        .filter((r) => !r.deletedAt)
+        .first();
+      if (!recipe) {
         return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
       }
       return success(toRecipe(recipe as unknown as Record<string, unknown>));

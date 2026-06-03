@@ -6,6 +6,8 @@ import { CreateGastoInputSchema, UpdateGastoInputSchema } from '../../../specs/g
 import { GASTOS_ERRORS } from '../../../specs/gastos/errors';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
+import { requireNetwork } from '../../../services/network/requireNetwork';
+import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 
 function mapExpense(e: DexieExpense): Gasto {
   return {
@@ -81,6 +83,10 @@ export const gastosService = {
   },
 
   async create(tenantId: string, userId: string, input: unknown): Promise<Result<Gasto, AppError>> {
+    // AUDIT-CRUD-006: requireNetwork para consistencia con resto del codebase
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const parsed = CreateGastoInputSchema.safeParse(input);
     if (!parsed.success) {
       return failure(new AppError(GASTOS_ERRORS.GASTOS_INVALID_CATEGORY.code, parsed.error.issues[0]?.message || 'Datos inválidos.'));
@@ -115,6 +121,8 @@ export const gastosService = {
         await syncQueue.enqueue('expenses', 'CREATE', expense.id, toSnake(expense as unknown as Record<string, unknown>), tenantId);
         await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category });
       });
+      // AUDIT-CRUD-006: audit post-tx (outbox único emisor per Regla #17)
+      await emitWithAudit('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category }, { userId, tenantId });
       return success(mapExpense(expense));
     } catch (err) {
       console.error('[gastosService.create]', err);
@@ -123,6 +131,10 @@ export const gastosService = {
   },
 
   async update(tenantId: string, id: string, input: unknown, currentRate?: number): Promise<Result<Gasto, AppError>> {
+    // AUDIT-CRUD-007: requireNetwork para consistencia
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     const parsed = UpdateGastoInputSchema.safeParse(input);
     if (!parsed.success) {
       return failure(new AppError(GASTOS_ERRORS.GASTOS_UPDATE_FAILED.code, parsed.error.issues[0]?.message || 'Datos inválidos.'));
@@ -151,13 +163,15 @@ export const gastosService = {
         updatedAt: now,
       };
 
-      await db.expenses.update(id, updated);
-      const result = await db.expenses.get(id);
-      // AUDIT-007: Transactional outbox (Regla 17 compliance)
+      // AUDIT-CRUD-007: update + syncQueue + outbox DENTRO de la MISMA tx (Regla #17)
       await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        await db.expenses.update(id, updated);
         await syncQueue.enqueue('expenses', 'UPDATE', id, { id, ...toSnake(updated as unknown as Record<string, unknown>) }, tenantId);
         await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
       });
+      // AUDIT-CRUD-007: audit post-tx
+      await emitWithAudit('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) }, { userId: undefined, tenantId });
+      const result = await db.expenses.get(id);
       return success(mapExpense(result!));
     } catch (err) {
       console.error('[gastosService.update]', err);
@@ -166,6 +180,10 @@ export const gastosService = {
   },
 
   async remove(tenantId: string, id: string): Promise<Result<void, AppError>> {
+    // AUDIT-CRUD-008: requireNetwork para consistencia
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     try {
       const db = getDb();
       const existing = await db.expenses.get(id);
@@ -173,12 +191,14 @@ export const gastosService = {
         return failure(new AppError(GASTOS_ERRORS.GASTOS_NOT_FOUND.code, GASTOS_ERRORS.GASTOS_NOT_FOUND.message));
       }
       const now = new Date().toISOString();
-      await db.expenses.update(id, { deletedAt: now, updatedAt: now });
-      // AUDIT-007: Transactional outbox (Regla 17 compliance)
+      // AUDIT-CRUD-008: update + syncQueue + outbox DENTRO de la MISMA tx (Regla #17)
       await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        await db.expenses.update(id, { deletedAt: now, updatedAt: now });
         await syncQueue.enqueue('expenses', 'DELETE', id, { id, deleted_at: now }, tenantId);
         await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
       });
+      // AUDIT-CRUD-008: audit post-tx
+      await emitWithAudit('EXPENSES.DELETED', 'gastos', { expenseId: id }, { userId: undefined, tenantId });
       return success(undefined);
     } catch (err) {
       console.error('[gastosService.remove]', err);
@@ -205,6 +225,10 @@ export const gastosService = {
   },
 
   async checkAndGenerateRecurring(tenantId: string): Promise<Result<{ generated: Gasto[]; upcoming: { category: string; description?: string; id: string; date: string }[] }, AppError>> {
+    // AUDIT-CRUD-010: requireNetwork para consistencia
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     try {
       const db = getDb();
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -287,6 +311,11 @@ export const gastosService = {
         date: tomorrow,
       }));
 
+      // AUDIT-CRUD-010: audit post-tx
+      if (generated.length > 0) {
+        await emitWithAudit('EXPENSES.RECURRING_GENERATED', 'gastos', { count: generated.length, date: today }, { userId: undefined, tenantId });
+      }
+
       return success({ generated, upcoming });
     } catch (err) {
       console.error('[gastosService.checkAndGenerateRecurring]', err);
@@ -314,6 +343,10 @@ export const gastosService = {
   },
 
   async cancelOccurrence(tenantId: string, templateId: string, occurrenceDate: string): Promise<Result<void, AppError>> {
+    // AUDIT-CRUD-009: requireNetwork para consistencia
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
     try {
       const db = getDb();
       const instances = await db.expenses
@@ -322,11 +355,21 @@ export const gastosService = {
         .filter((e) => e.date === occurrenceDate && e.status === 'pending' && e.tenantId === tenantId)
         .toArray();
 
-      for (const inst of instances) {
-        const now = new Date().toISOString();
-        await db.expenses.update(inst.id, { status: 'cancelled', updatedAt: now });
-        await syncQueue.enqueue('expenses', 'UPDATE', inst.id, { id: inst.id, status: 'cancelled', updated_at: now }, tenantId);
+      if (instances.length === 0) {
+        return success(undefined);
       }
+
+      const now = new Date().toISOString();
+      // AUDIT-CRUD-009: UNA sola tx que cubre todas las updates de instancias (Regla #17)
+      await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        for (const inst of instances) {
+          await db.expenses.update(inst.id, { status: 'cancelled', updatedAt: now });
+          await syncQueue.enqueue('expenses', 'UPDATE', inst.id, { id: inst.id, status: 'cancelled', updated_at: now }, tenantId);
+          await outboxService.enqueue('EXPENSES.CANCELLED', 'gastos', { expenseId: inst.id, parentExpenseId: templateId });
+        }
+      });
+      // AUDIT-CRUD-009: audit post-tx
+      await emitWithAudit('EXPENSES.CANCELLED', 'gastos', { templateId, occurrenceDate, cancelledCount: instances.length }, { userId: undefined, tenantId });
 
       return success(undefined);
     } catch (err) {
