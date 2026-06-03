@@ -573,6 +573,7 @@ export const posService = {
             cost_usd_per_unit: costUsdPerUnit,
             is_weighted: product.isWeighted,
             unit: product.unit,
+            consumed_lots: consumedLots.length > 0 ? consumedLots : null, // AUDIT-017-DB / CRIT-DB-003: sync FIFO lot consumption
             created_at: now,
           } as unknown as Record<string, unknown>), tenantId);
 
@@ -716,6 +717,7 @@ export const posService = {
             cost_usd_per_unit: costUsdPerUnit,
             is_weighted: false,
             unit: product.unit,
+            consumed_lots: assemblyConsumedLots.length > 0 ? assemblyConsumedLots : null, // AUDIT-017-DB / CRIT-DB-003: sync FIFO lot consumption
             created_at: now,
           } as unknown as Record<string, unknown>), tenantId);
         }
