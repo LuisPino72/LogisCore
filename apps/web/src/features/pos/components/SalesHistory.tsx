@@ -8,6 +8,7 @@ import type { Sale } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
 import { usePosStore } from '../stores/posStore';
 import { METADATA_PAGOS } from '../../../specs/pos';
+import { IGTF_RATE } from '@logiscore/shared';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 const PAGE_SIZE = 20;
@@ -237,7 +238,8 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
               </div>
               {selectedSale.igtfBs > 0 && (
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>IGTF (3%)</span>
+                  {/* AUDIT-FLOW-2-004: porcentaje derivado de IGTF_RATE (Regla #8), no hardcoded. */}
+                  <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
                   <span>{formatBs(selectedSale.igtfBs)}</span>
                 </div>
               )}

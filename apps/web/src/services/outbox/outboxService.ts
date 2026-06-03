@@ -6,9 +6,10 @@ class OutboxService {
     event: OutboxEntry['event'],
     module: OutboxEntry['module'],
     payload: OutboxEntry['payload'],
+    tx?: any,
   ): Promise<Result<number, AppError>> {
     try {
-      const db = getDb();
+      const db = tx || getDb();
       const entry: Omit<OutboxEntry, 'id'> = {
         event,
         module,
@@ -25,6 +26,15 @@ class OutboxService {
     } catch (err) {
       return failure(new AppError('OUTBOX_ENQUEUE_FAILED', 'Error al encolar evento outbox', { details: { event, module, error: String(err) } }));
     }
+  }
+
+  async enqueueInTransaction(
+    tx: any,
+    event: OutboxEntry['event'],
+    module: OutboxEntry['module'],
+    payload: OutboxEntry['payload'],
+  ): Promise<Result<number, AppError>> {
+    return this.enqueue(event, module, payload, tx);
   }
 
   async processNext(): Promise<Result<'processed' | 'failed' | 'none', AppError>> {

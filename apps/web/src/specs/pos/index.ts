@@ -4,7 +4,9 @@ import { z } from 'zod';
 
 export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'efectivo_usd'] as const;
 export type PaymentMethod = typeof PAYMENT_METHODS[number];
-export const IGTF_RATE = 0.03;
+// AUDIT-FLOW-2-002: IGTF_RATE ahora proviene SOLO de @logiscore/shared (Regla de Oro #8).
+// Eliminado duplicado 0.03 (incorrecto, el canónico está en 0 según motor fiscal VE vigente).
+export { IGTF_RATE } from '@logiscore/shared';
 
 export const PaymentMethodSchema = z.enum(PAYMENT_METHODS);
 
@@ -106,6 +108,7 @@ export const CreateSaleInputSchema = z.object({
   discountType: z.enum(['percentage', 'fixed']).optional(),
   discountValue: z.number().min(0).optional(),
   customerId: z.string().uuid().optional(),
+  allowOverride: z.boolean().optional(),
 });
 
 export type CreateSaleInput = z.infer<typeof CreateSaleInputSchema>;

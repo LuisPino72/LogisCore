@@ -29,7 +29,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   // Load existing recipe data
   useEffect(() => {
     if (recipe) {
-      getRecipeWithLines(recipe.id).then((data) => {
+      getRecipeWithLines(tenantId!, recipe.id).then((data) => {
         if (data) {
           updateField('name', data.recipe.name);
           updateField('productId', data.recipe.productId);

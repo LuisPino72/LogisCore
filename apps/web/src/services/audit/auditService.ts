@@ -1,6 +1,10 @@
 import { supabase } from '../supabase/client';
 import { getDb, isDbReady } from '../dexie/db';
 
+// AUDIT-FLOW-1-001: Ampliar CRITICAL_EVENTS para cubrir TODAS las mutaciones de
+// negocio. Antes solo 9 eventos eran auditados (~20%); ahora cubrimos el set
+// completo de eventos de mutación de LogisCore. Decisión conservadora: lista
+// explícita (no "todos") para evitar inflado de tabla por eventos internos.
 export const CRITICAL_EVENTS = [
   'SALE.COMPLETED',
   'SALE.VOIDED',
@@ -9,8 +13,43 @@ export const CRITICAL_EVENTS = [
   'BOX.OPENED',
   'BOX.CLOSED',
   'INVENTORY.ADJUSTMENT',
+  'INVENTORY.CREATED',
+  'INVENTORY.UPDATED',
+  'INVENTORY.DELETED',
   'USER.LOGIN',
   'USER.LOGOUT',
+  // Purchases (7)
+  'PURCHASE.SUPPLIER_CREATED',
+  'PURCHASE.SUPPLIER_UPDATED',
+  'PURCHASE.SUPPLIER_DELETED',
+  'PURCHASE.CREATED',
+  'PURCHASE.UPDATED',
+  'PURCHASE.DELETED',
+  'PURCHASE.CONFIRMED',
+  'PURCHASE.RECEIVED',
+  'PURCHASE.CANCELLED',
+  // Expenses (5)
+  'EXPENSES.CREATED',
+  'EXPENSES.UPDATED',
+  'EXPENSES.DELETED',
+  'EXPENSES.RECURRING_GENERATED',
+  'EXPENSES.CANCELLED',
+  // Production (6)
+  'PRODUCTION.CREATED',
+  'PRODUCTION.UPDATED',
+  'PRODUCTION.DELETED',
+  'PRODUCTION.COMPLETED',
+  'PRODUCTION.ORDER_CANCELLED',
+  // Customers (3)
+  'CUSTOMER.CREATED',
+  'CUSTOMER.UPDATED',
+  'CUSTOMER.DELETED',
+  // Admin (3)
+  'ADMIN.TENANT.CREATE',
+  'ADMIN.TENANT.DELETE',
+  'ADMIN.TENANT.HARD_DELETE',
+  // Exchange (1)
+  'EXCHANGE.RATE_UPDATED',
 ] as const;
 
 export function sanitizePayload(payload: Record<string, unknown> = {}): Record<string, unknown> {

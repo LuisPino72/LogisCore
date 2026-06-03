@@ -46,10 +46,25 @@ export function useProduction(tenantId: string | null) {
       doFetch(true);
     });
 
+    const sub4 = EventBus.on('PRODUCTION.CREATED', () => {
+      doFetch(true);
+    });
+
+    const sub5 = EventBus.on('PRODUCTION.UPDATED', () => {
+      doFetch(true);
+    });
+
+    const sub6 = EventBus.on('PRODUCTION.DELETED', () => {
+      doFetch(true);
+    });
+
     return () => {
       EventBus.off(sub1);
       EventBus.off(sub2);
       EventBus.off(sub3);
+      EventBus.off(sub4);
+      EventBus.off(sub5);
+      EventBus.off(sub6);
     };
   }, [tenantId, doFetch]);
 

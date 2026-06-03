@@ -948,10 +948,12 @@ export const inventoryService = {
     // If local is empty, try pulling from Supabase filtering by tenant UUID
     if (rows.length === 0) {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+      // AUDIT-FLOW-5-005: UNION de categorías del tenant + predefinidas globales (tenant_id NULL).
+      // Antes: solo filtraba por tenant_uuid, perdiendo categorías predefinidas visibles para todos.
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('tenant_id', tenantUuid)
+        .or(`tenant_id.eq.${tenantUuid},tenant_id.is.null`)
         .is('deleted_at', null);
 
       if (!error && data && data.length > 0) {
@@ -1018,8 +1020,12 @@ export const inventoryService = {
     }
 
     const db = getDb();
-    const product = await db.products.get(input.productId);
-    if (!product || product.deletedAt) {
+    // AUDIT-FLOW-9-009: Filtrar por tenantId para evitar tenant-leak (Regla #5).
+    const product = await db.products
+      .where({ tenantId: input.tenantId, id: input.productId })
+      .filter((p) => !p.deletedAt)
+      .first();
+    if (!product) {
       return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
     }
 
@@ -1326,10 +1332,34 @@ export const inventoryService = {
 
   async consumeFifo(productId: string, quantity: number, tenantId: string): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
     const db = getDb();
-    const lots = await db.inventoryLots
+    let lots = await db.inventoryLots
       .where({ productId })
       .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
       .sortBy('createdAt');
+
+    // AUDIT-FLOW-6-006: Fallback de lote implícito si no hay inventory_lots pero producto tiene stock.
+    // Antes: error INVENTORY_STOCK_INSUFFICIENT aunque product.stock >= quantity.
+    if (lots.length === 0) {
+      const product = await db.products.where({ tenantId, id: productId }).filter(p => !p.deletedAt).first();
+      if (product && product.stock >= quantity) {
+        const now = new Date().toISOString();
+        const implicitLot = {
+          id: generateId(),
+          tenantId,
+          productId,
+          quantityAdded: product.stock,
+          remainingQuantity: product.stock,
+          costUsdPerUnit: product.isWeighted
+            ? (product.costPrice ?? 0) / 1000
+            : (product.costPrice ?? 0),
+          createdAt: now,
+          updatedAt: now,
+        };
+        await db.inventoryLots.add(implicitLot as never);
+        await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
+        lots = [implicitLot as never];
+      }
+    }
 
     let toConsume = quantity;
     const consumed: Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }> = [];

@@ -25,16 +25,21 @@ export function calculateSaleTotals(
   paymentMethod: string,
   discount: { type: 'percentage' | 'fixed'; value: number } | null,
 ): SaleTotals {
-  const subtotalUsd = items.reduce((sum, item) => sum + item.unitPriceUsd * item.quantity, 0);
+  // AUDIT-FLOW-10-010B: subtotalUsd redondeado a 2 decimales (Regla #6).
+  const subtotalUsd = preciseRound(
+    items.reduce((sum, item) => sum + item.unitPriceUsd * item.quantity, 0),
+    2,
+  );
   const subtotalBs = exchangeRateBs > 0 ? preciseRound(subtotalUsd * exchangeRateBs, 2) : 0;
 
   const igtfBs = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0
     ? preciseRound(subtotalBs * IGTF_RATE, 2)
     : 0;
 
+  // AUDIT-FLOW-10-010C: subtotalTaxableBs redondeado en cada iteración (Regla #6).
   const subtotalTaxableBs = items.reduce((sum, item) => {
     if (item.isTaxable === false) return sum;
-    return sum + item.unitPriceUsd * item.quantity * exchangeRateBs;
+    return preciseRound(sum + item.unitPriceUsd * item.quantity * exchangeRateBs, 2);
   }, 0);
 
   let discountBs = 0;

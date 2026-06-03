@@ -118,6 +118,11 @@ export function usePos(tenantId: string | null) {
       }
     }));
 
+    subs.push(EventBus.on('CUSTOMER.UPDATED', () => {
+      // The SearchableSelect is handled by useCustomers hook used in CustomerPickerModal
+      // We don't need to do anything here unless we want to refresh selectedCustomer
+    }));
+
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);
       subs.forEach((s) => EventBus.off(s));

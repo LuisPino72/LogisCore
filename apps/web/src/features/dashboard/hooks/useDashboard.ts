@@ -52,6 +52,7 @@ export function useDashboard(tenantId: string | null) {
     const subs = [
       EventBus.on(SystemEvents.EXPENSES_CREATED, handler),
       EventBus.on(SystemEvents.EXPENSES_UPDATED, handler),
+      EventBus.on(SystemEvents.EXPENSES_DELETED, handler),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [tenantId]);

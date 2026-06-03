@@ -9,6 +9,7 @@ import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
+import { extractRole } from '../../../lib/jwt';
 import {
   CreateCustomerInputSchema,
   UpdateCustomerInputSchema,
@@ -23,6 +24,29 @@ import { CustomerErrors } from '../../../specs/customers/errors';
 import type { Sale } from '../../pos/types';
 
 const MODULE_NAME = 'CUSTOMERS';
+ 
+async function getRoleFromSession(): Promise<Result<string, AppError>> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión.'));
+    const role = extractRole(session);
+    if (!role) return failure(new AppError('AUTH_NO_ROLE', 'No se encontró el rol del usuario.'));
+    return success(role);
+  } catch {
+    return failure(new AppError('AUTH_ERROR', 'Error al obtener la sesión.'));
+  }
+}
+
+async function requireRole(...allowedRoles: string[]): Promise<Result<string, AppError>> {
+  const roleResult = await getRoleFromSession();
+  if (!roleResult.ok) return failure(roleResult.error);
+
+  if (!allowedRoles.includes(roleResult.data)) {
+    return failure(new AppError('FORBIDDEN', `Solo los roles [${allowedRoles.join(', ')}] pueden realizar esta acción.`));
+  }
+
+  return roleResult;
+}
 
 function toCustomer(raw: Record<string, unknown>): Customer {
   return {
@@ -55,6 +79,9 @@ export const customerService = {
     _userId: string,
     input: CreateCustomerInput,
   ): Promise<Result<Customer, AppError>> {
+    const roleCheck = await requireRole('owner', 'admin');
+    if (!roleCheck.ok) return failure(roleCheck.error);
+
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -69,6 +96,16 @@ export const customerService = {
           parsed.error.issues[0]?.message ?? 'Datos inválidos.',
         ),
       );
+    }
+
+    if (parsed.data.cedula) {
+      const duplicate = await db.customers
+        .where({ tenantId })
+        .filter(c => c.cedula === parsed.data.cedula?.trim().toUpperCase() && !c.deletedAt)
+        .first();
+      if (duplicate) {
+        return failure(new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe un cliente con esta cédula.'));
+      }
     }
 
     const customer: Customer = {
@@ -118,6 +155,9 @@ export const customerService = {
     input: UpdateCustomerInput,
     tenantId: string,
   ): Promise<Result<Customer, AppError>> {
+    const roleCheck = await requireRole('owner', 'admin');
+    if (!roleCheck.ok) return failure(roleCheck.error);
+
     try {
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
@@ -132,6 +172,16 @@ export const customerService = {
               partial.error.issues[0]?.message ?? 'Datos inválidos.',
             ),
           );
+        }
+
+        if (input.cedula) {
+          const duplicate = await db.customers
+            .where({ tenantId })
+            .filter(c => c.id !== id && c.cedula === input.cedula?.trim().toUpperCase() && !c.deletedAt)
+            .first();
+          if (duplicate) {
+            return failure(new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe otro cliente con esta cédula.'));
+          }
         }
       }
 
@@ -181,6 +231,9 @@ export const customerService = {
   },
 
   async softDeleteCustomer(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    const roleCheck = await requireRole('owner', 'admin');
+    if (!roleCheck.ok) return failure(roleCheck.error);
+
     try {
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);

@@ -71,8 +71,6 @@ export class SyncEngine {
     const MAX_BATCHES = 50;
 
     try {
-      emitEngineEvent('SYNC.BATCH_STARTED', { batchSize });
-
       let batches = 0;
       while (batches < MAX_BATCHES) {
         const items = await syncQueue.dequeue(batchSize);
@@ -97,11 +95,9 @@ export class SyncEngine {
         batches++;
       }
 
-      emitEngineEvent('SYNC.BATCH_COMPLETED', result);
       return success(result);
     } catch (err) {
       const appErr = err instanceof AppError ? err : new AppError('SYNC_BATCH_FAILED', 'Error en lote de sincronización');
-      emitEngineEvent('SYNC.ERROR', appErr);
       return failure(appErr);
     } finally {
       this.isSyncing = false;
@@ -130,11 +126,10 @@ export class SyncEngine {
             remotePayload: existing,
             strategy: cfg.conflictStrategy,
           });
-          const { error } = await supabase.from(item.table).upsert(resolved);
-          if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
-          result.conflicts++;
-          emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
-        } else {
+           const { error } = await supabase.from(item.table).upsert(resolved);
+           if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
+           result.conflicts++;
+         } else {
           const { error } = await supabase.from(item.table).upsert(remotePayload);
           if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
         }
@@ -161,11 +156,10 @@ export class SyncEngine {
               remotePayload: existing,
               strategy: cfg.conflictStrategy,
             });
-            const { error: upsertError } = await supabase.from(item.table).upsert(resolved);
-            if (upsertError) throw new AppError('SYNC_PUSH_FAILED', upsertError.message, { details: { table: item.table, recordId: item.recordId } });
-            result.conflicts++;
-            emitEngineEvent('SYNC.CONFLICT_DETECTED', { table: item.table, recordId: item.recordId });
-          } else if (error.message) {
+               const { error: upsertError } = await supabase.from(item.table).upsert(resolved);
+               if (upsertError) throw new AppError('SYNC_PUSH_FAILED', upsertError.message, { details: { table: item.table, recordId: item.recordId } });
+               result.conflicts++;
+             } else if (error.message) {
             throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
           }
         }

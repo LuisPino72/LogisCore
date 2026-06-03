@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
-import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals, IGTF_RATE } from '../../../specs/pos';
+import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals } from '../../../specs/pos';
+import { IGTF_RATE } from '@logiscore/shared';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface CartSummaryProps {
@@ -67,7 +68,8 @@ export function CartSummary({
 
       {paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
-          <span>IGTF (3%)</span>
+          {/* AUDIT-FLOW-2-003: porcentaje derivado de IGTF_RATE (Regla #8), no hardcoded. */}
+          <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
           <span>{formatUsd(igtfUsd)} / {formatBs(igtfBs)}</span>
         </div>
       )}

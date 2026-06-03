@@ -1,5 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { emitWithPersistence } from '../../../services/audit/emitWithAudit';
@@ -426,10 +427,14 @@ export const productionService = {
     }
   },
 
-  async getRecipeWithLines(recipeId: string): Promise<Result<RecipeWithLines, AppError>> {
+  async getRecipeWithLines(tenantId: string, recipeId: string): Promise<Result<RecipeWithLines, AppError>> {
     const db = getDb();
-    const recipe = await db.recipes.get(recipeId);
-    if (!recipe || recipe.deletedAt) {
+    // AUDIT-FLOW-7-007: Filtrar por tenantId para evitar tenant-leak (Regla #5).
+    const recipe = await db.recipes
+      .where({ tenantId, id: recipeId })
+      .filter((r) => !r.deletedAt)
+      .first();
+    if (!recipe) {
       return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
     }
 
@@ -679,6 +684,12 @@ export const productionService = {
           const fifoResult = await consumeFifoInternal(line.productId, needed, tenantId);
           if (!fifoResult.ok) throw fifoResult.error;
 
+          // AUDIT-FLOW-11-011A: Calcular costUsd del movement desde FIFO consumido.
+          const costUsd = preciseRound(
+            fifoResult.data.reduce((sum, l) => sum + l.quantity * (l.costUsdPerUnit ?? 0), 0),
+            2,
+          );
+
           // Create inventory movement
           const movementId = generateId();
           const movement = {
@@ -691,6 +702,7 @@ export const productionService = {
             previousStock,
             newStock,
             reasonType: 'consumo_interno',
+            costUsd,
             createdAt: now,
           };
           await db.inventoryMovements.add(movement);
@@ -762,8 +774,12 @@ export const productionService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const order = await db.productionOrders.get(orderId);
-    if (!order || order.deletedAt) {
+    // AUDIT-FLOW-8-008: Filtrar por tenantId para evitar tenant-leak (Regla #5).
+    const order = await db.productionOrders
+      .where({ tenantId, id: orderId })
+      .filter((o) => !o.deletedAt)
+      .first();
+    if (!order) {
       return failure(new AppError(ProductionErrors.ORDER_NOT_FOUND, 'Orden de producción no encontrada.'));
     }
     if (order.status !== 'confirmed') {
@@ -892,6 +908,119 @@ export const productionService = {
       logger.error(PRODUCTION_MODULE, 'Error en getOrders:', err);
       return failure(new AppError('PRODUCTION_ORDERS_QUERY_FAILED', 'Error al cargar órdenes de producción.'));
     }
+  },
+
+  async consumeForAssembly(
+    productId: string,
+    quantity: number,
+    tenantId: string,
+    userId: string,
+    options: { allowOverride?: boolean } = {},
+  ): Promise<Result<{ consumedLots: Array<{ lotId: string; quantity: number }>; totalIngredientCost: number }, AppError>> {
+    const db = getDb();
+    const now = new Date().toISOString();
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+
+    const recipe = await db.recipes
+      .where({ productId, mode: 'assembly' as const })
+      .filter(r => !r.deletedAt && r.isActive)
+      .first();
+
+    if (!recipe) {
+      return failure(new AppError(ProductionErrors.ASSEMBLY_NO_RECIPE, `Producto no tiene receta de ensamblaje.`));
+    }
+
+    const recipeLines = await db.recipeLines
+      .where({ recipeId: recipe.id })
+      .filter(l => !l.deletedAt)
+      .toArray();
+
+    if (recipeLines.length === 0) {
+      return failure(new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, `La receta de ensamblaje no tiene ingredientes.`));
+    }
+
+    const wasteMultiplier = 1 + (recipe.wastePct / 100);
+    let totalIngredientCost = 0;
+    const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = [];
+
+    for (const line of recipeLines) {
+      const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
+      const ingredient = await db.products.get(line.productId);
+      
+      if (!ingredient) {
+        return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado.`));
+      }
+
+      const isInsufficient = ingredient.stock < needed;
+      if (isInsufficient && !options.allowOverride) {
+        return failure(new AppError(
+          ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK,
+          `Stock insuficiente de ingrediente "${ingredient.name}". Necesario: ${needed}, Disponible: ${ingredient.stock}.`
+        ));
+      }
+
+      const previousStock = ingredient.stock;
+      const newStock = Math.max(0, previousStock - needed);
+
+      await db.products.update(line.productId, { stock: newStock });
+      await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+
+      let toConsume = needed;
+      let lotCost = 0;
+      const lots = await db.inventoryLots
+        .where({ productId: line.productId })
+        .filter(l => l.remainingQuantity > 0)
+        .sortBy('createdAt');
+
+      for (const lot of lots) {
+        if (toConsume <= 0) break;
+        const currentLot = await db.inventoryLots.get(lot.id);
+        if (!currentLot || currentLot.remainingQuantity <= 0) continue;
+        if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
+          throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto en consumo FIFO.');
+        }
+        const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
+        const newVersion = (currentLot.version ?? 0) + 1;
+        lotCost += consumeQty * (currentLot.costUsdPerUnit ?? 0);
+        assemblyConsumedLots.push({ lotId: lot.id, quantity: consumeQty });
+        await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion });
+        await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion } as unknown as Record<string, unknown>), tenantId);
+        toConsume -= consumeQty;
+      }
+
+      if (toConsume > 0 && !options.allowOverride) {
+        return failure(new AppError('INVENTORY_STOCK_INSUFFICIENT', `Stock insuficiente de "${ingredient.name}" (lotes agotados).`));
+      }
+
+      totalIngredientCost += lotCost;
+      const movementCostUsd = preciseRound(lotCost, 2);
+
+      const movementId = generateId();
+      const reasonType = isInsufficient ? 'ajuste_manual' : 'consumo_interno';
+      
+      await db.inventoryMovements.add({
+        id: movementId,
+        tenantId,
+        productId: line.productId,
+        userId,
+        type: 'adjustment' as const,
+        quantity: -needed,
+        previousStock,
+        newStock,
+        reasonType,
+        costUsd: movementCostUsd,
+        createdAt: now,
+      });
+      await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
+        id: movementId, tenant_id: tenantUuid, product_id: line.productId, user_id: userId,
+        type: 'adjustment', quantity: -needed, previous_stock: previousStock, new_stock: newStock,
+        reason_type: reasonType, cost_usd: movementCostUsd, created_at: now,
+      } as unknown as Record<string, unknown>), tenantId);
+    }
+
+    await emitWithPersistence('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, { productId, quantity, tenantId }, { userId, tenantId });
+
+    return success({ consumedLots: assemblyConsumedLots, totalIngredientCost });
   },
 
   // ===== INTERNAL HELPERS =====

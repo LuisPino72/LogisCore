@@ -9,7 +9,7 @@ interface ProductionStore extends ProductionState {
   createRecipe: (tenantId: string, userId: string, input: CreateRecipeInput) => Promise<Recipe | null>;
   updateRecipe: (id: string, input: UpdateRecipeInput, tenantId: string) => Promise<boolean>;
   deleteRecipe: (id: string, tenantId: string) => Promise<boolean>;
-  getRecipeWithLines: (recipeId: string) => Promise<RecipeWithLines | null>;
+  getRecipeWithLines: (tenantId: string, recipeId: string) => Promise<RecipeWithLines | null>;
 
   // Production Orders
   productionOrders: ProductionOrder[];
@@ -90,8 +90,8 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
     return false;
   },
 
-  getRecipeWithLines: async (recipeId) => {
-    const result = await productionService.getRecipeWithLines(recipeId);
+  getRecipeWithLines: async (tenantId, recipeId) => {
+    const result = await productionService.getRecipeWithLines(tenantId, recipeId);
     if (result.ok) return result.data;
     set({ error: result.error });
     return null;

@@ -12,4 +12,6 @@ export const PosErrors = {
   CART_ITEM_WEIGHT_REQUIRED: 'CART_ITEM_WEIGHT_REQUIRED',
   BOX_QUERY_FAILED: 'BOX_QUERY_FAILED',
   BOX_CLOSED_TODAY: 'BOX_CLOSED_TODAY',
+  // AUDIT-FLOW-12-012: Anulación post-cierre aborta para no corromper arqueo.
+  SALE_VOID_BOX_CLOSED: 'SALE_VOID_BOX_CLOSED',
 } as const;

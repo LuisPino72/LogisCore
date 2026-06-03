@@ -1,5 +1,6 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
-import { preciseRound, toSnake, generateId } from '@logiscore/shared';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
+import { preciseRound, toSnake, generateId, MAX_CENTS_DIFFERENCE } from '@logiscore/shared';
+import { productionService } from '../../production/services/productionService';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
 import type { DexieCashRegister, LogisCoreDB } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -97,7 +98,7 @@ async function autoCloseRegister(
       updated_at: now,
     } as Record<string, unknown>), tenantId);
 
-    await outboxService.enqueue('BOX.CLOSED', MODULE_NAME, {
+    await outboxService.enqueue(SystemEvents.BOX_CLOSED, MODULE_NAME, {
       registerId: register.id,
       tenantSlug: tenantId,
       expectedBs: expectedClosingBs,
@@ -107,7 +108,7 @@ async function autoCloseRegister(
     });
   });
 
-  await emitWithAudit('BOX.CLOSED', MODULE_NAME, {
+  await emitWithAudit(SystemEvents.BOX_CLOSED, MODULE_NAME, {
     registerId: register.id,
     tenantSlug: tenantId,
     expectedBs: expectedClosingBs,
@@ -489,13 +490,14 @@ export const posService = {
             const lotCost = currentLot.costUsdPerUnit ?? 0;
             const newVersion = (currentLot.version ?? 0) + 1;
             if (currentLot.remainingQuantity >= toConsume) {
-              totalCostUsd += toConsume * lotCost;
+              // AUDIT-FLOW-10-010D: totalCostUsd acumulado con preciseRound (Regla #6).
+              totalCostUsd = preciseRound(totalCostUsd + toConsume * lotCost, 2);
               consumedLots.push({ lotId: lot.id, quantity: toConsume }); // AUDIT-012
               await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion });
               await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion } as unknown as Record<string, unknown>), tenantId);
               toConsume = 0;
             } else {
-              totalCostUsd += currentLot.remainingQuantity * lotCost;
+              totalCostUsd = preciseRound(totalCostUsd + currentLot.remainingQuantity * lotCost, 2);
               consumedLots.push({ lotId: lot.id, quantity: currentLot.remainingQuantity }); // AUDIT-012
               toConsume -= currentLot.remainingQuantity;
               await db.inventoryLots.update(lot.id, { remainingQuantity: 0, version: newVersion });
@@ -581,107 +583,26 @@ export const posService = {
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
         }
 
-        // Crear saleItems para items assembly (consumo de ingredientes dentro de transacción)
+        // Crear saleItems para items assembly (consumo de ingredientes dentro de transacción) // AUDIT-FLOW-2-001
         for (const assemblyItem of assemblyItems) {
+          const result = await productionService.consumeForAssembly(
+            assemblyItem.productId,
+            assemblyItem.quantity,
+            tenantId,
+            userId,
+            { allowOverride: input.allowOverride }
+          );
+
+          if (!result.ok) {
+            throw result.error;
+          }
+
+          const { consumedLots, totalIngredientCost } = result.data;
           const product = await db.products.get(assemblyItem.productId);
           if (!product) {
             throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no encontrado.`);
           }
 
-          const recipe = await db.recipes
-            .where({ productId: assemblyItem.productId, mode: 'assembly' as const })
-            .filter(r => !r.deletedAt && r.isActive)
-            .first();
-
-          if (!recipe) {
-            throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no tiene receta de ensamblaje.`);
-          }
-
-          const recipeLines = await db.recipeLines
-            .where({ recipeId: recipe.id })
-            .filter(l => !l.deletedAt)
-            .toArray();
-
-          if (recipeLines.length === 0) {
-            throw new AppError(
-              'ASSEMBLY_NO_INGREDIENTS',
-              `La receta de ensamblaje de "${assemblyItem.productName}" no tiene ingredientes. Edite la receta antes de vender.`,
-            );
-          }
-
-          // Verificar y consumir ingredientes en un solo paso atómico
-          const wasteMultiplier = 1 + (recipe.wastePct / 100);
-          let totalIngredientCost = 0;
-          const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = []; // AUDIT-012: FIFO restore (track ingredient lot consumption)
-          for (const line of recipeLines) {
-            const needed = Math.ceil(line.quantity * assemblyItem.quantity * wasteMultiplier);
-            const ingredient = await db.products.get(line.productId);
-            if (!ingredient || ingredient.stock < needed) {
-              throw new AppError(
-                'ASSEMBLY_INSUFFICIENT_STOCK',
-                `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${assemblyItem.productName}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`,
-              );
-            }
-
-            // Consumir inmediatamente después de verificar
-            const previousStock = ingredient.stock;
-            const newStock = Math.max(0, previousStock - needed);
-
-            await db.products.update(line.productId, { stock: newStock });
-            await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
-
-            // Consumo FIFO del ingrediente
-            let toConsume = needed;
-            let lotCost = 0;
-            const lots = await db.inventoryLots
-              .where({ productId: line.productId })
-              .filter(l => l.remainingQuantity > 0)
-              .sortBy('createdAt');
-
-            for (const lot of lots) {
-              if (toConsume <= 0) break;
-              const currentLot = await db.inventoryLots.get(lot.id);
-              if (!currentLot || currentLot.remainingQuantity <= 0) continue;
-              if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
-                throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto en consumo FIFO.');
-              }
-              const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
-              const newVersion = (currentLot.version ?? 0) + 1;
-              lotCost += consumeQty * (currentLot.costUsdPerUnit ?? 0);
-              assemblyConsumedLots.push({ lotId: lot.id, quantity: consumeQty }); // AUDIT-012
-              await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion });
-              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion } as unknown as Record<string, unknown>), tenantId);
-              toConsume -= consumeQty;
-            }
-
-            if (toConsume > 0) {
-              throw new AppError('INVENTORY_STOCK_INSUFFICIENT', `Stock insuficiente de "${ingredient.name}" (lotes agotados).`);
-            }
-
-            totalIngredientCost += lotCost;
-
-            // Movement de consumo
-            const movementId = generateId();
-            await db.inventoryMovements.add({
-              id: movementId,
-              tenantId,
-              productId: line.productId,
-              userId,
-              type: 'adjustment' as const,
-              quantity: -needed,
-              previousStock,
-              newStock,
-              reasonType: 'consumo_interno',
-              createdAt: now,
-            });
-            await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
-              id: movementId, tenant_id: tenantUuid, product_id: line.productId, user_id: userId,
-              type: 'adjustment', quantity: -needed, previous_stock: previousStock, new_stock: newStock,
-              reason_type: 'consumo_interno', created_at: now,
-            } as unknown as Record<string, unknown>), tenantId);
-          }
-
-          // Crear saleItem para el producto ensamblado
           const cartItemData = items.find(i => i.productId === assemblyItem.productId);
           const costUsdPerUnit = assemblyItem.quantity > 0 ? preciseRound(totalIngredientCost / assemblyItem.quantity, 4) : 0;
 
@@ -701,7 +622,7 @@ export const posService = {
             unit: product.unit,
             unitMultiplier: 1,
             createdAt: now,
-            consumedLots: assemblyConsumedLots, // AUDIT-012: FIFO restore (ingredient lots consumed)
+            consumedLots, // AUDIT-012: FIFO restore (ingredient lots consumed)
           });
 
           await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
@@ -717,7 +638,7 @@ export const posService = {
             cost_usd_per_unit: costUsdPerUnit,
             is_weighted: false,
             unit: product.unit,
-            consumed_lots: assemblyConsumedLots.length > 0 ? assemblyConsumedLots : null, // AUDIT-017-DB / CRIT-DB-003: sync FIFO lot consumption
+            consumed_lots: consumedLots.length > 0 ? consumedLots : null, // AUDIT-017-DB / CRIT-DB-003: sync FIFO lot consumption
             created_at: now,
           } as unknown as Record<string, unknown>), tenantId);
         }
@@ -755,19 +676,17 @@ export const posService = {
           itemsCount: items.length,
           ...(discountBs > 0 && { discountBs, discountType, discountValue }),
         });
+
+        await emitWithAudit({
+          eventName: 'SALE.COMPLETED',
+          module: MODULE_NAME,
+          payload: { saleId, tenantSlug: tenantId, totalBs, paymentMethod, itemsCount: items.length },
+          context: { userId, tenantId, tenantUuid },
+        }, tx);
       });
 
-      await emitWithAudit('SALE.COMPLETED', MODULE_NAME, {
-        saleId,
-        tenantSlug: tenantId,
-        totalBs,
-        paymentMethod,
-        itemsCount: items.length,
-      }, {
-        userId,
-        tenantId,
-        tenantUuid,
-      });
+      // El emitWithAudit ya se hizo dentro de la tx para garantizar persistencia
+
 
       // Push inmediato para que la venta llegue a la nube sin esperar el timer
       syncEngine.pushNow().catch(() => {});
@@ -927,24 +846,23 @@ export const posService = {
           updated_at: now,
         } as unknown as Record<string, unknown>), tenantId);
 
-        await outboxService.enqueue('BOX.OPENED', MODULE_NAME, {
+        await outboxService.enqueue(SystemEvents.BOX_OPENED, MODULE_NAME, {
           registerId: id,
           tenantSlug: tenantId,
           openingBalanceBs,
           openedBy: userId,
         });
+
+        await emitWithAudit({
+          eventName: SystemEvents.BOX_OPENED,
+          module: MODULE_NAME,
+          payload: { registerId: id, tenantSlug: tenantId, openingBalanceBs, openedBy: userId },
+          context: { userId, tenantId, tenantUuid },
+        }, tx);
       });
 
-      await emitWithAudit('BOX.OPENED', MODULE_NAME, {
-        registerId: id,
-        tenantSlug: tenantId,
-        openingBalanceBs,
-        openedBy: userId,
-      }, {
-        userId,
-        tenantId,
-        tenantUuid,
-      });
+      // El emitWithAudit ya se hizo dentro de la tx para garantizar persistencia
+
 
       // Push inmediato para sincronizar apertura de caja a la nube
       syncEngine.pushNow().catch(() => {});
@@ -1334,6 +1252,14 @@ export const posService = {
 
         // Revertir totales de caja si existe una caja abierta
         if (cashReg) {
+          // AUDIT-FLOW-12-012: Si la caja ya está cerrada, NO actualizar totales
+          // (eso corrompería expectedClosingBs/differenceBs del arqueo). Abortar.
+          if (!cashReg.isOpen) {
+            throw new AppError(
+              PosErrors.SALE_VOID_BOX_CLOSED,
+              'No se puede anular una venta cuya caja ya está cerrada. Crea un ajuste manual.',
+            );
+          }
           // AUDIT-011: Canonical totals recompute (no silent clamp)
           // Re-leer todas las ventas completed (no voided) en la ventana de la caja
           // y derivar totales desde la fuente de verdad, no por decremento.
@@ -1430,7 +1356,9 @@ export const posService = {
       2,
     );
 
-    const differenceBs = preciseRound(declaredClosingBalanceBs - expectedClosingBs, 2);
+    // AUDIT-FLOW-10-010A: Diferencia ≤ 1 céntimo se ajusta a 0 (Regla #6 + #8).
+    const rawDiff = preciseRound(declaredClosingBalanceBs - expectedClosingBs, 2);
+    const differenceBs = Math.abs(rawDiff) <= MAX_CENTS_DIFFERENCE ? 0 : rawDiff;
 
     try {
       await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
@@ -1461,26 +1389,24 @@ export const posService = {
           updated_at: now,
         } as unknown as Record<string, unknown>), tenantId);
 
-        await outboxService.enqueue('BOX.CLOSED', MODULE_NAME, {
+        await outboxService.enqueue(SystemEvents.BOX_CLOSED, MODULE_NAME, {
           registerId: cashReg.id,
           tenantSlug: tenantId,
           expectedBs: expectedClosingBs,
           declaredBs: declaredClosingBalanceBs,
           differenceBs,
         });
+
+        await emitWithAudit({
+          eventName: SystemEvents.BOX_CLOSED,
+          module: MODULE_NAME,
+          payload: { registerId: cashReg.id, tenantSlug: tenantId, expectedBs: expectedClosingBs, declaredBs: declaredClosingBalanceBs, differenceBs },
+          context: { userId, tenantId, tenantUuid },
+        }, tx);
       });
 
-      await emitWithAudit('BOX.CLOSED', MODULE_NAME, {
-        registerId: cashReg.id,
-        tenantSlug: tenantId,
-        expectedBs: expectedClosingBs,
-        declaredBs: declaredClosingBalanceBs,
-        differenceBs,
-      }, {
-        userId,
-        tenantId,
-        tenantUuid,
-      });
+      // El emitWithAudit ya se hizo dentro de la tx para garantizar persistencia
+
 
       // Push inmediato para sincronizar cierre de caja a la nube
       syncEngine.pushNow().catch(() => {});

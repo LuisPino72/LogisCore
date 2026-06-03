@@ -14,24 +14,34 @@ export function emitEngineEvent(eventName: string, payload: unknown = {}): void 
   EventBus.emit(eventName, payload);
 }
 
+export interface EmitAuditParams {
+  eventName: string;
+  module: string;
+  payload: unknown;
+  context: {
+    userId?: string;
+    tenantId?: string;
+    tenantUuid?: string | null;
+  };
+}
+
 /** Emite un evento con feedback UI inmediato + registro de auditoría.
  *  NOTA: El encolado en outbox se realiza DENTRO de la transacción Dexie
  *  (ver outboxService.enqueue() en los servicios) para garantizar atomicidad
  *  (Regla #17). El outbox processor es el único emisor de EventBus (Regla #17).
  *  Esta función solo registra auditoría no crítica. */
 export async function emitWithAudit(
-  eventName: string,
-  module: string,
-  payload: unknown,
-  context: {
-    userId?: string;
-    tenantId?: string;
-    tenantUuid?: string | null;
-  },
+  params: EmitAuditParams,
+  tx?: any,
 ): Promise<void> {
-  // AUDIT-006: Outbox processor is the single event emitter (Option A).
-  // Removido EventBus.emit síncrono — outbox processor emite en processNext().
-  // Esta función solo registra en auditoría.
+  const { eventName, module, payload, context } = params;
+
+  // AUDIT-SASA-PERSISTENCE: If tx is provided, ensure persistence in outbox
+  if (tx) {
+    await outboxService.enqueueInTransaction(tx, eventName, module, payload);
+  } else {
+    await outboxService.enqueue(eventName, module, payload);
+  }
 
   // Registrar en auditoría
   try {
@@ -75,7 +85,7 @@ export function emitWithPersistence(
   },
 ) {
   return {
-    enqueueInTransaction: () => outboxService.enqueue(eventName, module, payload),
+    enqueueInTransaction: (tx) => outboxService.enqueueInTransaction(tx, eventName, module, payload),
     auditAfterTransaction: () => emitWithAudit(eventName, module, payload, context),
   };
 }
