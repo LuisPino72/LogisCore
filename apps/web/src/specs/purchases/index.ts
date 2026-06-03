@@ -7,7 +7,7 @@ export const SupplierSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1, 'Nombre requerido').max(25),
   // AUDIT-CRUD-012: rif opcional con regex Regla #8 (V/E/J/G/P + 9 dígitos)
-  rif: z.string().regex(/^[VJEGP]\d{9}$/i, 'RIF inválido. Formato: V/E/J/G/P + 9 dígitos.').optional(),
+  rif: z.string().regex(/^[VJEGP]\d{9}$/i, 'Cédula inválida. Formato: V/E/J/G/P + 9 dígitos.').optional(),
   phone: z.string().max(14).optional(),
   createdAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
