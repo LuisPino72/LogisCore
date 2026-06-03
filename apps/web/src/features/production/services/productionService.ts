@@ -8,6 +8,21 @@ import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability } from '../types';
+
+/**
+ * Convierte la cantidad de un ingrediente (en la unidad declarada en la receta)
+ * a la unidad de almacenamiento del producto (gramos para kg, ml para lt, unidades para unidad).
+ */
+function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit: string): number {
+  if (productUnit === 'kg' && recipeUnit === 'g') return qty;
+  if (productUnit === 'kg' && recipeUnit === 'kg') return qty * 1000;
+  if (productUnit === 'lt' && recipeUnit === 'ml') return qty;
+  if (productUnit === 'lt' && recipeUnit === 'lt') return qty * 1000;
+  if (productUnit === 'unidad' && recipeUnit === 'unidad') return qty;
+  if (productUnit === 'gr' && recipeUnit === 'g') return qty;
+  if (productUnit === 'm' && recipeUnit === 'ml') return qty;
+  return qty;
+}
 import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder } from '../../../services/dexie/db';
 
 const PRODUCTION_MODULE = 'PRODUCTION';
@@ -93,6 +108,9 @@ export const productionService = {
     if (product.productType && product.productType === 'materia_prima') {
       return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_TYPE_INVALID, 'El producto seleccionado es materia prima, no se puede producir. Selecciona un producto terminado.'));
     }
+    if (product.stock <= 0) {
+      return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_NO_STOCK, `"${product.name}" no tiene stock. Agrega stock inicial al producto antes de crear una receta.`));
+    }
 
     // Check duplicate recipe name
     const existingName = await db.recipes
@@ -122,6 +140,16 @@ export const productionService = {
       }
       if (ingredient.productType && ingredient.productType === 'producto_terminado') {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
+      }
+      if (ingredient.stock <= 0) {
+        return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
+      }
+      const needed = recipeQtyToStorage(line.quantity, line.unit, ingredient.unit);
+      if (needed > ingredient.stock) {
+        return failure(new AppError(
+          ProductionErrors.RECIPE_INGREDIENT_EXCEEDS_STOCK,
+          `"${ingredient.name}" tiene ${ingredient.stock} ${ingredient.unit} pero la receta pide ${line.quantity} ${line.unit}. Reduce la cantidad de la receta, o si el stock real es distinto al del sistema, ve a Ajustes para corregirlo.`,
+        ));
       }
     }
 
@@ -208,6 +236,16 @@ export const productionService = {
           }
           if (ingredient.productType && ingredient.productType === 'producto_terminado') {
             return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
+          }
+          if (ingredient.stock <= 0) {
+            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
+          }
+          const needed = recipeQtyToStorage(line.quantity, line.unit, ingredient.unit);
+          if (needed > ingredient.stock) {
+            return failure(new AppError(
+              ProductionErrors.RECIPE_INGREDIENT_EXCEEDS_STOCK,
+              `"${ingredient.name}" tiene ${ingredient.stock} ${ingredient.unit} pero la receta pide ${line.quantity} ${line.unit}. Reduce la cantidad de la receta, o si el stock real es distinto al del sistema, ve a Ajustes para corregirlo.`,
+            ));
           }
         }
       }

@@ -254,6 +254,10 @@ export const customerService = {
           logger.warn(MODULE_NAME, 'Pull customers failed:', error.message);
         } else if (data && data.length > 0) {
           for (const c of data) {
+            const existing = await db.customers.get(c.id as string);
+            if (existing?.deletedAt) {
+              continue;
+            }
             await db.customers.put({
               id: c.id as string,
               tenantId,

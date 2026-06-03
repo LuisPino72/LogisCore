@@ -195,8 +195,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
                   return (
                     <div key={p.id} className={`low-stock-card ${isZero ? 'low-stock-card--danger' : 'low-stock-card--warning'}`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-800 wrap-break-word flex-1 pr-2" title={p.name}>{p.name}</span>
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-2">
+                        <span className="text-sm font-medium text-gray-800 wrap-break-word min-w-0 flex-1" title={p.name}>{p.name}</span>
                         <Badge variant={isZero ? 'danger' : 'warning'} className="shrink-0">
                           {displayStock(p.stock, p.unit)} {p.unit}
                         </Badge>

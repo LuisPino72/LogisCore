@@ -76,10 +76,21 @@ export const purchaseService = {
     const db = getDb();
     const id = generateId();
     const now = new Date().toISOString();
+
+    const parsed = CreateSupplierInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(
+        new AppError(
+          PurchaseErrors.SUPPLIER_INVALID_INPUT,
+          parsed.error.issues[0]?.message ?? 'Datos inválidos.',
+        ),
+      );
+    }
+
     const supplier: Supplier = {
       id,
-      name: input.name,
-      phone: input.phone,
+      name: parsed.data.name.trim(),
+      phone: parsed.data.phone?.trim() || undefined,
       createdAt: now,
     };
 

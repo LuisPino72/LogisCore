@@ -51,7 +51,7 @@ interface ProductFormProps {
   onClose: () => void;
   onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => Promise<boolean>;
   categories: { id: string; name: string; isPredefined?: boolean }[];
-  editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string; costPrice?: number } | null;
+  editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string; costPrice?: number; productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both' } | null;
   onCreateCategory?: (name: string) => Promise<string | null>;
 }
 
@@ -92,6 +92,10 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       : undefined,
     costPrice: editProduct.costPrice ?? 0,
     imageUrl: editProduct.imageUrl ?? undefined,
+    isRawMaterial: editProduct.productType === 'materia_prima' || editProduct.productType === 'producto_terminado' || editProduct.productType === 'both',
+    productionType: editProduct.productType === 'materia_prima' || editProduct.productType === 'producto_terminado' || editProduct.productType === 'both'
+      ? editProduct.productType
+      : undefined,
   } : undefined;
 
   const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }): Promise<boolean> => {
@@ -545,6 +549,31 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   checked={formData.isSellable}
                   onChange={(e) => setField('isSellable', e.target.checked)}
                 />
+                <Checkbox
+                  label="¿Es materia prima?"
+                  checked={formData.isRawMaterial}
+                  onChange={(e) => setField('isRawMaterial', e.target.checked)}
+                  disabled={isEditing}
+                />
+                {formData.isRawMaterial && (
+                  <div className="ml-6 mt-1">
+                    <Select
+                      label="Rol en producción"
+                      value={formData.productionType ?? ''}
+                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima' | 'producto_terminado' | 'both')}
+                      disabled={isEditing}
+                      error={errors.productionType}
+                    >
+                      <option value="">Selecciona...</option>
+                      <option value="materia_prima">Materia prima (ingrediente)</option>
+                      <option value="producto_terminado">Producto terminado (output)</option>
+                      <option value="both">Ambos</option>
+                    </Select>
+                    {isEditing && (
+                      <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -679,6 +708,31 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   checked={formData.isSellable}
                   onChange={(e) => setField('isSellable', e.target.checked)}
                 />
+                <Checkbox
+                  label="¿Es materia prima?"
+                  checked={formData.isRawMaterial}
+                  onChange={(e) => setField('isRawMaterial', e.target.checked)}
+                  disabled={isEditing}
+                />
+                {formData.isRawMaterial && (
+                  <div className="ml-6 mt-1">
+                    <Select
+                      label="Rol en producción"
+                      value={formData.productionType ?? ''}
+                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima' | 'producto_terminado' | 'both')}
+                      disabled={isEditing}
+                      error={errors.productionType}
+                    >
+                      <option value="">Selecciona...</option>
+                      <option value="materia_prima">Materia prima (ingrediente)</option>
+                      <option value="producto_terminado">Producto terminado (output)</option>
+                      <option value="both">Ambos</option>
+                    </Select>
+                    {isEditing && (
+                      <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -816,6 +870,31 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             checked={formData.isSellable}
             onChange={(e) => setField('isSellable', e.target.checked)}
           />
+          <Checkbox
+            label="¿Es materia prima?"
+            checked={formData.isRawMaterial}
+            onChange={(e) => setField('isRawMaterial', e.target.checked)}
+            disabled={isEditing}
+          />
+          {formData.isRawMaterial && (
+            <div className="ml-6 mt-1">
+              <Select
+                label="Rol en producción"
+                value={formData.productionType ?? ''}
+                onChange={(e) => setField('productionType', e.target.value as 'materia_prima' | 'producto_terminado' | 'both')}
+                disabled={isEditing}
+                error={errors.productionType}
+              >
+                <option value="">Selecciona...</option>
+                <option value="materia_prima">Materia prima (ingrediente)</option>
+                <option value="producto_terminado">Producto terminado (output)</option>
+                <option value="both">Ambos</option>
+              </Select>
+              {isEditing && (
+                <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

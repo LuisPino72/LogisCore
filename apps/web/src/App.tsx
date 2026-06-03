@@ -110,15 +110,50 @@ function useSyncModuleFromRoute() {
 
 function RateBadgeMobile() {
   const rate = useExchangeRateStore((s) => s.rate);
-  if (!rate) return null;
+  const fetchedAt = useExchangeRateStore((s) => s.fetchedAt);
+  const loading = useExchangeRateStore((s) => s.loading);
+
+  // Calcular estado para color y mensaje
+  const isMissing = !rate;
+  const ageMs = fetchedAt ? Date.now() - new Date(fetchedAt).getTime() : Infinity;
+  const isStale = ageMs > 6 * 60 * 60 * 1000;
+  const isCritical = ageMs > 24 * 60 * 60 * 1000;
+
+  let colorClass = 'bg-success/10 border-success/20 text-success';
+  let textClass = 'text-success/70';
+  let displayValue: string;
+  let title: string;
+
+  if (isMissing) {
+    colorClass = 'bg-danger/10 border-danger/30 text-danger';
+    textClass = 'text-danger/70';
+    displayValue = loading ? '...' : '—';
+    title = loading ? 'Cargando tasa...' : 'Sin tasa — toca para ir a Configuración';
+  } else if (isCritical) {
+    colorClass = 'bg-danger/10 border-danger/30 text-danger';
+    textClass = 'text-danger/70';
+    displayValue = rate.toFixed(2);
+    title = 'Tasa muy desactualizada (>24h)';
+  } else if (isStale) {
+    colorClass = 'bg-warning/10 border-warning/30 text-warning';
+    textClass = 'text-warning/70';
+    displayValue = rate.toFixed(2);
+    title = 'Tasa desactualizada (>6h)';
+  } else {
+    displayValue = rate.toFixed(2);
+    title = 'Tasa BCV';
+  }
 
   return (
-    <div className="md:hidden flex items-center gap-1.5 px-2 py-0.5 bg-success/10 border border-success/20 rounded-full shadow-sm shrink-0">
-      <DollarSign size={10} className="text-success shrink-0" />
-      <span className="text-[10px] text-success/70 font-medium whitespace-nowrap">Tasa Bs</span>
-      <span className="text-xs text-success font-bold whitespace-nowrap">
-        {rate.toFixed(2)}
-      </span>
+    <div
+      className={`md:hidden flex items-center gap-1.5 px-2 py-0.5 border rounded-full shadow-sm shrink-0 ${colorClass} ${
+        isMissing || isCritical ? 'animate-pulse' : ''
+      }`}
+      title={title}
+    >
+      <DollarSign size={10} className="shrink-0" />
+      <span className={`text-[10px] font-medium whitespace-nowrap ${textClass}`}>Tasa Bs</span>
+      <span className="text-xs font-bold whitespace-nowrap">{displayValue}</span>
     </div>
   );
 }

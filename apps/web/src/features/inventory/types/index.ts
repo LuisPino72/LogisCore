@@ -36,6 +36,7 @@ export interface ProductFormData {
   isWeighted: boolean;
   isTaxable: boolean;
   isSellable: boolean;
+  isRawMaterial: boolean;
   productType: 'unidad' | 'pesable_kg' | 'pesable_lt';
   productionType?: 'materia_prima' | 'producto_terminado' | 'both';
   unit: string;

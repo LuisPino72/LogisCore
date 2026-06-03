@@ -130,6 +130,36 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
       }),
     );
 
+    // Alerta de tasa desactualizada — el usuario debe actualizarla manualmente
+    subs.push(
+      EventBus.on(SystemEvents.EXCHANGE_RATE_STALE, (payload: unknown) => {
+        const data = payload as { hours?: number; level?: 1 | 2; source?: string | null };
+        if (!data.hours || !data.level) return;
+
+        const isCritical = data.level === 2;
+        store.addNotification({
+          type: isCritical ? 'tasa_stale_critical' : 'tasa_stale',
+          title: isCritical ? 'Tasa muy desactualizada' : 'Tasa desactualizada',
+          message: isCritical
+            ? `La tasa BCV tiene ${data.hours}h sin actualizar. ACTUALÍZALA MANUALMENTE o tus precios están basados en datos viejos.`
+            : `La tasa BCV tiene ${data.hours}h sin actualizar. Te recomendamos actualizarla.`,
+          actionLabel: 'Actualizar ahora',
+        });
+      }),
+    );
+
+    // Alerta de tasa que falló al cargar — SIN TASA, los precios son 0
+    subs.push(
+      EventBus.on(SystemEvents.EXCHANGE_RATE_FAILED, () => {
+        store.addNotification({
+          type: 'tasa_failed',
+          title: 'Tasa BCV no disponible',
+          message: `No se pudo cargar la tasa del BCV. Ingrésala manualmente para que los precios funcionen.`,
+          actionLabel: 'Ingresar tasa',
+        });
+      }),
+    );
+
     return () => subs.forEach((s) => EventBus.off(s));
   }, [tenantId, role]);
 }

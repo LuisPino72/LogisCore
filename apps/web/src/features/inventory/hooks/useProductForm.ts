@@ -50,6 +50,8 @@ const defaultFormData: ProductFormData = {
   isWeighted: false,
   isTaxable: true,
   isSellable: true,
+  isRawMaterial: false,
+  productionType: undefined,
   productType: 'unidad',
   unit: 'unidad',
   stockInicial: 0,
@@ -72,12 +74,17 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
   const setField = useCallback(<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {
     if (options.editProductId && key === 'productType') return;
+    if (options.editProductId && (key === 'isRawMaterial' || key === 'productionType')) return;
     setFormData((prev) => {
       const next = { ...prev, [key]: value };
 
       if (key === 'productType') {
         next.isWeighted = value === 'pesable_kg' || value === 'pesable_lt';
         next.unit = value === 'pesable_kg' ? 'kg' : value === 'pesable_lt' ? 'lt' : 'unidad';
+      }
+
+      if (key === 'isRawMaterial' && value === false) {
+        next.productionType = undefined;
       }
 
       return next;
@@ -91,7 +98,9 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
   const generateSku = useCallback(() => {
     if (!formData.name.trim()) return;
-    const existing = useInventoryStore.getState().products.map(p => p.sku);
+    const existing = useInventoryStore.getState().products
+      .map((p) => p.sku)
+      .filter((sku): sku is string => typeof sku === 'string' && sku.length > 0);
     const newSku = generateAutoSku(formData.name, existing);
     setField('sku', newSku);
   }, [formData.name, setField]);
@@ -162,6 +171,13 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
     if (!validationData.categoryId) {
       const errs = { categoryId: 'Debes seleccionar una categoría' };
+      setErrors(errs);
+      setIsSubmitting(false);
+      return { success: false, errors: errs };
+    }
+
+    if (formData.isRawMaterial && !formData.productionType) {
+      const errs = { productionType: 'Selecciona el rol de producción' };
       setErrors(errs);
       setIsSubmitting(false);
       return { success: false, errors: errs };
@@ -277,9 +293,10 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       }
     }
 
-    const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' } = {
+    const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared'; productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both' } = {
       ...parsed.data,
       stockInicial: isEditing ? 0 : formData.stockInicial,
+      productType: formData.isRawMaterial ? formData.productionType : 'resale',
     };
 
     if (presentations.length > 0) {

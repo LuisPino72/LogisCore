@@ -40,7 +40,7 @@ export interface DexieProduct {
   stockMin?: number;
   imageUrl?: string;
   costPrice?: number;
-  productType?: 'materia_prima' | 'producto_terminado' | 'both';
+  productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both';
   deletedAt?: string;
 }
 

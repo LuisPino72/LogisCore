@@ -42,14 +42,16 @@ export const notificationService = {
   }): Promise<Result<ReturnType<typeof mapNotification>, AppError>> {
     try {
       const db = getDb();
-      // Dedup: si ya existe una notificación no leída con mismo type+title+message,
-      // skip y retorna la existente. Esto evita duplicados cuando el componente
-      // se re-monta (React StrictMode) o el sync pull dispara re-renders.
       const fingerprint = `${data.type}|${data.title}|${data.message}`;
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
       const recent = await db.notifications
         .where('tenantId')
         .equals(data.tenantId)
-        .filter((n) => !n.deletedAt && !n.read)
+        .filter((n) => {
+          if (n.deletedAt) return false;
+          if (new Date(n.createdAt).getTime() < oneDayAgo) return false;
+          return true;
+        })
         .toArray();
       const existing = recent.find(
         (n) => `${n.type}|${n.title}|${n.message}` === fingerprint,
@@ -118,6 +120,41 @@ export const notificationService = {
       return success(rows.length);
     } catch (err) {
       return failure(new AppError('NOTIFICATION_CLEAR_FAILED', 'Error al limpiar notificaciones', { details: { error: String(err) } }));
+    }
+  },
+
+  async dedupeAll(tenantId: string): Promise<Result<number, AppError>> {
+    try {
+      const db = getDb();
+      const now = new Date().toISOString();
+      const rows = await db.notifications
+        .where('tenantId')
+        .equals(tenantId)
+        .filter((n) => !n.deletedAt)
+        .toArray();
+
+      const groups = new Map<string, typeof rows>();
+      for (const row of rows) {
+        const fp = `${row.type}|${row.title}|${row.message}`;
+        const list = groups.get(fp) ?? [];
+        list.push(row);
+        groups.set(fp, list);
+      }
+
+      let removed = 0;
+      for (const list of groups.values()) {
+        if (list.length <= 1) continue;
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const [, ...duplicates] = list;
+        for (const dup of duplicates) {
+          await db.notifications.update(dup.id, { deletedAt: now });
+          removed++;
+        }
+      }
+
+      return success(removed);
+    } catch (err) {
+      return failure(new AppError('NOTIFICATION_DEDUPE_FAILED', 'Error al deduplicar notificaciones', { details: { error: String(err) } }));
     }
   },
 };

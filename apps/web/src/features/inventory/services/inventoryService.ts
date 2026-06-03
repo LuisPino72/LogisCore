@@ -155,7 +155,8 @@ export const inventoryService = {
         ? convertToStorage(input.stockMin, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
         : undefined,
       costPrice: costPerDisplayUnit,
-    };
+        productType: input.productType ?? 'resale',
+      };
 
     try {
       await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
@@ -305,6 +306,7 @@ export const inventoryService = {
           : undefined,
         costPrice: costPerDisplayUnit,
         imageUrl: input.imageUrl,
+      productType: input.productType ?? 'resale',
       };
 
       await db.transaction('rw', [

@@ -33,9 +33,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   setTenantId: (id) => set({ tenantId: id }),
 
   loadNotifications: async (tenantId) => {
+    await notificationService.dedupeAll(tenantId);
     const result = await notificationService.loadNotifications(tenantId);
     if (result.ok) {
-      set({ notifications: result.data, loaded: true, tenantId });
+      const seen = new Set<string>();
+      const deduped = result.data.filter((n) => {
+        const fp = `${n.type}|${n.title}|${n.message}`;
+        if (seen.has(fp)) return false;
+        seen.add(fp);
+        return true;
+      });
+      set({ notifications: deduped, loaded: true, tenantId });
     }
   },
 

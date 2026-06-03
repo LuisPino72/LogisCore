@@ -22,6 +22,7 @@ export function toProduct(raw: Record<string, unknown>): Product {
     stockMin: raw.stockMin != null ? toNumber(raw.stockMin) : undefined,
     imageUrl: (raw.imageUrl as string | undefined) ?? undefined,
     costPrice: raw.costPrice != null ? toNumber(raw.costPrice) : undefined,
+    productType: raw.productType as Product['productType'],
     deletedAt: raw.deletedAt as string | undefined,
   };
 }

@@ -11,6 +11,9 @@ interface ExchangeRateWidgetProps {
   role: string | null;
 }
 
+const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000;
+const STALE_CRITICAL_MS = 24 * 60 * 60 * 1000;
+
 export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role }) => {
   const { rate, source, fetchedAt, loading, isUpdating, error, updateFromBcv, setManual } =
     useExchangeRate(tenantId);
@@ -64,94 +67,121 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
     }
   };
 
-    return (
-      <>
-        <div className="flex flex-col items-center w-full">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center ring-1 ring-success/20">
-              <DollarSign size={14} className="text-success" />
-            </div>
-            <span className="text-base font-title font-bold text-success">
-              {loading ? '-' : formatRate(rate)}
-            </span>
+  const getRateStatus = (): 'fresh' | 'stale' | 'critical' | 'missing' => {
+    if (!rate || !fetchedAt) return 'missing';
+    const ageMs = Date.now() - new Date(fetchedAt).getTime();
+    if (ageMs > STALE_CRITICAL_MS) return 'critical';
+    if (ageMs > STALE_THRESHOLD_MS) return 'stale';
+    return 'fresh';
+  };
+
+  const rateStatus = getRateStatus();
+  const statusStyles = {
+    fresh: { color: 'success', label: 'BCV', icon: DollarSign, pulse: false },
+    stale: { color: 'warning', label: 'Desactualizada', icon: AlertCircle, pulse: true },
+    critical: { color: 'danger', label: '¡MUY VIEJA!', icon: AlertCircle, pulse: true },
+    missing: { color: 'danger', label: 'Sin tasa', icon: AlertCircle, pulse: true },
+  } as const;
+  const currentStyle = statusStyles[rateStatus];
+  const StatusIcon = currentStyle.icon;
+
+  return (
+    <>
+      <div className="flex flex-col items-center w-full">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-lg flex items-center justify-center ring-1 bg-${currentStyle.color}/10 ring-${currentStyle.color}/20 ${
+              currentStyle.pulse ? 'animate-pulse' : ''
+            }`}
+          >
+            <StatusIcon size={14} className={`text-${currentStyle.color}`} />
           </div>
- 
-          {error && (
-            <div className="flex items-start gap-1 text-[10px] text-danger">
-              <AlertCircle size={10} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
- 
-          <div className="text-[12px] text-text-secondary opacity-80">
-            {source === 'bcv_api' ? 'BCV' : source === 'manual' ? 'Manual' : ''}
-            {fetchedAt && ` ${formatDate(fetchedAt)}`}
-          </div>
- 
-          {isOwner && (
-            <div className="flex flex-col gap-1 w-full pt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleUpdate}
-                disabled={isUpdating || !tenantId || !isOnline}
-                className="min-h-9 px-2 w-full active:scale-95 transition-transform"
-              >
-                {isUpdating ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <RefreshCw size={14} />
-                )}
-                Actualizar
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowModal(true)}
-                disabled={isUpdating || !tenantId}
-                className="min-h-9 px-2 w-full active:scale-95 transition-transform"
-              >
-                <Settings size={14} />
-                Manual
-              </Button>
-            </div>
-          )}
+          <span className={`text-base font-title font-bold text-${currentStyle.color}`}>
+            {loading ? '-' : formatRate(rate)}
+          </span>
         </div>
- 
-        <Modal isOpen={showModal} onClose={() => { setShowModal(false); setManualRate(''); setManualError(''); }} title="Ajustar precio del dólar manualmente">
-            <div className="space-y-4 animate-slide-down">
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Si la tasa automática del BCV no es la que usas en tu local, o no tienes internet, puedes escribir el valor del dólar aquí para que el sistema haga las cuentas exactas por ti.
-              </p>
- 
-              <div className="input-wrapper">
-                <label className="input-label font-semibold text-gray-700">Valor del dólar en Bolívares (Bs)</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="65.50"
-                  value={manualRate}
-                  onChange={(e) => setManualRate(e.target.value)}
-                  error={manualError}
-                  validation={{ required: true, min: 0.01, max: 9999 }}
-                />
-              </div>
- 
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="ghost" onClick={() => setShowModal(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={handleManualSubmit}
-                  disabled={isUpdating || !isOnline}
-                >
-                  {isUpdating ? 'Guardando...' : 'Guardar tasa'}
-                </Button>
-              </div>
-            </div>
-          </Modal>
-      </>
-    );
+
+        {error && (
+          <div className="flex items-start gap-1 text-[10px] text-danger">
+            <AlertCircle size={10} className="mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className={`text-[12px] text-${currentStyle.color} opacity-90 font-medium`}>
+          {source === 'manual' ? 'Manual' : currentStyle.label}
+          {fetchedAt && ` · ${formatDate(fetchedAt)}`}
+        </div>
+
+        {isOwner && (
+          <div className="flex flex-col gap-1 w-full pt-2">
+            <Button
+              variant={rateStatus === 'fresh' ? 'ghost' : 'primary'}
+              size="sm"
+              onClick={handleUpdate}
+              disabled={isUpdating || !tenantId || !isOnline}
+              className="min-h-9 px-2 w-full active:scale-95 transition-transform"
+            >
+              {isUpdating ? <Spinner size="sm" /> : <RefreshCw size={14} />}
+              {rateStatus === 'missing' ? 'Cargar tasa AHORA' : 'Actualizar'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowModal(true)}
+              disabled={isUpdating || !tenantId}
+              className="min-h-9 px-2 w-full active:scale-95 transition-transform"
+            >
+              <Settings size={14} />
+              Manual
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setManualRate('');
+          setManualError('');
+        }}
+        title="Ajustar precio del dólar manualmente"
+      >
+        <div className="space-y-4 animate-slide-down">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Si la tasa automática del BCV no es la que usas en tu local, o no tienes internet, puedes
+            escribir el valor del dólar aquí para que el sistema haga las cuentas exactas por ti.
+          </p>
+
+          <div className="input-wrapper">
+            <label className="input-label font-semibold text-gray-700">Valor del dólar en Bolívares (Bs)</label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="65.50"
+              value={manualRate}
+              onChange={(e) => setManualRate(e.target.value)}
+              error={manualError}
+              validation={{ required: true, min: 0.01, max: 9999 }}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setShowModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleManualSubmit}
+              disabled={isUpdating || !isOnline}
+            >
+              {isUpdating ? 'Guardando...' : 'Guardar tasa'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
 };
