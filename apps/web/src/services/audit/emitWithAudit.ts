@@ -17,7 +17,8 @@ export function emitEngineEvent(eventName: string, payload: unknown = {}): void 
 /** Emite un evento con feedback UI inmediato + registro de auditoría.
  *  NOTA: El encolado en outbox se realiza DENTRO de la transacción Dexie
  *  (ver outboxService.enqueue() en los servicios) para garantizar atomicidad
- *  (Regla #17). Esta función solo emite para UI y registra auditoría no crítica. */
+ *  (Regla #17). El outbox processor es el único emisor de EventBus (Regla #17).
+ *  Esta función solo registra auditoría no crítica. */
 export async function emitWithAudit(
   eventName: string,
   module: string,
@@ -28,10 +29,11 @@ export async function emitWithAudit(
     tenantUuid?: string | null;
   },
 ): Promise<void> {
-  // 1. Emitir inmediatamente para feedback de UI (sincrónico)
-  EventBus.emit(eventName, payload);
+  // AUDIT-006: Outbox processor is the single event emitter (Option A).
+  // Removido EventBus.emit síncrono — outbox processor emite en processNext().
+  // Esta función solo registra en auditoría.
 
-  // 2. Registrar en auditoría
+  // Registrar en auditoría
   try {
     await logAuditEvent({
       eventName,

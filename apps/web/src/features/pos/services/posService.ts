@@ -454,6 +454,7 @@ export const posService = {
 
           let toConsume = storageQuantity;
           let totalCostUsd = 0;
+          const consumedLots: Array<{ lotId: string; quantity: number }> = []; // AUDIT-012: FIFO restore (track original lot consumption)
           let lots = await db.inventoryLots
             .where({ productId: cartItem.productId })
             .filter((l) => l.remainingQuantity > 0)
@@ -489,11 +490,13 @@ export const posService = {
             const newVersion = (currentLot.version ?? 0) + 1;
             if (currentLot.remainingQuantity >= toConsume) {
               totalCostUsd += toConsume * lotCost;
+              consumedLots.push({ lotId: lot.id, quantity: toConsume }); // AUDIT-012
               await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion });
               await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion } as unknown as Record<string, unknown>), tenantId);
               toConsume = 0;
             } else {
               totalCostUsd += currentLot.remainingQuantity * lotCost;
+              consumedLots.push({ lotId: lot.id, quantity: currentLot.remainingQuantity }); // AUDIT-012
               toConsume -= currentLot.remainingQuantity;
               await db.inventoryLots.update(lot.id, { remainingQuantity: 0, version: newVersion });
               await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: 0, version: newVersion } as unknown as Record<string, unknown>), tenantId);
@@ -539,6 +542,7 @@ export const posService = {
             presentationName: cartItem.presentationName,
             unitMultiplier: cartItem.unitMultiplier ?? 1,
             createdAt: now,
+            consumedLots, // AUDIT-012: FIFO restore (track original lot consumption)
           });
 
           const movementId = generateId();
@@ -607,6 +611,7 @@ export const posService = {
           // Verificar y consumir ingredientes en un solo paso atómico
           const wasteMultiplier = 1 + (recipe.wastePct / 100);
           let totalIngredientCost = 0;
+          const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = []; // AUDIT-012: FIFO restore (track ingredient lot consumption)
           for (const line of recipeLines) {
             const needed = Math.ceil(line.quantity * assemblyItem.quantity * wasteMultiplier);
             const ingredient = await db.products.get(line.productId);
@@ -642,6 +647,7 @@ export const posService = {
               const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
               const newVersion = (currentLot.version ?? 0) + 1;
               lotCost += consumeQty * (currentLot.costUsdPerUnit ?? 0);
+              assemblyConsumedLots.push({ lotId: lot.id, quantity: consumeQty }); // AUDIT-012
               await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion });
               await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion } as unknown as Record<string, unknown>), tenantId);
               toConsume -= consumeQty;
@@ -694,6 +700,7 @@ export const posService = {
             unit: product.unit,
             unitMultiplier: 1,
             createdAt: now,
+            consumedLots: assemblyConsumedLots, // AUDIT-012: FIFO restore (ingredient lots consumed)
           });
 
           await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
@@ -1047,12 +1054,15 @@ export const posService = {
 
       if (rows.length === 0) {
         const tenantUuid = useAuthStore.getState().session?.tenantId;
-        const query = supabase
+        // AUDIT-009: Fail-closed on missing tenantUuid — antes caía a query sin filtro (multi-tenant leak)
+        if (!tenantUuid) {
+          return failure(new AppError('AUTH_REQUIRED', 'Sesión inválida. Inicia sesión para cargar items de venta.'));
+        }
+        const { data } = await supabase
           .from('sale_items')
           .select('*')
-          .eq('sale_id', saleId);
-        if (tenantUuid) query.eq('tenant_id', tenantUuid);
-        const { data } = await query;
+          .eq('sale_id', saleId)
+          .eq('tenant_id', tenantUuid);
 
         if (data) {
           for (const item of data) {
@@ -1158,26 +1168,128 @@ export const posService = {
 
             const wasteMultiplier = 1 + (assemblyRecipe.wastePct / 100);
 
+            // AUDIT-012: FIFO restore (track original lot consumption)
+            // Si tenemos consumedLots de la venta original, restaurar exactamente esos lotes.
+            // Si no (ventas legacy pre-AUDIT-012), fallback a la lógica antigua.
+            const hasConsumedLots = item.consumedLots && item.consumedLots.length > 0; // AUDIT-012
+            const restoredByProduct = new Map<string, number>(); // AUDIT-012: productId -> total restaurado
+
+            if (hasConsumedLots) {
+              // AUDIT-012: Restaurar a los lotes ORIGINALES consumidos (no a los más recientes)
+              for (const { lotId, quantity } of item.consumedLots!) {
+                const currentLot = await db.inventoryLots.get(lotId);
+                if (!currentLot) continue;
+                const cap = currentLot.quantityAdded - currentLot.remainingQuantity; // no over-restore
+                const restoreAmount = Math.min(quantity, cap);
+                if (restoreAmount <= 0) continue;
+                const newRemaining = currentLot.remainingQuantity + restoreAmount;
+                const newVersion = (currentLot.version ?? 0) + 1;
+                await db.inventoryLots.update(lotId, { remainingQuantity: newRemaining, version: newVersion });
+                await syncQueue.enqueue('inventory_lots', 'UPDATE', lotId, toSnake({
+                  id: lotId, remainingQuantity: newRemaining, version: newVersion,
+                } as unknown as Record<string, unknown>), tenantId);
+                restoredByProduct.set(currentLot.productId, (restoredByProduct.get(currentLot.productId) ?? 0) + restoreAmount);
+              }
+            }
+
             for (const line of recipeLines) {
               const ingredient = await db.products.get(line.productId);
               if (!ingredient) continue;
 
               const needed = Math.ceil(line.quantity * item.quantity * wasteMultiplier);
               const previousStock = ingredient.stock;
-              const newStock = previousStock + needed;
+              // AUDIT-012: usar lo realmente restaurado por lotes si tenemos tracking, sino fallback a `needed`
+              const restoredForThisIngredient = hasConsumedLots
+                ? (restoredByProduct.get(line.productId) ?? 0)
+                : needed;
+              const newStock = previousStock + restoredForThisIngredient;
 
               await db.products.update(line.productId, { stock: newStock });
               await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
-              // Restaurar lotes FIFO del ingrediente (más recientes primero)
-              const ingredientLots = await db.inventoryLots
-                .where({ productId: line.productId })
-                .filter(l => l.remainingQuantity >= 0)
-                .toArray();
-              ingredientLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+              if (!hasConsumedLots) {
+                // Fallback legacy: restaurar lotes más recientes primero (ventas pre-AUDIT-012)
+                const ingredientLots = await db.inventoryLots
+                  .where({ productId: line.productId })
+                  .filter(l => l.remainingQuantity >= 0)
+                  .toArray();
+                ingredientLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-              let toRestore = needed;
-              for (const lot of ingredientLots) {
+                let toRestore = needed;
+                for (const lot of ingredientLots) {
+                  if (toRestore <= 0) break;
+                  const currentLot = await db.inventoryLots.get(lot.id);
+                  if (!currentLot) continue;
+                  if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) continue;
+                  const consumedFromLot = currentLot.quantityAdded - currentLot.remainingQuantity;
+                  if (consumedFromLot <= 0) continue;
+                  const restoreAmount = Math.min(toRestore, consumedFromLot);
+                  const newRemaining = currentLot.remainingQuantity + restoreAmount;
+                  const newVersion = (currentLot.version ?? 0) + 1;
+                  await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
+                  await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
+                    id: lot.id, remainingQuantity: newRemaining, version: newVersion,
+                  } as unknown as Record<string, unknown>), tenantId);
+                  toRestore -= restoreAmount;
+                }
+              }
+
+              // Movimiento de reversión de ingrediente
+              const movementId = generateId();
+              await db.inventoryMovements.add({
+                id: movementId,
+                tenantId,
+                productId: line.productId,
+                userId,
+                type: 'adjustment',
+                quantity: restoredForThisIngredient,
+                previousStock,
+                newStock,
+                reason: `Anulación venta assembly #${saleId.slice(0, 8)}`,
+                createdAt: now,
+              });
+              await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
+                id: movementId, tenantId, productId: line.productId, userId,
+                type: 'adjustment', quantity: restoredForThisIngredient, previousStock, newStock,
+                reason: `Anulación venta assembly #${saleId.slice(0, 8)}`, createdAt: now,
+              } as unknown as Record<string, unknown>), tenantId);
+            }
+          } else {
+            // Producto normal: revertir stock del producto
+            const previousStock = product.stock;
+            const baseQty = product.isWeighted
+              ? convertToStorage(item.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
+              : Math.round(item.quantity);
+            const storageQty = baseQty * (item.unitMultiplier || 1);
+            const newStock = previousStock + storageQty;
+            await db.products.update(item.productId, { stock: newStock });
+
+            // AUDIT-012: FIFO restore (track original lot consumption)
+            // Si tenemos consumedLots, restaurar a los lotes ORIGINALES. Sino, fallback legacy.
+            if (item.consumedLots && item.consumedLots.length > 0) {
+              for (const { lotId, quantity } of item.consumedLots) {
+                const currentLot = await db.inventoryLots.get(lotId);
+                if (!currentLot) continue;
+                const cap = currentLot.quantityAdded - currentLot.remainingQuantity;
+                const restoreAmount = Math.min(quantity, cap);
+                if (restoreAmount <= 0) continue;
+                const newRemaining = currentLot.remainingQuantity + restoreAmount;
+                const newVersion = (currentLot.version ?? 0) + 1;
+                await db.inventoryLots.update(lotId, { remainingQuantity: newRemaining, version: newVersion });
+                await syncQueue.enqueue('inventory_lots', 'UPDATE', lotId, toSnake({
+                  id: lotId, remainingQuantity: newRemaining, version: newVersion,
+                } as unknown as Record<string, unknown>), tenantId);
+              }
+            } else {
+              // Fallback legacy: ventas pre-AUDIT-012 sin tracking — restaurar lotes más recientes primero
+              const lots = await db.inventoryLots
+                .where({ productId: item.productId })
+                .filter((l) => l.remainingQuantity >= 0)
+                .toArray();
+              lots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+              let toRestore = storageQty;
+              for (const lot of lots) {
                 if (toRestore <= 0) break;
                 const currentLot = await db.inventoryLots.get(lot.id);
                 if (!currentLot) continue;
@@ -1193,59 +1305,6 @@ export const posService = {
                 } as unknown as Record<string, unknown>), tenantId);
                 toRestore -= restoreAmount;
               }
-
-              // Movimiento de reversión de ingrediente
-              const movementId = generateId();
-              await db.inventoryMovements.add({
-                id: movementId,
-                tenantId,
-                productId: line.productId,
-                userId,
-                type: 'adjustment',
-                quantity: needed,
-                previousStock,
-                newStock,
-                reason: `Anulación venta assembly #${saleId.slice(0, 8)}`,
-                createdAt: now,
-              });
-              await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
-                id: movementId, tenantId, productId: line.productId, userId,
-                type: 'adjustment', quantity: needed, previousStock, newStock,
-                reason: `Anulación venta assembly #${saleId.slice(0, 8)}`, createdAt: now,
-              } as unknown as Record<string, unknown>), tenantId);
-            }
-          } else {
-            // Producto normal: revertir stock del producto
-            const previousStock = product.stock;
-            const baseQty = product.isWeighted
-              ? convertToStorage(item.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
-              : Math.round(item.quantity);
-            const storageQty = baseQty * (item.unitMultiplier || 1);
-            const newStock = previousStock + storageQty;
-            await db.products.update(item.productId, { stock: newStock });
-
-            const lots = await db.inventoryLots
-              .where({ productId: item.productId })
-              .filter((l) => l.remainingQuantity >= 0)
-              .toArray();
-            lots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
-            let toRestore = storageQty;
-            for (const lot of lots) {
-              if (toRestore <= 0) break;
-              const currentLot = await db.inventoryLots.get(lot.id);
-              if (!currentLot) continue;
-              if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) continue;
-              const consumedFromLot = currentLot.quantityAdded - currentLot.remainingQuantity;
-              if (consumedFromLot <= 0) continue;
-              const restoreAmount = Math.min(toRestore, consumedFromLot);
-              const newRemaining = currentLot.remainingQuantity + restoreAmount;
-              const newVersion = (currentLot.version ?? 0) + 1;
-              await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
-              await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
-                id: lot.id, remainingQuantity: newRemaining, version: newVersion,
-              } as unknown as Record<string, unknown>), tenantId);
-              toRestore -= restoreAmount;
             }
 
             const movementId = generateId();
@@ -1273,26 +1332,55 @@ export const posService = {
 
         // Revertir totales de caja si existe una caja abierta
         if (cashReg) {
-          const updatedCashReg = {
-            ...cashReg,
-            totalSalesCount: Math.max(0, cashReg.totalSalesCount - 1),
-            totalSalesBs: preciseRound(Math.max(0, cashReg.totalSalesBs - sale.totalBs), 2),
-            totalIgtfBs: preciseRound(Math.max(0, cashReg.totalIgtfBs - sale.igtfBs), 2),
-            updatedAt: now,
-          };
+          // AUDIT-011: Canonical totals recompute (no silent clamp)
+          // Re-leer todas las ventas completed (no voided) en la ventana de la caja
+          // y derivar totales desde la fuente de verdad, no por decremento.
+          const regOpened = cashReg.openedAt ?? cashReg.createdAt; // AUDIT-011
+          const regClosed = cashReg.closedAt ?? now; // AUDIT-011
+          const completedRegSales = await db.sales // AUDIT-011
+            .where({ tenantId })
+            .filter((s) =>
+              !s.deletedAt &&
+              s.status === 'completed' &&
+              !s.voidedAt &&
+              s.createdAt >= regOpened &&
+              s.createdAt <= regClosed,
+            )
+            .toArray();
+
+          let canonicalTotalSalesBs = 0; // AUDIT-011
+          let canonicalTotalIgtfBs = 0; // AUDIT-011
+          for (const s of completedRegSales) {
+            canonicalTotalSalesBs += s.totalBs;
+            canonicalTotalIgtfBs += s.igtfBs;
+          }
+          canonicalTotalSalesBs = preciseRound(canonicalTotalSalesBs, 2);
+          canonicalTotalIgtfBs = preciseRound(canonicalTotalIgtfBs, 2);
+          const canonicalCount = completedRegSales.length;
+
+          // AUDIT-011: Si el cómputo da negativo (no debería), loggear como bug y usar 0
+          if (canonicalTotalSalesBs < 0) {
+            logger.error('voidSale', `BUG: canonical totalSalesBs=${canonicalTotalSalesBs} en register ${cashReg.id} tras anular ${saleId}. Usando 0.`);
+            canonicalTotalSalesBs = 0;
+          }
+          if (canonicalTotalIgtfBs < 0) {
+            logger.error('voidSale', `BUG: canonical totalIgtfBs=${canonicalTotalIgtfBs} en register ${cashReg.id} tras anular ${saleId}. Usando 0.`);
+            canonicalTotalIgtfBs = 0;
+          }
+
           await db.cashRegisters.update(cashReg.id, {
-            totalSalesCount: updatedCashReg.totalSalesCount,
-            totalSalesBs: updatedCashReg.totalSalesBs,
-            totalIgtfBs: updatedCashReg.totalIgtfBs,
+            totalSalesCount: canonicalCount, // AUDIT-011
+            totalSalesBs: canonicalTotalSalesBs, // AUDIT-011
+            totalIgtfBs: canonicalTotalIgtfBs, // AUDIT-011
             updatedAt: now,
           });
 
           await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
             id: cashReg.id,
             tenant_id: tenantUuid,
-            total_sales_count: updatedCashReg.totalSalesCount,
-            total_sales_bs: updatedCashReg.totalSalesBs,
-            total_igtf_bs: updatedCashReg.totalIgtfBs,
+            total_sales_count: canonicalCount, // AUDIT-011
+            total_sales_bs: canonicalTotalSalesBs, // AUDIT-011
+            total_igtf_bs: canonicalTotalIgtfBs, // AUDIT-011
             updated_at: now,
           } as unknown as Record<string, unknown>), tenantId);
         }
@@ -1464,9 +1552,14 @@ export const posService = {
     }
   },
 
-  async deleteParkedCart(id: string): Promise<Result<void, AppError>> {
+  async deleteParkedCart(tenantId: string, id: string): Promise<Result<void, AppError>> {
     try {
       const db = getDb();
+      // AUDIT-010: Tenant guard on delete (Regla 5) — verificar tenantId antes de borrar
+      const existing = await db.parkedCarts.get(id);
+      if (!existing || existing.tenantId !== tenantId) {
+        return failure(new AppError('PARKED_CART_NOT_FOUND', 'Venta en cola no encontrada.'));
+      }
       // Efímero: carritos en cola no se sincronizan ni necesitan soft delete
       await db.parkedCarts.delete(id);
       return success(undefined);

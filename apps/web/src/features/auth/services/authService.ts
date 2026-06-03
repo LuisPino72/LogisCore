@@ -6,6 +6,7 @@ import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { outboxProcessor } from '../../../services/outbox/outboxProcessor';
 import { sessionGuard } from './sessionGuardService';
 import { offlineGrace } from './offlineGraceService';
 
@@ -196,9 +197,13 @@ export const authService = {
     ];
     allTables.forEach((cfg) => syncEngine.registerTable(cfg));
     syncEngine.start();
+    // AUDIT-005: Start outbox processor (was dead code)
+    outboxProcessor.start();
   },
 
   stopSync(): void {
+    // AUDIT-005: Stop outbox processor alongside sync engine
+    outboxProcessor.stop();
     syncEngine.stop();
   },
 

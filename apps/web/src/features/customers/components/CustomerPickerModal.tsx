@@ -25,6 +25,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newCedula, setNewCedula] = useState(''); // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
   const [createError, setCreateError] = useState('');
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
     }
   }, [isOpen, customers.length, fetchCustomers, tenantId]);
 
-  const fuzzyCustomers = useFuzzySearch(customers, searchQuery, { keys: ['name', 'phone'] });
+  const fuzzyCustomers = useFuzzySearch(customers, searchQuery, { keys: ['name', 'phone', 'cedula'] }); // AUDIT-017: Cédula field V/E/J/P + 6-8 digits (búsqueda)
 
   const handleSelect = (customer: Customer | null) => {
     onSelect(customer);
@@ -41,13 +42,18 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
     setShowCreateForm(false);
     setNewName('');
     setNewPhone('');
+    setNewCedula(''); // AUDIT-017
     setCreateError('');
     onClose();
   };
 
   const handleCreate = async () => {
     setCreateError('');
-    const payload = { name: newName.trim(), phone: newPhone.trim() || undefined };
+    const payload = {
+      name: newName.trim(),
+      phone: newPhone.trim() || undefined,
+      cedula: newCedula.trim().toUpperCase() || undefined, // AUDIT-017
+    };
     const parsed = CreateCustomerInputSchema.safeParse(payload);
     if (!parsed.success) {
       setCreateError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
@@ -61,6 +67,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
           id: newId,
           name: parsed.data.name,
           phone: parsed.data.phone,
+          cedula: parsed.data.cedula, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
           address: undefined,
           creditLimit: 0,
           balance: 0,
@@ -90,8 +97,8 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
       {!showCreateForm ? (
         <div className="space-y-3">
           <SearchInput
-            maxLength={20}
-            placeholder="Buscar cliente por nombre..."
+            maxLength={25}
+            placeholder="Buscar por nombre, cédula o teléfono..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onClear={() => setSearchQuery('')}
@@ -143,7 +150,12 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
                     </div>
                     <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
-                      {c.phone && <p className="text-[10px] text-text-secondary truncate">{c.phone}</p>}
+                      {/* AUDIT-017: Cédula field V/E/J/P + 6-8 digits */}
+                      <div className="flex items-center gap-2 text-[10px] text-text-secondary">
+                        {c.cedula && <span className="font-mono">{c.cedula}</span>}
+                        {c.cedula && c.phone && <span>·</span>}
+                        {c.phone && <span className="truncate">{c.phone}</span>}
+                      </div>
                     </div>
                     {selectedCustomerId === c.id && <span className="text-xs text-primary font-medium">✓</span>}
                   </button>
@@ -184,6 +196,19 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
               autoFocus
             />
             <p className="text-xs text-gray-500 mt-1">{newName.length}/25</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Cédula / RIF (opcional)</label>
+            <input
+              type="text"
+              value={newCedula}
+              onChange={(e) => setNewCedula(e.target.value.replace(/[^VEJGPvejpg0-9]/g, '').toUpperCase().slice(0, 9))} // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+              placeholder="V12345678"
+              className="input uppercase"
+              maxLength={9}
+            />
+            <p className="text-xs text-gray-500 mt-1">Formato: V/E/J/G/P + 6-8 dígitos</p>
           </div>
 
           <div>

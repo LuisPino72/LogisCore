@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Phone, MapPin, CreditCard, FileText } from 'lucide-react';
+import { Users, Phone, MapPin, CreditCard, FileText, IdCard } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
 import {
@@ -16,6 +16,7 @@ interface CustomerFormProps {
 
 export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: CustomerFormProps) {
   const [name, setName] = useState('');
+  const [cedula, setCedula] = useState(''); // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
@@ -26,6 +27,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
   useEffect(() => {
     if (isOpen) {
       setName(editCustomer?.name ?? '');
+      setCedula(editCustomer?.cedula ?? ''); // AUDIT-017
       setPhone(editCustomer?.phone ?? '');
       setAddress(editCustomer?.address ?? '');
       setCreditLimit(editCustomer?.creditLimit ? String(editCustomer.creditLimit) : '');
@@ -38,6 +40,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
     const creditLimitNum = creditLimit ? Number(creditLimit) : 0;
     const payload = {
       name: name.trim(),
+      cedula: cedula.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
       phone: phone.trim() || undefined,
       address: address.trim() || undefined,
       creditLimit: creditLimitNum,
@@ -54,6 +57,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
     setSubmitting(false);
     if (ok) {
       setName('');
+      setCedula(''); // AUDIT-017
       setPhone('');
       setAddress('');
       setCreditLimit('');
@@ -103,6 +107,17 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           error={error && !name.trim() ? error : undefined}
           validation={{ required: 'Ingresa el nombre del cliente', maxLength: 25 }}
           inputClassName="text-sm"
+        />
+
+        <Input
+          label={<span className="flex items-center gap-2"><IdCard size={14} className="text-text-muted" /> Cédula / RIF <span className="text-text-muted font-normal">(opcional)</span></span>}
+          placeholder="V12345678"
+          value={cedula}
+          sanitize="rif"
+          onChange={(e) => setCedula(sanitizeValue(e.target.value, 'rif').toUpperCase())}
+          validation={{ pattern: /^$|^[VEJGP]\d{6,8}$/i, maxLength: 9 }}
+          hint="Formato: V/E/J/G/P + 6 a 8 dígitos. Facilita búsqueda."
+          inputClassName="text-sm uppercase"
         />
 
         <Input

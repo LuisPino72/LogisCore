@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Phone, MapPin, Pencil, Trash2, CreditCard, History } from 'lucide-react';
+import { Users, Phone, MapPin, Pencil, Trash2, CreditCard, History, IdCard } from 'lucide-react';
 import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/components';
 import type { Customer } from '../../../specs/customers';
 import { getInitials } from '../../../lib/utils';
@@ -75,6 +75,12 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                 )}
               </div>
               <div className="flex items-center justify-center gap-2 sm:justify-start sm:flex-row flex-col">
+                {c.cedula && ( // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+                  <p className="text-xs text-text-secondary flex items-center gap-1 font-mono">
+                    <IdCard size={12} className="shrink-0" />
+                    <span className="wrap-break-word">{c.cedula}</span>
+                  </p>
+                )}
                 {c.phone && (
                   <p className="text-xs text-text-secondary flex items-center gap-1">
                     <Phone size={12} className="shrink-0" />

@@ -109,9 +109,12 @@ export const gastosService = {
         updatedAt: now,
       };
 
-      await db.expenses.add(expense);
-      await syncQueue.enqueue('expenses', 'CREATE', expense.id, toSnake(expense as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category });
+      // AUDIT-007: Transactional outbox (Regla 17 compliance)
+      await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        await db.expenses.add(expense);
+        await syncQueue.enqueue('expenses', 'CREATE', expense.id, toSnake(expense as unknown as Record<string, unknown>), tenantId);
+        await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category });
+      });
       return success(mapExpense(expense));
     } catch (err) {
       console.error('[gastosService.create]', err);
@@ -150,8 +153,11 @@ export const gastosService = {
 
       await db.expenses.update(id, updated);
       const result = await db.expenses.get(id);
-      await syncQueue.enqueue('expenses', 'UPDATE', id, { id, ...toSnake(updated as unknown as Record<string, unknown>) }, tenantId);
-      await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
+      // AUDIT-007: Transactional outbox (Regla 17 compliance)
+      await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        await syncQueue.enqueue('expenses', 'UPDATE', id, { id, ...toSnake(updated as unknown as Record<string, unknown>) }, tenantId);
+        await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
+      });
       return success(mapExpense(result!));
     } catch (err) {
       console.error('[gastosService.update]', err);
@@ -168,8 +174,11 @@ export const gastosService = {
       }
       const now = new Date().toISOString();
       await db.expenses.update(id, { deletedAt: now, updatedAt: now });
-      await syncQueue.enqueue('expenses', 'DELETE', id, { id, deleted_at: now }, tenantId);
-      await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
+      // AUDIT-007: Transactional outbox (Regla 17 compliance)
+      await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        await syncQueue.enqueue('expenses', 'DELETE', id, { id, deleted_at: now }, tenantId);
+        await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
+      });
       return success(undefined);
     } catch (err) {
       console.error('[gastosService.remove]', err);
@@ -239,23 +248,26 @@ export const gastosService = {
           updatedAt: now,
         };
 
-        await db.expenses.add(instance);
-        await syncQueue.enqueue('expenses', 'CREATE', instance.id, toSnake(instance as unknown as Record<string, unknown>), tenantId);
-        generated.push(mapExpense(instance));
+        // AUDIT-007: Transactional outbox (Regla 17 compliance) — instance + template update atómicos
+        await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+          await db.expenses.add(instance);
+          await syncQueue.enqueue('expenses', 'CREATE', instance.id, toSnake(instance as unknown as Record<string, unknown>), tenantId);
+          generated.push(mapExpense(instance));
 
-        const nextDate = new Date(tpl.nextDueDate!);
-        if (tpl.recurrenceType === 'monthly') {
-          nextDate.setMonth(nextDate.getMonth() + 1);
-        } else if (tpl.recurrenceType === 'yearly') {
-          nextDate.setFullYear(nextDate.getFullYear() + 1);
-        }
+          const nextDate = new Date(tpl.nextDueDate!);
+          if (tpl.recurrenceType === 'monthly') {
+            nextDate.setMonth(nextDate.getMonth() + 1);
+          } else if (tpl.recurrenceType === 'yearly') {
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+          }
 
-        const nextDateStr = nextDate.toISOString().slice(0, 10);
-        await db.expenses.update(tpl.id, {
-          nextDueDate: nextDateStr,
-          updatedAt: now,
+          const nextDateStr = nextDate.toISOString().slice(0, 10);
+          await db.expenses.update(tpl.id, {
+            nextDueDate: nextDateStr,
+            updatedAt: now,
+          });
+          await syncQueue.enqueue('expenses', 'UPDATE', tpl.id, { id: tpl.id, next_due_date: nextDateStr, updated_at: now }, tenantId);
         });
-        await syncQueue.enqueue('expenses', 'UPDATE', tpl.id, { id: tpl.id, next_due_date: nextDateStr, updated_at: now }, tenantId);
       }
 
       const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);

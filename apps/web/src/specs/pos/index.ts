@@ -67,6 +67,8 @@ export const SaleItemSchema = z.object({
   unitMultiplier: z.number().positive().default(1),
   stockType: z.literal('shared').optional(),
   createdAt: z.string().datetime(),
+  // AUDIT-012: FIFO restore (track original lot consumption for void)
+  consumedLots: z.array(z.object({ lotId: z.string(), quantity: z.number().positive() })).optional(),
 });
 
 export type SaleItem = z.infer<typeof SaleItemSchema>;

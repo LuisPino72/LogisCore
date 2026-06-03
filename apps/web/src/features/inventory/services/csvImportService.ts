@@ -338,11 +338,24 @@ export async function importProductsFromCsv(
     }
   }
 
-  const chunkSize = 50;
-  for (let i = 0; i < validRows.length; i += chunkSize) {
-    const chunk = validRows.slice(i, i + chunkSize);
-    const results = await Promise.allSettled(
-      chunk.map(async (row) => {
+  // AUDIT-016: Transactional CSV import (all-or-nothing)
+  // Fase 2-phase: categorías ya pre-creadas (idempotentes) arriba. Aquí importamos
+  // productos dentro de UNA SOLA transacción Dexie. Si cualquier fila falla, rollback total.
+  // Las categorías creadas en fase 1 quedan (no se revierten — son idempotentes y reutilizables).
+  const importedRows: Array<{ sku: string; nombre: string }> = []; // AUDIT-016
+  let rollbackError: string | null = null; // AUDIT-016
+
+  try {
+    // AUDIT-016: outer transaction abarca todas las tablas que inventoryService.createProduct toca
+    // (Dexie reúsa la outer como sub-transacción si el scope es compatible)
+    await db.transaction('rw', [
+      db.products,
+      db.inventoryMovements,
+      db.inventoryLots,
+      db.syncQueue,
+      db.outbox,
+    ], async () => {
+      for (const row of validRows) {
         const nombre = row.nombre?.trim() ?? '';
         const sku = row.sku?.trim() ?? '';
         const precio = parseNumber(row.precio, 0);
@@ -381,27 +394,25 @@ export async function importProductsFromCsv(
 
         const result = await inventoryService.createProduct(tenantId, userId, input);
         if (!result.ok) {
-          throw new Error(result.error?.message ?? 'Error al crear producto');
+          // AUDIT-016: cualquier falla aborta la transacción completa
+          throw new Error(`Fila ${sku || nombre}: ${result.error?.message ?? 'Error al crear producto'}`);
         }
-        return { sku, nombre };
-      }),
-    );
-
-    results.forEach((r, idx) => {
-      if (r.status === 'fulfilled') {
-        summary.imported++;
-      } else {
-        summary.errors++;
-        const row = chunk[idx];
-        const existingResult = summary.results.find(
-          (res) => res.sku === row.sku?.trim() && res.status === 'valid',
-        );
-        if (existingResult) {
-          existingResult.status = 'error';
-          existingResult.errors = [{ field: 'import', message: r.reason?.message ?? 'Error al importar' }];
-        }
+        importedRows.push({ sku, nombre });
       }
     });
+    summary.imported = importedRows.length;
+  } catch (err) {
+    // AUDIT-016: Transacción revertida — ningún producto se importó
+    rollbackError = (err as Error).message ?? 'Error desconocido';
+    summary.imported = 0;
+    summary.errors = validRows.length;
+    // Marcar todas las filas válidas como erróneas con mensaje de rollback
+    for (const r of summary.results) {
+      if (r.status === 'valid') {
+        r.status = 'error';
+        r.errors = [{ field: 'import', message: `Transacción revertida: ${rollbackError}` }];
+      }
+    }
   }
 
   return summary;

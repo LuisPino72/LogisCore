@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, Button, Badge, EmptyState, Spinner, Pagination } from '../../../common/components';
-import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useCustomerStore } from '../stores/customerStore';
@@ -75,6 +75,12 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold text-gray-900 wrap-break-word">{customer.name}</h3>
             <div className="flex flex-col gap-1 mt-1.5">
+              {customer.cedula && ( // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+                <p className="text-xs text-text-secondary flex items-center gap-1.5 font-mono">
+                  <IdCard size={12} className="shrink-0" />
+                  <span className="wrap-break-word">{customer.cedula}</span>
+                </p>
+              )}
               {customer.phone && (
                 <p className="text-xs text-text-secondary flex items-center gap-1.5">
                   <Phone size={12} className="shrink-0" />

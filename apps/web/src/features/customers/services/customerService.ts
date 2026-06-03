@@ -29,6 +29,7 @@ function toCustomer(raw: Record<string, unknown>): Customer {
     id: raw.id as string,
     name: raw.name as string,
     phone: (raw.phone as string | undefined) || undefined,
+    cedula: (raw.cedula as string | undefined) || undefined, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
     address: (raw.address as string | undefined) || undefined,
     creditLimit: (raw.creditLimit as number) ?? 0,
     balance: (raw.balance as number) ?? 0,
@@ -74,6 +75,7 @@ export const customerService = {
       id,
       name: parsed.data.name.trim(),
       phone: parsed.data.phone?.trim() || undefined,
+      cedula: parsed.data.cedula?.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
       address: parsed.data.address?.trim() || undefined,
       creditLimit: parsed.data.creditLimit ?? 0,
       balance: 0,
@@ -147,6 +149,7 @@ export const customerService = {
         ...existing,
         ...input,
         phone: input.phone?.trim() || undefined,
+        cedula: input.cedula?.trim().toUpperCase() || undefined, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
         address: input.address?.trim() || undefined,
         notes: input.notes?.trim() || undefined,
         updatedAt: new Date().toISOString(),
@@ -263,6 +266,7 @@ export const customerService = {
               tenantId,
               name: c.name as string,
               phone: (c.phone as string | null) ?? undefined,
+              cedula: (c.cedula as string | null) ?? undefined, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
               address: (c.address as string | null) ?? undefined,
               creditLimit: (c.credit_limit as number) ?? 0,
               balance: (c.balance as number) ?? 0,

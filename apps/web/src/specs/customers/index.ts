@@ -6,6 +6,12 @@ export const CustomerSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().optional(),
   name: z.string().min(1, 'Nombre requerido').max(25, 'Máximo 25 caracteres'),
+  // AUDIT-017: Cédula field V/E/J/P + 6-8 digits (no digit verifier, just letter + digits)
+  cedula: z
+    .string()
+    .regex(/^[VEJGP]\d{6,8}$/i, 'Cédula inválida (formato: V12345678)')
+    .optional()
+    .or(z.literal('')),
   phone: z
     .string()
     .regex(/^$|^0\d{10}$/, 'Formato: 04121234567')

@@ -387,7 +387,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             <ParkedCartsList
               carts={parkedCarts}
               onLoad={handleLoadParked}
-              onDelete={deleteParkedCart}
+              onDelete={(id) => { if (tenantId) deleteParkedCart(tenantId, id); }}
             />
             <div className="flex-1 overflow-hidden relative">
               {(!isOpen || isFromPreviousDay) && (

@@ -391,10 +391,17 @@ export const reportsService = {
         const yStart = startOfDayVzla(yest);
         const yEnd = endOfDayVzla(yest);
         const yData = await fetchSalesWithItems(tenantId, yStart, yEnd);
-        const yRevenue = yData.reduce((sum, d) => {
-          const itemRevenue = d.items.reduce((s, i) => s + i.quantity * i.unitPriceUsd * d.sale.exchangeRate, 0);
-          return sum + itemRevenue - (d.sale.discountBs || 0);
-        }, 0);
+        // AUDIT-015: Discounts in YRevenue (apples-to-apples con effectiveRevenueBs de hoy)
+        // Mismo orden de operaciones: items con preciseRound, suma de descuentos, resta final.
+        let yRevenueBeforeDiscount = 0; // AUDIT-015
+        let yDiscountBs = 0; // AUDIT-015
+        for (const d of yData) {
+          for (const i of d.items) {
+            yRevenueBeforeDiscount += preciseRound(i.quantity * i.unitPriceUsd * d.sale.exchangeRate, 2); // AUDIT-015
+          }
+          yDiscountBs += d.sale.discountBs || 0; // AUDIT-015
+        }
+        const yRevenue = preciseRound(yRevenueBeforeDiscount - yDiscountBs, 2); // AUDIT-015
         if (yRevenue > 0) {
           salesVsYesterdayPercent = preciseRound(((effectiveRevenueBs - yRevenue) / yRevenue) * 100, 2);
         }
@@ -776,8 +783,9 @@ export const reportsService = {
           .lt('created_at', end);
 
         if (!regErr && cloudRegs && cloudRegs.length > 0) {
+          // AUDIT-013: Offline-first merge (local authoritative until sync)
           const merged = new Map<string, typeof registers[0]>();
-          for (const r of registers) merged.set(r.id, r);
+          // Insertar primero los de la nube (de respaldo)
           for (const r of cloudRegs) {
             merged.set(r.id as string, {
               id: r.id as string,
@@ -800,6 +808,8 @@ export const reportsService = {
               updatedAt: r.updated_at as string,
             });
           }
+          // AUDIT-013: Locales pisan a la nube (autoridad offline-first)
+          for (const r of registers) merged.set(r.id, r);
           registers = [...merged.values()].sort(
             (a, b) => b.createdAt.localeCompare(a.createdAt),
           );
@@ -827,8 +837,9 @@ export const reportsService = {
           .lt('created_at', end);
 
         if (!salesErr && cloudSales && cloudSales.length > 0) {
+          // AUDIT-013: Offline-first merge (local authoritative until sync)
           const mergedSales = new Map<string, typeof allSales[0]>();
-          for (const s of allSales) mergedSales.set(s.id, s);
+          // Insertar primero los de la nube (de respaldo)
           for (const s of cloudSales) {
             mergedSales.set(s.id as string, {
               id: s.id as string,
@@ -844,6 +855,8 @@ export const reportsService = {
               createdAt: s.created_at as string,
             });
           }
+          // AUDIT-013: Locales pisan a la nube (offline-first, autoridad local hasta sync)
+          for (const s of allSales) mergedSales.set(s.id, s);
           allSales = [...mergedSales.values()];
         }
       } catch {
@@ -878,7 +891,9 @@ export const reportsService = {
           : undefined;
 
         const expectedClosingUsd = openingRate > 0
-          ? preciseRound(((r.openingBalanceBs ?? 0) + r.totalSalesBs) / openingRate, 2)
+          // AUDIT-014: Per-sale USD total (rate-stable). Suma de cada venta convertida a su propia tasa,
+          // no recálculo desde Bs con openingRate (que es incorrecto cuando BCV se actualiza mid-day).
+          ? preciseRound(openingBalanceUsd + totalSalesUsd, 2)
           : undefined;
 
         const differenceUsd = (r.differenceBs != null && closeRate > 0)

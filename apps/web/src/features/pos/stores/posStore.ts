@@ -32,7 +32,7 @@ interface PosStore extends PosState {
   clearCart: () => void;
   parkCart: (tenantId: string, name: string) => Promise<boolean>;
   loadParkedCart: (cart: ParkedCart) => void;
-  deleteParkedCart: (id: string) => Promise<void>;
+  deleteParkedCart: (tenantId: string, id: string) => Promise<void>;
   toggleFavorite: (tenantId: string, productId: string) => Promise<void>;
   isFavorite: (productId: string) => boolean;
   completeSale: (tenantId: string, paymentMethod: PaymentMethod, userId: string) => Promise<Result<string, AppError>>;
@@ -201,8 +201,8 @@ export const usePosStore = create<PosStore>()(
     set({ cart: parked.cart, activeParkedCartId: parked.id, error: null });
   },
 
-  deleteParkedCart: async (id) => {
-    await posService.deleteParkedCart(id);
+  deleteParkedCart: async (tenantId, id) => {
+    await posService.deleteParkedCart(tenantId, id);
     set((state) => ({
       parkedCarts: state.parkedCarts.filter((p) => p.id !== id),
     }));
@@ -306,7 +306,10 @@ export const usePosStore = create<PosStore>()(
     const currentQtyInCart = cart.find((item) => item.productId === product.id)?.quantity ?? 0;
     const totalRequested = currentQtyInCart + quantity;
     const isAssembly = product.hasAssemblyRecipe;
-    if (!isAssembly && totalRequested > product.stock) {
+    // AUDIT-004: Pesable stock check (UI kg/lt, internals g/ml). totalRequested está en unidades de display;
+    // product.stock está en unidades de almacenamiento. Comparar en mismas unidades.
+    const stockInDisplayUnits = product.isWeighted ? product.stock / 1000 : product.stock;
+    if (!isAssembly && totalRequested > stockInDisplayUnits) {
       const available = product.unit === 'kg' || product.unit === 'lt'
         ? (product.stock / 1000).toFixed(2)
         : product.stock;
@@ -474,7 +477,7 @@ export const usePosStore = create<PosStore>()(
     if (result.ok) {
       const activeId = get().activeParkedCartId;
       if (activeId) {
-        await posService.deleteParkedCart(activeId);
+        await posService.deleteParkedCart(tenantId, activeId);
       }
       set({
         discount: null,

@@ -120,6 +120,8 @@ export interface DexieSaleItem {
   presentationId?: string;
   presentationName?: string;
   unitMultiplier: number;
+  // AUDIT-012: FIFO restore (track original lot consumption)
+  consumedLots?: Array<{ lotId: string; quantity: number }>;
 }
 
 export interface DexieCashRegister {
@@ -206,6 +208,7 @@ export interface DexieCustomer {
   tenantId: string;
   name: string;
   phone?: string;
+  cedula?: string; // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
   address?: string;
   creditLimit: number;
   balance: number;

@@ -751,6 +751,7 @@ export const inventoryService = {
 
             await db.transaction('rw', [db.products, db.inventoryLots, db.productPresentations], async () => {
               for (const prod of data) {
+                // AUDIT-003: Preserve productType in Supabase→Dexie cache (Sesión 98 regression fix)
                 await db.products.put({
                   id: prod.id, tenantId,
                   name: prod.name, sku: prod.sku,
@@ -764,6 +765,7 @@ export const inventoryService = {
                   stockMin: prod.stock_min,
                   imageUrl: prod.image_url,
                   costPrice: prod.cost_price,
+                  productType: ((prod as any).product_type ?? 'resale') as Product['productType'],
                 });
               }
 
@@ -835,9 +837,10 @@ export const inventoryService = {
     }
   },
 
-  async getProductById(id: string): Promise<Result<Product, AppError>> {
+  async getProductById(tenantId: string, id: string): Promise<Result<Product, AppError>> {
     const db = getDb();
-    const product = await db.products.get(id);
+    // AUDIT-008: Multi-tenant defense (Regla 5) — filtrar por tenantId para evitar cross-tenant leak
+    const product = await db.products.where({ tenantId, id }).first();
     if (!product || product.deletedAt) {
       return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
     }
@@ -1231,6 +1234,7 @@ export const inventoryService = {
         .is('deleted_at', null)
         .maybeSingle();
       if (data) {
+        // AUDIT-003: Preserve productType in Supabase→Dexie cache (Sesión 98 regression fix)
         const local = {
           id: data.id as string,
           tenantId,
@@ -1246,6 +1250,7 @@ export const inventoryService = {
           stockMin: data.stock_min as number | undefined,
           imageUrl: (data.image_url as string | undefined) ?? undefined,
           costPrice: data.cost_price as number | undefined,
+          productType: ((data as any).product_type ?? 'resale') as Product['productType'],
         };
         await db.products.put(local);
         return success(toProduct(local as unknown as Record<string, unknown>));
@@ -1366,6 +1371,7 @@ export const inventoryService = {
         try {
           for (const prod of data) {
             if (isDbClosing()) break;
+            // AUDIT-003: Preserve productType in Supabase→Dexie cache (Sesión 98 regression fix)
             await db.products.put({
               id: prod.id, tenantId,
               name: prod.name, sku: prod.sku,
@@ -1377,6 +1383,7 @@ export const inventoryService = {
               unit: prod.unit,
               stock: prod.stock,
               stockMin: prod.stock_min,
+              productType: ((prod as any).product_type ?? 'resale') as Product['productType'],
             });
           }
         } catch {
