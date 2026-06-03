@@ -18,6 +18,24 @@ import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './m
 
 const INVENTORY_MODULE = 'INVENTORY';
 
+/** Tipo para filas de producto que llegan desde Supabase (snake_case).
+ *  Mantener sincronizado con el schema de la tabla `products` en Supabase. */
+interface SupabaseProductRow {
+  id: string;
+  tenant_id?: string;
+  name: string;
+  sku: string;
+  is_weighted?: boolean;
+  is_taxable?: boolean;
+  is_sellable?: boolean;
+  unit: Product['unit'];
+  stock: number;
+  stock_min?: number;
+  image_url?: string;
+  cost_price?: number;
+  product_type?: Product['productType'];
+}
+
 async function deleteStorageImage(imageUrl: string, token?: string): Promise<void> {
   try {
     if (!token) {
@@ -750,14 +768,15 @@ export const inventoryService = {
             const presData = presResponse.data;
 
             await db.transaction('rw', [db.products, db.inventoryLots, db.productPresentations], async () => {
-              for (const prod of data) {
+              for (const prod of data as SupabaseProductRow[]) {
                 // AUDIT-003: Preserve productType in Supabase→Dexie cache (Sesión 98 regression fix)
+                const prodRecord = prod as unknown as Record<string, unknown>;
                 await db.products.put({
                   id: prod.id, tenantId,
                   name: prod.name, sku: prod.sku,
-                  priceUsd: prod.price_usd,
-                  categoryId: prod.category_id,
-                  isWeighted: prod.is_weighted,
+                  priceUsd: (prodRecord.price_usd as number | undefined) ?? 0,
+                  categoryId: prodRecord.category_id as string | undefined,
+                  isWeighted: prod.is_weighted !== undefined ? !!prod.is_weighted : false,
                   isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
                   isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
                   unit: prod.unit,
@@ -765,7 +784,7 @@ export const inventoryService = {
                   stockMin: prod.stock_min,
                   imageUrl: prod.image_url,
                   costPrice: prod.cost_price,
-                  productType: ((prod as any).product_type ?? 'resale') as Product['productType'],
+                  productType: prod.product_type ?? 'resale',
                 });
               }
 
@@ -1235,22 +1254,23 @@ export const inventoryService = {
         .maybeSingle();
       if (data) {
         // AUDIT-003: Preserve productType in Supabase→Dexie cache (Sesión 98 regression fix)
+        const row = data as unknown as SupabaseProductRow;
         const local = {
-          id: data.id as string,
+          id: row.id,
           tenantId,
-          name: data.name as string,
-          sku: data.sku as string,
-          priceUsd: data.price_usd as number,
-          categoryId: data.category_id as string | undefined,
-          isWeighted: data.is_weighted as boolean,
-          isTaxable: data.is_taxable !== undefined ? !!data.is_taxable : true,
-          isSellable: data.is_sellable !== undefined ? !!data.is_sellable : true,
-          unit: data.unit as Product['unit'],
-          stock: data.stock as number,
-          stockMin: data.stock_min as number | undefined,
-          imageUrl: (data.image_url as string | undefined) ?? undefined,
-          costPrice: data.cost_price as number | undefined,
-          productType: ((data as any).product_type ?? 'resale') as Product['productType'],
+          name: row.name,
+          sku: row.sku,
+          priceUsd: (data as Record<string, unknown>).price_usd as number,
+          priceBs: (data as Record<string, unknown>).price_bs as number,
+          isWeighted: row.is_weighted ?? false,
+          isTaxable: row.is_taxable ?? true,
+          isSellable: row.is_sellable ?? true,
+          unit: row.unit,
+          stock: row.stock,
+          stockMin: row.stock_min,
+          imageUrl: row.image_url,
+          costPrice: row.cost_price,
+          productType: row.product_type ?? 'resale',
         };
         await db.products.put(local);
         return success(toProduct(local as unknown as Record<string, unknown>));
@@ -1369,21 +1389,22 @@ export const inventoryService = {
 
       if (!error && data && data.length > 0 && !isDbClosing()) {
         try {
-          for (const prod of data) {
+          for (const prod of data as SupabaseProductRow[]) {
             if (isDbClosing()) break;
             // AUDIT-003: Preserve productType in Supabase→Dexie cache (Sesión 98 regression fix)
+            const prodRecord = prod as unknown as Record<string, unknown>;
             await db.products.put({
               id: prod.id, tenantId,
               name: prod.name, sku: prod.sku,
-              priceUsd: prod.price_usd,
-              categoryId: prod.category_id,
-              isWeighted: prod.is_weighted,
+              priceUsd: (prodRecord.price_usd as number | undefined) ?? 0,
+              categoryId: prodRecord.category_id as string | undefined,
+              isWeighted: prod.is_weighted !== undefined ? !!prod.is_weighted : false,
               isTaxable: prod.is_taxable !== undefined ? !!prod.is_taxable : true,
               isSellable: prod.is_sellable !== undefined ? !!prod.is_sellable : true,
               unit: prod.unit,
               stock: prod.stock,
               stockMin: prod.stock_min,
-              productType: ((prod as any).product_type ?? 'resale') as Product['productType'],
+              productType: prod.product_type ?? 'resale',
             });
           }
         } catch {
