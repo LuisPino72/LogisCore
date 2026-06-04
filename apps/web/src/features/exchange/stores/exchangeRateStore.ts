@@ -54,7 +54,12 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set, get) => ({
         isUpdating: false,
       });
       if (result.data.rate !== prevRate) {
-        emitWithAudit(SystemEvents.EXCHANGE_RATE_UPDATED, 'EXCHANGE', { rate: result.data.rate, source: result.data.source }, {});
+        emitWithAudit({
+          eventName: SystemEvents.EXCHANGE_RATE_UPDATED,
+          module: 'EXCHANGE',
+          payload: { rate: result.data.rate, source: result.data.source },
+          context: {},
+        });
       }
     } else {
       set({ isUpdating: false, error: result.error.message });
@@ -75,7 +80,12 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set, get) => ({
         isUpdating: false,
       });
       if (result.data.rate !== prevRate) {
-        emitWithAudit(SystemEvents.EXCHANGE_RATE_UPDATED, 'EXCHANGE', { rate: result.data.rate, source: result.data.source }, {});
+        emitWithAudit({
+          eventName: SystemEvents.EXCHANGE_RATE_UPDATED,
+          module: 'EXCHANGE',
+          payload: { rate: result.data.rate, source: result.data.source },
+          context: {},
+        });
       }
     } else {
       set({ isUpdating: false, error: result.error.message });

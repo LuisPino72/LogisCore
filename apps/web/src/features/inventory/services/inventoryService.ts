@@ -234,7 +234,12 @@ export const inventoryService = {
         await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial });
       });
 
-      await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial }, { userId, tenantId });
+      await emitWithAudit({
+        eventName: 'INVENTORY.CREATED',
+        module: INVENTORY_MODULE,
+        payload: { productId: id, name: input.name, sku: input.sku, stockInicial },
+        context: { userId, tenantId },
+      });
 
       return success(product);
     } catch (err) {
@@ -405,10 +410,15 @@ export const inventoryService = {
         });
       });
 
-      await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, {
-        productId, name: input.name, sku: input.sku,
-        stockInicial: parentStock, presentationCount: presentations.length,
-      }, { userId, tenantId });
+      await emitWithAudit({
+        eventName: 'INVENTORY.CREATED',
+        module: INVENTORY_MODULE,
+        payload: {
+          productId, name: input.name, sku: input.sku,
+          stockInicial: parentStock, presentationCount: presentations.length,
+        },
+        context: { userId, tenantId },
+      });
 
       return success({
         product: toProduct(createdProduct as unknown as Record<string, unknown>),
@@ -541,7 +551,12 @@ export const inventoryService = {
           }
         }
       });
-      await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { productId: id, changes: Object.keys(input) }, { tenantId });
+      await emitWithAudit({
+        eventName: 'INVENTORY.UPDATED',
+        module: INVENTORY_MODULE,
+        payload: { productId: id, changes: Object.keys(input) },
+        context: { tenantId },
+      });
       return success(toProduct(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en updateProduct:', err);
@@ -661,7 +676,12 @@ export const inventoryService = {
         await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, changes: Object.keys(input) });
       });
 
-      await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, changes: Object.keys(input) }, { tenantId });
+      await emitWithAudit({
+        eventName: 'INVENTORY.UPDATED',
+        module: INVENTORY_MODULE,
+        payload: { presentationId, changes: Object.keys(input) },
+        context: { tenantId },
+      });
       return success(toPresentation(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en updatePresentation:', err);
@@ -690,7 +710,12 @@ export const inventoryService = {
         await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, action: 'deleted' });
       });
 
-      await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, action: 'deleted' }, { tenantId });
+      await emitWithAudit({
+        eventName: 'INVENTORY.UPDATED',
+        module: INVENTORY_MODULE,
+        payload: { presentationId, action: 'deleted' },
+        context: { tenantId },
+      });
       return success(undefined);
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en deletePresentation:', err);
@@ -755,7 +780,12 @@ export const inventoryService = {
       await syncQueue.enqueue('products', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
       await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { productId: id });
     });
-    await emitWithAudit('INVENTORY.DELETED', INVENTORY_MODULE, { productId: id, cascadePresentations: presentations.length }, { tenantId });
+    await emitWithAudit({
+      eventName: 'INVENTORY.DELETED',
+      module: INVENTORY_MODULE,
+      payload: { productId: id, cascadePresentations: presentations.length },
+      context: { tenantId },
+    });
     return success(undefined);
   },
 
@@ -912,7 +942,12 @@ export const inventoryService = {
       await syncQueue.enqueue('categories', 'CREATE', id, { id, name: input.name }, input.tenantId);
       await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name });
     });
-    await emitWithAudit('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name }, { tenantId: input.tenantId });
+    await emitWithAudit({
+      eventName: 'INVENTORY.CREATED',
+      module: INVENTORY_MODULE,
+      payload: { categoryId: id, name: input.name },
+      context: { tenantId: input.tenantId },
+    });
     return success(toCategory(cat as unknown as Record<string, unknown>));
   },
 
@@ -934,7 +969,12 @@ export const inventoryService = {
       await syncQueue.enqueue('categories', 'UPDATE', id, { id, name }, tenantId);
       await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name });
     });
-    await emitWithAudit('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name }, { tenantId });
+    await emitWithAudit({
+      eventName: 'INVENTORY.UPDATED',
+      module: INVENTORY_MODULE,
+      payload: { categoryId: id, name },
+      context: { tenantId },
+    });
     return success({ id, name });
   },
 
@@ -990,7 +1030,12 @@ export const inventoryService = {
       await syncQueue.enqueue('categories', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
       await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { categoryId: id });
     });
-    await emitWithAudit('INVENTORY.DELETED', INVENTORY_MODULE, { categoryId: id }, { tenantId });
+    await emitWithAudit({
+      eventName: 'INVENTORY.DELETED',
+      module: INVENTORY_MODULE,
+      payload: { categoryId: id },
+      context: { tenantId },
+    });
     return success(undefined);
   },
 
@@ -1109,10 +1154,15 @@ export const inventoryService = {
         });
       });
 
-      await emitWithAudit('INVENTORY.ADJUSTMENT', INVENTORY_MODULE, {
-        productId: input.productId, quantity: input.quantity, reasonType: input.reasonType,
-        previousStock, newStock, costUsd: movementCostUsd,
-      }, { userId: input.userId, tenantId: input.tenantId });
+      await emitWithAudit({
+        eventName: 'INVENTORY.ADJUSTMENT',
+        module: INVENTORY_MODULE,
+        payload: {
+          productId: input.productId, quantity: input.quantity, reasonType: input.reasonType,
+          previousStock, newStock, costUsd: movementCostUsd,
+        },
+        context: { userId: input.userId, tenantId: input.tenantId },
+      });
 
       const resultMovement = {
         id: movementId,

@@ -1,15 +1,17 @@
+import type { Table } from 'dexie';
 import { EventBus, success, failure, AppError, type Result, type OutboxEntry, OUTBOX_MAX_RETRIES, OUTBOX_BASE_BACKOFF_MS } from '@logiscore/core';
 import { getDb } from '../dexie/db';
+
+type OutboxTxScope = { outbox: Table<OutboxEntry, number> };
 
 class OutboxService {
   async enqueue(
     event: OutboxEntry['event'],
     module: OutboxEntry['module'],
     payload: OutboxEntry['payload'],
-    tx?: any,
+    tx?: OutboxTxScope,
   ): Promise<Result<number, AppError>> {
     try {
-      const db = tx || getDb();
       const entry: Omit<OutboxEntry, 'id'> = {
         event,
         module,
@@ -21,7 +23,9 @@ class OutboxService {
         createdAt: new Date().toISOString(),
         processedAt: null,
       };
-      const id = await db.outbox.add(entry as OutboxEntry);
+      const id = tx
+        ? await tx.outbox.add(entry as OutboxEntry)
+        : await getDb().outbox.add(entry as OutboxEntry);
       return success(id);
     } catch (err) {
       return failure(new AppError('OUTBOX_ENQUEUE_FAILED', 'Error al encolar evento outbox', { details: { event, module, error: String(err) } }));
@@ -29,7 +33,7 @@ class OutboxService {
   }
 
   async enqueueInTransaction(
-    tx: any,
+    tx: OutboxTxScope,
     event: OutboxEntry['event'],
     module: OutboxEntry['module'],
     payload: OutboxEntry['payload'],

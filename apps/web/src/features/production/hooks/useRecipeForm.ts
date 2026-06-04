@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
+import { validateCycles } from '../services/productionService';
 
 interface RecipeLineInput {
   productId: string;
@@ -88,7 +89,7 @@ export function useRecipeForm() {
     setIngredientAvailability((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const validate = useCallback((): boolean => {
+  const validate = useCallback(async (): Promise<boolean> => {
     const newErrors: Record<string, string> = {};
 
     if (!form.name.trim()) newErrors.name = 'Nombre requerido';
@@ -106,11 +107,14 @@ export function useRecipeForm() {
       newErrors.lines = 'No puede haber ingredientes duplicados';
     }
 
-    // Check that product is not used as its own ingredient
-    if (form.productId) {
-      const selfReference = form.lines.some((l) => l.productId === form.productId);
-      if (selfReference) {
-        newErrors.lines = 'El producto terminado no puede ser ingredente de sí mismo';
+    // PRODUCTION-001-010: Validación completa de ciclos (incluye sub-recetas anidadas)
+    if (form.productId && form.lines.length > 0) {
+      const cycleCheck = await validateCycles(
+        form.productId,
+        form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
+      );
+      if (!cycleCheck.ok) {
+        newErrors.lines = cycleCheck.error.message;
       }
     }
 
@@ -171,14 +175,30 @@ export function useRecipeForm() {
     );
   }, [products]);
 
+  // PRODUCTION-001-011: Preview de líneas para distinguir sub-recetas
+  const getExpandPreview = useCallback((lines: RecipeLineInput[]) => {
+    return lines.map((line, index) => {
+      const product = products.find((p) => p.id === line.productId);
+      const isSubRecipe = product?.productType === 'producto_terminado';
+      return {
+        index,
+        productId: line.productId,
+        productName: product?.name ?? 'Sin nombre',
+        quantity: line.quantity,
+        unit: line.unit,
+        isSubRecipe,
+      };
+    });
+  }, [products]);
+
   const reset = useCallback(() => {
     setForm(INITIAL_STATE);
     setErrors({});
     setIngredientAvailability([]);
   }, []);
 
-  const toInput = useCallback((): CreateRecipeInput | null => {
-    if (!validate()) return null;
+  const toInput = useCallback(async (): Promise<CreateRecipeInput | null> => {
+    if (!(await validate())) return null;
     return {
       name: form.name.trim(),
       productId: form.productId,
@@ -208,6 +228,7 @@ export function useRecipeForm() {
     validate,
     getAvailableIngredients,
     getAvailableProducts,
+    getExpandPreview,
     toInput,
     reset,
     setIngredientAvailability,

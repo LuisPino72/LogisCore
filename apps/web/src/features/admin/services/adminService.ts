@@ -60,17 +60,20 @@ export const adminService = {
     }
 
     try {
-      await emitWithAudit('ADMIN.TENANT.DELETE', 'ADMIN', {
-        tenantId: id,
-        type: 'soft',
-      }, {
-        userId: '',
-        tenantId: '',
-        tenantUuid: id,
+      await emitWithAudit({
+        eventName: 'ADMIN.TENANT.DELETE',
+        module: 'ADMIN',
+        payload: {
+          tenantId: id,
+          type: 'soft',
+        },
+        context: {
+          userId: '',
+          tenantId: '',
+          tenantUuid: id,
+        },
       });
-    } catch {
-      // Non-critical: audit fallo, pero el soft delete ya fue exitoso
-    }
+    } catch { /* audit best-effort */ }
 
     return success(undefined);
   },
@@ -95,17 +98,20 @@ export const adminService = {
     }
 
     try {
-      await emitWithAudit('ADMIN.TENANT.HARD_DELETE', 'ADMIN', {
-        tenantId: id,
-        type: 'hard',
-      }, {
-        userId: '',
-        tenantId: '',
-        tenantUuid: id,
+      await emitWithAudit({
+        eventName: 'ADMIN.TENANT.HARD_DELETE',
+        module: 'ADMIN',
+        payload: {
+          tenantId: id,
+          type: 'hard',
+        },
+        context: {
+          userId: '',
+          tenantId: '',
+          tenantUuid: id,
+        },
       });
-    } catch {
-      // Non-critical: audit fallo, pero el hard delete ya fue exitoso
-    }
+    } catch { /* audit best-effort */ }
 
     return success(undefined);
   },
@@ -211,15 +217,20 @@ export const adminService = {
 
       const result: CreateTenantResponse = await response.json();
 
-      await emitWithAudit('ADMIN.TENANT.CREATE', 'ADMIN', {
-        tenantId: result.tenant.id,
-        tenantSlug: result.tenant.slug,
-        ownerEmail: result.owner.email,
-        employeeCount: result.employees.length,
-      }, {
-        userId: '',
-        tenantId: '',
-        tenantUuid: result.tenant.id,
+      await emitWithAudit({
+        eventName: 'ADMIN.TENANT.CREATE',
+        module: 'ADMIN',
+        payload: {
+          tenantId: result.tenant.id,
+          tenantSlug: result.tenant.slug,
+          ownerEmail: result.owner.email,
+          employeeCount: result.employees.length,
+        },
+        context: {
+          userId: '',
+          tenantId: '',
+          tenantUuid: result.tenant.id,
+        },
       });
 
       return success(result);

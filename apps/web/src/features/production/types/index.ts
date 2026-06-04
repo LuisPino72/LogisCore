@@ -40,3 +40,13 @@ export interface ProductionOrderFilters {
   status?: ProductionOrderStatus;
   recipeId?: string;
 }
+
+// PRODUCTION-001-009: Tipo de línea expandida para sub-recetas
+export interface ExpandedRecipeLine {
+  productId: string;
+  quantity: number;
+  unit: string;
+  source: 'direct' | 'sub-recipe';
+  path: string[];
+  depth: number;
+}

@@ -101,7 +101,12 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name });
       });
       // @event PURCHASE.SUPPLIER_CREATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name }, { userId, tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.SUPPLIER_CREATED',
+        module: PURCHASES_MODULE,
+        payload: { supplierId: id, name: input.name },
+        context: { userId, tenantId },
+      });
       return success(supplier);
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en createSupplier:', err);
@@ -138,7 +143,12 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id });
       });
       // @event PURCHASE.SUPPLIER_UPDATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.SUPPLIER_UPDATED',
+        module: PURCHASES_MODULE,
+        payload: { supplierId: id },
+        context: { tenantId },
+      });
       return success(toSupplier(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en updateSupplier:', err);
@@ -172,7 +182,12 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id });
       });
       // @event PURCHASE.SUPPLIER_DELETED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id }, { tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.SUPPLIER_DELETED',
+        module: PURCHASES_MODULE,
+        payload: { supplierId: id },
+        context: { tenantId },
+      });
       return success(undefined);
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en softDeleteSupplier:', err);
@@ -299,7 +314,12 @@ export const purchaseService = {
       });
 
       // @event PURCHASE.CREATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.CREATED', PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd }, { userId, tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.CREATED',
+        module: PURCHASES_MODULE,
+        payload: { orderId: id, supplierId: input.supplierId, totalUsd },
+        context: { userId, tenantId },
+      });
       return success(order);
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en createOrder:', err);
@@ -382,7 +402,12 @@ export const purchaseService = {
       });
 
       // @event PURCHASE.UPDATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.UPDATED', PURCHASES_MODULE, { orderId: id }, { userId, tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.UPDATED',
+        module: PURCHASES_MODULE,
+        payload: { orderId: id },
+        context: { userId, tenantId },
+      });
       return success(toOrder({ ...order, totalUsd } as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en updateOrder:', err);
@@ -406,7 +431,12 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id });
       });
       // @event PURCHASE.DELETED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id }, { tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.DELETED',
+        module: PURCHASES_MODULE,
+        payload: { orderId: id },
+        context: { tenantId },
+      });
       return success(undefined);
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en softDeleteOrder:', err);
@@ -434,7 +464,12 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id });
       });
       // @event PURCHASE.CONFIRMED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id }, { tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.CONFIRMED',
+        module: PURCHASES_MODULE,
+        payload: { orderId: id },
+        context: { tenantId },
+      });
       return success(toOrder(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en confirmOrder:', err);
@@ -636,7 +671,12 @@ export const purchaseService = {
         }
       });
 
-      await emitWithAudit('PURCHASE.RECEIVED', PURCHASES_MODULE, { orderId: id, status: newStatus }, { userId, tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.RECEIVED',
+        module: PURCHASES_MODULE,
+        payload: { orderId: id, status: newStatus },
+        context: { userId, tenantId },
+      });
       return success(toOrder({ ...order, status: newStatus, updatedAt: now } as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error('receiveOrder', 'Error:', err);
@@ -664,7 +704,12 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id });
       });
       // @event PURCHASE.CANCELLED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id }, { tenantId });
+      await emitWithAudit({
+        eventName: 'PURCHASE.CANCELLED',
+        module: PURCHASES_MODULE,
+        payload: { orderId: id },
+        context: { tenantId },
+      });
       return success(toOrder(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PURCHASES_MODULE, 'Error en cancelOrder:', err);

@@ -70,7 +70,7 @@ async function autoCloseRegister(
     (register.openingBalanceBs ?? 0) + register.totalSalesBs, 2,
   );
 
-  await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
+  await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
     await db.cashRegisters.update(register.id, {
       isOpen: false,
       closedBy: userId,
@@ -105,20 +105,25 @@ async function autoCloseRegister(
       declaredBs: expectedClosingBs,
       differenceBs: 0,
       autoClosed: true,
-    });
+    }, tx);
   });
 
-  await emitWithAudit(SystemEvents.BOX_CLOSED, MODULE_NAME, {
-    registerId: register.id,
-    tenantSlug: tenantId,
-    expectedBs: expectedClosingBs,
-    declaredBs: expectedClosingBs,
-    differenceBs: 0,
-    autoClosed: true,
-  }, {
-    userId,
-    tenantId,
-    tenantUuid,
+  await emitWithAudit({
+    eventName: SystemEvents.BOX_CLOSED,
+    module: MODULE_NAME,
+    payload: {
+      registerId: register.id,
+      tenantSlug: tenantId,
+      expectedBs: expectedClosingBs,
+      declaredBs: expectedClosingBs,
+      differenceBs: 0,
+      autoClosed: true,
+    },
+    context: {
+      userId,
+      tenantId,
+      tenantUuid,
+    },
   });
 
   // Push inmediato para sincronizar cierre automático a la nube
@@ -400,7 +405,7 @@ export const posService = {
         db.recipeLines,
         db.syncQueue,
         db.outbox,
-      ], async () => {
+      ], async (tx) => {
         await db.sales.add({
           id: saleId,
           tenantId,
@@ -675,7 +680,7 @@ export const posService = {
           paymentMethod,
           itemsCount: items.length,
           ...(discountBs > 0 && { discountBs, discountType, discountValue }),
-        });
+        }, tx);
 
         await emitWithAudit({
           eventName: 'SALE.COMPLETED',
@@ -828,7 +833,7 @@ export const posService = {
         updatedAt: now,
       };
 
-      await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
         await db.cashRegisters.add(register);
 
         await syncQueue.enqueue('cash_registers', 'CREATE', id, toSnake({
@@ -851,7 +856,7 @@ export const posService = {
           tenantSlug: tenantId,
           openingBalanceBs,
           openedBy: userId,
-        });
+        }, tx);
 
         await emitWithAudit({
           eventName: SystemEvents.BOX_OPENED,
@@ -1066,7 +1071,7 @@ export const posService = {
         return opened <= saleTs && (r.isOpen || closed >= saleTs);
       }) ?? allRegisters.find((r) => r.isOpen);
 
-      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });
 
         for (const item of items) {
@@ -1313,14 +1318,19 @@ export const posService = {
           } as unknown as Record<string, unknown>), tenantId);
         }
 
-        await outboxService.enqueue('SALE.VOIDED', MODULE_NAME, { saleId, tenantSlug: tenantId });
+        await outboxService.enqueue('SALE.VOIDED', MODULE_NAME, { saleId, tenantSlug: tenantId }, tx);
 
         await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
           id: saleId, tenant_id: tenantUuid, status: 'voided', voided_at: now,
         } as unknown as Record<string, unknown>), tenantId);
       });
 
-      await emitWithAudit('SALE.VOIDED', MODULE_NAME, { saleId, tenantSlug: tenantId }, { userId, tenantId, tenantUuid });
+      await emitWithAudit({
+        eventName: 'SALE.VOIDED',
+        module: MODULE_NAME,
+        payload: { saleId, tenantSlug: tenantId },
+        context: { userId, tenantId, tenantUuid },
+      });
       return success(undefined);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en voidSale:', err);
@@ -1361,7 +1371,7 @@ export const posService = {
     const differenceBs = Math.abs(rawDiff) <= MAX_CENTS_DIFFERENCE ? 0 : rawDiff;
 
     try {
-      await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
         await db.cashRegisters.update(cashReg.id, {
           isOpen: false,
           closedBy: userId,
@@ -1395,7 +1405,7 @@ export const posService = {
           expectedBs: expectedClosingBs,
           declaredBs: declaredClosingBalanceBs,
           differenceBs,
-        });
+        }, tx);
 
         await emitWithAudit({
           eventName: SystemEvents.BOX_CLOSED,

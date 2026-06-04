@@ -175,9 +175,14 @@ export const authService = {
       if (!subCheck.ok) return subCheck;
     }
 
-    await emitWithAudit('USER.LOGIN', 'AUTH', { email: sanitizedEmail, role: userSession.role, tenantSlug: userSession.tenantSlug }, {
-      userId: userSession.userId,
-      tenantUuid: userSession.tenantId ?? null,
+    await emitWithAudit({
+      eventName: 'USER.LOGIN',
+      module: 'AUTH',
+      payload: { email: sanitizedEmail, role: userSession.role, tenantSlug: userSession.tenantSlug },
+      context: {
+        userId: userSession.userId,
+        tenantUuid: userSession.tenantId ?? null,
+      },
     });
 
     return success(userSession);
@@ -213,9 +218,14 @@ export const authService = {
     const isAdmin = auditRole === 'admin';
 
     if (session) {
-      await emitWithAudit('USER.LOGOUT', 'AUTH', { email: session.user.email ?? '' }, {
-        userId: session.user.id,
-        tenantUuid: extractTenantId(session) ?? null,
+      await emitWithAudit({
+        eventName: 'USER.LOGOUT',
+        module: 'AUTH',
+        payload: { email: session.user.email ?? '' },
+        context: {
+          userId: session.user.id,
+          tenantUuid: extractTenantId(session) ?? null,
+        },
       });
     }
 

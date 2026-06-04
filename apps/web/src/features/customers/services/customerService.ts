@@ -137,12 +137,12 @@ export const customerService = {
         });
       });
 
-      await emitWithAudit(
-        'CUSTOMER.CREATED',
-        MODULE_NAME,
-        { customerId: id, name: customer.name },
-        { tenantId },
-      );
+      await emitWithAudit({
+        eventName: 'CUSTOMER.CREATED',
+        module: MODULE_NAME,
+        payload: { customerId: id, name: customer.name },
+        context: { tenantId },
+      });
       return success(customer);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en createCustomer:', err);
@@ -217,12 +217,12 @@ export const customerService = {
         await outboxService.enqueue('CUSTOMER.UPDATED', MODULE_NAME, { customerId: id });
       });
 
-      await emitWithAudit(
-        'CUSTOMER.UPDATED',
-        MODULE_NAME,
-        { customerId: id, name: updated.name },
-        { tenantId },
-      );
+      await emitWithAudit({
+        eventName: 'CUSTOMER.UPDATED',
+        module: MODULE_NAME,
+        payload: { customerId: id, name: updated.name },
+        context: { tenantId },
+      });
       return success(toCustomer(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en updateCustomer:', err);
@@ -275,12 +275,12 @@ export const customerService = {
         await outboxService.enqueue('CUSTOMER.DELETED', MODULE_NAME, { customerId: id });
       });
 
-      await emitWithAudit(
-        'CUSTOMER.DELETED',
-        MODULE_NAME,
-        { customerId: id, name: customer.name },
-        { tenantId },
-      );
+      await emitWithAudit({
+        eventName: 'CUSTOMER.DELETED',
+        module: MODULE_NAME,
+        payload: { customerId: id, name: customer.name },
+        context: { tenantId },
+      });
       return success(undefined);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en softDeleteCustomer:', err);

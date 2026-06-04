@@ -8,7 +8,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
-import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability } from '../types';
+import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
 
 /**
  * Convierte la cantidad de un ingrediente (en la unidad declarada en la receta)
@@ -27,6 +27,136 @@ function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit: string
 import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder } from '../../../services/dexie/db';
 
 const PRODUCTION_MODULE = 'PRODUCTION';
+
+// PRODUCTION-001: Límite máximo de profundidad de recursión para sub-recetas
+const MAX_RECIPE_DEPTH = 5;
+
+// PRODUCTION-001-001: Función pura para expandir una receta en ingredientes base con DFS
+export async function expandRecipe(
+  recipeId: string,
+  multiplier: number,
+  visited: Set<string> = new Set(),
+  depth: number = 1,
+): Promise<Result<ExpandedRecipeLine[], AppError>> {
+  if (depth > MAX_RECIPE_DEPTH) {
+    return failure(new AppError(
+      ProductionErrors.RECIPE_MAX_DEPTH_EXCEEDED,
+      `La receta anida ${depth} niveles. Máximo permitido: ${MAX_RECIPE_DEPTH}.`,
+    ));
+  }
+
+  if (visited.has(recipeId)) {
+    return failure(new AppError(
+      ProductionErrors.RECIPE_CYCLE_DETECTED,
+      'Esta receta forma un ciclo. No se puede expandir.',
+    ));
+  }
+
+  const db = getDb();
+  const recipe = await db.recipes.get(recipeId);
+  if (!recipe || recipe.deletedAt) {
+    return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
+  }
+  if (!recipe.isActive) {
+    return failure(new AppError(ProductionErrors.RECIPE_INACTIVE, 'La receta está inactiva.'));
+  }
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(recipeId);
+
+  const lines = await db.recipeLines
+    .where({ recipeId })
+    .filter((l) => !l.deletedAt)
+    .toArray();
+
+  const result: ExpandedRecipeLine[] = [];
+
+  for (const line of lines) {
+    const product = await db.products.get(line.productId);
+    if (!product || product.deletedAt) {
+      return failure(new AppError(
+        ProductionErrors.SUB_RECIPE_NOT_FOUND,
+        `Sub-receta no encontrada para el producto: ${line.productId}`,
+      ));
+    }
+
+    const isSubRecipe = product.productType === 'producto_terminado';
+    let subRecipe: DexieRecipe | undefined;
+    if (isSubRecipe) {
+      // Buscar receta activa O inactiva para detectar ambos casos
+      const candidates = await db.recipes
+        .where({ productId: line.productId })
+        .filter((r) => !r.deletedAt)
+        .toArray();
+      subRecipe = candidates[0];
+    }
+
+    if (subRecipe) {
+      if (!subRecipe.isActive) {
+        return failure(new AppError(
+          ProductionErrors.SUB_RECIPE_INACTIVE,
+          `La sub-receta "${product.name}" está inactiva. Actívala o usa otra.`,
+        ));
+      }
+      const subMultiplier = line.quantity * multiplier;
+      const subResult = await expandRecipe(subRecipe.id, subMultiplier, nextVisited, depth + 1);
+      if (!subResult.ok) return subResult;
+      result.push(...subResult.data);
+    } else {
+      result.push({
+        productId: line.productId,
+        quantity: line.quantity * multiplier,
+        unit: line.unit,
+        source: depth === 1 ? 'direct' : 'sub-recipe',
+        path: [...Array.from(nextVisited), line.productId],
+        depth,
+      });
+    }
+  }
+
+  return success(result);
+}
+
+// PRODUCTION-001-002: Validación de ciclos con DFS pre-guardado
+export async function validateCycles(
+  productId: string,
+  lines: Array<{ productId: string; quantity: number; unit: string }>,
+): Promise<Result<true, AppError>> {
+  const db = getDb();
+  const visited = new Set<string>([productId]);
+  const stack: Array<{ pid: string; lines: typeof lines }> = [{ pid: productId, lines }];
+
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    if (current.lines.length === 0) continue;
+
+    for (const line of current.lines) {
+      if (visited.has(line.productId)) {
+        return failure(new AppError(
+          ProductionErrors.RECIPE_CYCLE_DETECTED,
+          `No se puede guardar: la receta forma un ciclo. "${line.productId}" ya fue visitado.`,
+        ));
+      }
+
+      const subRecipe = await db.recipes
+        .where({ productId: line.productId })
+        .filter((r) => !r.deletedAt && r.isActive)
+        .first();
+
+      if (subRecipe) {
+        visited.add(line.productId);
+        const subLines = await db.recipeLines
+          .where({ recipeId: subRecipe.id })
+          .filter((l) => !l.deletedAt)
+          .toArray();
+        const nextLines = subLines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit }));
+        stack.push({ pid: line.productId, lines: nextLines });
+      }
+    }
+  }
+
+  return success(true);
+}
 
 function toRecipe(raw: Record<string, unknown>): Recipe {
   return {
@@ -142,8 +272,16 @@ export const productionService = {
       if (!ingredient || ingredient.deletedAt) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
       }
-      if (ingredient.productType && ingredient.productType === 'producto_terminado') {
-        return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
+      // PRODUCTION-001-003: Permitir producto_terminado SI tiene receta activa (sub-receta)
+      if (ingredient.productType === 'producto_terminado') {
+        const hasSubRecipe = await db.recipes
+          .where({ productId: ingredient.id })
+          .filter((r) => !r.deletedAt && r.isActive)
+          .first();
+        if (!hasSubRecipe) {
+          return failure(new AppError(ProductionErrors.SUB_RECIPE_NOT_FOUND, `"${ingredient.name}" es un producto terminado sin receta activa. Crea una receta para este producto o usa otra materia prima.`));
+        }
+        continue;
       }
       if (ingredient.stock <= 0) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
@@ -186,7 +324,7 @@ export const productionService = {
 
     try {
       const ev = emitWithPersistence('PRODUCTION.CREATED', PRODUCTION_MODULE, { recipeId, name: input.name, productId: input.productId }, { userId, tenantId });
-      await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
         await db.recipes.add(recipe);
         await syncQueue.enqueue('recipes', 'CREATE', recipeId, toSnake(recipe as unknown as Record<string, unknown>), tenantId);
 
@@ -195,7 +333,7 @@ export const productionService = {
           await syncQueue.enqueue('recipe_lines', 'CREATE', line.id, toSnake(line as unknown as Record<string, unknown>), tenantId);
         }
 
-        await ev.enqueueInTransaction();
+        await ev.enqueueInTransaction(tx);
       });
 
       await ev.auditAfterTransaction();
@@ -238,8 +376,16 @@ export const productionService = {
           if (!ingredient || ingredient.deletedAt) {
             return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
           }
-          if (ingredient.productType && ingredient.productType === 'producto_terminado') {
-            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_TYPE_INVALID, `"${ingredient.name}" es un producto terminado, no puede usarse como ingrediente.`));
+          // PRODUCTION-001-003: Permitir producto_terminado SI tiene receta activa
+          if (ingredient.productType === 'producto_terminado') {
+            const hasSubRecipe = await db.recipes
+              .where({ productId: ingredient.id })
+              .filter((r) => !r.deletedAt && r.isActive)
+              .first();
+            if (!hasSubRecipe) {
+              return failure(new AppError(ProductionErrors.SUB_RECIPE_NOT_FOUND, `"${ingredient.name}" es un producto terminado sin receta activa.`));
+            }
+            continue;
           }
           if (ingredient.stock <= 0) {
             return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
@@ -269,7 +415,7 @@ export const productionService = {
 
     try {
       const ev = emitWithPersistence('PRODUCTION.UPDATED', PRODUCTION_MODULE, { recipeId: id, changes: Object.keys(input) }, { userId: undefined, tenantId });
-      await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
         await db.recipes.put(updated);
         await syncQueue.enqueue('recipes', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
 
@@ -325,7 +471,7 @@ export const productionService = {
           }
         }
 
-        await ev.enqueueInTransaction();
+        await ev.enqueueInTransaction(tx);
       });
 
       await ev.auditAfterTransaction();
@@ -364,7 +510,7 @@ export const productionService = {
 
     try {
       const ev = emitWithPersistence('PRODUCTION.DELETED', PRODUCTION_MODULE, { recipeId: id, cascadeLines: lines.length }, { userId: undefined, tenantId });
-      await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
         for (const line of lines) {
           await db.recipeLines.update(line.id, { deletedAt });
           await syncQueue.enqueue('recipe_lines', 'DELETE', line.id, { id: line.id, deleted_at: deletedAt }, tenantId);
@@ -372,7 +518,7 @@ export const productionService = {
 
         await db.recipes.update(id, { deletedAt });
         await syncQueue.enqueue('recipes', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-        await ev.enqueueInTransaction();
+        await ev.enqueueInTransaction(tx);
       });
 
       await ev.auditAfterTransaction();
@@ -462,16 +608,16 @@ export const productionService = {
         return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
       }
 
-      const lines = await db.recipeLines
-        .where({ recipeId })
-        .filter((l) => !l.deletedAt)
-        .toArray();
+      // PRODUCTION-001-005: Expandir receta para resolver sub-recetas
+      const expandResult = await expandRecipe(recipeId, batchCount);
+      if (!expandResult.ok) return expandResult;
+      const expandedLines = expandResult.data;
 
       const wasteMultiplier = 1 + (recipe.wastePct / 100);
       const result: IngredientAvailability[] = [];
 
-      for (const line of lines) {
-        const needed = Math.ceil(line.quantity * batchCount * wasteMultiplier);
+      for (const line of expandedLines) {
+        const needed = Math.ceil(line.quantity * wasteMultiplier);
         const product = await db.products.get(line.productId);
         const available = product ? product.stock : 0;
         const productName = product ? product.name : 'Desconocido';
@@ -504,20 +650,20 @@ export const productionService = {
         return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
       }
 
-      const lines = await db.recipeLines
-        .where({ recipeId })
-        .filter((l) => !l.deletedAt)
-        .toArray();
+      // PRODUCTION-001-004: Expandir receta para resolver sub-recetas
+      const expandResult = await expandRecipe(recipeId, batchCount);
+      if (!expandResult.ok) return expandResult;
+      const expandedLines = expandResult.data;
 
-      if (lines.length === 0) {
+      if (expandedLines.length === 0) {
         return failure(new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, 'La receta no tiene ingredientes para calcular costo.'));
       }
 
       const wasteMultiplier = 1 + (recipe.wastePct / 100);
       let totalCost = 0;
 
-      for (const line of lines) {
-        const needed = line.quantity * batchCount * wasteMultiplier;
+      for (const line of expandedLines) {
+        const needed = line.quantity * wasteMultiplier;
         const product = await db.products.get(line.productId);
         if (product && product.costPrice != null && product.costPrice > 0) {
           const costPerStorageUnit = product.isWeighted
@@ -572,13 +718,12 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.ORDER_BATCH_COUNT_INVALID, 'Debes producir al menos 1 lote.'));
     }
 
-    // 2. Get recipe lines
-    const lines = await db.recipeLines
-      .where({ recipeId: input.recipeId })
-      .filter((l) => !l.deletedAt)
-      .toArray();
+    // 2. Get recipe lines (PRODUCTION-001-007: usar expandRecipe para resolver sub-recetas)
+    const expandResult = await expandRecipe(input.recipeId, input.batchCount);
+    if (!expandResult.ok) return expandResult;
+    const expandedLines = expandResult.data;
 
-    if (lines.length === 0) {
+    if (expandedLines.length === 0) {
       return failure(new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, 'La receta no tiene ingredientes.'));
     }
 
@@ -587,8 +732,8 @@ export const productionService = {
     const quantityTarget = recipe.yieldQuantity * input.batchCount;
 
     // 4. Check ingredient availability
-    for (const line of lines) {
-      const needed = Math.ceil(line.quantity * input.batchCount * wasteMultiplier);
+    for (const line of expandedLines) {
+      const needed = Math.ceil(line.quantity * wasteMultiplier);
       const product = await db.products.get(line.productId);
       if (!product || product.stock < needed) {
         const productName = product?.name || 'Desconocido';
@@ -604,8 +749,8 @@ export const productionService = {
 
     // 5. Calculate cost of ingredients consumed
     let totalIngredientCost = 0;
-    for (const line of lines) {
-      const needed = Math.ceil(line.quantity * input.batchCount * wasteMultiplier);
+    for (const line of expandedLines) {
+      const needed = Math.ceil(line.quantity * wasteMultiplier);
       const product = await db.products.get(line.productId);
       if (product && product.costPrice != null) {
         const costPerStorageUnit = product.isWeighted
@@ -620,8 +765,8 @@ export const productionService = {
 
     // 6. Atomic transaction
     // Re-validate stock right before transaction (concurrency guard)
-    for (const line of lines) {
-      const needed = Math.ceil(line.quantity * input.batchCount * wasteMultiplier);
+    for (const line of expandedLines) {
+      const needed = Math.ceil(line.quantity * wasteMultiplier);
       const freshProduct = await db.products.get(line.productId);
       if (!freshProduct || freshProduct.stock < needed) {
         const productName = freshProduct?.name || 'Desconocido';
@@ -648,7 +793,7 @@ export const productionService = {
       await db.transaction('rw', [
         db.productionOrders, db.products, db.inventoryMovements,
         db.inventoryLots, db.syncQueue, db.outbox,
-      ], async () => {
+      ], async (tx) => {
         // a. Create production order
         const order: DexieProductionOrder = {
           id: orderId,
@@ -668,9 +813,9 @@ export const productionService = {
         await db.productionOrders.add(order);
         await syncQueue.enqueue('production_orders', 'CREATE', orderId, toSnake(order as unknown as Record<string, unknown>), tenantId);
 
-        // b. Consume ingredients
-        for (const line of lines) {
-          const needed = Math.ceil(line.quantity * input.batchCount * wasteMultiplier);
+        // b. Consume ingredients (PRODUCTION-001-007: usa expandedLines para sub-recetas)
+        for (const line of expandedLines) {
+          const needed = Math.ceil(line.quantity * wasteMultiplier);
           const product = await db.products.get(line.productId);
           if (!product) throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado.');
 
@@ -750,7 +895,7 @@ export const productionService = {
         }
 
         // d. Outbox event
-        await ev.enqueueInTransaction();
+        await ev.enqueueInTransaction(tx);
       });
 
       // 7. Audit event
@@ -793,7 +938,7 @@ export const productionService = {
       await db.transaction('rw', [
         db.productionOrders, db.products, db.inventoryMovements,
         db.inventoryLots, db.syncQueue, db.outbox,
-      ], async () => {
+      ], async (tx) => {
         // Revert ingredient consumption
         const recipe = await db.recipes.get(order.recipeId);
         if (recipe) {
@@ -871,7 +1016,7 @@ export const productionService = {
         // Update order status
         await db.productionOrders.update(orderId, { status: 'cancelled', updatedAt: now });
         await syncQueue.enqueue('production_orders', 'UPDATE', orderId, { id: orderId, status: 'cancelled', updated_at: now }, tenantId);
-        await ev.enqueueInTransaction();
+        await ev.enqueueInTransaction(tx);
       });
 
       await ev.auditAfterTransaction();
@@ -930,12 +1075,12 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.ASSEMBLY_NO_RECIPE, `Producto no tiene receta de ensamblaje.`));
     }
 
-    const recipeLines = await db.recipeLines
-      .where({ recipeId: recipe.id })
-      .filter(l => !l.deletedAt)
-      .toArray();
+    // PRODUCTION-001-006: Expandir receta para resolver sub-recetas
+    const expandResult = await expandRecipe(recipe.id, quantity);
+    if (!expandResult.ok) return expandResult;
+    const expandedLines = expandResult.data;
 
-    if (recipeLines.length === 0) {
+    if (expandedLines.length === 0) {
       return failure(new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, `La receta de ensamblaje no tiene ingredientes.`));
     }
 
@@ -943,10 +1088,10 @@ export const productionService = {
     let totalIngredientCost = 0;
     const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = [];
 
-    for (const line of recipeLines) {
-      const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
+    for (const line of expandedLines) {
+      const needed = Math.ceil(line.quantity * wasteMultiplier);
       const ingredient = await db.products.get(line.productId);
-      
+
       if (!ingredient) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado.`));
       }
@@ -997,7 +1142,7 @@ export const productionService = {
 
       const movementId = generateId();
       const reasonType = isInsufficient ? 'ajuste_manual' : 'consumo_interno';
-      
+
       await db.inventoryMovements.add({
         id: movementId,
         tenantId,

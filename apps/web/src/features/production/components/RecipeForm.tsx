@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChefHat, Plus, Trash2, AlertTriangle, Info } from 'lucide-react';
+import { ChefHat, Plus, Trash2, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button, Card, Modal, Input, SearchableSelect, Spinner } from '../../../common/components';
 import { useRecipeForm } from '../hooks/useRecipeForm';
 import { useProductionStore } from '../stores/productionStore';
@@ -19,12 +19,14 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
     updateField, addLine, updateLine, removeLine,
     validate, toInput,
     getAvailableIngredients, getAvailableProducts,
+    getExpandPreview,
   } = useRecipeForm();
 
   const { createRecipe, updateRecipe, getRecipeWithLines } = useProductionStore();
   const { addToast } = useToastStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(!!recipe);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Load existing recipe data
   useEffect(() => {
@@ -78,10 +80,14 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
     label: `${p.name} (${p.sku})`,
   }));
 
-  const handleSubmit = async () => {
-    if (!validate() || !tenantId || !userId) return;
+  // PRODUCTION-001-012: Preview de líneas con distinción de sub-recetas
+  const previewLines = getExpandPreview(form.lines);
+  const hasSubRecipes = previewLines.some((l) => l.isSubRecipe);
 
-    const input = toInput();
+  const handleSubmit = async () => {
+    if (!(await validate()) || !tenantId || !userId) return;
+
+    const input = await toInput();
     if (!input) return;
 
     setIsSubmitting(true);
@@ -251,21 +257,29 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           )}
 
           <div className="space-y-2">
-            {form.lines.map((line, index) => (
-              <Card key={index} className="p-3">
-                <div className="flex items-start gap-2">
-                  <div className="flex-1 space-y-2">
-                    <div>
-                      <SearchableSelect
-                        options={ingredientOptions}
-                        value={line.productId}
-                        onChange={(value) => updateLine(index, 'productId', value)}
-                        placeholder="Ingrediente"
-                      />
-                      {errors[`line_${index}_product`] && (
-                        <p className="text-xs text-danger mt-1">{errors[`line_${index}_product`]}</p>
-                      )}
-                    </div>
+            {form.lines.map((line, index) => {
+              const preview = previewLines[index];
+              return (
+                <Card key={index} className="p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <SearchableSelect
+                          options={ingredientOptions}
+                          value={line.productId}
+                          onChange={(value) => updateLine(index, 'productId', value)}
+                          placeholder="Ingrediente"
+                        />
+                        {/* PRODUCTION-001-013: Badge "Sub-receta" para producto_terminado */}
+                        {preview?.isSubRecipe && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
+                            Sub-receta
+                          </span>
+                        )}
+                        {errors[`line_${index}_product`] && (
+                          <p className="text-xs text-danger mt-1">{errors[`line_${index}_product`]}</p>
+                        )}
+                      </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Input
                         type="number"
@@ -297,13 +311,66 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   </Button>
                 </div>
               </Card>
-            ))}
+              );
+            })}
           </div>
 
           {form.lines.length === 0 && (
             <p className="text-xs text-gray-500 text-center py-4">
               Agrega al menos un ingrediente
             </p>
+          )}
+
+          {/* PRODUCTION-001-014: Card collapsable con preview expandido */}
+          {form.lines.length > 0 && (
+            <div className="mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPreview(!showPreview)}
+                className="w-full flex items-center justify-between"
+              >
+                <span className="text-sm font-medium text-gray-700">
+                  {showPreview ? 'Ocultar' : 'Ver'} preview de expansión
+                  {hasSubRecipes && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
+                      {previewLines.filter((l) => l.isSubRecipe).length} sub-receta(s)
+                    </span>
+                  )}
+                </span>
+                {showPreview ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </Button>
+
+              {showPreview && (
+                <Card className="mt-2 p-3 bg-gray-50">
+                  <ul className="space-y-1.5 text-xs">
+                    {previewLines.map((preview) => (
+                      <li
+                        key={preview.index}
+                        className="flex items-center justify-between gap-2 p-2 bg-white rounded border border-gray-200"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="font-mono text-gray-500 shrink-0">#{preview.index + 1}</span>
+                          <span className="truncate font-medium text-gray-700">{preview.productName}</span>
+                          {preview.isSubRecipe && (
+                            <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
+                              Sub-receta
+                            </span>
+                          )}
+                        </div>
+                        <span className="shrink-0 text-gray-600">
+                          {preview.quantity} {preview.unit}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[11px] text-gray-500 italic">
+                    El preview muestra las líneas tal como se guardarán. La expansión completa (con ingredientes base)
+                    se calculará al ejecutar la receta.
+                  </p>
+                </Card>
+              )}
+            </div>
           )}
         </div>
 

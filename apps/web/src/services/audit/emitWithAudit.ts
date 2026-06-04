@@ -1,6 +1,10 @@
+import type { Table } from 'dexie';
 import { EventBus } from '@logiscore/core';
+import type { OutboxEntry } from '@logiscore/core';
 import { logAuditEvent } from './auditService';
 import { outboxService } from '../outbox/outboxService';
+
+type OutboxTxScope = { outbox: Table<OutboxEntry, number> };
 
 let auditFailureCount = 0;
 let lastFailureAlert = 0;
@@ -32,7 +36,7 @@ export interface EmitAuditParams {
  *  Esta función solo registra auditoría no crítica. */
 export async function emitWithAudit(
   params: EmitAuditParams,
-  tx?: any,
+  tx?: OutboxTxScope,
 ): Promise<void> {
   const { eventName, module, payload, context } = params;
 
@@ -71,7 +75,7 @@ export async function emitWithAudit(
  *  para usar dentro/fuera de la transacción Dexie respectivamente.
  *  Uso:
  *    const ev = emitWithPersistence('SALE.C', 'POS', {...}, {...});
- *    await db.transaction(... async () => { await ev.enqueueInTransaction(); });
+ *    await db.transaction(... async (tx) => { await ev.enqueueInTransaction(tx); });
  *    await ev.auditAfterTransaction();
  */
 export function emitWithPersistence(
@@ -85,7 +89,7 @@ export function emitWithPersistence(
   },
 ) {
   return {
-    enqueueInTransaction: (tx) => outboxService.enqueueInTransaction(tx, eventName, module, payload),
-    auditAfterTransaction: () => emitWithAudit(eventName, module, payload, context),
+    enqueueInTransaction: (tx: OutboxTxScope) => outboxService.enqueueInTransaction(tx, eventName, module, payload),
+    auditAfterTransaction: () => emitWithAudit({ eventName, module, payload, context }),
   };
 }

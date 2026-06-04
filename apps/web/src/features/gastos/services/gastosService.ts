@@ -122,7 +122,12 @@ export const gastosService = {
         await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category });
       });
       // AUDIT-CRUD-006: audit post-tx (outbox único emisor per Regla #17)
-      await emitWithAudit('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category }, { userId, tenantId });
+      await emitWithAudit({
+        eventName: 'EXPENSES.CREATED',
+        module: 'gastos',
+        payload: { expenseId: expense.id, category: expense.category },
+        context: { userId, tenantId },
+      });
       return success(mapExpense(expense));
     } catch (err) {
       console.error('[gastosService.create]', err);
@@ -170,7 +175,12 @@ export const gastosService = {
         await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
       });
       // AUDIT-CRUD-007: audit post-tx
-      await emitWithAudit('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) }, { userId: undefined, tenantId });
+      await emitWithAudit({
+        eventName: 'EXPENSES.UPDATED',
+        module: 'gastos',
+        payload: { expenseId: id, changes: Object.keys(data) },
+        context: { userId: undefined, tenantId },
+      });
       const result = await db.expenses.get(id);
       return success(mapExpense(result!));
     } catch (err) {
@@ -198,7 +208,12 @@ export const gastosService = {
         await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
       });
       // AUDIT-CRUD-008: audit post-tx
-      await emitWithAudit('EXPENSES.DELETED', 'gastos', { expenseId: id }, { userId: undefined, tenantId });
+      await emitWithAudit({
+        eventName: 'EXPENSES.DELETED',
+        module: 'gastos',
+        payload: { expenseId: id },
+        context: { userId: undefined, tenantId },
+      });
       return success(undefined);
     } catch (err) {
       console.error('[gastosService.remove]', err);
@@ -313,7 +328,12 @@ export const gastosService = {
 
       // AUDIT-CRUD-010: audit post-tx
       if (generated.length > 0) {
-        await emitWithAudit('EXPENSES.RECURRING_GENERATED', 'gastos', { count: generated.length, date: today }, { userId: undefined, tenantId });
+        await emitWithAudit({
+          eventName: 'EXPENSES.RECURRING_GENERATED',
+          module: 'gastos',
+          payload: { count: generated.length, date: today },
+          context: { userId: undefined, tenantId },
+        });
       }
 
       return success({ generated, upcoming });
@@ -369,7 +389,12 @@ export const gastosService = {
         }
       });
       // AUDIT-CRUD-009: audit post-tx
-      await emitWithAudit('EXPENSES.CANCELLED', 'gastos', { templateId, occurrenceDate, cancelledCount: instances.length }, { userId: undefined, tenantId });
+      await emitWithAudit({
+        eventName: 'EXPENSES.CANCELLED',
+        module: 'gastos',
+        payload: { templateId, occurrenceDate, cancelledCount: instances.length },
+        context: { userId: undefined, tenantId },
+      });
 
       return success(undefined);
     } catch (err) {
