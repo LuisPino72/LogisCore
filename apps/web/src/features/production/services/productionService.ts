@@ -530,8 +530,8 @@ export const productionService = {
   },
 
   async getRecipes(tenantId: string, filters?: { query?: string; mode?: string; isActive?: boolean }): Promise<Result<Recipe[], AppError>> {
-    const db = getDb();
     try {
+      const db = getDb();
       let rows = await db.recipes
         .where({ tenantId })
         .filter((r) => !r.deletedAt)
@@ -1031,8 +1031,8 @@ export const productionService = {
     tenantId: string,
     filters?: { status?: string; recipeId?: string },
   ): Promise<Result<ProductionOrder[], AppError>> {
-    const db = getDb();
     try {
+      const db = getDb();
       let rows = await db.productionOrders
         .where({ tenantId })
         .filter((o) => !o.deletedAt)

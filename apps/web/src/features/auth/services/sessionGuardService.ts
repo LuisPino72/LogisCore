@@ -101,7 +101,15 @@ class SessionGuardService {
   async release(): Promise<void> {
     const token = this.getSessionToken();
     if (token) {
-      await supabase.rpc('release_active_session', { p_session_token: token });
+      try {
+        await supabase.rpc('release_active_session', { p_session_token: token });
+      } catch (err) {
+        // BUGFIX-LOGOUT-003: Si el RPC falla (red, timeout), la limpieza
+        // local debe ocurrir de todos modos. Si dejamos el throw, signOut()
+        // se aborta antes de llamar supabase.auth.signOut({ scope: 'global' })
+        // y la sesión zombie queda viva en el servidor.
+        console.debug('[SessionGuard] release_active_session RPC failed — continuing with local cleanup', err);
+      }
     }
     this.clearToken();
   }

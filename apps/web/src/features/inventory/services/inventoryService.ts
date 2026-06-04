@@ -979,36 +979,41 @@ export const inventoryService = {
   },
 
   async getCategories(tenantId: string): Promise<Result<Category[], AppError>> {
-    const db = getDb();
-    let rows = await db.categories
-      .where({ tenantId })
-      .filter((c) => !c.deletedAt)
-      .toArray();
+    try {
+      const db = getDb();
+      let rows = await db.categories
+        .where({ tenantId })
+        .filter((c) => !c.deletedAt)
+        .toArray();
 
-    // If local is empty, try pulling from Supabase filtering by tenant UUID
-    if (rows.length === 0) {
-      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
-      // AUDIT-FLOW-5-005: UNION de categorías del tenant + predefinidas globales (tenant_id NULL).
-      // Antes: solo filtraba por tenant_uuid, perdiendo categorías predefinidas visibles para todos.
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .or(`tenant_id.eq.${tenantUuid},tenant_id.is.null`)
-        .is('deleted_at', null);
+      // If local is empty, try pulling from Supabase filtering by tenant UUID
+      if (rows.length === 0) {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+        // AUDIT-FLOW-5-005: UNION de categorías del tenant + predefinidas globales (tenant_id NULL).
+        // Antes: solo filtraba por tenant_uuid, perdiendo categorías predefinidas visibles para todos.
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .or(`tenant_id.eq.${tenantUuid},tenant_id.is.null`)
+          .is('deleted_at', null);
 
-      if (!error && data && data.length > 0) {
-        for (const cat of data) {
-          const localCat = {
-            id: cat.id, tenantId,
-            name: cat.name, isPredefined: cat.is_predefined,
-          };
-          await db.categories.put(localCat);
+        if (!error && data && data.length > 0) {
+          for (const cat of data) {
+            const localCat = {
+              id: cat.id, tenantId,
+              name: cat.name, isPredefined: cat.is_predefined,
+            };
+            await db.categories.put(localCat);
+          }
+          rows = data.map((d) => ({ id: d.id, name: d.name, isPredefined: d.is_predefined, tenantId }));
         }
-        rows = data.map((d) => ({ id: d.id, name: d.name, isPredefined: d.is_predefined, tenantId }));
       }
-    }
 
-    return success(rows.map((r) => toCategory(r as unknown as Record<string, unknown>)));
+      return success(rows.map((r) => toCategory(r as unknown as Record<string, unknown>)));
+    } catch (err) {
+      logger.error(INVENTORY_MODULE, 'Error en getCategories:', err);
+      return failure(new AppError(InventoryErrors.CATEGORY_LIST_FAILED, 'Error al listar categorías.'));
+    }
   },
 
   async deleteCategory(id: string, tenantId: string): Promise<Result<void, AppError>> {

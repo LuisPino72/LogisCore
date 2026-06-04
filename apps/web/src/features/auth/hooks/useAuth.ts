@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore, type AuthStatus } from '../stores/authStore';
 import { authService } from '../services/authService';
 
@@ -10,10 +10,13 @@ export function useAuth(): {
   role: string | null;
 } {
   const { status, session, setLoading, setSession, clearSession } = useAuthStore();
+  const bootstrappedRef = useRef(false);
 
   useEffect(() => {
+    if (bootstrappedRef.current) return;
     if (status !== 'idle') return;
 
+    bootstrappedRef.current = true;
     setLoading();
 
     authService
@@ -33,11 +36,11 @@ export function useAuth(): {
             clearSession(result.error.message);
           }
         }
+      })
+      .catch((err: unknown) => {
+        clearSession(err instanceof Error ? err.message : 'Error desconocido');
+        bootstrappedRef.current = false;
       });
-
-    return () => {
-      authService.stopSync();
-    };
   }, [status, setLoading, setSession, clearSession]);
 
   return {

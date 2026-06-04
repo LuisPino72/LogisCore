@@ -1,11 +1,11 @@
-import { type UserSession, AppError, Result, success, failure } from '@logiscore/core';
+import { type UserSession, AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { initDb, setDbClosing, getDb, isDbReady, resetDbInstance } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { SyncTableConfig } from '../../../services/sync/types';
-import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { logAuditEvent } from '../../../services/audit/auditService';
 import { outboxProcessor } from '../../../services/outbox/outboxProcessor';
 import { sessionGuard } from './sessionGuardService';
 import { offlineGrace } from './offlineGraceService';
@@ -157,9 +157,20 @@ export const authService = {
 
     if (!isAdmin) {
       sessionGuard.generateSessionToken();
-      const claimResult = await sessionGuard.claim(false);
+      let claimResult = await sessionGuard.claim(false);
+      // BUGFIX-LOGOUT-004: Si el claim falla con SESSION_ALREADY_ACTIVE,
+      // es probable que haya una fila zombie en active_sessions del signOut
+      // anterior (cuando el RPC release falló o no completó). Forzamos un
+      // release y reintentamos el claim una vez antes de abortar.
+      if (!claimResult.ok && claimResult.error.code === 'AUTH_SESSION_ACTIVE') {
+        await sessionGuard.release();
+        sessionGuard.generateSessionToken();
+        claimResult = await sessionGuard.claim(false);
+      }
       if (!claimResult.ok) {
-        await supabase.auth.signOut();
+        // BUGFIX-LOGOUT-005: signOut con scope 'global' explícito para
+        // limpiar tokens en servidor, no solo cookies locales.
+        await supabase.auth.signOut({ scope: 'global' });
         return claimResult;
       }
     }
@@ -175,14 +186,12 @@ export const authService = {
       if (!subCheck.ok) return subCheck;
     }
 
-    await emitWithAudit({
+    await logAuditEvent({
       eventName: 'USER.LOGIN',
       module: 'AUTH',
+      userId: userSession.userId,
+      tenantUuid: userSession.tenantId ?? null,
       payload: { email: sanitizedEmail, role: userSession.role, tenantSlug: userSession.tenantSlug },
-      context: {
-        userId: userSession.userId,
-        tenantUuid: userSession.tenantId ?? null,
-      },
     });
 
     return success(userSession);
@@ -218,14 +227,12 @@ export const authService = {
     const isAdmin = auditRole === 'admin';
 
     if (session) {
-      await emitWithAudit({
+      await logAuditEvent({
         eventName: 'USER.LOGOUT',
         module: 'AUTH',
+        userId: session.user.id,
+        tenantUuid: extractTenantId(session) ?? null,
         payload: { email: session.user.email ?? '' },
-        context: {
-          userId: session.user.id,
-          tenantUuid: extractTenantId(session) ?? null,
-        },
       });
     }
 
@@ -284,7 +291,16 @@ export const authService = {
     // Resetear referencia para que initDb() cree una nueva instancia en el próximo login
     resetDbInstance();
     TenantTranslator.clearCache();
-    await supabase.auth.signOut({ scope: 'local' });
+    // BUGFIX-LOGOUT-002: scope 'global' en vez de 'local' para invalidar
+    // el refresh token en el servidor. Con 'local', el token zombie queda
+    // vivo en Supabase y el próximo login rebota con "esa cuenta está
+    // iniciada". Con 'global' se cierran TODAS las sesiones del usuario.
+    await supabase.auth.signOut({ scope: 'global' });
+    // BUGFIX-LOGOUT-001: emitir USER_LOGOUT al EventBus directamente.
+    // El emitWithAudit de arriba encola en outbox, pero stopSync() ya mató
+    // el outboxProcessor que lo procesa. Sin esta emisión, el listener de
+    // App.tsx:389 nunca dispara clearSession() y la UI queda zombie.
+    EventBus.emit(SystemEvents.USER_LOGOUT);
     return success(undefined);
   },
 
