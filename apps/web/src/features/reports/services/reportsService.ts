@@ -129,6 +129,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
           productName: i.productName,
           productSku: i.productSku,
           quantity: i.quantity,
+          unitMultiplier: i.unitMultiplier,
           unitPriceUsd: i.unitPriceUsd,
           costUsdPerUnit: i.costUsdPerUnit,
         })),
@@ -190,6 +191,10 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
   } catch {
     return [];
   }
+}
+
+function effectiveItemQuantity(item: { quantity: number; unitMultiplier?: number }): number {
+  return item.quantity * (item.unitMultiplier ?? 1);
 }
 
 function calcItemCostBs(quantity: number, costUsdPerUnit: number | undefined, exchangeRate: number): number {
@@ -308,7 +313,7 @@ export const reportsService = {
         }
         for (const item of items) {
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
-          const costUsd = item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
+          const costUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
           totalRevenueBs += revenueBs;
@@ -480,7 +485,7 @@ export const reportsService = {
           point.salesBs += revenueBs;
           point.salesUsd += revenueUsd;
           point.costBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
-          point.costUsd += item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
+          point.costUsd += item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
         }
       }
 
@@ -531,7 +536,7 @@ export const reportsService = {
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
-          const costUsd = item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
+          const costUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
           const profitBs = preciseRound(revenueBs - costBs, 2);
           const profitUsd = preciseRound(revenueUsd - costUsd, 2);
 
@@ -632,7 +637,7 @@ export const reportsService = {
           }
           const revUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
           const revBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
-          const cUsd = item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
+          const cUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
           const cBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
           agg.productIds.add(item.productId);
           agg.quantitySold += item.quantity;
@@ -1086,7 +1091,7 @@ export const reportsService = {
       let totalCostUsd = 0;
       for (const { sale, items } of data) {
         for (const item of items) {
-          totalCostUsd += item.costUsdPerUnit ? preciseRound(item.quantity * item.costUsdPerUnit, 2) : 0;
+          totalCostUsd += item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
           totalCostBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
         }
       }
