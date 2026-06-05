@@ -20,6 +20,7 @@ import type {
 } from '../../../specs/purchases';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import { convertToStorage } from '../../inventory/types';
+import { requireRole } from '../../auth/services/roleGuard';
 
 const PURCHASES_MODULE = 'PURCHASES';
 
@@ -71,6 +72,7 @@ export const purchaseService = {
     userId: string,
     input: CreateSupplierInput,
   ): Promise<Result<Supplier, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -119,6 +121,7 @@ export const purchaseService = {
     input: Partial<CreateSupplierInput>,
     tenantId: string,
   ): Promise<Result<Supplier, AppError>> {
+    requireRole('owner', 'admin');
     try {
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
@@ -157,6 +160,7 @@ export const purchaseService = {
   },
 
   async softDeleteSupplier(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    requireRole('owner', 'admin');
     try {
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
@@ -237,6 +241,7 @@ export const purchaseService = {
     userId: string,
     input: CreatePurchaseOrderInput,
   ): Promise<Result<PurchaseOrder, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -333,6 +338,7 @@ export const purchaseService = {
     userId: string,
     input: Partial<CreatePurchaseOrderInput>,
   ): Promise<Result<PurchaseOrder, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();

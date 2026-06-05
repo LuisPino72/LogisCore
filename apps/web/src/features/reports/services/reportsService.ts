@@ -7,6 +7,7 @@ import { ReportsErrors } from '../../../specs/reports/errors';
 import { ReportsFiltersSchema, ValidateTenantInputSchema, TopProductsLimitSchema } from '../../../specs/reports/index';
 import { logger } from '../../../lib/logger';
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
+import { requireRole } from '../../auth/services/roleGuard';
 import type {
   ReportFilters,
   ExecutiveSummaryData,
@@ -268,6 +269,7 @@ async function getRateForDateCached(tenantId: string, date: string): Promise<num
 
 export const reportsService = {
   async getExecutiveSummary(tenantId: string, filters: ReportFilters): Promise<Result<ExecutiveSummaryData, AppError>> {
+    requireRole('owner', 'admin');
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
@@ -443,6 +445,7 @@ export const reportsService = {
   },
 
   async getProfitOverTime(tenantId: string, filters: ReportFilters): Promise<Result<DailyProfitPoint[], AppError>> {
+    requireRole('owner', 'admin');
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
@@ -1032,6 +1035,7 @@ export const reportsService = {
   },
 
   async getSalesDetail(tenantId: string, filters: ReportFilters): Promise<Result<SaleDetail[], AppError>> {
+    requireRole('owner', 'admin');
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));

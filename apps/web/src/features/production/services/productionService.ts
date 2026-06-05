@@ -24,6 +24,7 @@ import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema, type CalculateRecipeCostResult } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
 import { calculateConsumptionCost } from './costCalculator';
+import { requireRole } from '../../auth/services/roleGuard';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
 
 /**
@@ -235,6 +236,7 @@ export const productionService = {
     userId: string,
     input: CreateRecipeInput,
   ): Promise<Result<Recipe, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -463,6 +465,7 @@ export const productionService = {
     input: UpdateRecipeInput,
     tenantId: string,
   ): Promise<Result<Recipe, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -596,6 +599,7 @@ export const productionService = {
   },
 
   async deleteRecipe(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -817,6 +821,7 @@ export const productionService = {
     userId: string,
     input: CreateProductionOrderInput,
   ): Promise<Result<ProductionOrder, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -1068,6 +1073,7 @@ export const productionService = {
   },
 
   async cancelOrder(orderId: string, tenantId: string): Promise<Result<void, AppError>> {
+    requireRole('owner', 'admin');
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 

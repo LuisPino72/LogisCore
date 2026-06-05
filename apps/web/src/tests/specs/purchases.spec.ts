@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { outboxService } from '../../services/outbox/outboxService';
+import { useAuthStore } from '../../features/auth/stores/authStore';
 
 const mockDb = {
   suppliers: { get: vi.fn(), add: vi.fn(), put: vi.fn(), update: vi.fn(), where: vi.fn() },
@@ -71,6 +72,17 @@ vi.mock('@logiscore/core', () => ({
   SystemEvents: { USER_LOGIN: 'USER_LOGIN', USER_LOGOUT: 'USER_LOGOUT' },
   isAppError: (err: Error) => err.name === 'AppError',
 }));
+
+vi.mock('../../features/auth/stores/authStore', () => ({
+  useAuthStore: {
+    getState: vi.fn(),
+  },
+}));
+
+const mockUseAuthStore = vi.mocked(useAuthStore);
+mockUseAuthStore.getState.mockReturnValue({
+  session: { userId: 'u-1', email: 'owner@bodega.com', role: 'owner', tenantId: 'test-tenant-uuid' },
+} as ReturnType<typeof useAuthStore.getState>);
 
 function mockProduct() {
   const product = {
@@ -209,5 +221,30 @@ describe('PURCH-005: Cancelar orden', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(mockDb.transaction).toHaveBeenCalled();
+  });
+});
+
+describe('PURCH-006 [AUTH-002]: requireRole bloquea employees en mutaciones', () => {
+  beforeEach(() => {
+    resetMockDb();
+    mockUseAuthStore.getState.mockReturnValue({
+      session: { userId: 'e-1', email: 'emp@bodega.com', role: 'employee', tenantId: 'test-tenant-uuid' },
+    } as ReturnType<typeof useAuthStore.getState>);
+  });
+
+  it('Given: employee. When: createSupplier. Then: throws AUTH_SCOPE_DENIED', async () => {
+    const { purchaseService } = await import('../../features/purchases/services/purchaseService');
+    await expect(
+      purchaseService.createSupplier('test-tenant', 'e-1', { name: 'X', phone: '0414' }),
+    ).rejects.toThrow();
+  });
+
+  it('Given: employee. When: createOrder. Then: throws AUTH_SCOPE_DENIED', async () => {
+    const { purchaseService } = await import('../../features/purchases/services/purchaseService');
+    await expect(
+      purchaseService.createOrder('test-tenant', 'e-1', {
+        supplierId: 'sup-1', items: [{ productId: 'prod-1', quantity: 5, totalCostUsd: 10 }],
+      }),
+    ).rejects.toThrow();
   });
 });

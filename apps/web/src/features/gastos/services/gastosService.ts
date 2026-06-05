@@ -8,6 +8,7 @@ import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { requireRole } from '../../auth/services/roleGuard';
 
 function mapExpense(e: DexieExpense): Gasto {
   return {
@@ -83,6 +84,7 @@ export const gastosService = {
   },
 
   async create(tenantId: string, userId: string, input: unknown): Promise<Result<Gasto, AppError>> {
+    requireRole('owner', 'admin');
     // AUDIT-CRUD-006: requireNetwork para consistencia con resto del codebase
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -136,6 +138,7 @@ export const gastosService = {
   },
 
   async update(tenantId: string, id: string, input: unknown, currentRate?: number): Promise<Result<Gasto, AppError>> {
+    requireRole('owner', 'admin');
     // AUDIT-CRUD-007: requireNetwork para consistencia
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -190,6 +193,7 @@ export const gastosService = {
   },
 
   async remove(tenantId: string, id: string): Promise<Result<void, AppError>> {
+    requireRole('owner', 'admin');
     // AUDIT-CRUD-008: requireNetwork para consistencia
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
