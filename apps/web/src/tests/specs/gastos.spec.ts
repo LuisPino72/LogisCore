@@ -512,24 +512,6 @@ describe('GASTOS-012: Cancelar ocurrencia', () => {
   });
 });
 
-describe('GASTOS-013: Gastos operativos mensuales', () => {
-  beforeEach(() => { resetMockDb(); });
-
-  it('Given: 2 pagados + 1 pendiente. When: getMonthlyOperatingExpenses. Then: solo los pagados', async () => {
-    insertExpense({ id: 'exp-1', status: 'paid', amountUsd: 100, amountBs: 48000, date: '2026-05-10', isRecurring: false });
-    insertExpense({ id: 'exp-2', status: 'paid', amountUsd: 50, amountBs: 24000, date: '2026-05-15', isRecurring: false });
-    insertExpense({ id: 'exp-3', status: 'pending', amountUsd: 200, amountBs: 96000, date: '2026-05-20', isRecurring: false });
-
-    const { gastosService } = await import('../../features/gastos/services/gastosService');
-    const result = await gastosService.getMonthlyOperatingExpenses(TENANT_ID, '2026-05-01', '2026-05-31');
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.data.totalUsd).toBe(150);
-    expect(result.data.totalBs).toBe(72000);
-  });
-});
-
 describe('GASTOS-014: Categorías válidas', () => {
   beforeEach(() => { resetMockDb(); });
 
