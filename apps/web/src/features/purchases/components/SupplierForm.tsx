@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, Phone, Building2 } from 'lucide-react';
+import { Truck, Phone, Building2, FileText } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
@@ -14,6 +14,7 @@ interface SupplierFormProps {
 
 export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: SupplierFormProps) {
   const [name, setName] = useState('');
+  const [rif, setRif] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -21,13 +22,18 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
   useEffect(() => {
     if (isOpen) {
       setName(editSupplier?.name ?? '');
+      setRif(editSupplier?.rif ?? '');
       setPhone(editSupplier?.phone ?? '');
       setError('');
     }
   }, [isOpen, editSupplier]);
 
   const handleSubmit = async () => {
-    const payload = { name: name.trim(), phone: phone.trim() || undefined };
+    const payload = {
+      name: name.trim(),
+      rif: rif.trim() ? rif.trim().toUpperCase() : undefined,
+      phone: phone.trim() || undefined,
+    };
     const parsed = CreateSupplierInputSchema.safeParse(payload);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message || 'Revisa los datos ingresados');
@@ -39,6 +45,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
     setSubmitting(false);
     if (ok) {
       setName('');
+      setRif('');
       setPhone('');
       onClose();
     } else {
@@ -86,6 +93,19 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           error={error && !name.trim() ? error : undefined}
           validation={{ required: 'Ingresa el nombre del proveedor', maxLength: 25 }}
           inputClassName="text-sm"
+        />
+
+        <Input
+          label={<span className="flex items-center gap-2"><FileText size={14} className="text-text-muted" /> RIF <span className="text-text-muted font-normal">(opcional)</span></span>}
+          placeholder="Ej: J123456789"
+          value={rif}
+          onChange={(e) => setRif(e.target.value.toUpperCase())}
+          validation={{
+            pattern: /^[VJEGP]\d{9}$/i,
+            maxLength: 10,
+          }}
+          hint="Formato: V/E/J/G/P + 9 dígitos. Ej: J123456789"
+          inputClassName="text-sm uppercase"
         />
 
         <Input

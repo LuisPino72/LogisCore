@@ -197,6 +197,7 @@ export interface DexieSupplier {
   id: string;
   tenantId: string;
   name: string;
+  rif?: string;
   phone?: string;
   createdAt: string;
   updatedAt: string;
@@ -404,6 +405,14 @@ export class LogisCoreDB extends Dexie {
     }).upgrade(async (tx) => {
       const { migrateV17ToV18 } = await import('./migrations/v17-to-v18');
       await migrateV17ToV18({ rolePermissions: tx.table('rolePermissions') });
+    });
+    // BACKLOG-106 [PURCHASES-001]: Migración v18 → v19 — índice rif en suppliers
+    // Campo rif agregado a DexieSupplier; índice único por tenant (rif + deletedAt IS NULL)
+    this.version(19).stores({
+      suppliers: 'id, tenantId, rif, [tenantId+rif], [tenantId+deletedAt]',
+    }).upgrade(async (tx) => {
+      const { migrateV18ToV19 } = await import('./migrations/v18-to-v19');
+      await migrateV18ToV19({ suppliers: tx.table('suppliers') });
     });
   }
 }

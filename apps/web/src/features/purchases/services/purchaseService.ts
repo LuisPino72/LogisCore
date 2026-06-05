@@ -28,6 +28,7 @@ function toSupplier(raw: Record<string, unknown>): Supplier {
   return {
     id: raw.id as string,
     name: raw.name as string,
+    rif: raw.rif as string | undefined,
     phone: raw.phone as string | undefined,
     createdAt: raw.createdAt as string,
     deletedAt: raw.deletedAt as string | undefined,
@@ -92,6 +93,7 @@ export const purchaseService = {
     const supplier: Supplier = {
       id,
       name: parsed.data.name.trim(),
+      rif: parsed.data.rif?.toUpperCase() || undefined,
       phone: parsed.data.phone?.trim() || undefined,
       createdAt: now,
     };
