@@ -1208,7 +1208,7 @@ export const productionService = {
             let totalCost = 0;
             let totalQty = 0;
             for (const lot of remainingLots) {
-              totalCost += lot.costUsdPerUnit * lot.remainingQuantity;
+              totalCost += (lot.costUsdPerUnit ?? 0) * lot.remainingQuantity;
               totalQty += lot.remainingQuantity;
             }
             const newCostPrice = totalQty > 0

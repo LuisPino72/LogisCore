@@ -365,13 +365,14 @@ export const reportsService = {
       // Adjustment loss expenses
       const adjResult = await this.getAdjustmentLossExpenses(tenantId, start, end);
       const adjustmentLossExpenses = adjResult.ok ? adjResult.data : {
-        perdida: { totalUsd: 0, count: 0 },
-        robo: { totalUsd: 0, count: 0 },
-        vencido: { totalUsd: 0, count: 0 },
-        consumo_interno: { totalUsd: 0, count: 0 },
-        otros: { totalUsd: 0, count: 0 },
+        perdida: { totalUsd: 0, count: 0, estimatedCount: 0 },
+        robo: { totalUsd: 0, count: 0, estimatedCount: 0 },
+        vencido: { totalUsd: 0, count: 0, estimatedCount: 0 },
+        consumo_interno: { totalUsd: 0, count: 0, estimatedCount: 0 },
+        otros: { totalUsd: 0, count: 0, estimatedCount: 0 },
         totalUsd: 0,
         totalBs: 0,
+        estimatedTotalUsd: 0,
       };
       // Operating expenses (gastos operativos del período)
       // BACKLOG-106 [REPORTS-001]: Excluir COMPRA_INVENTARIO (el costo ya está en COGS vía purchaseOrder).
@@ -1160,7 +1161,7 @@ export const reportsService = {
           otros: 'Otros',
         };
         for (const [reason, val] of Object.entries(reasons)) {
-          if (reason === 'totalUsd' || reason === 'totalBs') continue;
+          if (reason === 'totalUsd' || reason === 'totalBs' || reason === 'estimatedTotalUsd') continue;
           if (val.count > 0) {
             const ratio = adjResult.data.totalUsd > 0 ? val.totalUsd / adjResult.data.totalUsd : 0;
             items.push({

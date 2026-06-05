@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
@@ -16,6 +17,7 @@ import { ParkedCartsList } from './ParkedCartsList';
 import { SalesHistory } from './SalesHistory';
 import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
+import { buildReorderUrl } from '../../../lib/reorderHelper';
 
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import { CustomerPickerModal } from '../../customers/components/CustomerPickerModal';
@@ -98,6 +100,11 @@ export function PosPage({ tenantId }: PosPageProps) {
       if (res.ok) setLowStockAlert(res.data);
     });
   }, [tenantId]);
+
+  const navigate = useNavigate();
+  const handleReorder = useCallback((product: Product) => {
+    navigate(buildReorderUrl(product.id));
+  }, [navigate]);
 
   const handleAddToCart = useCallback(
     (product: Product) => {
@@ -427,6 +434,7 @@ export function PosPage({ tenantId }: PosPageProps) {
                 favoriteIds={favoriteProductIds}
                 exchangeRateBs={exchangeRateBs}
                 role={role}
+                onReorder={handleReorder}
               />
             </div>
           </>

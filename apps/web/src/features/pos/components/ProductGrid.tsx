@@ -22,6 +22,7 @@ interface ProductGridProps {
   favoriteIds: Set<string>;
   exchangeRateBs: number;
   role?: UserRole | null;
+  onReorder?: (product: Product) => void;
 }
 
 const PAGE_SIZE = 20;
@@ -39,6 +40,7 @@ export const ProductGrid = memo(function ProductGrid({
   favoriteIds,
   exchangeRateBs,
   role,
+  onReorder,
 }: ProductGridProps) {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
@@ -205,6 +207,7 @@ export const ProductGrid = memo(function ProductGrid({
                 onToggleFavorite={onToggleFavorite}
                 isFavorite={favoriteIds.has(product.id)}
                 exchangeRateBs={exchangeRateBs}
+                onReorder={onReorder}
               />
             ))}
           </div>

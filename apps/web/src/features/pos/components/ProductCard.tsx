@@ -12,9 +12,10 @@ interface ProductCardProps {
   isFavorite: boolean;
   exchangeRateBs: number;
   presentationCount?: number;
+  onReorder?: (product: Product) => void;
 }
 
-export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount, onReorder }: ProductCardProps) {
   const priceBs = exchangeRateBs > 0
     ? formatBs(product.priceUsd * exchangeRateBs)
     : null;
@@ -89,6 +90,19 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
               Sin stock
             </span>
           </div>
+        )}
+        {isOutOfStock && onReorder && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorder(product);
+            }}
+            className="absolute bottom-1.5 left-1.5 px-2 py-1 rounded-md bg-accent text-white text-[10px] font-semibold leading-none z-20 shadow-sm hover:bg-accent/90 active:bg-accent/80 transition-colors min-h-11 min-w-11"
+            aria-label={`Pedir ${product.name}`}
+          >
+            + Pedir
+          </button>
         )}
       </div>
 
