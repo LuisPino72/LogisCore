@@ -327,6 +327,14 @@ export interface DexieProductionOrder {
   deletedAt?: string;
 }
 
+// BACKLOG-106 [AUTH-002]: Tabla rolePermissions (modelo simplificado Owner/Admin/Employee)
+export interface DexieRolePermission {
+  id: string;
+  role: 'owner' | 'admin' | 'employee';
+  modules: string[];
+  createdAt: string;
+}
+
 export class LogisCoreDB extends Dexie {
   tenantRefs!: Table<DexieTenantRef, string>;
   syncQueue!: Table<SyncQueueItem, number>;
@@ -354,6 +362,7 @@ export class LogisCoreDB extends Dexie {
   recipes!: Table<DexieRecipe, string>;
   recipeLines!: Table<DexieRecipeLine, string>;
   productionOrders!: Table<DexieProductionOrder, string>;
+  rolePermissions!: Table<DexieRolePermission, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -388,6 +397,13 @@ export class LogisCoreDB extends Dexie {
       // Preservar datos existentes durante upgrade — no destruir nada
       // Dexie recrea tablas con nuevos índices pero preserva los datos
       return Promise.resolve();
+    });
+    // BACKLOG-106 [AUTH-002]: Migración v17 → v18 — tabla rolePermissions
+    this.version(18).stores({
+      rolePermissions: 'id, role',
+    }).upgrade(async (tx) => {
+      const { migrateV17ToV18 } = await import('./migrations/v17-to-v18');
+      await migrateV17ToV18({ rolePermissions: tx.table('rolePermissions') });
     });
   }
 }
