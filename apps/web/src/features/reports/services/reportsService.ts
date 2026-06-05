@@ -493,7 +493,10 @@ export const reportsService = {
       for (const point of sorted) {
         const discount = discountByDate.get(point.date) || 0;
         const effectiveRevenueBs = preciseRound(point.salesBs - discount, 2);
-        const effectiveRevenueUsd = point.lastRate > 0 ? preciseRound(effectiveRevenueBs / point.lastRate, 2) : 0;
+        // DINERO-006 (A1): acumular USD directamente, no convertir desde Bs (cada venta tiene su propia tasa).
+        const effectiveRevenueUsd = point.lastRate > 0
+          ? preciseRound(point.salesUsd - (discount / point.lastRate), 2)
+          : 0;
         point.salesBs = preciseRound(point.salesBs, 2);
         point.salesUsd = preciseRound(point.salesUsd, 2);
         point.costBs = preciseRound(point.costBs, 2);
