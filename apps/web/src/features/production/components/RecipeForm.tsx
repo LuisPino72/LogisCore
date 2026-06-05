@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ChefHat, Plus, Trash2, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChefHat, Plus, Trash2, AlertTriangle, Info, ChevronDown, ChevronUp, Package } from 'lucide-react';
 import { Button, Card, Modal, Input, SearchableSelect, Spinner } from '../../../common/components';
-import { useRecipeForm } from '../hooks/useRecipeForm';
+import { useRecipeForm, NEW_PRODUCT_SENTINEL } from '../hooks/useRecipeForm';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
 import type { Recipe } from '../types';
@@ -19,7 +19,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
     updateField, addLine, updateLine, removeLine,
     validate, toInput,
     getAvailableIngredients, getAvailableProducts,
-    getExpandPreview,
+    getExpandPreview, categories,
   } = useRecipeForm();
 
   const { createRecipe, updateRecipe, getRecipeWithLines } = useProductionStore();
@@ -70,15 +70,27 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const availableProducts = getAvailableProducts();
   const availableIngredients = getAvailableIngredients();
 
-  const productOptions = availableProducts.map((p) => ({
-    value: p.id,
-    label: `${p.name} (${p.sku})`,
-  }));
+  // PRODUCTION-003 [Paso-2]: opciones de producto con "Crear nuevo" como primera opción
+  const productOptions = [
+    { value: NEW_PRODUCT_SENTINEL, label: '+ Crear nuevo producto terminado' },
+    ...availableProducts.map((p) => ({
+      value: p.id,
+      label: `${p.name} (${p.sku})`,
+    })),
+  ];
 
   const ingredientOptions = availableIngredients.map((p) => ({
     value: p.id,
     label: `${p.name} (${p.sku})`,
   }));
+
+  // PRODUCTION-003 [Paso-2]: categorías para el select del nuevo producto
+  const categoryOptions = categories
+    .filter((c) => !('deletedAt' in c) || !c.deletedAt)
+    .map((c) => ({ value: c.id, label: c.name }));
+
+  // PRODUCTION-003 [Paso-2]: detectar modo "Crear nuevo producto"
+  const isCreatingNewProduct = form.productId === NEW_PRODUCT_SENTINEL;
 
   // PRODUCTION-001-012: Preview de líneas con distinción de sub-recetas
   const previewLines = getExpandPreview(form.lines);
@@ -165,6 +177,64 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             placeholder="Selecciona el producto que se crea"
           />
           {errors.productId && <p className="text-xs text-danger mt-1">{errors.productId}</p>}
+
+          {/* PRODUCTION-003 [Paso-2]: Mini-form de auto-creación de producto_terminado */}
+          {isCreatingNewProduct && (
+            <Card className="p-3 bg-teal-50 border-teal-200 space-y-3">
+              <div className="flex items-center gap-2 text-teal-700">
+                <Package size={16} />
+                <span className="text-sm font-semibold">Nuevo producto terminado</span>
+              </div>
+              <p className="text-xs text-teal-600">
+                Se creará un nuevo producto con stock=0. Al ejecutar la receta, se generarán lotes con su costo.
+              </p>
+              <Input
+                label="Nombre del producto"
+                value={form.newProductName}
+                onChange={(e) => updateField('newProductName', e.target.value)}
+                placeholder="Ej: Pan de jamón"
+                error={errors.newProductName}
+                validation={{ required: true, maxLength: 25 }}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  label="SKU"
+                  value={form.newProductSku}
+                  onChange={(e) => updateField('newProductSku', e.target.value.toUpperCase())}
+                  placeholder="Ej: PAN-001"
+                  error={errors.newProductSku}
+                  validation={{ required: true, maxLength: 18 }}
+                />
+                <Input
+                  label="Precio de venta ($)"
+                  type="number"
+                  value={form.newProductPriceUsd || ''}
+                  onChange={(e) => updateField('newProductPriceUsd', Number(e.target.value) || 0)}
+                  placeholder="0.00"
+                  min={0.01}
+                  step={0.01}
+                  error={errors.newProductPriceUsd}
+                />
+              </div>
+              {categoryOptions.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Categoría <span className="text-gray-400 text-xs">(opcional)</span>
+                  </label>
+                  <select
+                    value={form.newProductCategoryId}
+                    onChange={(e) => updateField('newProductCategoryId', e.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="">Sin categoría</option>
+                    {categoryOptions.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Warnings */}
           {warnings.length > 0 && (

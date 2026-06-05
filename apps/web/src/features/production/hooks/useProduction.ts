@@ -50,6 +50,11 @@ export function useProduction(tenantId: string | null) {
       doFetch(true);
     });
 
+    // PRODUCTION-003 [Paso-2]: escuchar también el nuevo nombre semántico
+    const sub4b = EventBus.on('PRODUCTION.RECIPE_CREATED', () => {
+      doFetch(true);
+    });
+
     const sub5 = EventBus.on('PRODUCTION.UPDATED', () => {
       doFetch(true);
     });
@@ -63,6 +68,7 @@ export function useProduction(tenantId: string | null) {
       EventBus.off(sub2);
       EventBus.off(sub3);
       EventBus.off(sub4);
+      EventBus.off(sub4b);
       EventBus.off(sub5);
       EventBus.off(sub6);
     };

@@ -24,7 +24,7 @@ function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit: string
   if (productUnit === 'm' && recipeUnit === 'ml') return qty;
   return qty;
 }
-import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder } from '../../../services/dexie/db';
+import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder, DexieProduct } from '../../../services/dexie/db';
 
 const PRODUCTION_MODULE = 'PRODUCTION';
 
@@ -231,19 +231,45 @@ export const productionService = {
     const db = getDb();
     const now = new Date().toISOString();
 
-    // AUDIT-CRUD-001: Tenant-leak fix — filtrar producto por tenantId antes de operar
-    const product = await db.products
-      .where({ tenantId, id: input.productId })
-      .filter((p) => !p.deletedAt)
-      .first();
-    if (!product) {
-      return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_NOT_FOUND, 'Producto terminado no encontrado.'));
-    }
-    if (product.productType && product.productType === 'materia_prima') {
-      return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_TYPE_INVALID, 'El producto seleccionado es materia prima, no se puede producir. Selecciona un producto terminado.'));
-    }
-    if (product.stock <= 0) {
-      return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_NO_STOCK, `"${product.name}" no tiene stock. Agrega stock inicial al producto antes de crear una receta.`));
+    // PRODUCTION-003 [Paso-2]: resolver productId.
+    // Si el usuario seleccionó un producto existente, validarlo.
+    // Si no, auto-crear producto_terminado (SKU único, stock=0).
+    let resolvedProductId = input.productId;
+
+    if (resolvedProductId) {
+      // AUDIT-CRUD-001: Tenant-leak fix — filtrar producto por tenantId antes de operar
+      const product = await db.products
+        .where({ tenantId, id: resolvedProductId })
+        .filter((p) => !p.deletedAt)
+        .first();
+      if (!product) {
+        return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_NOT_FOUND, 'Producto terminado no encontrado.'));
+      }
+      if (product.productType && product.productType === 'materia_prima') {
+        return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_TYPE_INVALID, 'El producto seleccionado es materia prima, no se puede producir. Selecciona un producto terminado.'));
+      }
+      // PRODUCTION-003 [Paso-2]: Removida validación de stock>0 en el producto de la receta.
+      // Una receta puede existir sobre un producto con stock=0 (recién creado, o agotado);
+      // el stock se actualizará al ejecutar la receta. Esta validación bloqueaba auto-creación.
+    } else {
+      // Auto-creación: validar campos requeridos (Zod ya refinó, defensa en profundidad)
+      if (!input.newProductName) {
+        return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_NAME_REQUIRED, 'Nombre del producto requerido.'));
+      }
+      if (!input.newProductSku) {
+        return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_SKU_REQUIRED, 'SKU del producto requerido.'));
+      }
+      if (input.newProductPriceUsd == null) {
+        return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_PRICE_REQUIRED, 'Precio del producto requerido.'));
+      }
+      // Validar SKU único por tenant (UNIQUE INDEX products(tenant_id, sku) en BD)
+      const existingSku = await db.products
+        .where({ tenantId, sku: input.newProductSku })
+        .filter((p) => !p.deletedAt)
+        .first();
+      if (existingSku) {
+        return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_SKU_DUPLICATE, `Ya existe un producto con el SKU "${input.newProductSku}".`));
+      }
     }
 
     // Check duplicate recipe name
@@ -256,9 +282,9 @@ export const productionService = {
     }
 
     // Check duplicate recipe batch for same product
-    if (input.mode === 'batch') {
+    if (input.mode === 'batch' && resolvedProductId) {
       const existing = await db.recipes
-        .where({ tenantId, productId: input.productId, mode: 'batch' })
+        .where({ tenantId, productId: resolvedProductId, mode: 'batch' })
         .filter((r) => !r.deletedAt)
         .first();
       if (existing) {
@@ -296,21 +322,6 @@ export const productionService = {
     }
 
     const recipeId = generateId();
-    const recipe: DexieRecipe = {
-      id: recipeId,
-      tenantId,
-      name: input.name,
-      productId: input.productId,
-      mode: input.mode,
-      yieldQuantity: input.yieldQuantity,
-      yieldUnit: input.yieldUnit,
-      wastePct: input.wastePct ?? 0,
-      isActive: true,
-      notes: input.notes,
-      createdAt: now,
-      updatedAt: now,
-    };
-
     const lineRecords: DexieRecipeLine[] = input.lines.map((line, i) => ({
       id: generateId(),
       tenantId,
@@ -322,23 +333,109 @@ export const productionService = {
       createdAt: now,
     }));
 
+    // PRODUCTION-003 [Paso-2]: Transacción atómica.
+    // Si falla CUALQUIER paso (auto-crear producto, crear receta, crear líneas, encolar outbox),
+    // Dexie hace ROLLBACK completo. Si se auto-creó producto, NO queda huérfano.
+    let createdProductId: string | undefined;
+    let newProductRecord: DexieProduct | undefined;
+
     try {
-      const ev = emitWithPersistence('PRODUCTION.CREATED', PRODUCTION_MODULE, { recipeId, name: input.name, productId: input.productId }, { userId, tenantId });
-      await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
-        await db.recipes.add(recipe);
-        await syncQueue.enqueue('recipes', 'CREATE', recipeId, toSnake(recipe as unknown as Record<string, unknown>), tenantId);
+      // Crear eventos ANTES de la tx (enqueueInTransaction los mete en la tx)
+      const evRecipe = emitWithPersistence(
+        'PRODUCTION.RECIPE_CREATED',
+        PRODUCTION_MODULE,
+        { recipeId, productId: resolvedProductId, name: input.name },
+        { userId, tenantId },
+      );
 
-        for (const line of lineRecords) {
-          await db.recipeLines.add(line);
-          await syncQueue.enqueue('recipe_lines', 'CREATE', line.id, toSnake(line as unknown as Record<string, unknown>), tenantId);
-        }
+      await db.transaction(
+        'rw',
+        [db.products, db.recipes, db.recipeLines, db.syncQueue, db.outbox],
+        async (tx) => {
+          // 1. Auto-crear producto_terminado si no se proporcionó productId
+          if (!resolvedProductId) {
+            createdProductId = generateId();
+            newProductRecord = {
+              id: createdProductId,
+              tenantId,
+              name: input.newProductName!,
+              sku: input.newProductSku!,
+              priceUsd: input.newProductPriceUsd!,
+              categoryId: input.newProductCategoryId,
+              isWeighted: false,
+              isTaxable: true,
+              isSellable: true,
+              unit: 'unidad',
+              stock: 0,
+              costPrice: 0,
+              productType: 'producto_terminado',
+            };
+            await db.products.add(newProductRecord);
+            await syncQueue.enqueue('products', 'CREATE', createdProductId, toSnake(newProductRecord as unknown as Record<string, unknown>), tenantId);
+            resolvedProductId = createdProductId;
 
-        await ev.enqueueInTransaction(tx);
-      });
+            // Outbox: producto creado desde producción
+            await evRecipe.enqueueInTransaction(tx); // placeholder — emitimos ambos en mismo helper abajo
+          }
 
-      await ev.auditAfterTransaction();
+          // 2. Crear receta
+          const recipe: DexieRecipe = {
+            id: recipeId,
+            tenantId,
+            name: input.name,
+            productId: resolvedProductId,
+            mode: input.mode,
+            yieldQuantity: input.yieldQuantity,
+            yieldUnit: input.yieldUnit,
+            wastePct: input.wastePct ?? 0,
+            isActive: true,
+            notes: input.notes,
+            createdAt: now,
+            updatedAt: now,
+          };
+          await db.recipes.add(recipe);
+          await syncQueue.enqueue('recipes', 'CREATE', recipeId, toSnake(recipe as unknown as Record<string, unknown>), tenantId);
 
-      return success(toRecipe(recipe as unknown as Record<string, unknown>));
+          // 3. Crear líneas
+          for (const line of lineRecords) {
+            await db.recipeLines.add(line);
+            await syncQueue.enqueue('recipe_lines', 'CREATE', line.id, toSnake(line as unknown as Record<string, unknown>), tenantId);
+          }
+
+          // 4. Outbox events (Regla #17)
+          if (newProductRecord) {
+            // Si auto-creamos producto, emitimos INVENTORY.PRODUCT_CREATED
+            const evProduct = emitWithPersistence(
+              'INVENTORY.PRODUCT_CREATED',
+              PRODUCTION_MODULE,
+              { productId: createdProductId, source: 'production', name: input.newProductName, sku: input.newProductSku },
+              { userId, tenantId },
+            );
+            await evProduct.enqueueInTransaction(tx);
+          }
+          // PRODUCTION.RECIPE_CREATED (siempre)
+          await evRecipe.enqueueInTransaction(tx);
+        },
+      );
+
+      await evRecipe.auditAfterTransaction();
+
+      // Reconstruir el recipe final con el productId resuelto
+      const finalRecipe: DexieRecipe = {
+        id: recipeId,
+        tenantId,
+        name: input.name,
+        productId: resolvedProductId!,
+        mode: input.mode,
+        yieldQuantity: input.yieldQuantity,
+        yieldUnit: input.yieldUnit,
+        wastePct: input.wastePct ?? 0,
+        isActive: true,
+        notes: input.notes,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return success(toRecipe(finalRecipe as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en createRecipe:', err);
       return failure(new AppError(ProductionErrors.RECIPE_CREATE_FAILED, 'Error al crear la receta.'));

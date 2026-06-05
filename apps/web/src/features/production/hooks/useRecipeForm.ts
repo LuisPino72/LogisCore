@@ -10,6 +10,9 @@ interface RecipeLineInput {
   unit: string;
 }
 
+// PRODUCTION-003 [Paso-2]: constante para identificar "crear nuevo producto"
+const NEW_PRODUCT_SENTINEL = '__NEW_PRODUCT__';
+
 interface RecipeFormState {
   name: string;
   productId: string;
@@ -20,6 +23,11 @@ interface RecipeFormState {
   wastePct: number;
   notes: string;
   lines: RecipeLineInput[];
+  // PRODUCTION-003 [Paso-2]: campos para auto-creación de producto_terminado
+  newProductName: string;
+  newProductSku: string;
+  newProductPriceUsd: number;
+  newProductCategoryId: string;
 }
 
 export interface FormWarning {
@@ -37,6 +45,10 @@ const INITIAL_STATE: RecipeFormState = {
   wastePct: 0,
   notes: '',
   lines: [],
+  newProductName: '',
+  newProductSku: '',
+  newProductPriceUsd: 0,
+  newProductCategoryId: '',
 };
 
 export function useRecipeForm() {
@@ -45,7 +57,7 @@ export function useRecipeForm() {
   const [ingredientAvailability, setIngredientAvailability] = useState<IngredientAvailability[]>([]);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
-  const { products } = useInventoryStore();
+  const { products, categories } = useInventoryStore();
 
   const updateField = useCallback(<K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => {
     setForm((prev) => {
@@ -94,7 +106,23 @@ export function useRecipeForm() {
 
     if (!form.name.trim()) newErrors.name = 'Nombre requerido';
     if (form.name.trim().length > 25) newErrors.name = 'Máximo 25 caracteres';
-    if (!form.productId) newErrors.productId = 'Selecciona un producto terminado';
+
+    // PRODUCTION-003 [Paso-2]: productId puede ser vacío (auto-crear) o un UUID
+    const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
+    if (!isNewProduct && !form.productId) {
+      newErrors.productId = 'Selecciona un producto terminado o crea uno nuevo';
+    }
+    // Si es nuevo producto, validar campos
+    if (isNewProduct) {
+      if (!form.newProductName.trim()) newErrors.newProductName = 'Nombre del producto requerido';
+      if (form.newProductName.length > 25) newErrors.newProductName = 'Máximo 25 caracteres';
+      if (!form.newProductSku.trim()) newErrors.newProductSku = 'SKU del producto requerido';
+      if (form.newProductSku.length > 18) newErrors.newProductSku = 'Máximo 18 caracteres';
+      if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
+        newErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
+      }
+    }
+
     if (form.yieldQuantity <= 0) newErrors.yieldQuantity = 'El yield debe ser mayor a 0';
     if (!form.yieldUnit) newErrors.yieldUnit = 'Selecciona una unidad';
     if (form.wastePct < 0 || form.wastePct > 100) newErrors.wastePct = 'La merma debe ser entre 0 y 100%';
@@ -108,9 +136,11 @@ export function useRecipeForm() {
     }
 
     // PRODUCTION-001-010: Validación completa de ciclos (incluye sub-recetas anidadas)
-    if (form.productId && form.lines.length > 0) {
+    // Solo si hay un productId real (no sentinel)
+    const realProductId = isNewProduct ? '' : form.productId;
+    if (realProductId && form.lines.length > 0) {
       const cycleCheck = await validateCycles(
-        form.productId,
+        realProductId,
         form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
       );
       if (!cycleCheck.ok) {
@@ -199,9 +229,10 @@ export function useRecipeForm() {
 
   const toInput = useCallback(async (): Promise<CreateRecipeInput | null> => {
     if (!(await validate())) return null;
-    return {
+    // PRODUCTION-003 [Paso-2]: si el usuario eligió "Crear nuevo producto", no enviar productId
+    const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
+    const input: CreateRecipeInput = {
       name: form.name.trim(),
-      productId: form.productId,
       mode: form.mode,
       yieldQuantity: form.yieldQuantity,
       yieldUnit: form.yieldUnit,
@@ -213,6 +244,15 @@ export function useRecipeForm() {
         unit: line.unit,
       })),
     };
+    if (isNewProduct) {
+      input.newProductName = form.newProductName.trim();
+      input.newProductSku = form.newProductSku.trim();
+      input.newProductPriceUsd = form.newProductPriceUsd;
+      if (form.newProductCategoryId) input.newProductCategoryId = form.newProductCategoryId;
+    } else {
+      input.productId = form.productId;
+    }
+    return input;
   }, [form, validate]);
 
   return {
@@ -233,5 +273,9 @@ export function useRecipeForm() {
     reset,
     setIngredientAvailability,
     setIsCheckingAvailability,
+    categories,
   };
 }
+
+// PRODUCTION-003 [Paso-2]: exportar sentinel para uso en componentes
+export { NEW_PRODUCT_SENTINEL };

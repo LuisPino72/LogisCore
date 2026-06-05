@@ -57,16 +57,26 @@ export const CreateRecipeLineInputSchema = z.object({
   unit: z.string().min(1, 'Selecciona una unidad'),
 });
 
+// PRODUCTION-003 [Paso-2]: productId ahora es OPCIONAL.
+// Si no se proporciona, se auto-crea un producto_terminado atómicamente
+// junto con la receta y sus líneas (transacción Dexie).
 export const CreateRecipeInputSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(25),
-  productId: z.string().uuid('Selecciona un producto terminado'),
+  productId: z.string().uuid('Selecciona un producto terminado').optional(),
+  newProductName: z.string().min(1, 'Nombre del producto requerido').max(25).optional(),
+  newProductSku: z.string().min(1, 'SKU del producto requerido').max(18).optional(),
+  newProductPriceUsd: z.number().positive('El precio debe ser mayor a 0').optional(),
+  newProductCategoryId: z.string().uuid().optional(),
   mode: RecipeModeSchema,
   yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0'),
   yieldUnit: z.string().min(1, 'Selecciona una unidad'),
   wastePct: z.number().min(0).max(100).default(0),
   notes: z.string().max(25).optional(),
   lines: z.array(CreateRecipeLineInputSchema).min(1, 'Debe agregar al menos un ingrediente'),
-});
+}).refine(
+  (data) => data.productId || (data.newProductName && data.newProductSku && data.newProductPriceUsd != null),
+  { message: 'Debes seleccionar un producto existente o proporcionar nombre, SKU y precio del nuevo producto.', path: ['productId'] },
+);
 
 export type CreateRecipeInput = z.infer<typeof CreateRecipeInputSchema>;
 
