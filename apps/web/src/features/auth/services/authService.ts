@@ -106,6 +106,8 @@ export const authService = {
         tenantSlug,
         accessToken: session.access_token,
         expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
+        // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes reciben POS-only.
+        permissions: role === 'employee' ? ['pos'] : undefined,
       });
     }
 
@@ -128,6 +130,12 @@ export const authService = {
     if (userSession.tenantId) {
       const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
       if (!subCheck.ok) return subCheck;
+    }
+
+    // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes sin permissions
+    // asignadas reciben POS-only al primer login post-migración.
+    if (userSession.role === 'employee' && !userSession.permissions) {
+      return success({ ...userSession, permissions: ['pos'] });
     }
 
     return success(userSession);
