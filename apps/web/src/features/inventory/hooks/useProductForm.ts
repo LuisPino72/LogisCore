@@ -83,9 +83,14 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
         next.unit = value === 'pesable_kg' ? 'kg' : value === 'pesable_lt' ? 'lt' : 'unidad';
       }
 
-      if (key === 'isRawMaterial' && value === false) {
-        next.productionType = undefined;
+      if (key === 'isRawMaterial') {
+        if (value === true) {
+          next.isSellable = false;
+        } else {
+          next.productionType = undefined;
+        }
       }
+      // DINERO-005 (C5) handled inline above.
 
       return next;
     });
