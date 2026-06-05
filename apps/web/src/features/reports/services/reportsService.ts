@@ -82,6 +82,7 @@ interface SaleWithItems {
     productName: string;
     productSku: string;
     quantity: number;
+    unitMultiplier?: number;
     unitPriceUsd: number;
     costUsdPerUnit?: number;
   }[];
@@ -184,6 +185,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         productName: i.product_name || '',
         productSku: i.product_sku || '',
         quantity: Number(i.quantity),
+        unitMultiplier: 1,
         unitPriceUsd: Number(i.unit_price_usd) || 0,
         costUsdPerUnit: i.cost_usd_per_unit ? Number(i.cost_usd_per_unit) : undefined,
       })),
@@ -197,9 +199,10 @@ function effectiveItemQuantity(item: { quantity: number; unitMultiplier?: number
   return item.quantity * (item.unitMultiplier ?? 1);
 }
 
-function calcItemCostBs(quantity: number, costUsdPerUnit: number | undefined, exchangeRate: number): number {
+function calcItemCostBs(quantity: number, costUsdPerUnit: number | undefined, exchangeRate: number, unitMultiplier: number = 1): number {
   if (!costUsdPerUnit || costUsdPerUnit <= 0) return 0;
-  return preciseRound(quantity * costUsdPerUnit * exchangeRate, 2);
+  const effectiveQuantity = quantity * unitMultiplier;
+  return preciseRound(effectiveQuantity * costUsdPerUnit * exchangeRate, 2);
 }
 
 /** Busca la tasa de cambio activa más cercana a una fecha dada */
@@ -312,7 +315,7 @@ export const reportsService = {
           totalDiscountUsdAccum += preciseRound(sale.discountBs / sale.exchangeRate, 2);
         }
         for (const item of items) {
-          const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
+          const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
           const costUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
@@ -485,7 +488,7 @@ export const reportsService = {
           const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
           point.salesBs += revenueBs;
           point.salesUsd += revenueUsd;
-          point.costBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
+          point.costBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
           point.costUsd += item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
         }
       }
@@ -539,7 +542,7 @@ export const reportsService = {
           const existing = map.get(effectiveId);
           const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
-          const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
+          const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
           const costUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
           const profitBs = preciseRound(revenueBs - costBs, 2);
           const profitUsd = preciseRound(revenueUsd - costUsd, 2);
@@ -642,7 +645,7 @@ export const reportsService = {
           const revUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
           const revBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
           const cUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
-          const cBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
+          const cBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
           agg.productIds.add(item.productId);
           agg.quantitySold += item.quantity;
           agg.revenueUsd = preciseRound(agg.revenueUsd + revUsd, 2);
@@ -1126,7 +1129,7 @@ export const reportsService = {
       for (const { sale, items } of data) {
         for (const item of items) {
           totalCostUsd += item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
-          totalCostBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate);
+          totalCostBs += calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
         }
       }
 
