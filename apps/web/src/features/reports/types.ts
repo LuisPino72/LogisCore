@@ -124,6 +124,10 @@ export interface SaleDetail {
   date: string;
   time: string;
   itemCount: number;
+  subtotalBs: number;
+  subtotalUsd: number;
+  ivaBs: number;
+  ivaUsd: number;
   totalBs: number;
   totalUsd: number;
   paymentMethod: string;

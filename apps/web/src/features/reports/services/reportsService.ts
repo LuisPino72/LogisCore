@@ -1078,11 +1078,20 @@ export const reportsService = {
 
       const sales: SaleDetail[] = data.map(({ sale, items }) => {
         const dateObj = new Date(sale.createdAt);
+        const ivaBs = sale.ivaBs || 0;
+        const ivaUsd = sale.exchangeRate > 0 ? preciseRound(ivaBs / sale.exchangeRate, 2) : 0;
+        // DINERO-014 (M4): subtotal = total - IVA
+        const subtotalBs = preciseRound(sale.totalBs - ivaBs, 2);
+        const subtotalUsd = sale.exchangeRate > 0 ? preciseRound(subtotalBs / sale.exchangeRate, 2) : 0;
         return {
           id: sale.id,
           date: dateObj.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
           time: dateObj.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
           itemCount: items.length,
+          subtotalBs,
+          subtotalUsd,
+          ivaBs,
+          ivaUsd,
           totalBs: sale.totalBs,
           totalUsd: sale.exchangeRate > 0 ? preciseRound(sale.totalBs / sale.exchangeRate, 2) : 0,
           paymentMethod: sale.paymentMethod,
