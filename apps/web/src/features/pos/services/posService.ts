@@ -1,6 +1,6 @@
 import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { preciseRound, toSnake, generateId, MAX_CENTS_DIFFERENCE } from '@logiscore/shared';
-import { productionService } from '../../production/services/productionService';
+import { productionService, recipeQtyToStorage } from '../../production/services/productionService';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
 import type { DexieCashRegister, LogisCoreDB } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -1096,7 +1096,7 @@ export const posService = {
               const ingredient = await db.products.get(line.productId);
               if (!ingredient) continue;
 
-              const needed = Math.ceil(line.quantity * item.quantity * wasteMultiplier);
+              const needed = Math.ceil(recipeQtyToStorage(line.quantity * item.quantity * wasteMultiplier, line.unit, ingredient.unit));
               const previousStock = ingredient.stock;
               // AUDIT-012: usar lo realmente restaurado por lotes si tenemos tracking, sino fallback a `needed`
               const restoredForThisIngredient = hasConsumedLots

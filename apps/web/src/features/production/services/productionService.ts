@@ -31,7 +31,7 @@ import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProd
  * Convierte la cantidad de un ingrediente (en la unidad declarada en la receta)
  * a la unidad de almacenamiento del producto (gramos para kg, ml para lt, unidades para unidad).
  */
-function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit: string): number {
+export function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit: string): number {
   if (productUnit === 'kg' && recipeUnit === 'g') return qty;
   if (productUnit === 'kg' && recipeUnit === 'kg') return qty * 1000;
   if (productUnit === 'lt' && recipeUnit === 'ml') return qty;
