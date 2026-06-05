@@ -1166,7 +1166,10 @@ export const productionService = {
           const finishedProduct = await db.products.get(order.productId);
           if (finishedProduct && order.quantityTarget > 0) {
             const previousStock = finishedProduct.stock;
-            const newStock = Math.max(0, previousStock - order.quantityTarget);
+            // DINERO-013 (M3): revertir solo el stock que aún existe (no las unidades ya vendidas).
+            // quantityToRevert = min(stock actual, quantityTarget). Nunca resta de más.
+            const quantityToRevert = Math.min(previousStock, order.quantityTarget);
+            const newStock = Math.max(0, previousStock - quantityToRevert);
             await db.products.update(order.productId, { stock: newStock });
             await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...finishedProduct, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
@@ -1177,7 +1180,7 @@ export const productionService = {
               productId: order.productId,
               userId: order.createdBy,
               type: 'adjustment' as const,
-              quantity: -order.quantityTarget,
+              quantity: -quantityToRevert,
               previousStock,
               newStock,
               reasonType: 'ajuste_manual',
@@ -1196,6 +1199,26 @@ export const productionService = {
           if (lotToRevert && lotToRevert.remainingQuantity === lotToRevert.quantityAdded) {
             await db.inventoryLots.update(lotToRevert.id, { deletedAt: now, remainingQuantity: 0 });
             await syncQueue.enqueue('inventory_lots', 'UPDATE', lotToRevert.id, { id: lotToRevert.id, deleted_at: now, remaining_quantity: 0 }, tenantId);
+
+            // DINERO-012 (M2): recalcular WAC del producto terminado después de revertir el lote
+            const remainingLots = await db.inventoryLots
+              .where({ productId: order.productId })
+              .filter((l) => !l.deletedAt)
+              .toArray();
+            let totalCost = 0;
+            let totalQty = 0;
+            for (const lot of remainingLots) {
+              totalCost += lot.costUsdPerUnit * lot.remainingQuantity;
+              totalQty += lot.remainingQuantity;
+            }
+            const newCostPrice = totalQty > 0
+              ? preciseRound(totalCost / totalQty, 4)
+              : 0;
+            const productForWac = await db.products.get(order.productId);
+            if (productForWac) {
+              await db.products.update(order.productId, { costPrice: newCostPrice });
+              await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...productForWac, costPrice: newCostPrice } as unknown as Record<string, unknown>), tenantId);
+            }
           }
         }
 
