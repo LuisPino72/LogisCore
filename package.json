@@ -1,6 +1,6 @@
 {
   "name": "logiscore-erp",
-  "version": "0.1.0",
+  "version": "0.89.1",
   "private": true,
   "description": "LogisCore ERP - Sistema de gestión para PYMES y bodegas en Venezuela",
   "workspaces": [
