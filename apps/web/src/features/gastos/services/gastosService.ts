@@ -347,25 +347,6 @@ export const gastosService = {
     }
   },
 
-  async getMonthlyOperatingExpenses(tenantId: string, startDate: string, endDate: string): Promise<Result<{ totalUsd: number; totalBs: number }, AppError>> {
-    try {
-      const db = getDb();
-      const expenses = await db.expenses
-        .where('[tenantId+date]')
-        .between([tenantId, startDate], [tenantId, endDate])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
-        .toArray();
-
-      const totalUsd = expenses.reduce((s, e) => s + e.amountUsd, 0);
-      const totalBs = expenses.reduce((s, e) => s + e.amountBs, 0);
-
-      return success({ totalUsd: preciseRound(totalUsd, 2), totalBs: preciseRound(totalBs, 2) });
-    } catch (err) {
-      console.error('[gastosService.getMonthlyOperatingExpenses]', err);
-      return failure(new AppError(GASTOS_ERRORS.GASTOS_FETCH_FAILED.code, GASTOS_ERRORS.GASTOS_FETCH_FAILED.message));
-    }
-  },
-
   async cancelOccurrence(tenantId: string, templateId: string, occurrenceDate: string): Promise<Result<void, AppError>> {
     // AUDIT-CRUD-009: requireNetwork para consistencia
     const networkCheck = requireNetwork();
