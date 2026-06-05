@@ -367,13 +367,15 @@ export const reportsService = {
         totalBs: 0,
       };
       // Operating expenses (gastos operativos del período)
+      // BACKLOG-106 [REPORTS-001]: Excluir COMPRA_INVENTARIO (el costo ya está en COGS vía purchaseOrder).
+      // Si se incluye acá, grossProfit se reduce doble (una vez en COGS, otra como gasto operativo).
       const db = getDb();
       const startNorm = start.slice(0, 10);
       const endNorm = end.slice(0, 10);
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
         .between([tenantId, startNorm], [tenantId, endNorm])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
         .toArray();
       const operatingExpensesUsd = operatingExpenses.reduce((s, e) => s + e.amountUsd, 0);
       const operatingExpensesBs = operatingExpenses.reduce((s, e) => s + e.amountBs, 0);
@@ -1131,13 +1133,14 @@ export const reportsService = {
       }
 
       // Operating expenses breakdown
+      // BACKLOG-106 [REPORTS-001]: Excluir COMPRA_INVENTARIO del desglose (el costo ya se refleja en COGS).
       const db = getDb();
       const startNorm = start.slice(0, 10);
       const endNorm = end.slice(0, 10);
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
         .between([tenantId, startNorm], [tenantId, endNorm])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid')
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
         .toArray();
 
       if (operatingExpenses.length > 0) {
