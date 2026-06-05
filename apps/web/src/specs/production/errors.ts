@@ -50,6 +50,11 @@ export const ProductionErrors = {
   ASSEMBLY_INSUFFICIENT_STOCK: 'PRODUCTION_ASSEMBLY_INSUFFICIENT_STOCK',
   ASSEMBLY_PRODUCT_NOT_FOUND: 'PRODUCTION_ASSEMBLY_PRODUCT_NOT_FOUND',
   ASSEMBLY_FAILED: 'PRODUCTION_ASSEMBLY_FAILED',
+
+  // PRODUCTION-003 [Paso-3]: Errores del helper compartido de consumo FIFO real
+  // Usados por calculateConsumptionCost (costCalculator) y por los callers refactorizados.
+  INGREDIENT_INSUFFICIENT_STOCK: 'PRODUCTION_INGREDIENT_INSUFFICIENT_STOCK',
+  INGREDIENT_NOT_FOUND: 'PRODUCTION_INGREDIENT_NOT_FOUND',
 } as const;
 
 export type ProductionErrorCode = typeof ProductionErrors[keyof typeof ProductionErrors];

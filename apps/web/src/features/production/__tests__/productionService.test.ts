@@ -442,3 +442,259 @@ describe('PRODUCTION-001-RECURSIVIDAD: Sub-recetas', () => {
     expect(result.ok).toBe(true);
   });
 });
+
+// ── PRODUCTION-003 [Paso-3]: Sprint 3 — BDD de integración ──
+
+describe('PRODUCTION-003-Sprint3: Unificar costo batch/assembly con helper FIFO real', () => {
+  beforeEach(() => {
+    resetMockDb();
+    productMap.clear();
+    recipeMap.clear();
+    linesByRecipe.clear();
+  });
+
+  it('Escenario 3.1: Batch (createOrder) calcula costPerProducedUnit con FIFO real', async () => {
+    // Given: 2 lotes de Harina: lot-1 (10kg @ $0.50, 2026-06-01) + lot-2 (5kg @ $0.60, 2026-06-04)
+    const panUuid = '00000000-0000-1000-8000-000000000010';
+    const harinaUuid = '00000000-0000-1000-8000-000000000011';
+    const recipePanUuid = '00000000-0000-1000-8000-000000000012';
+    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 15, costPrice: 0.5 });
+    seedProduct({ id: panUuid, name: 'Pan', productType: 'producto_terminado', unit: 'unidad', stock: 0 });
+    seedRecipe({
+      id: recipePanUuid,
+      productId: panUuid,
+      mode: 'batch',
+      yieldQuantity: 1,
+      yieldUnit: 'unidad',
+      lines: [{ productId: harinaUuid, quantity: 1, unit: 'kg' }],
+    });
+    applySeeds();
+    mockDb.inventoryLots.where.mockImplementation((query: { productId?: string }) => {
+      const lotsByProductId: Record<string, unknown[]> = {
+        [harinaUuid]: [
+          { id: 'lot-1', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 10, remainingQuantity: 10, costUsdPerUnit: 0.5, createdAt: '2026-06-01T00:00:00Z', version: 0 },
+          { id: 'lot-2', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 5, remainingQuantity: 5, costUsdPerUnit: 0.6, createdAt: '2026-06-04T00:00:00Z', version: 0 },
+        ],
+      };
+      const lots = query?.productId ? lotsByProductId[query.productId] ?? [] : [];
+      return {
+        filter: vi.fn(() => ({
+          sortBy: vi.fn(() => Promise.resolve([...lots])),
+          toArray: vi.fn(() => Promise.resolve([...lots])),
+        })),
+      };
+    });
+    mockDb.inventoryLots.get.mockImplementation((id: string) => {
+      const map: Record<string, unknown> = {
+        'lot-1': { id: 'lot-1', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 10, remainingQuantity: 10, costUsdPerUnit: 0.5, createdAt: '2026-06-01T00:00:00Z', version: 0 },
+        'lot-2': { id: 'lot-2', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 5, remainingQuantity: 5, costUsdPerUnit: 0.6, createdAt: '2026-06-04T00:00:00Z', version: 0 },
+      };
+      return Promise.resolve(map[id] ?? null);
+    });
+
+    const { productionService } = await import('../services/productionService');
+
+    // When: producir 5 panes en batch
+    const result = await productionService.createOrder('test-tenant', 'user-1', {
+      recipeId: recipePanUuid,
+      batchCount: 5,
+      plannedDate: '2026-06-05',
+    });
+
+    // Then: success, costPerProducedUnit = $0.50 (5kg × $0.50 de lot-1, FIFO)
+    expect(result.ok).toBe(true);
+    if (!result.ok) console.error('3.1 result.error:', result.error);
+    // Verificar que el finished lot (inventoryLots.add para pan) tiene costUsdPerUnit = 0.50
+    const finishedLotCall = mockDb.inventoryLots.add.mock.calls.find(
+      (c) => Array.isArray(c) && c[0] && (c[0] as { productId?: string }).productId === panUuid,
+    );
+    expect(finishedLotCall).toBeDefined();
+    if (finishedLotCall) {
+      const finishedLot = finishedLotCall[0] as { costUsdPerUnit: number; quantityAdded: number };
+      expect(finishedLot.costUsdPerUnit).toBe(0.5);
+      expect(finishedLot.quantityAdded).toBe(5);
+    }
+  });
+
+  it('Escenario 3.2: Assembly (consumeForAssembly) calcula totalIngredientCost con FIFO real', async () => {
+    // Given: 2 lotes de Harina: lot-1 (10kg @ $0.50) + lot-2 (5kg @ $0.60)
+    // NOTA: productionService usa Math.ceil(0.5)=1 para needed, por lo que el assembly
+    // consume 1kg (no 0.5kg) — pre-existente, no es bug introducido por Sprint 3.
+    const comboUuid = '00000000-0000-1000-8000-000000000020';
+    const harinaUuid = '00000000-0000-1000-8000-000000000021';
+    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 15 });
+    seedProduct({ id: comboUuid, name: 'Combo-desayuno', productType: 'producto_terminado', unit: 'unidad', stock: 0 });
+    seedRecipe({
+      id: 'r-combo-asm',
+      productId: comboUuid,
+      mode: 'assembly',
+      yieldQuantity: 1,
+      yieldUnit: 'unidad',
+      lines: [{ productId: harinaUuid, quantity: 0.5, unit: 'kg' }],
+    });
+    applySeeds();
+    mockDb.inventoryLots.where.mockImplementation((query: { productId?: string }) => {
+      const lotsByProductId: Record<string, unknown[]> = {
+        [harinaUuid]: [
+          { id: 'lot-1', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 10, remainingQuantity: 10, costUsdPerUnit: 0.5, createdAt: '2026-06-01T00:00:00Z', version: 0 },
+          { id: 'lot-2', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 5, remainingQuantity: 5, costUsdPerUnit: 0.6, createdAt: '2026-06-04T00:00:00Z', version: 0 },
+        ],
+      };
+      const lots = query?.productId ? lotsByProductId[query.productId] ?? [] : [];
+      return {
+        filter: vi.fn(() => ({
+          sortBy: vi.fn(() => Promise.resolve([...lots])),
+          toArray: vi.fn(() => Promise.resolve([...lots])),
+        })),
+      };
+    });
+    mockDb.inventoryLots.get.mockImplementation((id: string) => {
+      const map: Record<string, unknown> = {
+        'lot-1': { id: 'lot-1', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 10, remainingQuantity: 10, costUsdPerUnit: 0.5, createdAt: '2026-06-01T00:00:00Z', version: 0 },
+      };
+      return Promise.resolve(map[id] ?? null);
+    });
+
+    const { productionService } = await import('../services/productionService');
+
+    // When: ensamblar 1 combo (receta dice 0.5kg Harina, pero Math.ceil = 1kg)
+    const result = await productionService.consumeForAssembly(comboUuid, 1, 'test-tenant', 'user-1');
+
+    // Then: success, totalIngredientCost refleja el consumo de 1kg de lot-1 (pre-existente Math.ceil behavior)
+    expect(result.ok).toBe(true);
+    if (!result.ok) console.error('3.2 result.error:', result.error);
+    if (result.ok) {
+      // Math.ceil(0.5 * 1.0) = 1kg; 1kg * $0.50 = $0.50
+      expect(result.data.totalIngredientCost).toBe(0.5);
+      expect(result.data.consumedLots).toHaveLength(1);
+      expect(result.data.consumedLots[0].lotId).toBe('lot-1');
+      expect(result.data.consumedLots[0].quantity).toBe(1);
+    }
+  });
+
+  it('Escenario 3.3: Batch y Assembly dan MISMO costo (proporcional) con mismos ingredientes', async () => {
+    // Given: 1 lote de Harina: 10kg @ $0.50
+    // NOTA: usamos cantidades ENTERAS (2kg Pan, 1kg Combo) para evitar el
+    // pre-existente Math.ceil(0.5)=1 que rompe proporcionalidad con fracciones.
+    // (Bug pre-existente, no introducido por Sprint 3 — ver reporte al final.)
+    const panUuid = '00000000-0000-1000-8000-000000000030';
+    const comboUuid = '00000000-0000-1000-8000-000000000031';
+    const harinaUuid = '00000000-0000-1000-8000-000000000032';
+    const recipePanUuid = '00000000-0000-1000-8000-000000000033';
+    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 10 });
+    seedProduct({ id: panUuid, name: 'Pan', productType: 'producto_terminado', unit: 'unidad', stock: 0 });
+    seedProduct({ id: comboUuid, name: 'Combo', productType: 'producto_terminado', unit: 'unidad', stock: 0 });
+    seedRecipe({
+      id: recipePanUuid,
+      productId: panUuid,
+      mode: 'batch',
+      yieldQuantity: 1,
+      yieldUnit: 'unidad',
+      lines: [{ productId: harinaUuid, quantity: 2, unit: 'kg' }],
+    });
+    seedRecipe({
+      id: 'r-combo-asm',
+      productId: comboUuid,
+      mode: 'assembly',
+      yieldQuantity: 1,
+      yieldUnit: 'unidad',
+      lines: [{ productId: harinaUuid, quantity: 1, unit: 'kg' }],
+    });
+    applySeeds();
+    mockDb.inventoryLots.where.mockImplementation((query: { productId?: string }) => {
+      const lots = query?.productId === harinaUuid ? [
+        { id: 'lot-1', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 10, remainingQuantity: 10, costUsdPerUnit: 0.5, createdAt: '2026-06-01T00:00:00Z', version: 0 },
+      ] : [];
+      return {
+        filter: vi.fn(() => ({
+          sortBy: vi.fn(() => Promise.resolve([...lots])),
+          toArray: vi.fn(() => Promise.resolve([...lots])),
+        })),
+      };
+    });
+    mockDb.inventoryLots.get.mockImplementation((id: string) => {
+      if (id === 'lot-1') {
+        return Promise.resolve({ id: 'lot-1', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 10, remainingQuantity: 10, costUsdPerUnit: 0.5, createdAt: '2026-06-01T00:00:00Z', version: 0 });
+      }
+      return Promise.resolve(null);
+    });
+
+    const { productionService } = await import('../services/productionService');
+
+    // When: producir 1 pan en batch + ensamblar 1 combo
+    const batchResult = await productionService.createOrder('test-tenant', 'user-1', {
+      recipeId: recipePanUuid,
+      batchCount: 1,
+      plannedDate: '2026-06-05',
+    });
+    const assemblyResult = await productionService.consumeForAssembly(comboUuid, 1, 'test-tenant', 'user-1');
+
+    // Then: ambos modos usan el helper, diferencia proporcional a la cantidad
+    expect(batchResult.ok).toBe(true);
+    expect(assemblyResult.ok).toBe(true);
+    if (!batchResult.ok) console.error('3.3 batch error:', batchResult.error);
+    if (!assemblyResult.ok) console.error('3.3 assembly error:', assemblyResult.error);
+    if (batchResult.ok && assemblyResult.ok) {
+      // Batch: 1 pan × 2kg = 2kg × $0.50 = $1.00 costPerProducedUnit
+      // Assembly: 1 combo × 1kg = 1kg × $0.50 = $0.50 totalIngredientCost
+      // Diferencia proporcional: 1.00 / 0.50 = 2 (batch usa 2x más harina)
+      const batchLot = mockDb.inventoryLots.add.mock.calls
+        .map((c) => c[0])
+        .find((lot) => (lot as { productId?: string }).productId === panUuid) as { costUsdPerUnit: number } | undefined;
+      expect(batchLot?.costUsdPerUnit).toBe(1.0);
+      expect(assemblyResult.data.totalIngredientCost).toBe(0.5);
+      // Proporcionalidad: el doble de harina → el doble de costo
+      expect(batchLot!.costUsdPerUnit / assemblyResult.data.totalIngredientCost).toBe(2);
+    }
+  });
+
+  it('Escenario 3.4: Stock insuficiente en batch retorna INGREDIENT_INSUFFICIENT_STOCK', async () => {
+    // Given: 1 lote de Harina: 2kg @ $0.50; product.stock = 5 (para pasar early check y llegar al helper)
+    const panUuid = '00000000-0000-1000-8000-000000000040';
+    const harinaUuid = '00000000-0000-1000-8000-000000000041';
+    const recipePanUuid = '00000000-0000-1000-8000-000000000042';
+    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 5, costPrice: 0.5 });
+    seedProduct({ id: panUuid, name: 'Pan', productType: 'producto_terminado', unit: 'unidad', stock: 0 });
+    seedRecipe({
+      id: recipePanUuid,
+      productId: panUuid,
+      mode: 'batch',
+      yieldQuantity: 1,
+      yieldUnit: 'unidad',
+      lines: [{ productId: harinaUuid, quantity: 1, unit: 'kg' }],
+    });
+    applySeeds();
+    mockDb.inventoryLots.where.mockImplementation((query: { productId?: string }) => {
+      const lots = query?.productId === harinaUuid ? [
+        { id: 'lot-1', tenantId: 'test-tenant', productId: harinaUuid, quantityAdded: 2, remainingQuantity: 2, costUsdPerUnit: 0.5, createdAt: '2026-06-01T00:00:00Z', version: 0 },
+      ] : [];
+      return {
+        filter: vi.fn(() => ({
+          sortBy: vi.fn(() => Promise.resolve([...lots])),
+          toArray: vi.fn(() => Promise.resolve([...lots])),
+        })),
+      };
+    });
+
+    const { productionService } = await import('../services/productionService');
+
+    // When: intentar producir 5 panes (5kg Harina necesarios, pero solo 2kg en lotes)
+    const result = await productionService.createOrder('test-tenant', 'user-1', {
+      recipeId: recipePanUuid,
+      batchCount: 5,
+      plannedDate: '2026-06-05',
+    });
+
+    // Then: failure con INGREDIENT_INSUFFICIENT_STOCK
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('PRODUCTION_INGREDIENT_INSUFFICIENT_STOCK');
+    }
+    // Verificar que NO se creó lote del producto terminado
+    const productionLotAdd = mockDb.inventoryLots.add.mock.calls.find(
+      (c) => Array.isArray(c) && c[0] && (c[0] as { productId?: string }).productId === panUuid,
+    );
+    expect(productionLotAdd).toBeUndefined();
+    expect(mockDb.productionOrders.add).not.toHaveBeenCalled();
+  });
+});

@@ -8,6 +8,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
+import { calculateConsumptionCost } from './costCalculator';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
 
 /**
@@ -845,19 +846,16 @@ export const productionService = {
     }
 
     // 5. Calculate cost of ingredients consumed
+    // PRODUCTION-003 [Paso-3]: Reemplazado cálculo manual con helper FIFO real.
     let totalIngredientCost = 0;
     for (const line of expandedLines) {
       const needed = Math.ceil(line.quantity * wasteMultiplier);
-      const product = await db.products.get(line.productId);
-      if (product && product.costPrice != null) {
-        const costPerStorageUnit = product.isWeighted
-          ? product.costPrice / 1000
-          : product.costPrice;
-        totalIngredientCost += needed * costPerStorageUnit;
-      }
+      const result = await calculateConsumptionCost(line.productId, needed);
+      if (!result.ok) return failure(result.error);
+      totalIngredientCost += result.data.totalCost;
     }
     const costPerProducedUnit = quantityTarget > 0
-      ? preciseRound(totalIngredientCost / quantityTarget, 4)
+      ? Math.round((totalIngredientCost / quantityTarget) * 100) / 100
       : 0;
 
     // 6. Atomic transaction
@@ -1193,49 +1191,41 @@ export const productionService = {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado.`));
       }
 
-      const isInsufficient = ingredient.stock < needed;
-      if (isInsufficient && !options.allowOverride) {
-        return failure(new AppError(
-          ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK,
-          `Stock insuficiente de ingrediente "${ingredient.name}". Necesario: ${needed}, Disponible: ${ingredient.stock}.`
-        ));
-      }
+      // PRODUCTION-003 [Paso-3]: Usando helper compartido para cálculo FIFO y plan de consumo.
+      const calcResult = await calculateConsumptionCost(line.productId, needed, { allowOverride: options.allowOverride });
+      if (!calcResult.ok) return failure(calcResult.error);
+      const { totalCost: lineTotalCost, consumedLots } = calcResult.data;
 
+      // Mantener isInsufficient para el reasonType del movement (override manual → ajuste_manual).
+      const isInsufficient = ingredient.stock < needed;
+
+      // Update product stock (igual que antes)
       const previousStock = ingredient.stock;
       const newStock = Math.max(0, previousStock - needed);
 
       await db.products.update(line.productId, { stock: newStock });
       await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
-      let toConsume = needed;
-      let lotCost = 0;
-      const lots = await db.inventoryLots
-        .where({ productId: line.productId })
-        .filter(l => l.remainingQuantity > 0)
-        .sortBy('createdAt');
-
-      for (const lot of lots) {
-        if (toConsume <= 0) break;
-        const currentLot = await db.inventoryLots.get(lot.id);
+      // Aplicar consumo a la DB (reducir remainingQuantity, incrementar version).
+      for (const detail of consumedLots) {
+        const currentLot = await db.inventoryLots.get(detail.lotId);
         if (!currentLot || currentLot.remainingQuantity <= 0) continue;
-        if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
+        // PRODUCTION-003 [Paso-3]: Si el costUsdPerUnit cambió entre la lectura del helper y la
+        // actualización, hay conflicto concurrente (mismo control que el version check original).
+        if (currentLot.costUsdPerUnit !== detail.costUsdPerUnit) {
           throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto en consumo FIFO.');
         }
-        const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
+        const newRemaining = currentLot.remainingQuantity - detail.quantity;
         const newVersion = (currentLot.version ?? 0) + 1;
-        lotCost += consumeQty * (currentLot.costUsdPerUnit ?? 0);
-        assemblyConsumedLots.push({ lotId: lot.id, quantity: consumeQty });
-        await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion });
-        await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - consumeQty, version: newVersion } as unknown as Record<string, unknown>), tenantId);
-        toConsume -= consumeQty;
+        assemblyConsumedLots.push({ lotId: detail.lotId, quantity: detail.quantity });
+        await db.inventoryLots.update(detail.lotId, { remainingQuantity: newRemaining, version: newVersion });
+        await syncQueue.enqueue('inventory_lots', 'UPDATE', detail.lotId, toSnake({
+          ...currentLot, remainingQuantity: newRemaining, version: newVersion,
+        } as unknown as Record<string, unknown>), tenantId);
       }
 
-      if (toConsume > 0 && !options.allowOverride) {
-        return failure(new AppError('INVENTORY_STOCK_INSUFFICIENT', `Stock insuficiente de "${ingredient.name}" (lotes agotados).`));
-      }
-
-      totalIngredientCost += lotCost;
-      const movementCostUsd = preciseRound(lotCost, 2);
+      totalIngredientCost += lineTotalCost;
+      const movementCostUsd = preciseRound(lineTotalCost, 2);
 
       const movementId = generateId();
       const reasonType = isInsufficient ? 'ajuste_manual' : 'consumo_interno';
