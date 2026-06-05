@@ -1025,7 +1025,8 @@ export const reportsService = {
           // Estimación: |quantity| * priceUsd * 0.5 (costo fallback proporcional a unidades perdidas)
           const product = await db.products.get(mov.productId);
           const priceUsd = product?.priceUsd ?? 0;
-          const unitsLost = Math.abs(mov.quantity);
+          let unitsLost = Math.abs(mov.quantity);
+          if (product?.isWeighted) unitsLost = unitsLost / 1000;
           costUsd = preciseRound(unitsLost * priceUsd * 0.5, 4);
           isEstimated = true;
           estimatedTotalUsd += costUsd;
