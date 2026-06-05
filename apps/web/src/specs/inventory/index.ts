@@ -40,7 +40,7 @@ export const CreateProductInputSchema = ProductSchema.omit({
   deletedAt: true,
 }).extend({
   categoryId: z.string().uuid('Selecciona una categoría'),
-  costPrice: z.number().min(0, 'El costo no puede ser negativo').max(9999.99, 'El costo es demasiado alto').optional(),
+  costPrice: z.number().min(0.01, 'El costo debe ser mayor a 0').max(9999.99, 'El costo es demasiado alto').optional(),
   // PRODUCTION-003 [Paso-1]: el form de Inventario solo acepta estos 2 tipos.
   productType: InventoryProductTypeEnum.default('resale').optional(),
 }).strict();
