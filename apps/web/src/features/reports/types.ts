@@ -7,13 +7,14 @@ export interface ReportFilters {
 }
 
 export interface AdjustmentLossExpenses {
-  perdida: { totalUsd: number; count: number };
-  robo: { totalUsd: number; count: number };
-  vencido: { totalUsd: number; count: number };
-  consumo_interno: { totalUsd: number; count: number };
-  otros: { totalUsd: number; count: number };
+  perdida: { totalUsd: number; count: number; estimatedCount: number };
+  robo: { totalUsd: number; count: number; estimatedCount: number };
+  vencido: { totalUsd: number; count: number; estimatedCount: number };
+  consumo_interno: { totalUsd: number; count: number; estimatedCount: number };
+  otros: { totalUsd: number; count: number; estimatedCount: number };
   totalUsd: number;
   totalBs: number;
+  estimatedTotalUsd: number;
 }
 
 export interface ExecutiveSummaryData {

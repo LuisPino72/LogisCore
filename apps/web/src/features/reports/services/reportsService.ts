@@ -989,6 +989,8 @@ export const reportsService = {
     }
     try {
       const db = getDb();
+      // DINERO-010 (A5): incluir TODOS los movimientos con quantity<0 (no filtrar por costUsd>0).
+      // Las pérdidas con costUsd null/undefined se estiman usando priceUsd*0.5.
       const movements = await db.inventoryMovements
         .where({ tenantId })
         .filter((m) =>
@@ -997,44 +999,62 @@ export const reportsService = {
           && m.quantity < 0
           && m.createdAt >= start
           && m.createdAt <= end
-          && m.costUsd !== undefined
-          && m.costUsd > 0
         )
         .toArray();
 
       const LOSING_REASONS = ['perdida', 'robo', 'vencido', 'consumo_interno', 'otros'] as const;
-      const byReason: Record<string, { totalUsd: number; totalBs: number; count: number }> = {};
+      const byReason: Record<string, { totalUsd: number; totalBs: number; count: number; estimatedCount: number }> = {};
       for (const reason of LOSING_REASONS) {
-        byReason[reason] = { totalUsd: 0, totalBs: 0, count: 0 };
+        byReason[reason] = { totalUsd: 0, totalBs: 0, count: 0, estimatedCount: 0 };
       }
 
       let totalBs = 0;
       let totalUsd = 0;
+      let estimatedTotalUsd = 0;
+
       for (const mov of movements) {
         const reason = mov.reasonType ?? 'otros';
-        if (!byReason[reason]) byReason[reason] = { totalUsd: 0, totalBs: 0, count: 0 };
-        byReason[reason].totalUsd += mov.costUsd!;
+        if (!byReason[reason]) byReason[reason] = { totalUsd: 0, totalBs: 0, count: 0, estimatedCount: 0 };
+
+        let costUsd: number;
+        let isEstimated = false;
+        if (mov.costUsd !== undefined && mov.costUsd > 0) {
+          costUsd = mov.costUsd;
+        } else {
+          // Estimación: |quantity| * priceUsd * 0.5 (costo fallback proporcional a unidades perdidas)
+          const product = await db.products.get(mov.productId);
+          const priceUsd = product?.priceUsd ?? 0;
+          const unitsLost = Math.abs(mov.quantity);
+          costUsd = preciseRound(unitsLost * priceUsd * 0.5, 4);
+          isEstimated = true;
+          estimatedTotalUsd += costUsd;
+        }
+
+        byReason[reason].totalUsd += costUsd;
         byReason[reason].count += 1;
-        totalUsd += mov.costUsd!;
+        if (isEstimated) byReason[reason].estimatedCount += 1;
+        totalUsd += costUsd;
 
         const rate = await getRateForDateCached(tenantId, mov.createdAt);
         if (rate > 0) {
-          const movBs = preciseRound(mov.costUsd! * rate, 2);
+          const movBs = preciseRound(costUsd * rate, 2);
           byReason[reason].totalBs += movBs;
           totalBs += movBs;
         }
       }
       totalUsd = preciseRound(totalUsd, 2);
       totalBs = preciseRound(totalBs, 2);
+      estimatedTotalUsd = preciseRound(estimatedTotalUsd, 2);
 
       return success({
-        perdida: { totalUsd: byReason['perdida'].totalUsd, count: byReason['perdida'].count },
-        robo: { totalUsd: byReason['robo'].totalUsd, count: byReason['robo'].count },
-        vencido: { totalUsd: byReason['vencido'].totalUsd, count: byReason['vencido'].count },
-        consumo_interno: { totalUsd: byReason['consumo_interno'].totalUsd, count: byReason['consumo_interno'].count },
-        otros: { totalUsd: byReason['otros'].totalUsd, count: byReason['otros'].count },
+        perdida: { totalUsd: byReason['perdida'].totalUsd, count: byReason['perdida'].count, estimatedCount: byReason['perdida'].estimatedCount },
+        robo: { totalUsd: byReason['robo'].totalUsd, count: byReason['robo'].count, estimatedCount: byReason['robo'].estimatedCount },
+        vencido: { totalUsd: byReason['vencido'].totalUsd, count: byReason['vencido'].count, estimatedCount: byReason['vencido'].estimatedCount },
+        consumo_interno: { totalUsd: byReason['consumo_interno'].totalUsd, count: byReason['consumo_interno'].count, estimatedCount: byReason['consumo_interno'].estimatedCount },
+        otros: { totalUsd: byReason['otros'].totalUsd, count: byReason['otros'].count, estimatedCount: byReason['otros'].estimatedCount },
         totalUsd,
         totalBs,
+        estimatedTotalUsd,
       });
     } catch (err) {
       logger.error('Reports', 'Error al obtener gastos por pérdidas', err);
