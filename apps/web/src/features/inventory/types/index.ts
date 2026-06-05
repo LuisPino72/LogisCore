@@ -38,7 +38,7 @@ export interface ProductFormData {
   isSellable: boolean;
   isRawMaterial: boolean;
   productType: 'unidad' | 'pesable_kg' | 'pesable_lt';
-  productionType?: 'materia_prima' | 'producto_terminado' | 'both';
+  productionType?: 'materia_prima';
   unit: string;
   stockInicial: number;
   stockMin?: number;

@@ -5,8 +5,12 @@ import { z } from 'zod';
 export const PESABLE_UNITS = ['kg', 'gr', 'lt', 'm'] as const;
 export type WeightUnit = typeof PESABLE_UNITS[number];
 
+// 4 valores: la entidad Product puede tener cualquiera (Producción crea producto_terminado y both).
 export const ProductTypeEnum = z.enum(['resale', 'materia_prima', 'producto_terminado', 'both']);
 export type ProductType = z.infer<typeof ProductTypeEnum>;
+
+// PRODUCTION-003 [Paso-1]: Inventario solo permite materia prima y resale. Producto terminado se crea desde Producción.
+export const InventoryProductTypeEnum = z.enum(['resale', 'materia_prima']);
 
 export const ProductSchema = z.object({
   id: z.string().uuid(),
@@ -37,6 +41,8 @@ export const CreateProductInputSchema = ProductSchema.omit({
 }).extend({
   categoryId: z.string().uuid('Selecciona una categoría'),
   costPrice: z.number().min(0, 'El costo no puede ser negativo').max(9999.99, 'El costo es demasiado alto').optional(),
+  // PRODUCTION-003 [Paso-1]: el form de Inventario solo acepta estos 2 tipos.
+  productType: InventoryProductTypeEnum.default('resale').optional(),
 }).strict();
 
 export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;

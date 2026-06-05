@@ -92,10 +92,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       : undefined,
     costPrice: editProduct.costPrice ?? 0,
     imageUrl: editProduct.imageUrl ?? undefined,
-    isRawMaterial: editProduct.productType === 'materia_prima' || editProduct.productType === 'producto_terminado' || editProduct.productType === 'both',
-    productionType: editProduct.productType === 'materia_prima' || editProduct.productType === 'producto_terminado' || editProduct.productType === 'both'
-      ? editProduct.productType
-      : undefined,
+    isRawMaterial: editProduct.productType !== 'resale' && editProduct.productType != null,
+    productionType: editProduct.productType !== 'resale' && editProduct.productType != null ? ('materia_prima' as const) : undefined,
   } : undefined;
 
   const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }): Promise<boolean> => {
@@ -560,14 +558,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                     <Select
                       label="Rol en producción"
                       value={formData.productionType ?? ''}
-                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima' | 'producto_terminado' | 'both')}
+                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima')}
                       disabled={isEditing}
                       error={errors.productionType}
                     >
                       <option value="">Selecciona...</option>
                       <option value="materia_prima">Materia prima (ingrediente)</option>
-                      <option value="producto_terminado">Producto terminado (output)</option>
-                      <option value="both">Ambos</option>
                     </Select>
                     {isEditing && (
                       <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
@@ -719,14 +715,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                     <Select
                       label="Rol en producción"
                       value={formData.productionType ?? ''}
-                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima' | 'producto_terminado' | 'both')}
+                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima')}
                       disabled={isEditing}
                       error={errors.productionType}
                     >
                       <option value="">Selecciona...</option>
                       <option value="materia_prima">Materia prima (ingrediente)</option>
-                      <option value="producto_terminado">Producto terminado (output)</option>
-                      <option value="both">Ambos</option>
                     </Select>
                     {isEditing && (
                       <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
@@ -881,14 +875,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <Select
                 label="Rol en producción"
                 value={formData.productionType ?? ''}
-                onChange={(e) => setField('productionType', e.target.value as 'materia_prima' | 'producto_terminado' | 'both')}
+                onChange={(e) => setField('productionType', e.target.value as 'materia_prima')}
                 disabled={isEditing}
                 error={errors.productionType}
               >
                 <option value="">Selecciona...</option>
                 <option value="materia_prima">Materia prima (ingrediente)</option>
-                <option value="producto_terminado">Producto terminado (output)</option>
-                <option value="both">Ambos</option>
               </Select>
               {isEditing && (
                 <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>

@@ -293,10 +293,10 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       }
     }
 
-    const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared'; productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both' } = {
+    const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared'; productType?: 'resale' | 'materia_prima' } = {
       ...parsed.data,
       stockInicial: isEditing ? 0 : formData.stockInicial,
-      productType: formData.isRawMaterial ? formData.productionType : 'resale',
+      productType: formData.isRawMaterial ? 'materia_prima' : 'resale',
     };
 
     if (presentations.length > 0) {
