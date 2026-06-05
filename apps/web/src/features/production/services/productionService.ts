@@ -1,3 +1,18 @@
+/**
+ * Production Service — Lógica de negocio de producción (recetas + órdenes).
+ *
+ * BUGFIX-MATHCEIL-001 (Sesión 105): La función `recipeQtyToStorage` se aplica
+ * en los 7 puntos de cálculo de `needed` (checkIngredientsAvailability,
+ * calculateRecipeCost, createOrder availability/cost/re-validate/consume,
+ * cancelOrder revert, consumeForAssembly). Esto convierte la cantidad
+ * de la unidad de receta (g, kg, ml, lt) a la unidad de almacenamiento
+ * (g, ml) ANTES de aplicar `Math.ceil`, evitando que fracciones como
+ * 0.5 kg se inflen a 1 kg (Math.ceil(0.5) = 1).
+ *
+ * Consecuencia: el sistema de producción ahora opera en storage units
+ * (g/ml para pesables, unidad para no pesables). Esta convención debe
+ * respetarse en todos los call-sites que calculan `needed` para inventario.
+ */
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { TenantTranslator } from '../../../services/tenantTranslator';
@@ -715,8 +730,12 @@ export const productionService = {
       const result: IngredientAvailability[] = [];
 
       for (const line of expandedLines) {
-        const needed = Math.ceil(line.quantity * wasteMultiplier);
+        // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
         const product = await db.products.get(line.productId);
+        const neededInStorage = product
+          ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+          : line.quantity * wasteMultiplier;
+        const needed = Math.ceil(neededInStorage);
         const available = product ? product.stock : 0;
         const productName = product ? product.name : 'Desconocido';
 
@@ -764,13 +783,19 @@ export const productionService = {
       const warningsSet = new Set<string>();
 
       for (const line of expandedLines) {
-        const needed = line.quantity * wasteMultiplier;
         const product = await db.products.get(line.productId);
+        // BUGFIX-MATHCEIL-001 [Paso-2]: Usar recipeQtyToStorage para que calculateRecipeCost
+        // reporte la misma cantidad en storage units (g/ml) que createOrder consume.
+        const neededInStorage = product
+          ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+          : line.quantity * wasteMultiplier;
         if (product && product.costPrice != null && product.costPrice > 0) {
+          // El costPrice del producto está en $/display_unit (kg/lt/unidad).
+          // Para pesables, dividir entre 1000 para obtener $/g o $/ml (storage unit).
           const costPerStorageUnit = product.isWeighted
             ? product.costPrice / 1000
             : product.costPrice;
-          totalCost += needed * costPerStorageUnit;
+          totalCost += neededInStorage * costPerStorageUnit;
         } else if (product) {
           // PRODUCTION-003 [Paso-5]: ingrediente sin costo -> warning no bloqueante.
           warningsSet.add(`${product.name} no tiene costo registrado`);
@@ -840,8 +865,12 @@ export const productionService = {
 
     // 4. Check ingredient availability
     for (const line of expandedLines) {
-      const needed = Math.ceil(line.quantity * wasteMultiplier);
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
       const product = await db.products.get(line.productId);
+      const neededInStorage = product
+        ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+        : line.quantity * wasteMultiplier;
+      const needed = Math.ceil(neededInStorage);
       if (!product || product.stock < needed) {
         const productName = product?.name || 'Desconocido';
         const available = product?.stock || 0;
@@ -858,7 +887,12 @@ export const productionService = {
     // PRODUCTION-003 [Paso-3]: Reemplazado cálculo manual con helper FIFO real.
     let totalIngredientCost = 0;
     for (const line of expandedLines) {
-      const needed = Math.ceil(line.quantity * wasteMultiplier);
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Pasar cantidad en storage units al helper FIFO.
+      const product = await db.products.get(line.productId);
+      const neededInStorage = product
+        ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+        : line.quantity * wasteMultiplier;
+      const needed = Math.ceil(neededInStorage);
       const result = await calculateConsumptionCost(line.productId, needed);
       if (!result.ok) return failure(result.error);
       totalIngredientCost += result.data.totalCost;
@@ -870,8 +904,12 @@ export const productionService = {
     // 6. Atomic transaction
     // Re-validate stock right before transaction (concurrency guard)
     for (const line of expandedLines) {
-      const needed = Math.ceil(line.quantity * wasteMultiplier);
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
       const freshProduct = await db.products.get(line.productId);
+      const neededInStorage = freshProduct
+        ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, freshProduct.unit)
+        : line.quantity * wasteMultiplier;
+      const needed = Math.ceil(neededInStorage);
       if (!freshProduct || freshProduct.stock < needed) {
         const productName = freshProduct?.name || 'Desconocido';
         const available = freshProduct?.stock || 0;
@@ -919,9 +957,12 @@ export const productionService = {
 
         // b. Consume ingredients (PRODUCTION-001-007: usa expandedLines para sub-recetas)
         for (const line of expandedLines) {
-          const needed = Math.ceil(line.quantity * wasteMultiplier);
           const product = await db.products.get(line.productId);
           if (!product) throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado.');
+
+          // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
+          const neededInStorage = recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit);
+          const needed = Math.ceil(neededInStorage);
 
           const previousStock = product.stock;
           const newStock = previousStock - needed;
@@ -1062,8 +1103,13 @@ export const productionService = {
           const wasteMultiplier = 1 + (recipe.wastePct / 100);
 
           for (const line of lines) {
-            const needed = Math.ceil(line.quantity * order.batchCount * wasteMultiplier);
+            // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
+            // (Bug histórico: Math.ceil(0.5) = 1 inflaba el revertimiento de la cancelación.)
             const product = await db.products.get(line.productId);
+            const neededInStorage = product
+              ? recipeQtyToStorage(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
+              : line.quantity * order.batchCount * wasteMultiplier;
+            const needed = Math.ceil(neededInStorage);
             if (product) {
               const previousStock = product.stock;
               const newStock = previousStock + needed;
@@ -1201,12 +1247,16 @@ export const productionService = {
     const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = [];
 
     for (const line of expandedLines) {
-      const needed = Math.ceil(line.quantity * wasteMultiplier);
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
+      // (Bug histórico: Math.ceil(0.5) = 1 hacía que 1 combo con 0.5 kg de Harina consumiera 1 kg completo.)
       const ingredient = await db.products.get(line.productId);
 
       if (!ingredient) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado.`));
       }
+
+      const neededInStorage = recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, ingredient.unit);
+      const needed = Math.ceil(neededInStorage);
 
       // PRODUCTION-003 [Paso-3]: Usando helper compartido para cálculo FIFO y plan de consumo.
       const calcResult = await calculateConsumptionCost(line.productId, needed, { allowOverride: options.allowOverride });

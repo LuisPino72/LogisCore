@@ -205,11 +205,12 @@ describe('PRODUCTION-003-Sprint4: Sincronizar product.costPrice con WAC', () => 
 
   it('Escenario 4.1: Producir actualiza product.costPrice con WAC (stock previo 0)', async () => {
     // Given: Pan con stock=0 y costPrice=0
+    // BUGFIX-MATHCEIL-001 [Paso-1]: Stock de Harina en storage units (10000 g = 10 kg).
     const panUuid = '00000000-0000-4000-8000-000000000050';
     const harinaUuid = '00000000-0000-4000-8000-000000000051';
     const recipePanUuid = '00000000-0000-4000-8000-000000000052';
     seedProduct({ id: panUuid, name: 'Pan', productType: 'producto_terminado', unit: 'unidad', stock: 0, costPrice: 0 });
-    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 10, costPrice: 0.5 });
+    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 10000, isWeighted: true, costPrice: 0.5 });
     seedRecipe({
       id: recipePanUuid,
       productId: panUuid,
@@ -219,7 +220,7 @@ describe('PRODUCTION-003-Sprint4: Sincronizar product.costPrice con WAC', () => 
       lines: [{ productId: harinaUuid, quantity: 1, unit: 'kg' }],
     });
     applySeeds();
-    mockSingleLot(harinaUuid, 'lot-h1', 10, 0.5);
+    mockSingleLot(harinaUuid, 'lot-h1', 10000, 0.0005);
 
     const { productionService } = await import('../services/productionService');
 
@@ -261,11 +262,12 @@ describe('PRODUCTION-003-Sprint4: Sincronizar product.costPrice con WAC', () => 
 
   it('Escenario 4.2: WAC entre stock previo y lote producido', async () => {
     // Given: Pan con stock=5 y costPrice=$0.40
+    // BUGFIX-MATHCEIL-001 [Paso-1]: Stock de Harina en storage units (10000 g = 10 kg).
     const panUuid = '00000000-0000-4000-8000-000000000060';
     const harinaUuid = '00000000-0000-4000-8000-000000000061';
     const recipePanUuid = '00000000-0000-4000-8000-000000000062';
     seedProduct({ id: panUuid, name: 'Pan', productType: 'producto_terminado', unit: 'unidad', stock: 5, costPrice: 0.4 });
-    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 10, costPrice: 0.5 });
+    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 10000, isWeighted: true, costPrice: 0.5 });
     seedRecipe({
       id: recipePanUuid,
       productId: panUuid,
@@ -275,7 +277,7 @@ describe('PRODUCTION-003-Sprint4: Sincronizar product.costPrice con WAC', () => 
       lines: [{ productId: harinaUuid, quantity: 1, unit: 'kg' }],
     });
     applySeeds();
-    mockSingleLot(harinaUuid, 'lot-h1', 10, 0.5);
+    mockSingleLot(harinaUuid, 'lot-h1', 10000, 0.0005);
 
     const { productionService } = await import('../services/productionService');
 
@@ -336,9 +338,10 @@ describe('PRODUCTION-003-Sprint4: Sincronizar product.costPrice con WAC', () => 
 
   it('Escenario 4.4: Ensamblar combo crea lote del combo (FIFO tracking)', async () => {
     // Given: Combo con receta assembly (1kg Harina) + 1 lote de Harina
+    // BUGFIX-MATHCEIL-001 [Paso-1]: Stock de Harina en storage units (10000 g = 10 kg).
     const comboUuid = '00000000-0000-4000-8000-000000000080';
     const harinaUuid = '00000000-0000-4000-8000-000000000081';
-    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 10, costPrice: 0.5 });
+    seedProduct({ id: harinaUuid, name: 'Harina', productType: 'materia_prima', unit: 'kg', stock: 10000, isWeighted: true, costPrice: 0.5 });
     seedProduct({ id: comboUuid, name: 'Combo-desayuno', productType: 'producto_terminado', unit: 'unidad', stock: 0 });
     seedRecipe({
       id: 'r-combo-asm-4',
@@ -349,7 +352,7 @@ describe('PRODUCTION-003-Sprint4: Sincronizar product.costPrice con WAC', () => 
       lines: [{ productId: harinaUuid, quantity: 1, unit: 'kg' }],
     });
     applySeeds();
-    mockSingleLot(harinaUuid, 'lot-h1', 10, 0.5);
+    mockSingleLot(harinaUuid, 'lot-h1', 10000, 0.0005);
 
     const { productionService } = await import('../services/productionService');
 
