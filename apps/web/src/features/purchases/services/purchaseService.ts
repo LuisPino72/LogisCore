@@ -595,9 +595,12 @@ export const purchaseService = {
             const previousCostStorage = product.isWeighted
               ? (product.costPrice ?? 0) / 1000
               : (product.costPrice ?? 0);
+            // DINERO-002 (C2): dividir costUsdPerUnit por unitMultiplier para presentaciones (Caja×6, etc.)
+            // costUsdPerUnit está en $/presentation-unit (caja); storage unit = unidad base (gramo, ml, und).
+            const divisor = (item.unitMultiplier && item.unitMultiplier > 1) ? item.unitMultiplier : 1;
             const itemCostStorage = product.isWeighted
-              ? (item.costUsdPerUnit || 0) / 1000
-              : (item.costUsdPerUnit || 0);
+              ? ((item.costUsdPerUnit || 0) / divisor) / 1000
+              : (item.costUsdPerUnit || 0) / divisor;
 
             // Calcular Costo Promedio Ponderado (WAC) en storage units ($/g)
             const totalLotCost = (previousStock * previousCostStorage) + (effectiveQty * itemCostStorage);
