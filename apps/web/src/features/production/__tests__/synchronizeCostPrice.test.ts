@@ -329,7 +329,8 @@ describe('PRODUCTION-003-Sprint4: Sincronizar product.costPrice con WAC', () => 
     // Then: success con costo = 2 unidades × $0.47 = $0.94 (NO usa un costPrice desactualizado como $0)
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data).toBe(0.94);
+      expect(result.data.totalCost).toBe(0.94);
+      expect(result.data.warnings).toEqual([]);
     }
   });
 

@@ -381,7 +381,8 @@ describe('PRODUCTION-001-RECURSIVIDAD: Sub-recetas', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       // 1 Combo → 2 Masa → 10 Harina → 10 * 0.5 = 5 USD
-      expect(result.data).toBe(5);
+      expect(result.data.totalCost).toBe(5);
+      expect(result.data.warnings).toEqual([]);
     }
   });
 

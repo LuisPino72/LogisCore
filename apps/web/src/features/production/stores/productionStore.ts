@@ -19,7 +19,7 @@ interface ProductionStore extends ProductionState {
 
   // Assembly
   checkIngredientsAvailability: (recipeId: string, batchCount: number) => Promise<IngredientAvailability[]>;
-  calculateRecipeCost: (recipeId: string, batchCount: number) => Promise<number>;
+  calculateRecipeCost: (recipeId: string, batchCount: number) => Promise<{ totalCost: number; warnings: string[] }>;
 
   // UI State
   activeTab: 'recipes' | 'produce' | 'history';
@@ -147,7 +147,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   calculateRecipeCost: async (recipeId, batchCount) => {
     const result = await productionService.calculateRecipeCost(recipeId, batchCount);
     if (result.ok) return result.data;
-    return 0;
+    return { totalCost: 0, warnings: [] };
   },
 
   // ===== REFRESH =====

@@ -6,7 +6,7 @@ import { syncQueue } from '../../../services/sync/syncQueue';
 import { emitWithPersistence } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
-import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
+import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema, type CalculateRecipeCostResult } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
 import { calculateConsumptionCost } from './costCalculator';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
@@ -740,7 +740,7 @@ export const productionService = {
   async calculateRecipeCost(
     recipeId: string,
     batchCount: number,
-  ): Promise<Result<number, AppError>> {
+  ): Promise<Result<CalculateRecipeCostResult, AppError>> {
     try {
       const db = getDb();
       const recipe = await db.recipes.get(recipeId);
@@ -759,6 +759,9 @@ export const productionService = {
 
       const wasteMultiplier = 1 + (recipe.wastePct / 100);
       let totalCost = 0;
+      // PRODUCTION-003 [Paso-5]: acumular warnings de ingredientes sin costo registrado.
+      // Evitamos duplicados via Set para casos donde una sub-receta repita el mismo ingrediente.
+      const warningsSet = new Set<string>();
 
       for (const line of expandedLines) {
         const needed = line.quantity * wasteMultiplier;
@@ -768,10 +771,16 @@ export const productionService = {
             ? product.costPrice / 1000
             : product.costPrice;
           totalCost += needed * costPerStorageUnit;
+        } else if (product) {
+          // PRODUCTION-003 [Paso-5]: ingrediente sin costo -> warning no bloqueante.
+          warningsSet.add(`${product.name} no tiene costo registrado`);
         }
       }
 
-      return success(preciseRound(totalCost, 2));
+      return success({
+        totalCost: preciseRound(totalCost, 2),
+        warnings: Array.from(warningsSet),
+      });
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en calculateRecipeCost:', err);
       return failure(new AppError('PRODUCTION_COST_CALC_FAILED', 'Error al calcular costo de la receta.'));

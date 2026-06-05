@@ -149,3 +149,15 @@ export const RecipeWithLinesSchema = z.object({
 });
 
 export type RecipeWithLines = z.infer<typeof RecipeWithLinesSchema>;
+
+// ===== Calculate Recipe Cost Result =====
+// PRODUCTION-003 [Paso-5]: calculateRecipeCost retorna warnings explicitos
+// para ingredientes sin costo registrado (costPrice=0 o null).
+// La UI muestra los warnings al bodeguero, pero NO bloquea el guardado.
+
+export const CalculateRecipeCostResultSchema = z.object({
+  totalCost: z.number(),
+  warnings: z.array(z.string()).default([]),
+});
+
+export type CalculateRecipeCostResult = z.infer<typeof CalculateRecipeCostResultSchema>;

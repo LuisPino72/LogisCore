@@ -19,6 +19,9 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   const [batchCount, setBatchCountState] = useState(1);
   const [ingredientAvailability, setIngredientAvailability] = useState<IngredientAvailability[]>([]);
   const [estimatedCost, setEstimatedCost] = useState(0);
+  // PRODUCTION-003 [Paso-5]: warnings de ingredientes sin costo registrado.
+  // No bloquean el guardado; se muestran al bodeguero como contexto.
+  const [costWarnings, setCostWarnings] = useState<string[]>([]);
   const [isChecking, setIsChecking] = useState(false);
   const [isProducing, setIsProducing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +36,8 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
         calculateRecipeCost(recipe.id, count),
       ]);
       setIngredientAvailability(availability);
-      setEstimatedCost(cost);
+      setEstimatedCost(cost.totalCost);
+      setCostWarnings(cost.warnings);
     } catch {
       setError('Error al verificar disponibilidad.');
     } finally {
@@ -197,11 +201,23 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
             </div>
 
             {/* Cost Estimate */}
-            {estimatedCost > 0 && (
+            {(estimatedCost > 0 || costWarnings.length > 0) && (
               <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-600">Costo estimado:</span>
                 <span className="font-semibold text-sm">${estimatedCost.toFixed(2)}</span>
               </div>
+            )}
+
+            {/* Cost Warnings — PRODUCTION-003 [Paso-5] */}
+            {costWarnings.length > 0 && (
+              <Alert variant="warning" icon={<AlertTriangle size={16} />} title="Costo estimado impreciso">
+                <ul className="list-disc list-inside text-sm space-y-0.5">
+                  {costWarnings.map((msg) => (
+                    <li key={msg}>{msg}</li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-xs">El costo puede ser incorrecto. Registra el costo de los ingredientes faltantes para mejorar la precisión.</p>
+              </Alert>
             )}
 
         {/* Warning */}

@@ -180,7 +180,7 @@ export function useRecipeForm() {
       w.push({ field: 'yieldQuantity', message: 'En modo ensamblaje, el yield siempre es 1 unidad.', type: 'info' });
     }
 
-    // Ingredient cost warnings
+    // PRODUCTION-003 [Paso-5] — Ingredient cost warnings (espejo del warning en calculateRecipeCost)
     form.lines.forEach((line, i) => {
       if (line.productId) {
         const ingredient = allProducts.find((p) => p.id === line.productId);
