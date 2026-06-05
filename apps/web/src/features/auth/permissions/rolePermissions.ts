@@ -9,7 +9,10 @@
  * para verificar el módulo. Si los roles requieren configuración por
  * tenant en el futuro, se puede cambiar a lectura asíncrona.
  */
-import type { UserSession, UserRole } from '../types';
+import type { UserRole } from '../types';
+import type { UserSession as CoreUserSession } from '@logiscore/core';
+
+type SessionLike = { role?: UserRole | null } | CoreUserSession | null | undefined;
 
 export interface RolePermission {
   id: string;
@@ -43,8 +46,8 @@ export function getRolePermissions(role: UserRole | undefined | null): string[] 
   return found ? found.modules : FALLBACK_MODULES;
 }
 
-export function hasPermission(session: UserSession | null | undefined, module: string): boolean {
-  const role = session?.role;
+export function hasPermission(session: SessionLike, module: string): boolean {
+  const role = session?.role as UserRole | undefined | null;
   if (!role) return false;
   return getRolePermissions(role).includes(module);
 }

@@ -4,6 +4,8 @@ import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthStore } from './features/auth/stores/authStore';
 import { authService } from './features/auth/services/authService';
 import { sessionGuard } from './features/auth/services/sessionGuardService';
+import { hasPermission } from './features/auth/permissions/rolePermissions';
+import type { UserRole } from './features/auth/types';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { initDb, destroyDb } from './services/dexie/db';
 import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
@@ -60,7 +62,8 @@ const ALL_MODULES: SidebarModule[] = [
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
 ];
 
-const EMPLOYEE_ALLOWED = new Set(['pos', 'customers']);
+// BACKLOG-106 [AUTH-002]: Lookup dinámico desde rolePermissions (single source of truth)
+// Antes era un Set hardcoded; ahora se filtra por `getRolePermissions(role).modules` (ver sidebarModules más abajo).
 
 const MODULE_ROUTE_MAP: Record<string, string> = {
   dashboard: '/dashboard',
@@ -200,8 +203,9 @@ function DashboardLayout() {
     return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
   }
 
+  // BACKLOG-106 [AUTH-002]: Filtrar sidebar por permisos del rol (lectura síncrona).
   const sidebarModules = role === 'employee'
-    ? ALL_MODULES.filter((m) => EMPLOYEE_ALLOWED.has(m.id))
+    ? ALL_MODULES.filter((m) => hasPermission(session, m.id))
     : ALL_MODULES;
 
   return (
@@ -317,7 +321,7 @@ function DashboardLayout() {
   );
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: UserRole[] }) {
   const { isAuthenticated, isLoading } = useAuth();
   const session = useAuthStore((s) => s.session);
   const selectedTenantSlug = useAuthStore((s) => s.selectedTenantSlug);
@@ -330,6 +334,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/admin" replace />;
   }
 
+  // BACKLOG-106 [AUTH-002]: Defense in depth — si la ruta declara allowedRoles y el rol no aplica, redirect.
+  if (allowedRoles && role && !allowedRoles.includes(role)) {
+    return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -339,7 +348,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (role !== 'admin') return <Navigate to={role === 'employee' ? '/inventory' : '/dashboard'} replace />;
+  // BACKLOG-106 [AUTH-002]: Fix bug — employee iba a /inventory (no en su sidebar). Ahora va a /pos.
+  if (role !== 'admin') return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
 
   return <>{children}</>;
 }
