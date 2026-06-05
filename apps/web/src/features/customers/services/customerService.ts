@@ -423,9 +423,9 @@ export const customerService = {
       let lastAt: string | null = null;
 
       for (const s of sales) {
-        totalBs += s.totalBs;
+        totalBs += s.subtotalBs;
         if (s.exchangeRate > 0) {
-          totalUsd += s.totalBs / s.exchangeRate;
+          totalUsd += s.subtotalBs / s.exchangeRate;
         }
         if (!firstAt || s.createdAt < firstAt) firstAt = s.createdAt;
         if (!lastAt || s.createdAt > lastAt) lastAt = s.createdAt;
@@ -462,9 +462,9 @@ export const customerService = {
       for (const s of sales) {
         const cid = s.customerId!;
         const existing = customerMap.get(cid) ?? { totalBs: 0, totalUsd: 0, count: 0, lastPurchaseAt: s.createdAt };
-        existing.totalBs += s.totalBs;
+        existing.totalBs += s.subtotalBs;
         if (s.exchangeRate > 0) {
-          existing.totalUsd += s.totalBs / s.exchangeRate;
+          existing.totalUsd += s.subtotalBs / s.exchangeRate;
         }
         existing.count += 1;
         if (s.createdAt > existing.lastPurchaseAt) {
