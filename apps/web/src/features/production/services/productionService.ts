@@ -1333,9 +1333,10 @@ export const productionService = {
       id: comboLotId,
       tenantId,
       productId,
-      quantityAdded: 1,
-      remainingQuantity: 1,
-      costUsdPerUnit: preciseRound(totalIngredientCost, 2),
+      // DINERO-009 (A4): respetar quantity ensamblado (no siempre 1)
+      quantityAdded: quantity,
+      remainingQuantity: quantity,
+      costUsdPerUnit: preciseRound(totalIngredientCost / quantity, 4),
       createdAt: now,
       updatedAt: now,
       version: 1,
