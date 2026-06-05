@@ -339,6 +339,17 @@ export const productionService = {
       }
     }
 
+    // DINERO-011 (M1): validar ciclos en backend (defensa en profundidad: UI ya valida con useRecipeForm)
+    if (resolvedProductId) {
+      const cycleCheck = await validateCycles(
+        resolvedProductId,
+        input.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
+      );
+      if (!cycleCheck.ok) {
+        return failure(cycleCheck.error);
+      }
+    }
+
     const recipeId = generateId();
     const lineRecords: DexieRecipeLine[] = input.lines.map((line, i) => ({
       id: generateId(),
@@ -514,6 +525,17 @@ export const productionService = {
             ));
           }
         }
+      }
+    }
+
+    // DINERO-011 (M1): validar ciclos en updateRecipe
+    if (input.lines) {
+      const cycleCheck = await validateCycles(
+        existing.productId,
+        input.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
+      );
+      if (!cycleCheck.ok) {
+        return failure(cycleCheck.error);
       }
     }
 
