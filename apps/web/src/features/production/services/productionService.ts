@@ -964,13 +964,21 @@ export const productionService = {
         await db.inventoryLots.add(finishedLot);
         await syncQueue.enqueue('inventory_lots', 'CREATE', finishedLotId, toSnake(finishedLot as unknown as Record<string, unknown>), tenantId);
 
-        // Update finished product stock
+        // Update finished product stock + WAC
+        // PRODUCTION-003 [Paso-4]: Sincronizar product.costPrice con WAC tras producir.
+        // Consistente con receiveOrder en Compras (purchaseService.ts:583-601).
         const finishedProduct = await db.products.get(recipe.productId);
         if (finishedProduct) {
-          const prevStock = finishedProduct.stock;
+          const prevStock = finishedProduct.stock ?? 0;
+          const prevCostPrice = finishedProduct.costPrice ?? 0;
           const newStock = prevStock + quantityTarget;
-          await db.products.update(recipe.productId, { stock: newStock });
-          await syncQueue.enqueue('products', 'UPDATE', recipe.productId, toSnake({ ...finishedProduct, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+          const previousValue = prevStock * prevCostPrice;
+          const newValue = quantityTarget * costPerProducedUnit;
+          const newWac = newStock > 0
+            ? Math.round(((previousValue + newValue) / newStock) * 100) / 100
+            : 0;
+          await db.products.update(recipe.productId, { stock: newStock, costPrice: newWac });
+          await syncQueue.enqueue('products', 'UPDATE', recipe.productId, toSnake({ ...finishedProduct, stock: newStock, costPrice: newWac } as unknown as Record<string, unknown>), tenantId);
 
           // Create movement for finished product
           const finishedMovementId = generateId();
@@ -1251,6 +1259,24 @@ export const productionService = {
     }
 
     await emitWithPersistence('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, { productId, quantity, tenantId }, { userId, tenantId });
+
+    // PRODUCTION-003 [Paso-4]: Crear lote del combo ensamblado para tracking FIFO.
+    // NO se descuenta stock del combo (se vende al instante) — el lote permite
+    // trazabilidad temporal del costo real (FIFO) de cada combo producido.
+    const comboLotId = generateId();
+    const comboLot = {
+      id: comboLotId,
+      tenantId,
+      productId,
+      quantityAdded: 1,
+      remainingQuantity: 1,
+      costUsdPerUnit: preciseRound(totalIngredientCost, 2),
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
+    };
+    await db.inventoryLots.add(comboLot);
+    await syncQueue.enqueue('inventory_lots', 'CREATE', comboLotId, toSnake(comboLot as unknown as Record<string, unknown>), tenantId);
 
     return success({ consumedLots: assemblyConsumedLots, totalIngredientCost });
   },
