@@ -18,8 +18,8 @@ import { CreateSaleInputSchema, calculateSaleTotals } from '../../../specs/pos';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
-import { extractRole } from '../../../lib/jwt';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { requireRole } from '../../auth/services/roleGuard';
 
 type VerificationProduct = {
   productId: string;
@@ -34,29 +34,6 @@ type VerificationProduct = {
 };
 
 const MODULE_NAME = 'POS';
-
-async function getRoleFromSession(): Promise<Result<string, AppError>> {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión.'));
-    const role = extractRole(session);
-    if (!role) return failure(new AppError('AUTH_NO_ROLE', 'No se encontró el rol del usuario.'));
-    return success(role);
-  } catch {
-    return failure(new AppError('AUTH_ERROR', 'Error al obtener la sesión.'));
-  }
-}
-
-async function requireRole(...allowedRoles: string[]): Promise<Result<string, AppError>> {
-  const roleResult = await getRoleFromSession();
-  if (!roleResult.ok) return failure(roleResult.error);
-
-  if (!allowedRoles.includes(roleResult.data)) {
-    return failure(new AppError('FORBIDDEN', `Solo los roles [${allowedRoles.join(', ')}] pueden realizar esta acción.`));
-  }
-
-  return roleResult;
-}
 
 async function autoCloseRegister(
   db: LogisCoreDB,
@@ -726,8 +703,7 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, openingBalanceBs, openingRate } = input;
 
-    const roleCheck = await requireRole('owner', 'admin');
-    if (!roleCheck.ok) return failure(roleCheck.error);
+    requireRole('owner', 'admin');
 
     if (!openingBalanceBs || openingBalanceBs <= 0) {
       return failure(new AppError(PosErrors.BOX_OPENING_BALANCE_REQUIRED, 'Debe ingresar un monto inicial para abrir la caja.'));
@@ -1039,8 +1015,7 @@ export const posService = {
   },
 
   async voidSale(saleId: string, tenantId: string, userId: string): Promise<Result<void, AppError>> {
-    const roleCheck = await requireRole('owner', 'admin');
-    if (!roleCheck.ok) return failure(roleCheck.error);
+    requireRole('owner', 'admin');
 
     try {
       const db = getDb();
@@ -1345,9 +1320,7 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, declaredClosingBalanceBs, closingRate } = input;
 
-    const roleCheck = await requireRole('owner', 'admin');
-    if (!roleCheck.ok) return failure(roleCheck.error);
-
+    requireRole('owner', 'admin');
 
     const cashReg = await db.cashRegisters
       .where({ tenantId })

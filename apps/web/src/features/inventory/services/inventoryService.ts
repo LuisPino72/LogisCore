@@ -13,7 +13,7 @@ import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage } from '../types';
-import { extractRole } from '../../../lib/jwt';
+import { requireRole } from '../../auth/services/roleGuard';
 import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './mappers';
 
 // AUDIT-BD-001: verified, código usa 'product_presentations' consistentemente (no hay 'from('presentations')' ni '"presentations"' en src)
@@ -1045,20 +1045,10 @@ export const inventoryService = {
   },
 
   async adjustStock(input: AdjustStockInput & { userId: string; tenantId: string }): Promise<Result<InventoryMovement, AppError>> {
+    requireRole('owner', 'admin');
+
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
-
-    // Role check: solo owner o admin pueden ajustar stock
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return failure(new AppError('AUTH_REQUIRED', 'Debe iniciar sesión para ajustar stock.'));
-      const role = extractRole(session);
-      if (role !== 'owner' && role !== 'admin') {
-        return failure(new AppError('FORBIDDEN', 'Solo el dueño o administrador pueden ajustar stock.'));
-      }
-    } catch {
-      return failure(new AppError('AUTH_ERROR', 'Error al verificar permisos.'));
-    }
 
     if (!input.reasonType) {
       return failure(new AppError('INVENTORY_ADJUSTMENT_INVALID', 'Debes seleccionar un motivo para el ajuste.'));

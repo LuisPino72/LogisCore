@@ -66,6 +66,12 @@ vi.mock('@logiscore/core', () => ({
   isAppError: (err: Error) => err.name === 'AppError',
 }));
 
+vi.mock('../../features/auth/stores/authStore', () => ({
+  useAuthStore: {
+    getState: () => ({ session: { userId: 'u-1', email: 'owner@bodega.com', role: 'owner', tenantId: 'test-tenant-uuid' } }),
+  },
+}));
+
 function mockCashRegister(overrides: Record<string, unknown> = {}) {
   const reg = {
     id: 'reg-1', tenantId: 'test-tenant', isOpen: true,

@@ -65,6 +65,12 @@ vi.mock('@logiscore/core', () => ({
   isAppError: (err: Error) => err.name === 'AppError',
 }));
 
+vi.mock('../../features/auth/stores/authStore', () => ({
+  useAuthStore: {
+    getState: () => ({ session: { userId: 'u-1', email: 'owner@bodega.com', role: 'owner', tenantId: 'test-tenant-uuid' } }),
+  },
+}));
+
 const USER_ID = '550e8400-e29b-41d4-a716-446655440001';
 const PROD_ID = '550e8400-e29b-41d4-a716-446655440002';
 
