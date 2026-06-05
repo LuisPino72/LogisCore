@@ -90,6 +90,23 @@ export const purchaseService = {
       );
     }
 
+    // DINERO-007 (A2): RIF único por tenant activo
+    if (parsed.data.rif) {
+      const rifUpper = parsed.data.rif.toUpperCase();
+      const existing = await db.suppliers
+        .where({ tenantId })
+        .filter((s) => !s.deletedAt && s.rif === rifUpper)
+        .first();
+      if (existing) {
+        return failure(
+          new AppError(
+            PurchaseErrors.SUPPLIER_RIF_DUPLICATE,
+            `Ya existe un proveedor activo con el RIF ${rifUpper}.`,
+          ),
+        );
+      }
+    }
+
     const supplier: Supplier = {
       id,
       name: parsed.data.name.trim(),
@@ -569,6 +586,14 @@ export const purchaseService = {
           if (!item) continue;
 
           const newReceivedQty = item.receivedQuantity + rec.receivedQuantity;
+          // DINERO-008 (A3): validación "no exceder" DENTRO de la transacción
+          // (la pre-validación arriba puede pasar en race conditions con 2 recepciones concurrentes).
+          if (newReceivedQty > item.quantity) {
+            return failure(new AppError(
+              PurchaseErrors.ORDER_RECEIVE_EXCEEDS,
+              `Recibido excede lo ordenado para producto "${item.productName ?? item.productId.slice(0, 8)}". Ordenado: ${item.quantity}, ya recibido: ${item.receivedQuantity}, intento: ${rec.receivedQuantity}.`,
+            ));
+          }
           await db.purchaseOrderItems.update(item.id, { receivedQuantity: newReceivedQty });
           await syncQueue.enqueue('purchase_order_items', 'UPDATE', item.id, toSnake({
             ...item,
