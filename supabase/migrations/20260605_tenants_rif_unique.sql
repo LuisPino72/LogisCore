@@ -1,6 +1,10 @@
 -- Sprint 1 — Issue #7: tenants.rif UNIQUE
 -- Aplica UNIQUE constraint parcial (soft-delete aware) sobre tenants.rif.
 -- Esto previene que dos tenants activos tengan el mismo RIF.
+--
+-- Nota: PostgreSQL no soporta UNIQUE CONSTRAINT parcial directamente
+-- (la sintaxis UNIQUE (col) WHERE solo es valida para CREATE UNIQUE INDEX).
+-- Por eso se usa CREATE UNIQUE INDEX que tiene el mismo efecto.
 
 DO $$
 BEGIN
@@ -14,7 +18,6 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE tenants
-  ADD CONSTRAINT tenants_rif_unique
-  UNIQUE (rif)
+CREATE UNIQUE INDEX IF NOT EXISTS tenants_rif_unique
+  ON tenants (rif)
   WHERE deleted_at IS NULL;
