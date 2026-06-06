@@ -1,4 +1,4 @@
-import { AppError, Result, success, failure } from '@logiscore/core';
+import { AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 
 const SESSION_TOKEN_KEY = 'logiscore_session_token';
@@ -92,6 +92,7 @@ class SessionGuardService {
     } catch {
       this.heartbeatFailures++;
       if (this.heartbeatFailures >= SessionGuardService.MAX_HEARTBEAT_FAILURES) {
+        EventBus.emit(SystemEvents.USER_LOGOUT);
         this.clearToken();
         this.stopHeartbeat();
       }
