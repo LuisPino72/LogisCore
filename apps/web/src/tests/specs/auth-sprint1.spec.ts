@@ -207,6 +207,85 @@ describe('LOGIN-001-01: Token storage migration + Supabase config', () => {
     });
   });
 
+  describe('Escenario 3: User enumeration unificado - email no existe (issue #2)', () => {
+    it('Given: signInWithPassword retorna error "Invalid login credentials". When: authService.login. Then: retorna "Credenciales inválidas" con code AUTH_INVALID_CREDENTIALS', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Invalid login credentials', status: 400 },
+      });
+
+      const result = await authService.login('noexiste@test.com', 'Password123!');
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe('AUTH_INVALID_CREDENTIALS');
+        expect(result.error.message).toBe('Credenciales inválidas. Verifica tu email y contraseña.');
+      }
+    });
+  });
+
+  describe('Escenario 4: User enumeration con email no confirmado / user not found / fallback (issue #2)', () => {
+    it('Given: signInWithPassword retorna error "Email not confirmed". When: authService.login. Then: MISMO mensaje que credenciales inválidas (code interno AUTH_EMAIL_NOT_CONFIRMED)', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Email not confirmed', status: 400 },
+      });
+
+      const result = await authService.login('noconfirmado@test.com', 'Password123!');
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe('AUTH_EMAIL_NOT_CONFIRMED');
+        expect(result.error.message).toBe('Credenciales inválidas. Verifica tu email y contraseña.');
+      }
+    });
+
+    it('Given: signInWithPassword retorna error "User not found". When: authService.login. Then: MISMO mensaje (code interno AUTH_USER_NOT_FOUND)', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'User not found', status: 400 },
+      });
+
+      const result = await authService.login('fantasma@test.com', 'Password123!');
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe('AUTH_USER_NOT_FOUND');
+        expect(result.error.message).toBe('Credenciales inválidas. Verifica tu email y contraseña.');
+      }
+    });
+
+    it('Given: signInWithPassword retorna error genérico. When: authService.login. Then: mensaje unificado (code interno AUTH_LOGIN_FAILED)', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Some unknown error', status: 500 },
+      });
+
+      const result = await authService.login('test@test.com', 'Password123!');
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe('AUTH_LOGIN_FAILED');
+        expect(result.error.message).toBe('Credenciales inválidas. Verifica tu email y contraseña.');
+      }
+    });
+
+    it('Given: signInWithPassword retorna "rate limit". When: authService.login. Then: mensaje específico de rate limit (code AUTH_RATE_LIMITED)', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Too many requests', status: 429 },
+      });
+
+      const result = await authService.login('test@test.com', 'Password123!');
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe('AUTH_RATE_LIMITED');
+        expect(result.error.message).toBe('Demasiados intentos. Espera un momento e intenta de nuevo.');
+      }
+    });
+  });
+
   describe('Escenario 5: Login fallido se audita (issue #3)', () => {
     it('Given: CRITICAL_EVENTS exportado. Then: incluye USER.LOGIN_FAILED', () => {
       expect(CRITICAL_EVENTS).toContain('USER.LOGIN_FAILED');

@@ -43,18 +43,18 @@ async function buildUserSession(session: NonNullable<RawSession>): Promise<UserS
 function mapSupabaseAuthError(error: { message: string; status?: number }): AppError {
   const msg = error.message.toLowerCase();
   if (msg.includes('invalid login credentials')) {
-    return new AppError('AUTH_INVALID_CREDENTIALS', 'Credenciales incorrectas. Verifica tu email y contraseña.');
+    return new AppError('AUTH_INVALID_CREDENTIALS', 'Credenciales inválidas. Verifica tu email y contraseña.');
   }
   if (msg.includes('email not confirmed')) {
-    return new AppError('AUTH_EMAIL_NOT_CONFIRMED', 'Este email no ha sido confirmado.');
+    return new AppError('AUTH_EMAIL_NOT_CONFIRMED', 'Credenciales inválidas. Verifica tu email y contraseña.');
   }
   if (msg.includes('user not found')) {
-    return new AppError('AUTH_USER_NOT_FOUND', 'Este email no está registrado.');
+    return new AppError('AUTH_USER_NOT_FOUND', 'Credenciales inválidas. Verifica tu email y contraseña.');
   }
   if (msg.includes('rate limit') || msg.includes('too many requests')) {
     return new AppError('AUTH_RATE_LIMITED', 'Demasiados intentos. Espera un momento e intenta de nuevo.');
   }
-  return new AppError('AUTH_LOGIN_FAILED', 'Error al iniciar sesión. Verifica tu conexión e intenta de nuevo.');
+  return new AppError('AUTH_LOGIN_FAILED', 'Credenciales inválidas. Verifica tu email y contraseña.');
 }
 
 export const authService = {
