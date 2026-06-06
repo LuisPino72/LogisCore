@@ -19,13 +19,25 @@ function sanitizeEmail(email: string): string {
 
 type RawSession = Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
 
-async function buildUserSession(session: NonNullable<RawSession>): Promise<UserSession> {
+async function buildUserSession(
+  session: NonNullable<RawSession>,
+  opts: { signal?: AbortSignal } = {},
+): Promise<UserSession> {
+  const { signal } = opts;
+
+  if (signal?.aborted) {
+    throw new DOMException('buildUserSession aborted before start', 'AbortError');
+  }
+
   const role = extractRole(session);
   const tenantUuid = extractTenantId(session);
   let tenantSlug: string | null = null;
 
   if (tenantUuid) {
     tenantSlug = await TenantTranslator.uuidToSlug(tenantUuid);
+    if (signal?.aborted) {
+      throw new DOMException('buildUserSession aborted after tenant slug resolve', 'AbortError');
+    }
     initDb(tenantSlug);
   }
 
@@ -58,6 +70,8 @@ function mapSupabaseAuthError(error: { message: string; status?: number }): AppE
 }
 
 export const authService = {
+  buildUserSession,
+
   async bootstrapSession(): Promise<Result<UserSession | null, AppError>> {
     const { data: { session }, error } = await supabase.auth.getSession();
 

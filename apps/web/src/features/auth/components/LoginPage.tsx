@@ -172,6 +172,7 @@ export function LoginPage() {
             variant="primary"
             fullWidth
             loading={isLoggingIn}
+            disabled={isLoggingIn}
             className="btn-glow-hover py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
             style={{
               background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)',

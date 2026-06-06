@@ -170,11 +170,25 @@ import { useAuthStore } from '../../features/auth/stores/authStore';
 
 const SESSION_TOKEN_KEY = 'logiscore_session_token';
 
+function makeJwt(payload: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = btoa(JSON.stringify(payload));
+  return `${header}.${body}.mock-signature`;
+}
+
+const futureExp = Math.floor(Date.now() / 1000) + 3600;
+const baseJwtToken = makeJwt({
+  exp: futureExp,
+  app_metadata: { role: 'owner', tenant_id: 'tenant-uuid-1' },
+  role: 'owner',
+  tenant_id: 'tenant-uuid-1',
+});
+
 const baseSession = {
-  access_token: 'mock-access-token',
+  access_token: baseJwtToken,
   refresh_token: 'mock-refresh',
   expires_in: 3600,
-  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  expires_at: futureExp,
   token_type: 'bearer',
   user: {
     id: 'user-uuid-1',
