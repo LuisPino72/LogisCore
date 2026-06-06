@@ -55,7 +55,11 @@ export const adminService = {
 
   async softDeleteTenant(id: string): Promise<Result<void, AppError>> {
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.rpc('soft_delete_tenant', { p_tenant_id: id });
+    const { error } = await supabase
+      .from('tenants')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('deleted_at', null);
 
     if (error) {
       return failure(new AppError('TENANT_DELETE_FAILED', error.message || 'Error al desactivar el local'));
