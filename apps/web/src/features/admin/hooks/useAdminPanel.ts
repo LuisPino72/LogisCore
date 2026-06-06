@@ -14,7 +14,7 @@ interface UseAdminPanelReturn {
   isLoading: boolean;
   error: string | null;
   fetchTenants: () => Promise<void>;
-  fetchUsers: (tenantId?: string) => Promise<void>;
+  fetchUsers: (tenantId: string) => Promise<void>;
   fetchAllUsers: () => Promise<void>;
   fetchSubscriptions: () => Promise<void>;
   fetchGlobalCategories: () => Promise<void>;
@@ -57,7 +57,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     setIsLoading(false);
   }, []);
 
-  const fetchUsers = useCallback(async (tenantId?: string) => {
+  const fetchUsers = useCallback(async (tenantId: string) => {
     setIsLoading(true);
     setError(null);
     const result = await adminService.fetchUsers(tenantId);

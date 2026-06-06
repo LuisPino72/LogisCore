@@ -53,6 +53,7 @@ export const adminService = {
   },
 
   async softDeleteTenant(id: string): Promise<Result<void, AppError>> {
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.rpc('soft_delete_tenant', { p_tenant_id: id });
 
     if (error) {
@@ -68,7 +69,7 @@ export const adminService = {
           type: 'soft',
         },
         context: {
-          userId: '',
+          userId: user?.id ?? '',
           tenantId: '',
           tenantUuid: id,
         },
@@ -79,6 +80,7 @@ export const adminService = {
   },
 
   async hardDeleteTenant(id: string): Promise<Result<void, AppError>> {
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.rpc('hard_delete_tenant', { p_tenant_id: id });
 
     if (error) {
@@ -106,7 +108,7 @@ export const adminService = {
           type: 'hard',
         },
         context: {
-          userId: '',
+          userId: user?.id ?? '',
           tenantId: '',
           tenantUuid: id,
         },
@@ -116,20 +118,16 @@ export const adminService = {
     return success(undefined);
   },
 
-  async fetchUsers(tenantId?: string): Promise<Result<UserRole[], AppError>> {
-    let query = supabase
+  async fetchUsers(tenantId: string): Promise<Result<UserRole[], AppError>> {
+    const { data, error } = await supabase
       .from('user_roles')
       .select('id, user_id, tenant_id, role, created_at')
-      .is('deleted_at', null);
-
-    if (tenantId) {
-      query = query.eq('tenant_id', tenantId);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: true });
+      .is('deleted_at', null)
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: true });
 
     if (error) {
-      return failure(new AppError('TENANT_NOT_FOUND', 'Error al cargar usuarios'));
+      return failure(new AppError('USER_QUERY_FAILED', 'Error al cargar usuarios'));
     }
 
     const users: UserRole[] = (data ?? []).map((u: Record<string, unknown>) => ({
@@ -196,6 +194,7 @@ export const adminService = {
     }
     const tokenResult = await getAdminToken();
     if (!tokenResult.ok) return tokenResult;
+    const { data: { user } } = await supabase.auth.getUser();
 
     try {
       const response = await fetch(EDGE_FUNCTIONS.createTenant, {
@@ -227,7 +226,7 @@ export const adminService = {
           employeeCount: result.employees.length,
         },
         context: {
-          userId: '',
+          userId: user?.id ?? '',
           tenantId: '',
           tenantUuid: result.tenant.id,
         },
@@ -296,6 +295,13 @@ export const adminService = {
       return failure(new AppError('TENANT_NOT_FOUND', 'Error al actualizar tenant'));
     }
 
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('tenant_id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
     return success({
       id: updated.id,
       name: updated.name,
@@ -303,7 +309,7 @@ export const adminService = {
       rif: updated.rif,
       direccion: updated.direccion as string | undefined,
       telefono: updated.telefono as string | undefined,
-      plan: 'basic',
+      plan: (subscription?.plan as Tenant['plan']) ?? 'basic',
       createdAt: updated.created_at,
     });
   },
@@ -328,6 +334,17 @@ export const adminService = {
 
     if (!existing.tenant_id) {
       return failure(new AppError('TENANT_NOT_FOUND', 'Empleado sin tenant asociado'));
+    }
+
+    const { data: callerRole } = await supabase
+      .from('user_roles')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (existing.tenant_id !== callerRole?.tenant_id) {
+      return failure(new AppError('TENANT_FORBIDDEN', 'No autorizado para este empleado'));
     }
 
     const { error } = await supabase
