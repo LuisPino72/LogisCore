@@ -146,7 +146,21 @@ export const authService = {
     const { data, error } = await supabase.auth.signInWithPassword({ email: sanitizedEmail, password });
 
     if (error) {
-      return failure(mapSupabaseAuthError(error));
+      const authError = mapSupabaseAuthError(error);
+      const reason = (
+        authError.code === 'AUTH_INVALID_CREDENTIALS' ? 'invalid_credentials' :
+        authError.code === 'AUTH_EMAIL_NOT_CONFIRMED' ? 'email_not_confirmed' :
+        authError.code === 'AUTH_RATE_LIMITED' ? 'rate_limited' :
+        'unknown'
+      );
+      await logAuditEvent({
+        eventName: 'USER.LOGIN_FAILED',
+        module: 'AUTH',
+        userId: undefined,
+        tenantUuid: null,
+        payload: { email: sanitizedEmail, reason },
+      });
+      return failure(authError);
     }
 
     if (!data.session) {

@@ -34,15 +34,41 @@ Object.defineProperty(globalThis, 'crypto', {
 
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(() => Promise.resolve({ data: null, error: null })),
+  signInWithPassword: vi.fn(),
+  signOut: vi.fn(() => Promise.resolve({ error: null })),
+  getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+  refreshSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+  logAuditEvent: vi.fn(() => Promise.resolve()),
+  initDb: vi.fn(),
+  isDbReady: vi.fn(() => false),
+  resetDbInstance: vi.fn(),
+  setDbClosing: vi.fn(),
+  getDb: vi.fn(),
+  syncEngine: {
+    registerTable: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+    push: vi.fn(() => Promise.resolve()),
+  },
+  syncQueue: {
+    enqueue: vi.fn(),
+    getPendingCount: vi.fn(() => Promise.resolve(0)),
+  },
+  outboxProcessor: {
+    start: vi.fn(),
+    stop: vi.fn(),
+  },
+  uuidToSlug: vi.fn(() => Promise.resolve('test-tenant')),
+  clearCache: vi.fn(),
 }));
 
 vi.mock('../../services/supabase/client', () => ({
   supabase: {
     auth: {
-      signInWithPassword: vi.fn(),
-      signOut: vi.fn(() => Promise.resolve({ error: null })),
-      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
-      refreshSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+      signInWithPassword: mocks.signInWithPassword,
+      signOut: mocks.signOut,
+      getSession: mocks.getSession,
+      refreshSession: mocks.refreshSession,
     },
     rpc: mocks.rpc,
     from: vi.fn(() => ({
@@ -60,11 +86,58 @@ vi.mock('../../services/supabase/client', () => ({
 
 vi.mock('../../services/audit/auditService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/audit/auditService')>();
-  return { ...actual };
+  return {
+    ...actual,
+    logAuditEvent: mocks.logAuditEvent,
+  };
 });
 
+vi.mock('../../services/dexie/db', () => ({
+  initDb: mocks.initDb,
+  isDbReady: mocks.isDbReady,
+  resetDbInstance: mocks.resetDbInstance,
+  setDbClosing: mocks.setDbClosing,
+  getDb: mocks.getDb,
+}));
+
+vi.mock('../../services/sync/syncEngine', () => ({
+  syncEngine: mocks.syncEngine,
+}));
+
+vi.mock('../../services/sync/syncQueue', () => ({
+  syncQueue: mocks.syncQueue,
+}));
+
+vi.mock('../../services/outbox/outboxProcessor', () => ({
+  outboxProcessor: mocks.outboxProcessor,
+}));
+
+vi.mock('../../services/tenantTranslator', () => ({
+  TenantTranslator: {
+    uuidToSlug: mocks.uuidToSlug,
+    clearCache: mocks.clearCache,
+  },
+}));
+
+vi.mock('@logiscore/core', () => ({
+  AppError: class AppError extends Error {
+    public code: string;
+    constructor(code: string, msg: string) {
+      super(msg);
+      this.code = code;
+      this.name = 'AppError';
+    }
+  },
+  success: <T>(data: T) => ({ ok: true, data }) as const,
+  failure: (err: unknown) => ({ ok: false, error: err }) as const,
+  EventBus: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+  SystemEvents: { USER_LOGOUT: 'USER_LOGOUT' },
+}));
+
+import { authService } from '../../features/auth/services/authService';
 import { sessionGuard } from '../../features/auth/services/sessionGuardService';
 import { offlineGrace } from '../../features/auth/services/offlineGraceService';
+import { CRITICAL_EVENTS } from '../../services/audit/auditService';
 
 const SESSION_TOKEN_KEY = 'logiscore_session_token';
 const GRACE_KEY = 'logiscore_offline_grace';
@@ -131,6 +204,85 @@ describe('LOGIN-001-01: Token storage migration + Supabase config', () => {
 
     it('Given: client.ts. Then: NO contiene log_level: debug (Escenario 9)', () => {
       expect(clientSource).not.toMatch(/log_level:\s*['"]debug['"]/);
+    });
+  });
+
+  describe('Escenario 5: Login fallido se audita (issue #3)', () => {
+    it('Given: CRITICAL_EVENTS exportado. Then: incluye USER.LOGIN_FAILED', () => {
+      expect(CRITICAL_EVENTS).toContain('USER.LOGIN_FAILED');
+    });
+
+    it('Given: signInWithPassword retorna "Invalid login credentials". When: authService.login. Then: logAuditEvent con USER.LOGIN_FAILED + reason=invalid_credentials', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Invalid login credentials', status: 400 },
+      });
+
+      await authService.login('fail@test.com', 'Password123!');
+
+      const loginFailedCalls = mocks.logAuditEvent.mock.calls.filter(
+        (call) => (call[0] as { eventName?: string })?.eventName === 'USER.LOGIN_FAILED',
+      );
+      expect(loginFailedCalls.length).toBeGreaterThanOrEqual(1);
+      const payload = loginFailedCalls[0]![0] as {
+        eventName: string;
+        module: string;
+        payload?: { email?: string; reason?: string };
+      };
+      expect(payload.eventName).toBe('USER.LOGIN_FAILED');
+      expect(payload.module).toBe('AUTH');
+      expect(payload.payload?.email).toBe('fail@test.com');
+      expect(payload.payload?.reason).toBe('invalid_credentials');
+    });
+
+    it('Given: signInWithPassword retorna "Email not confirmed". When: authService.login. Then: logAuditEvent con reason=email_not_confirmed', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Email not confirmed', status: 400 },
+      });
+
+      await authService.login('noconfirmado@test.com', 'Password123!');
+
+      const loginFailedCalls = mocks.logAuditEvent.mock.calls.filter(
+        (call) => (call[0] as { eventName?: string })?.eventName === 'USER.LOGIN_FAILED',
+      );
+      expect(loginFailedCalls.length).toBeGreaterThanOrEqual(1);
+      const payload = loginFailedCalls[0]![0] as {
+        payload?: { reason?: string; email?: string };
+      };
+      expect(payload.payload?.reason).toBe('email_not_confirmed');
+    });
+
+    it('Given: signInWithPassword retorna rate limit. When: authService.login. Then: logAuditEvent con reason=rate_limited', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Too many requests', status: 429 },
+      });
+
+      await authService.login('ratelimit@test.com', 'Password123!');
+
+      const loginFailedCalls = mocks.logAuditEvent.mock.calls.filter(
+        (call) => (call[0] as { eventName?: string })?.eventName === 'USER.LOGIN_FAILED',
+      );
+      expect(loginFailedCalls.length).toBeGreaterThanOrEqual(1);
+      const payload = loginFailedCalls[0]![0] as { payload?: { reason?: string } };
+      expect(payload.payload?.reason).toBe('rate_limited');
+    });
+
+    it('Given: signInWithPassword retorna error genérico. When: authService.login. Then: logAuditEvent con reason=unknown', async () => {
+      mocks.signInWithPassword.mockResolvedValueOnce({
+        data: { session: null, user: null },
+        error: { message: 'Some other failure', status: 500 },
+      });
+
+      await authService.login('unknown@test.com', 'Password123!');
+
+      const loginFailedCalls = mocks.logAuditEvent.mock.calls.filter(
+        (call) => (call[0] as { eventName?: string })?.eventName === 'USER.LOGIN_FAILED',
+      );
+      expect(loginFailedCalls.length).toBeGreaterThanOrEqual(1);
+      const payload = loginFailedCalls[0]![0] as { payload?: { reason?: string } };
+      expect(payload.payload?.reason).toBe('unknown');
     });
   });
 });
