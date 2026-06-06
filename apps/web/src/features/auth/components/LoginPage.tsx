@@ -3,7 +3,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button, Input, Alert } from '../../../common/components';
 import { useAuthStore } from '../stores/authStore';
 
-const REMEMBERED_EMAIL_KEY = 'logiscore-remembered-email';
+const REMEMBERED_EMAIL_KEY = 'v2_logiscore-remembered-email';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');

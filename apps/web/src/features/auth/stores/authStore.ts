@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { UserSession } from '@logiscore/core';
 import { authService } from '../services/authService';
+import { sessionGuard } from '../services/sessionGuardService';
 import { LoginInputSchema } from '../types';
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
@@ -83,6 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         loginCooldownUntil: 0,
       });
       authService.startSync();
+      sessionGuard.startHeartbeat();
     } else {
       const attempts = get().loginAttempts + 1;
       const delay = Math.min(attempts * 2000, 30000);

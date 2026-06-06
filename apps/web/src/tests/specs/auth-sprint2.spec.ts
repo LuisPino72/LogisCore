@@ -168,7 +168,7 @@ import { authService } from '../../features/auth/services/authService';
 import { sessionGuard } from '../../features/auth/services/sessionGuardService';
 import { useAuthStore } from '../../features/auth/stores/authStore';
 
-const SESSION_TOKEN_KEY = 'logiscore_session_token';
+const SESSION_TOKEN_KEY = 'v2_logiscore_session_token';
 
 function makeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));

@@ -195,18 +195,12 @@ export const authService = {
     if (!isAdmin) {
       sessionGuard.generateSessionToken();
       let claimResult = await sessionGuard.claim(false);
-      // BUGFIX-LOGOUT-004: Si el claim falla con SESSION_ALREADY_ACTIVE,
-      // es probable que haya una fila zombie en active_sessions del signOut
-      // anterior (cuando el RPC release falló o no completó). Forzamos un
-      // release y reintentamos el claim una vez antes de abortar.
       if (!claimResult.ok && claimResult.error.code === 'AUTH_SESSION_ACTIVE') {
         await sessionGuard.release();
         sessionGuard.generateSessionToken();
         claimResult = await sessionGuard.claim(false);
       }
       if (!claimResult.ok) {
-        // BUGFIX-LOGOUT-005: signOut con scope 'global' explícito para
-        // limpiar tokens en servidor, no solo cookies locales.
         await supabase.auth.signOut({ scope: 'global' });
         return claimResult;
       }
@@ -278,12 +272,6 @@ export const authService = {
       await sessionGuard.release();
     }
 
-    // 5. BUGFIX-LOGOUT-002: scope 'global' en vez de 'local' para invalidar
-    // el refresh token en el servidor. Se ejecuta ANTES de cerrar la DB local
-    // para que si la red está caída, el intento + retry no compita con
-    // operaciones de Dexie. Best-effort: si falla 2 veces, continuamos
-    // con logout local igualmente (la sesión queda "huérfana" en Supabase
-    // hasta que el heartbeat la limpie).
     try {
       await supabase.auth.signOut({ scope: 'global' });
     } catch (err) {
@@ -296,7 +284,6 @@ export const authService = {
       }
     }
 
-    // 6. Detener sync y Realtime PRIMERO (antes de cerrar DB)
     this.stopSync();
 
     // 7. Flush de sync antes de cerrar DB local
@@ -347,10 +334,6 @@ export const authService = {
     // Resetear referencia para que initDb() cree una nueva instancia en el próximo login
     resetDbInstance();
     TenantTranslator.clearCache();
-    // BUGFIX-LOGOUT-001: emitir USER_LOGOUT al EventBus directamente.
-    // El emitWithAudit de arriba encola en outbox, pero stopSync() ya mató
-    // el outboxProcessor que lo procesa. Sin esta emisión, el listener de
-    // App.tsx:389 nunca dispara clearSession() y la UI queda zombie.
     EventBus.emit(SystemEvents.USER_LOGOUT);
     return success(undefined);
   },

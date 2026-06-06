@@ -16,7 +16,7 @@ function isJWTExpired(token: string): boolean {
   const decoded = decodeJWTPayload(token);
   const exp = decoded.exp as number | undefined;
   if (!exp) return false;
-  return Date.now() >= exp * 1000;
+  return Date.now() > exp * 1000;
 }
 
 export function extractRole(session: { access_token: string } | null): string | null {

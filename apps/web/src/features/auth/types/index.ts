@@ -49,3 +49,20 @@ export function validateLoginInput(input: unknown): LoginInput {
 export function isValidRole(role: unknown): role is UserRole {
   return role === 'admin' || role === 'owner' || role === 'employee';
 }
+
+const employeePasswordSchema = z.string()
+  .min(8, 'Mínimo 8 caracteres')
+  .max(20)
+  .regex(/[A-Z]/, 'Debe contener una mayúscula')
+  .regex(/[a-z]/, 'Debe contener una minúscula')
+  .regex(/[0-9]/, 'Debe contener un número')
+  .regex(/[^A-Za-z0-9]/, 'Debe contener un símbolo');
+
+export const CreateEmployeeInputSchema = z.object({
+  email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
+  password: employeePasswordSchema,
+  name: z.string().min(1, 'Nombre requerido').max(25),
+  tenantId: z.string().uuid('ID de tenant inválido'),
+}).strict();
+
+export type CreateEmployeeInput = z.infer<typeof CreateEmployeeInputSchema>;

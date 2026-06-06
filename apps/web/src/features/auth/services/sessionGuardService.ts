@@ -1,7 +1,7 @@
 import { AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 
-const SESSION_TOKEN_KEY = 'logiscore_session_token';
+const SESSION_TOKEN_KEY = 'v2_logiscore_session_token';
 const HEARTBEAT_MS = 3 * 60 * 1000;
 
 function deviceLabel(): string {
@@ -105,10 +105,6 @@ class SessionGuardService {
       try {
         await supabase.rpc('release_active_session', { p_session_token: token });
       } catch (err) {
-        // BUGFIX-LOGOUT-003: Si el RPC falla (red, timeout), la limpieza
-        // local debe ocurrir de todos modos. Si dejamos el throw, signOut()
-        // se aborta antes de llamar supabase.auth.signOut({ scope: 'global' })
-        // y la sesión zombie queda viva en el servidor.
         console.debug('[SessionGuard] release_active_session RPC failed — continuing with local cleanup', err);
       }
     }

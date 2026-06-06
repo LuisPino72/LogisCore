@@ -1,4 +1,4 @@
-const GRACE_KEY = 'logiscore_offline_grace';
+const GRACE_KEY = 'v2_logiscore_offline_grace';
 const GRACE_HOURS = 6;
 const GRACE_MS = GRACE_HOURS * 60 * 60 * 1000;
 

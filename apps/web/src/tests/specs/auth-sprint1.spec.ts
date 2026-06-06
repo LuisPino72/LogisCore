@@ -140,8 +140,8 @@ import { offlineGrace } from '../../features/auth/services/offlineGraceService';
 import { CRITICAL_EVENTS } from '../../services/audit/auditService';
 import { validateLoginInput } from '../../features/auth/types';
 
-const SESSION_TOKEN_KEY = 'logiscore_session_token';
-const GRACE_KEY = 'logiscore_offline_grace';
+const SESSION_TOKEN_KEY = 'v2_logiscore_session_token';
+const GRACE_KEY = 'v2_logiscore_offline_grace';
 
 const clientSource = readFileSync(
   resolve(__dirname, '../../services/supabase/client.ts'),
