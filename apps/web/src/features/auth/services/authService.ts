@@ -121,15 +121,16 @@ export const authService = {
       }
     }
 
+    const tenantUuidBootstrap = extractTenantId(session);
+    if (tenantUuidBootstrap) {
+      const subCheck = await authService.checkSubscriptionActive(tenantUuidBootstrap);
+      if (!subCheck.ok) return subCheck;
+    }
+
     const userSession = await buildUserSession(session);
 
     if (userSession.tenantSlug) {
       offlineGrace.extend(userSession.tenantSlug);
-    }
-
-    if (userSession.tenantId) {
-      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
-      if (!subCheck.ok) return subCheck;
     }
 
     // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes sin permissions
@@ -197,15 +198,16 @@ export const authService = {
       }
     }
 
+    const tenantUuidLogin = extractTenantId(data.session);
+    if (tenantUuidLogin) {
+      const subCheck = await authService.checkSubscriptionActive(tenantUuidLogin);
+      if (!subCheck.ok) return subCheck;
+    }
+
     const userSession = await buildUserSession(data.session);
 
     if (userSession.tenantSlug) {
       offlineGrace.extend(userSession.tenantSlug);
-    }
-
-    if (userSession.tenantId) {
-      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
-      if (!subCheck.ok) return subCheck;
     }
 
     await logAuditEvent({
@@ -262,10 +264,28 @@ export const authService = {
       await sessionGuard.release();
     }
 
-    // 5. Detener sync y Realtime PRIMERO (antes de cerrar DB)
+    // 5. BUGFIX-LOGOUT-002: scope 'global' en vez de 'local' para invalidar
+    // el refresh token en el servidor. Se ejecuta ANTES de cerrar la DB local
+    // para que si la red está caída, el intento + retry no compita con
+    // operaciones de Dexie. Best-effort: si falla 2 veces, continuamos
+    // con logout local igualmente (la sesión queda "huérfana" en Supabase
+    // hasta que el heartbeat la limpie).
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (err) {
+      console.debug('[AuthService] signOut failed, retrying once after 500ms', err);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (retryErr) {
+        console.debug('[AuthService] signOut retry also failed, continuing best-effort', retryErr);
+      }
+    }
+
+    // 6. Detener sync y Realtime PRIMERO (antes de cerrar DB)
     this.stopSync();
 
-    // 6. Flush de sync antes de cerrar DB local
+    // 7. Flush de sync antes de cerrar DB local
     try {
       const pendingCount = await syncQueue.getPendingCount();
       if (pendingCount > 0) {
@@ -275,10 +295,10 @@ export const authService = {
       // Si el flush falla, continuar con logout de todos modos
     }
 
-    // 7. Pequeña pausa para que operaciones en vuelo terminen
+    // 8. Pequeña pausa para que operaciones en vuelo terminen
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // 8. Persistir favoritos a localStorage antes de cerrar DB
+    // 9. Persistir favoritos a localStorage antes de cerrar DB
     try {
       const db = getDb();
       const favs = await db.productFavorites.toArray();
@@ -295,10 +315,10 @@ export const authService = {
       // Si la DB ya se está cerrando, ignoramos
     }
 
-    // 9. Señalizar que la DB se cerrará (DESPUÉS de detener sync/Realtime)
+    // 10. Señalizar que la DB se cerrará (DESPUÉS de detener sync/Realtime)
     setDbClosing(true);
 
-    // 10. Cerrar DB local SIN destruir — preservar datos offline para próximo login
+    // 11. Cerrar DB local SIN destruir — preservar datos offline para próximo login
     offlineGrace.clear();
     try {
       // Si el admin nunca entró a un tenant, Dexie no se inicializó.
@@ -313,11 +333,6 @@ export const authService = {
     // Resetear referencia para que initDb() cree una nueva instancia en el próximo login
     resetDbInstance();
     TenantTranslator.clearCache();
-    // BUGFIX-LOGOUT-002: scope 'global' en vez de 'local' para invalidar
-    // el refresh token en el servidor. Con 'local', el token zombie queda
-    // vivo en Supabase y el próximo login rebota con "esa cuenta está
-    // iniciada". Con 'global' se cierran TODAS las sesiones del usuario.
-    await supabase.auth.signOut({ scope: 'global' });
     // BUGFIX-LOGOUT-001: emitir USER_LOGOUT al EventBus directamente.
     // El emitWithAudit de arriba encola en outbox, pero stopSync() ya mató
     // el outboxProcessor que lo procesa. Sin esta emisión, el listener de
@@ -347,15 +362,16 @@ export const authService = {
       }
     }
 
+    const tenantUuidRefresh = extractTenantId(session);
+    if (tenantUuidRefresh) {
+      const subCheck = await authService.checkSubscriptionActive(tenantUuidRefresh);
+      if (!subCheck.ok) return subCheck;
+    }
+
     const userSession = await buildUserSession(session);
 
     if (userSession.tenantSlug) {
       offlineGrace.extend(userSession.tenantSlug);
-    }
-
-    if (userSession.tenantId) {
-      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
-      if (!subCheck.ok) return subCheck;
     }
 
     return success(userSession);
