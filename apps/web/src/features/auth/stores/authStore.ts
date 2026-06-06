@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { UserSession } from '@logiscore/core';
 import { authService } from '../services/authService';
+import { sessionGuard } from '../services/sessionGuardService';
 import { LoginInputSchema } from '../types';
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
@@ -49,10 +50,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   reset: () => set({ status: 'idle', session: null, selectedTenantSlug: null, error: null }),
 
   login: async (email, password) => {
+    if (get().isLoggingIn) return;
+
+    set({ isLoggingIn: true, loginError: null, fieldErrors: {} });
+
     const state = get();
     if (Date.now() < state.loginCooldownUntil) {
       const waitSeconds = Math.ceil((state.loginCooldownUntil - Date.now()) / 1000);
-      set({ loginError: `Demasiados intentos. Espera ${waitSeconds} segundos.` });
+      set({ loginError: `Demasiados intentos. Espera ${waitSeconds} segundos.`, isLoggingIn: false });
       return;
     }
 
@@ -63,11 +68,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (issue.path[0] === 'email') fieldErrors.email = 'Email inválido';
         if (issue.path[0] === 'password') fieldErrors.password = issue.message;
       }
-      set({ fieldErrors, loginError: null });
+      set({ fieldErrors, loginError: null, isLoggingIn: false });
       return;
     }
-
-    set({ isLoggingIn: true, loginError: null, fieldErrors: {} });
 
     const result = await authService.login(email, password);
 
@@ -81,6 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         loginCooldownUntil: 0,
       });
       authService.startSync();
+      sessionGuard.startHeartbeat();
     } else {
       const attempts = get().loginAttempts + 1;
       const delay = Math.min(attempts * 2000, 30000);

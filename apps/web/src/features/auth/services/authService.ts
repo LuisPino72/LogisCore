@@ -19,13 +19,25 @@ function sanitizeEmail(email: string): string {
 
 type RawSession = Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
 
-async function buildUserSession(session: NonNullable<RawSession>): Promise<UserSession> {
+async function buildUserSession(
+  session: NonNullable<RawSession>,
+  opts: { signal?: AbortSignal } = {},
+): Promise<UserSession> {
+  const { signal } = opts;
+
+  if (signal?.aborted) {
+    throw new DOMException('buildUserSession aborted before start', 'AbortError');
+  }
+
   const role = extractRole(session);
   const tenantUuid = extractTenantId(session);
   let tenantSlug: string | null = null;
 
   if (tenantUuid) {
     tenantSlug = await TenantTranslator.uuidToSlug(tenantUuid);
+    if (signal?.aborted) {
+      throw new DOMException('buildUserSession aborted after tenant slug resolve', 'AbortError');
+    }
     initDb(tenantSlug);
   }
 
@@ -43,21 +55,23 @@ async function buildUserSession(session: NonNullable<RawSession>): Promise<UserS
 function mapSupabaseAuthError(error: { message: string; status?: number }): AppError {
   const msg = error.message.toLowerCase();
   if (msg.includes('invalid login credentials')) {
-    return new AppError('AUTH_INVALID_CREDENTIALS', 'Credenciales incorrectas. Verifica tu email y contraseña.');
+    return new AppError('AUTH_INVALID_CREDENTIALS', 'Credenciales inválidas. Verifica tu email y contraseña.');
   }
   if (msg.includes('email not confirmed')) {
-    return new AppError('AUTH_EMAIL_NOT_CONFIRMED', 'Este email no ha sido confirmado.');
+    return new AppError('AUTH_EMAIL_NOT_CONFIRMED', 'Credenciales inválidas. Verifica tu email y contraseña.');
   }
   if (msg.includes('user not found')) {
-    return new AppError('AUTH_USER_NOT_FOUND', 'Este email no está registrado.');
+    return new AppError('AUTH_USER_NOT_FOUND', 'Credenciales inválidas. Verifica tu email y contraseña.');
   }
   if (msg.includes('rate limit') || msg.includes('too many requests')) {
     return new AppError('AUTH_RATE_LIMITED', 'Demasiados intentos. Espera un momento e intenta de nuevo.');
   }
-  return new AppError('AUTH_LOGIN_FAILED', 'Error al iniciar sesión. Verifica tu conexión e intenta de nuevo.');
+  return new AppError('AUTH_LOGIN_FAILED', 'Credenciales inválidas. Verifica tu email y contraseña.');
 }
 
 export const authService = {
+  buildUserSession,
+
   async bootstrapSession(): Promise<Result<UserSession | null, AppError>> {
     const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -121,15 +135,16 @@ export const authService = {
       }
     }
 
+    const tenantUuidBootstrap = extractTenantId(session);
+    if (tenantUuidBootstrap) {
+      const subCheck = await authService.checkSubscriptionActive(tenantUuidBootstrap);
+      if (!subCheck.ok) return subCheck;
+    }
+
     const userSession = await buildUserSession(session);
 
     if (userSession.tenantSlug) {
       offlineGrace.extend(userSession.tenantSlug);
-    }
-
-    if (userSession.tenantId) {
-      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
-      if (!subCheck.ok) return subCheck;
     }
 
     // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes sin permissions
@@ -146,7 +161,21 @@ export const authService = {
     const { data, error } = await supabase.auth.signInWithPassword({ email: sanitizedEmail, password });
 
     if (error) {
-      return failure(mapSupabaseAuthError(error));
+      const authError = mapSupabaseAuthError(error);
+      const reason = (
+        authError.code === 'AUTH_INVALID_CREDENTIALS' ? 'invalid_credentials' :
+        authError.code === 'AUTH_EMAIL_NOT_CONFIRMED' ? 'email_not_confirmed' :
+        authError.code === 'AUTH_RATE_LIMITED' ? 'rate_limited' :
+        'unknown'
+      );
+      await logAuditEvent({
+        eventName: 'USER.LOGIN_FAILED',
+        module: 'AUTH',
+        userId: undefined,
+        tenantUuid: null,
+        payload: { email: sanitizedEmail, reason },
+      });
+      return failure(authError);
     }
 
     if (!data.session) {
@@ -166,32 +195,27 @@ export const authService = {
     if (!isAdmin) {
       sessionGuard.generateSessionToken();
       let claimResult = await sessionGuard.claim(false);
-      // BUGFIX-LOGOUT-004: Si el claim falla con SESSION_ALREADY_ACTIVE,
-      // es probable que haya una fila zombie en active_sessions del signOut
-      // anterior (cuando el RPC release falló o no completó). Forzamos un
-      // release y reintentamos el claim una vez antes de abortar.
       if (!claimResult.ok && claimResult.error.code === 'AUTH_SESSION_ACTIVE') {
         await sessionGuard.release();
         sessionGuard.generateSessionToken();
         claimResult = await sessionGuard.claim(false);
       }
       if (!claimResult.ok) {
-        // BUGFIX-LOGOUT-005: signOut con scope 'global' explícito para
-        // limpiar tokens en servidor, no solo cookies locales.
         await supabase.auth.signOut({ scope: 'global' });
         return claimResult;
       }
+    }
+
+    const tenantUuidLogin = extractTenantId(data.session);
+    if (tenantUuidLogin) {
+      const subCheck = await authService.checkSubscriptionActive(tenantUuidLogin);
+      if (!subCheck.ok) return subCheck;
     }
 
     const userSession = await buildUserSession(data.session);
 
     if (userSession.tenantSlug) {
       offlineGrace.extend(userSession.tenantSlug);
-    }
-
-    if (userSession.tenantId) {
-      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
-      if (!subCheck.ok) return subCheck;
     }
 
     await logAuditEvent({
@@ -248,10 +272,21 @@ export const authService = {
       await sessionGuard.release();
     }
 
-    // 5. Detener sync y Realtime PRIMERO (antes de cerrar DB)
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (err) {
+      console.debug('[AuthService] signOut failed, retrying once after 500ms', err);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (retryErr) {
+        console.debug('[AuthService] signOut retry also failed, continuing best-effort', retryErr);
+      }
+    }
+
     this.stopSync();
 
-    // 6. Flush de sync antes de cerrar DB local
+    // 7. Flush de sync antes de cerrar DB local
     try {
       const pendingCount = await syncQueue.getPendingCount();
       if (pendingCount > 0) {
@@ -261,10 +296,10 @@ export const authService = {
       // Si el flush falla, continuar con logout de todos modos
     }
 
-    // 7. Pequeña pausa para que operaciones en vuelo terminen
+    // 8. Pequeña pausa para que operaciones en vuelo terminen
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // 8. Persistir favoritos a localStorage antes de cerrar DB
+    // 9. Persistir favoritos a localStorage antes de cerrar DB
     try {
       const db = getDb();
       const favs = await db.productFavorites.toArray();
@@ -281,10 +316,10 @@ export const authService = {
       // Si la DB ya se está cerrando, ignoramos
     }
 
-    // 9. Señalizar que la DB se cerrará (DESPUÉS de detener sync/Realtime)
+    // 10. Señalizar que la DB se cerrará (DESPUÉS de detener sync/Realtime)
     setDbClosing(true);
 
-    // 10. Cerrar DB local SIN destruir — preservar datos offline para próximo login
+    // 11. Cerrar DB local SIN destruir — preservar datos offline para próximo login
     offlineGrace.clear();
     try {
       // Si el admin nunca entró a un tenant, Dexie no se inicializó.
@@ -299,15 +334,6 @@ export const authService = {
     // Resetear referencia para que initDb() cree una nueva instancia en el próximo login
     resetDbInstance();
     TenantTranslator.clearCache();
-    // BUGFIX-LOGOUT-002: scope 'global' en vez de 'local' para invalidar
-    // el refresh token en el servidor. Con 'local', el token zombie queda
-    // vivo en Supabase y el próximo login rebota con "esa cuenta está
-    // iniciada". Con 'global' se cierran TODAS las sesiones del usuario.
-    await supabase.auth.signOut({ scope: 'global' });
-    // BUGFIX-LOGOUT-001: emitir USER_LOGOUT al EventBus directamente.
-    // El emitWithAudit de arriba encola en outbox, pero stopSync() ya mató
-    // el outboxProcessor que lo procesa. Sin esta emisión, el listener de
-    // App.tsx:389 nunca dispara clearSession() y la UI queda zombie.
     EventBus.emit(SystemEvents.USER_LOGOUT);
     return success(undefined);
   },
@@ -333,15 +359,16 @@ export const authService = {
       }
     }
 
+    const tenantUuidRefresh = extractTenantId(session);
+    if (tenantUuidRefresh) {
+      const subCheck = await authService.checkSubscriptionActive(tenantUuidRefresh);
+      if (!subCheck.ok) return subCheck;
+    }
+
     const userSession = await buildUserSession(session);
 
     if (userSession.tenantSlug) {
       offlineGrace.extend(userSession.tenantSlug);
-    }
-
-    if (userSession.tenantId) {
-      const subCheck = await authService.checkSubscriptionActive(userSession.tenantId);
-      if (!subCheck.ok) return subCheck;
     }
 
     return success(userSession);

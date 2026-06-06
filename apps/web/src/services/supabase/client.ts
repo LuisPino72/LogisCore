@@ -8,10 +8,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+  },
   realtime: {
-    params: {
-      log_level: 'debug',
-    },
     heartbeatIntervalMs: 15000,
   },
 });

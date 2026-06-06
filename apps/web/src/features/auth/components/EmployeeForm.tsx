@@ -11,8 +11,9 @@
  * - error: error externo a mostrar
  */
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Input, Button } from '../../../common/components';
-import { CreateEmployeeInputSchema } from '../../admin/types';
+import { CreateEmployeeInputSchema } from '../types';
 import type { Result } from '@logiscore/core';
 import type { AppError } from '@logiscore/core';
 
@@ -79,9 +80,11 @@ export function EmployeeForm({ onSubmit, isSubmitting = false, externalError }: 
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="text-xs text-blue-600 hover:underline self-start"
+          className="text-gray-400 hover:text-gray-600 transition-colors self-start"
+          tabIndex={-1}
+          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
         >
-          {showPassword ? 'Ocultar' : 'Mostrar'} contraseña
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
       {errorMessage && (

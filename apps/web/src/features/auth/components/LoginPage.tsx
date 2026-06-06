@@ -3,7 +3,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button, Input, Alert } from '../../../common/components';
 import { useAuthStore } from '../stores/authStore';
 
-const REMEMBERED_EMAIL_KEY = 'logiscore-remembered-email';
+const REMEMBERED_EMAIL_KEY = 'v2_logiscore-remembered-email';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -172,6 +172,7 @@ export function LoginPage() {
             variant="primary"
             fullWidth
             loading={isLoggingIn}
+            disabled={isLoggingIn}
             className="btn-glow-hover py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
             style={{
               background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)',

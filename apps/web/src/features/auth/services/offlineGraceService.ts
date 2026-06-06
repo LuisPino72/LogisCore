@@ -1,4 +1,4 @@
-const GRACE_KEY = 'logiscore_offline_grace';
+const GRACE_KEY = 'v2_logiscore_offline_grace';
 const GRACE_HOURS = 6;
 const GRACE_MS = GRACE_HOURS * 60 * 60 * 1000;
 
@@ -13,12 +13,12 @@ class OfflineGraceService {
   private load(): void {
     if (this.state) return;
     try {
-      const raw = localStorage.getItem(GRACE_KEY);
+      const raw = sessionStorage.getItem(GRACE_KEY);
       if (raw) {
         this.state = JSON.parse(raw) as GraceState;
       }
     } catch {
-      console.debug('[OfflineGrace] localStorage error — non-critical');
+      console.debug('[OfflineGrace] sessionStorage error — non-critical');
       this.state = null;
     }
   }
@@ -26,9 +26,9 @@ class OfflineGraceService {
   private save(): void {
     if (!this.state) return;
     try {
-      localStorage.setItem(GRACE_KEY, JSON.stringify(this.state));
+      sessionStorage.setItem(GRACE_KEY, JSON.stringify(this.state));
     } catch {
-      console.debug('[OfflineGrace] localStorage error — non-critical');
+      console.debug('[OfflineGrace] sessionStorage error — non-critical');
     }
   }
 
@@ -59,9 +59,9 @@ class OfflineGraceService {
   clear(): void {
     this.state = null;
     try {
-      localStorage.removeItem(GRACE_KEY);
+      sessionStorage.removeItem(GRACE_KEY);
     } catch {
-      console.debug('[OfflineGrace] localStorage error — non-critical');
+      console.debug('[OfflineGrace] sessionStorage error — non-critical');
     }
   }
 }

@@ -1,7 +1,7 @@
-import { AppError, Result, success, failure } from '@logiscore/core';
+import { AppError, Result, success, failure, EventBus, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 
-const SESSION_TOKEN_KEY = 'logiscore_session_token';
+const SESSION_TOKEN_KEY = 'v2_logiscore_session_token';
 const HEARTBEAT_MS = 3 * 60 * 1000;
 
 function deviceLabel(): string {
@@ -23,9 +23,9 @@ class SessionGuardService {
   getSessionToken(): string | null {
     if (!this.token) {
       try {
-        this.token = localStorage.getItem(SESSION_TOKEN_KEY);
+        this.token = sessionStorage.getItem(SESSION_TOKEN_KEY);
       } catch {
-        console.debug('[SessionGuard] localStorage error — non-critical');
+        console.debug('[SessionGuard] sessionStorage error — non-critical');
       }
     }
     return this.token;
@@ -34,22 +34,22 @@ class SessionGuardService {
   generateSessionToken(): string {
     this.token = crypto.randomUUID();
     try {
-      localStorage.setItem(SESSION_TOKEN_KEY, this.token);
+      sessionStorage.setItem(SESSION_TOKEN_KEY, this.token);
     } catch {
-      console.debug('[SessionGuard] localStorage error — non-critical');
+      console.debug('[SessionGuard] sessionStorage error — non-critical');
     }
     return this.token;
   }
 
   restoreSessionToken(): string | null {
     try {
-      const stored = localStorage.getItem(SESSION_TOKEN_KEY);
+      const stored = sessionStorage.getItem(SESSION_TOKEN_KEY);
       if (stored) {
         this.token = stored;
         return stored;
       }
     } catch {
-      console.debug('[SessionGuard] localStorage error — non-critical');
+      console.debug('[SessionGuard] sessionStorage error — non-critical');
     }
     return null;
   }
@@ -92,6 +92,7 @@ class SessionGuardService {
     } catch {
       this.heartbeatFailures++;
       if (this.heartbeatFailures >= SessionGuardService.MAX_HEARTBEAT_FAILURES) {
+        EventBus.emit(SystemEvents.USER_LOGOUT);
         this.clearToken();
         this.stopHeartbeat();
       }
@@ -104,10 +105,6 @@ class SessionGuardService {
       try {
         await supabase.rpc('release_active_session', { p_session_token: token });
       } catch (err) {
-        // BUGFIX-LOGOUT-003: Si el RPC falla (red, timeout), la limpieza
-        // local debe ocurrir de todos modos. Si dejamos el throw, signOut()
-        // se aborta antes de llamar supabase.auth.signOut({ scope: 'global' })
-        // y la sesión zombie queda viva en el servidor.
         console.debug('[SessionGuard] release_active_session RPC failed — continuing with local cleanup', err);
       }
     }
@@ -138,9 +135,9 @@ class SessionGuardService {
   private clearToken(): void {
     this.token = null;
     try {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
     } catch {
-      console.debug('[SessionGuard] localStorage error — non-critical');
+      console.debug('[SessionGuard] sessionStorage error — non-critical');
     }
   }
 }
