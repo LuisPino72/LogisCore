@@ -46,9 +46,9 @@ supabase/.branches
 !supabase/functions/
 opencode.json
 skills-lock.json
-supabase/migrations/
-supabase/seed.sql
-supabase/seed_masivo.py
+# supabase/migrations/ (line below was overriding whitelist above; moved comment for clarity)
+# supabase/seed.sql
+# supabase/seed_masivo.py
 
 # graphify
 .opencode

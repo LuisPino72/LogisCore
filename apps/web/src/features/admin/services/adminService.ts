@@ -1,7 +1,7 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { startOfDayVzla } from '../../../lib/date';
-import type { Tenant, UserRole, GlobalUser, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory } from '../types';
+import type { Tenant, TenantPlan, UserRole, GlobalUser, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory } from '../types';
 import { CreateTenantWithUsersInputSchema, CreateEmployeeInputSchema, UpdateTenantSchema, CreateGlobalCategorySchema, ResetPasswordSchema, RestoreTenantSchema } from '../types';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
@@ -10,6 +10,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 const EDGE_FUNCTIONS = {
   createTenant: `${SUPABASE_URL}/functions/v1/admin-create-tenant`,
+  addEmployee: `${SUPABASE_URL}/functions/v1/admin-add-employee`,
   listUsers: `${SUPABASE_URL}/functions/v1/admin-list-users`,
   resetPassword: `${SUPABASE_URL}/functions/v1/admin-reset-password`,
 } as const;
@@ -43,7 +44,7 @@ export const adminService = {
         rif: t.rif as string,
         direccion: t.direccion as string | undefined,
         telefono: t.telefono as string | undefined,
-        plan: (subs?.plan as string) ?? 'basic',
+        plan: (subs?.plan as TenantPlan) ?? 'basic',
         createdAt: t.created_at as string,
         deletedAt: t.deleted_at as string | undefined,
       };
@@ -53,7 +54,12 @@ export const adminService = {
   },
 
   async softDeleteTenant(id: string): Promise<Result<void, AppError>> {
-    const { error } = await supabase.rpc('soft_delete_tenant', { p_tenant_id: id });
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('tenants')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('deleted_at', null);
 
     if (error) {
       return failure(new AppError('TENANT_DELETE_FAILED', error.message || 'Error al desactivar el local'));
@@ -68,7 +74,7 @@ export const adminService = {
           type: 'soft',
         },
         context: {
-          userId: '',
+          userId: user?.id ?? '',
           tenantId: '',
           tenantUuid: id,
         },
@@ -79,6 +85,7 @@ export const adminService = {
   },
 
   async hardDeleteTenant(id: string): Promise<Result<void, AppError>> {
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.rpc('hard_delete_tenant', { p_tenant_id: id });
 
     if (error) {
@@ -106,7 +113,7 @@ export const adminService = {
           type: 'hard',
         },
         context: {
-          userId: '',
+          userId: user?.id ?? '',
           tenantId: '',
           tenantUuid: id,
         },
@@ -116,20 +123,16 @@ export const adminService = {
     return success(undefined);
   },
 
-  async fetchUsers(tenantId?: string): Promise<Result<UserRole[], AppError>> {
-    let query = supabase
+  async fetchUsers(tenantId: string): Promise<Result<UserRole[], AppError>> {
+    const { data, error } = await supabase
       .from('user_roles')
       .select('id, user_id, tenant_id, role, created_at')
-      .is('deleted_at', null);
-
-    if (tenantId) {
-      query = query.eq('tenant_id', tenantId);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: true });
+      .is('deleted_at', null)
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: true });
 
     if (error) {
-      return failure(new AppError('TENANT_NOT_FOUND', 'Error al cargar usuarios'));
+      return failure(new AppError('USER_QUERY_FAILED', 'Error al cargar usuarios'));
     }
 
     const users: UserRole[] = (data ?? []).map((u: Record<string, unknown>) => ({
@@ -196,6 +199,7 @@ export const adminService = {
     }
     const tokenResult = await getAdminToken();
     if (!tokenResult.ok) return tokenResult;
+    const { data: { user } } = await supabase.auth.getUser();
 
     try {
       const response = await fetch(EDGE_FUNCTIONS.createTenant, {
@@ -227,7 +231,7 @@ export const adminService = {
           employeeCount: result.employees.length,
         },
         context: {
-          userId: '',
+          userId: user?.id ?? '',
           tenantId: '',
           tenantUuid: result.tenant.id,
         },
@@ -250,17 +254,15 @@ export const adminService = {
 
     const data = parsed.data;
     try {
-      const response = await fetch(EDGE_FUNCTIONS.createTenant, {
+      const response = await fetch(EDGE_FUNCTIONS.addEmployee, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${tokenResult.data}`,
         },
         body: JSON.stringify({
-          tenant: null,
-          owner: null,
+          tenantId: data.tenantId,
           employees: [{ email: data.email, password: data.password, name: data.name }],
-          existingTenantId: data.tenantId,
         }),
       });
 
@@ -296,6 +298,13 @@ export const adminService = {
       return failure(new AppError('TENANT_NOT_FOUND', 'Error al actualizar tenant'));
     }
 
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('tenant_id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
     return success({
       id: updated.id,
       name: updated.name,
@@ -303,7 +312,7 @@ export const adminService = {
       rif: updated.rif,
       direccion: updated.direccion as string | undefined,
       telefono: updated.telefono as string | undefined,
-      plan: 'basic',
+      plan: (subscription?.plan as TenantPlan) ?? 'basic',
       createdAt: updated.created_at,
     });
   },
@@ -328,6 +337,17 @@ export const adminService = {
 
     if (!existing.tenant_id) {
       return failure(new AppError('TENANT_NOT_FOUND', 'Empleado sin tenant asociado'));
+    }
+
+    const { data: callerRole } = await supabase
+      .from('user_roles')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (existing.tenant_id !== callerRole?.tenant_id) {
+      return failure(new AppError('TENANT_FORBIDDEN', 'No autorizado para este empleado'));
     }
 
     const { error } = await supabase
@@ -364,7 +384,7 @@ export const adminService = {
         tenantId: t.id as string,
         tenantName: t.name as string,
         tenantSlug: t.slug as string,
-        plan: (subs?.plan as string) ?? 'basic',
+        plan: (subs?.plan as TenantPlan) ?? 'basic',
         status: (subs?.status as string) ?? 'inactive',
         expiresAt,
         daysRemaining,
@@ -676,9 +696,10 @@ export const adminService = {
   },
 
   async getTenantAnalytics(tenantId: string): Promise<Result<TenantAnalytics, AppError>> {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    const todayVzla = new Date(startOfDayVzla(new Date()));
+    todayVzla.setUTCDate(1);
+    todayVzla.setUTCHours(4, 0, 0, 0);
+    const startOfMonth = todayVzla.toISOString();
 
     const [
       salesResult,
@@ -689,7 +710,7 @@ export const adminService = {
         .from('sales')
         .select('total_bs', { count: 'exact', head: true })
         .eq('tenant_id', tenantId)
-        .gte('created_at', startOfMonth.toISOString())
+        .gte('created_at', startOfMonth)
         .is('deleted_at', null),
       supabase
         .from('products')

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
 import { adminService } from '../services/adminService';
+import { CreateEmployeeInputSchema } from '../types';
 import type { Tenant, UserRole, GlobalUser, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory } from '../types';
 
 interface UseAdminPanelReturn {
@@ -14,7 +15,7 @@ interface UseAdminPanelReturn {
   isLoading: boolean;
   error: string | null;
   fetchTenants: () => Promise<void>;
-  fetchUsers: (tenantId?: string) => Promise<void>;
+  fetchUsers: (tenantId: string) => Promise<void>;
   fetchAllUsers: () => Promise<void>;
   fetchSubscriptions: () => Promise<void>;
   fetchGlobalCategories: () => Promise<void>;
@@ -57,7 +58,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     setIsLoading(false);
   }, []);
 
-  const fetchUsers = useCallback(async (tenantId?: string) => {
+  const fetchUsers = useCallback(async (tenantId: string) => {
     setIsLoading(true);
     setError(null);
     const result = await adminService.fetchUsers(tenantId);
@@ -92,8 +93,10 @@ export function useAdminPanel(): UseAdminPanelReturn {
   const addEmployee = useCallback(async (payload: unknown) => {
     const result = await adminService.addEmployee(payload);
     if (result.ok) {
-      const data = payload as { tenantId: string };
-      await fetchUsers(data.tenantId);
+      const parsed = CreateEmployeeInputSchema.safeParse(payload);
+      if (parsed.success) {
+        await fetchUsers(parsed.data.tenantId);
+      }
     }
     return result;
   }, [fetchUsers]);
@@ -154,9 +157,10 @@ export function useAdminPanel(): UseAdminPanelReturn {
     const result = await adminService.restoreTenant(id);
     if (result.ok) {
       await fetchTenants();
+      await fetchSubscriptions();
     }
     return result;
-  }, [fetchTenants]);
+  }, [fetchTenants, fetchSubscriptions]);
 
   const resetPassword = useCallback(async (userId: string, newPassword: string) => {
     return adminService.resetPassword(userId, newPassword);

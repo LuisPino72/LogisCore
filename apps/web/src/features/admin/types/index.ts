@@ -60,6 +60,8 @@ export const UpdateTenantSchema = z.object({
 
 export type UpdateTenantInput = z.infer<typeof UpdateTenantSchema>;
 
+export type TenantPlan = 'basico' | 'plus' | 'premium';
+
 export interface Tenant {
   id: string;
   name: string;
@@ -67,7 +69,7 @@ export interface Tenant {
   rif: string;
   direccion?: string;
   telefono?: string;
-  plan: string;
+  plan: TenantPlan;
   createdAt: string;
   deletedAt?: string;
 }
