@@ -18,10 +18,7 @@ export interface TopProduct {
 
 export interface DashboardState {
   tenantInfo: TenantInfoResponse | null;
-  employees: number;
   subscription: SubscriptionResponse | null;
-  todayEarnings: number;
-  loading: boolean;
   error: string | null;
 }
 

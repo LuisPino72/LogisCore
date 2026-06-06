@@ -17,10 +17,7 @@ export interface DashboardStore extends DashboardState {
 
 const initialState: DashboardState = {
   tenantInfo: null,
-  employees: 0,
   subscription: null,
-  todayEarnings: 0,
-  loading: false,
   error: null,
 };
 
@@ -43,7 +40,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     lastFetchAt = now;
     lastFetchTenant = tenantId;
 
-    set({ loading: true, error: null });
+    set({ error: null });
 
     const [tenantResult, subResult, empResult, earningsResult] = await Promise.all([
       dashboardService.getTenantInfo(tenantId),
@@ -55,9 +52,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     set({
       tenantInfo: tenantResult.ok ? tenantResult.data : null,
       subscription: subResult.ok ? subResult.data : null,
-      employees: empResult.ok ? empResult.data : 0,
-      todayEarnings: earningsResult.ok ? earningsResult.data : 0,
-      loading: false,
       error: !navigator.onLine ? null
         : [!tenantResult.ok && 'Información del negocio',
            !subResult.ok && 'Suscripción',

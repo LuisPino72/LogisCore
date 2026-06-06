@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { type FC, useMemo } from 'react';
 import { Sun, Sunset, Moon, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
 import { startOfDayVzla } from '@/lib/date';
 import type { SubscriptionResponse } from '../types';
@@ -17,14 +17,20 @@ function getGreeting(): { text: string; icon: FC<{ size?: number; className?: st
 }
 
 export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription }) => {
-  const today = new Date().toLocaleDateString('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const dateKey = new Date().toDateString();
 
-  const greeting = getGreeting();
+  const today = useMemo(
+    () =>
+      new Date().toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+    [dateKey],
+  );
+
+  const greeting = useMemo(() => getGreeting(), [dateKey]);
   const GreetingIcon = greeting.icon;
 
   const daysRemaining = subscription?.expires_at

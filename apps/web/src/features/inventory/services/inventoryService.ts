@@ -1497,11 +1497,9 @@ export const inventoryService = {
 
       if (!error && data && data.length > 0 && !isDbClosing()) {
         try {
-          for (const prod of data as SupabaseProductRow[]) {
-            if (isDbClosing()) break;
-            // AUDIT-003: Preserve productType in Supabase→Dexie cache (Sesión 98 regression fix)
+          const productRecords = (data as SupabaseProductRow[]).map((prod) => {
             const prodRecord = prod as unknown as Record<string, unknown>;
-            await db.products.put({
+            return {
               id: prod.id, tenantId,
               name: prod.name, sku: prod.sku,
               priceUsd: (prodRecord.price_usd as number | undefined) ?? 0,
@@ -1513,7 +1511,10 @@ export const inventoryService = {
               stock: prod.stock,
               stockMin: prod.stock_min,
               productType: prod.product_type ?? 'resale',
-            });
+            };
+          });
+          if (!isDbClosing()) {
+            await db.products.bulkPut(productRecords);
           }
         } catch {
           // DB cerrada durante shutdown, ignorar

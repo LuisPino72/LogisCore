@@ -32,15 +32,16 @@ export function useDashboard(tenantId: string | null) {
     const handler = () => {
       if (mountedRef.current) {
         fetchDashboard(tenantId);
+        fetchLowStock(tenantId);
       }
     };
-    const sub1 = EventBus.on('SALE.COMPLETED', handler);
-    const sub2 = EventBus.on('SYNC.REFRESH_TABLE', handler);
+    const sub1 = EventBus.on(SystemEvents.SALE_COMPLETED, handler);
+    const sub2 = EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, handler);
     return () => {
       EventBus.off(sub1);
       EventBus.off(sub2);
     };
-  }, [tenantId]);
+  }, [tenantId, fetchLowStock]);
 
   useEffect(() => {
     if (!tenantId) return;

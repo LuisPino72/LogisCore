@@ -1,11 +1,10 @@
-import { type FC, useState, useEffect } from 'react';
+import { type FC, useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { EmptyState, Card, Badge } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
-import { EventBus } from '@logiscore/core';
 
 interface DashboardPageProps {
   tenantId?: string | null;
@@ -51,24 +50,16 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     lowStockProducts,
     lowStockLoading,
     fetchTopProducts,
-    fetchLowStock,
   } = useDashboard(tenantId);
 
   const [showAllLowStock, setShowAllLowStock] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
-    fetchLowStock(tenantId);
-    const sub = EventBus.on('SALE.COMPLETED', () => fetchLowStock(tenantId));
-    return () => {
-      EventBus.off(sub);
-    };
-  }, [tenantId, fetchLowStock]);
-
-  useEffect(() => {
-    if (!tenantId) return;
     fetchTopProducts(tenantId);
   }, [tenantId, fetchTopProducts]);
+
+  const top5LowStock = useMemo(() => lowStockProducts.slice(0, 5), [lowStockProducts]);
 
   const topQty = topProducts.length > 0 ? topProducts[0].totalQty : 1;
 
@@ -188,7 +179,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
               </div>
             ) : lowStockProducts.length > 0 ? (
               <div className="space-y-2">
-                {(showAllLowStock ? lowStockProducts : lowStockProducts.slice(0, 5)).map((p) => {
+                {(showAllLowStock ? lowStockProducts : top5LowStock).map((p) => {
                   const isZero = p.stock <= 0;
                   const stockMin = p.stockMin ?? 1;
                   const pct = stockMin > 0 ? Math.min((p.stock / stockMin) * 100, 100) : 0;

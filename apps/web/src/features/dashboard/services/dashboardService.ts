@@ -11,8 +11,8 @@ import { startOfDayVzla, startOfNextDayVzla } from '../../../lib/date';
 import type { Product } from '../../../specs/inventory';
 import { inventoryService } from '../../inventory/services/inventoryService';
 
-const CACHE_SUB_KEY = 'logiscore_cached_subscription';
-const CACHE_EMP_KEY = 'logiscore_cached_employee_count';
+const CACHE_SUB_KEY = (tenantId: string) => `logiscore_cached_subscription:${tenantId}`;
+const CACHE_EMP_KEY = (tenantId: string) => `logiscore_cached_employee_count:${tenantId}`;
 
 function calcItemCost(quantity: number, costUsdPerUnit: number | undefined): number {
   if (!costUsdPerUnit || costUsdPerUnit <= 0) return 0;
@@ -47,9 +47,9 @@ async function readCachedTenantInfo(tenantId: string): Promise<TenantInfoRespons
   return null;
 }
 
-function readCachedSubscription(): SubscriptionResponse | null {
+function readCachedSubscription(tenantId: string): SubscriptionResponse | null {
   try {
-    const raw = localStorage.getItem(CACHE_SUB_KEY);
+    const raw = localStorage.getItem(CACHE_SUB_KEY(tenantId));
     if (raw) return JSON.parse(raw) as SubscriptionResponse;
   } catch {
     console.debug('[DashboardService] localStorage read failed — non-critical');
@@ -57,9 +57,9 @@ function readCachedSubscription(): SubscriptionResponse | null {
   return null;
 }
 
-function readCachedEmployeeCount(): number | null {
+function readCachedEmployeeCount(tenantId: string): number | null {
   try {
-    const raw = localStorage.getItem(CACHE_EMP_KEY);
+    const raw = localStorage.getItem(CACHE_EMP_KEY(tenantId));
     if (raw !== null) return Number(raw);
   } catch {
     console.debug('[DashboardService] localStorage read failed — non-critical');
@@ -112,21 +112,21 @@ export const dashboardService = {
       const parsed = SubscriptionInfoSchema.safeParse(data);
       if (parsed.success) {
         try {
-          localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(parsed.data));
+          localStorage.setItem(CACHE_SUB_KEY(tenantId), JSON.stringify(parsed.data));
         } catch {
           console.debug('[DashboardService] localStorage cache write failed — non-critical');
         }
         return success(parsed.data);
       }
       try {
-        localStorage.setItem(CACHE_SUB_KEY, JSON.stringify(data));
+        localStorage.setItem(CACHE_SUB_KEY(tenantId), JSON.stringify(data));
       } catch {
         console.debug('[DashboardService] localStorage cache write failed — non-critical');
       }
       return success(data);
     }
 
-    const cached = readCachedSubscription();
+    const cached = readCachedSubscription(tenantId);
     if (cached) return success(cached);
 
     if (!navigator.onLine) return success(null);
@@ -147,14 +147,14 @@ export const dashboardService = {
 
     if (!error) {
       try {
-        localStorage.setItem(CACHE_EMP_KEY, String(count ?? 0));
+        localStorage.setItem(CACHE_EMP_KEY(tenantId), String(count ?? 0));
       } catch {
         console.debug('[DashboardService] localStorage cache write failed — non-critical');
       }
       return success(count ?? 0);
     }
 
-    const cached = readCachedEmployeeCount();
+    const cached = readCachedEmployeeCount(tenantId);
     if (cached !== null) return success(cached);
 
     if (!navigator.onLine) return success(0);
@@ -186,7 +186,7 @@ export const dashboardService = {
         .limit(1000); // Reduced from 10000; consider SQL view for production
 
       if (error) {
-        return failure(new AppError('DASHBOARD_TOP_PRODUCTS_FAILED', 'Error al cargar productos más vendidos'));
+        return failure(new AppError(DashboardErrors.DASHBOARD_TOP_PRODUCTS_FAILED, 'Error al cargar productos más vendidos'));
       }
 
       if (!data || data.length === 0) {
@@ -212,7 +212,7 @@ export const dashboardService = {
       return success(sorted);
     } catch (err) {
       logger.error('Dashboard', 'Error en getTopProducts:', err);
-      return failure(new AppError('DASHBOARD_TOP_PRODUCTS_FAILED', 'Error al cargar productos más vendidos'));
+      return failure(new AppError(DashboardErrors.DASHBOARD_TOP_PRODUCTS_FAILED, 'Error al cargar productos más vendidos'));
     }
   },
 
@@ -253,7 +253,7 @@ export const dashboardService = {
       // Fallback a Supabase si Dexie no está listo o está vacío
       const { data: cloudSales, error: cloudError } = await supabase
         .from('sales')
-        .select('id, total_bs, igtf_bs, exchange_rate, created_at')
+        .select('id, discount_type, discount_value, discount_bs, created_at')
         .eq('tenant_id', tenantUuid)
         .eq('status', 'completed')
         .is('deleted_at', null)
@@ -265,25 +265,26 @@ export const dashboardService = {
       const saleIdsCloud = cloudSales.map((s) => s.id);
       const { data: cloudItems, error: itemsError } = await supabase
         .from('sale_items')
-        .select('sale_id, quantity, unit_price_usd, cost_usd_per_unit')
+        .select('sale_id, quantity, total_price_usd, cost_usd_per_unit')
         .eq('tenant_id', tenantUuid)
         .in('sale_id', saleIdsCloud);
 
       if (itemsError || !cloudItems) return success(0);
 
-      interface CloudSaleItem { sale_id: string; quantity: number; unit_price_usd: number; cost_usd_per_unit: number | null }
+      interface CloudSaleItem { sale_id: string; quantity: number; total_price_usd: number; cost_usd_per_unit: number | null }
       const itemsMap = new Map<string, CloudSaleItem[]>();
       for (const item of cloudItems) {
         const sId = item.sale_id;
-        if (!itemsMap.has(sId)) itemsMap.set(sId, []);
-        itemsMap.get(sId)!.push(item);
+        const list = itemsMap.get(sId) ?? [];
+        list.push(item);
+        itemsMap.set(sId, list);
       }
 
       let totalEarningsCloud = 0;
       for (const sale of cloudSales) {
         const items = itemsMap.get(sale.id) ?? [];
         for (const item of items) {
-          const revenue = item.unit_price_usd * item.quantity;
+          const revenue = item.total_price_usd;
           const cost = (item.cost_usd_per_unit ?? 0) * item.quantity;
           totalEarningsCloud += (revenue - cost);
         }
@@ -292,7 +293,7 @@ export const dashboardService = {
       return success(preciseRound(totalEarningsCloud, 2));
     } catch (err) {
       logger.error('Dashboard', 'Error en getTodayEarnings:', err);
-      return failure(new AppError('DASHBOARD_TODAY_EARNINGS_FAILED', 'Error al calcular ganancias del día'));
+      return failure(new AppError(DashboardErrors.DASHBOARD_TODAY_EARNINGS_FAILED, 'Error al calcular ganancias del día'));
     }
   },
 };
