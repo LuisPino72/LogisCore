@@ -11,6 +11,8 @@ export function useProduction(tenantId: string | null) {
   const setActiveTab = useProductionStore((s) => s.setActiveTab);
   const fetchRecipes = useProductionStore((s) => s.fetchRecipes);
   const fetchOrders = useProductionStore((s) => s.fetchOrders);
+  // PLAN-115 (CODE-MIN-7): exponer cancelOrder para UI de historial
+  const cancelOrder = useProductionStore((s) => s.cancelOrder);
   const session = useAuthStore((s) => s.session);
   const initialFetchDone = useRef(false);
 
@@ -86,6 +88,7 @@ export function useProduction(tenantId: string | null) {
     activeTab,
     setActiveTab,
     refresh,
+    cancelOrder,
     userId: session?.userId,
     role: session?.role,
   };

@@ -319,6 +319,11 @@ Ref: recipes.tenant_id - tenants.id
 Ref: recipes.product_id - products.id
 Ref: recipe_lines.tenant_id - tenants.id
 Ref: recipe_lines.recipe_id - recipes.id
+// PLAN-115 (BD-CRIT-5): FK recipe_lines.recipe_id usa NO ACTION (default Postgres).
+// Decision de producto 2026-06-07: SOFT-DELETE-ONLY. recipes SIEMPRE se eliminan
+// via soft-delete (deleted_at). Hard-delete NO es flujo soportado en LogisCore.
+// Consistente con resto del ERP (sales, products, etc). Si en el futuro se requiere
+// hard-delete (purgas reales), ALTER FK ON DELETE CASCADE en migracion forward-only.
 Ref: recipe_lines.product_id - products.id
 Ref: production_orders.tenant_id - tenants.id
 Ref: production_orders.recipe_id - recipes.id

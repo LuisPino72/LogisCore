@@ -18,12 +18,16 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
     recipes, productionOrders, loading,
     activeTab, setActiveTab,
     userId,
+    cancelOrder,
   } = useProduction(tenantId);
 
   const [showRecipeForm, setShowRecipeForm] = useState(false);
   const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
   const [showProduceModal, setShowProduceModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  // PLAN-115 (CODE-MIN-7): estado para confirmacion de cancelacion de orden
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ orderId: string; recipeName: string } | null>(null);
 
   const bottomNavItems: BottomNavItem[] = useMemo(() => [
     { id: 'recipes', label: 'Recetas', icon: <ChefHat size={20} />, onClick: () => setActiveTab('recipes') },
@@ -54,6 +58,29 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
   const handleProduceModalClose = () => {
     setShowProduceModal(false);
     setSelectedRecipe(null);
+  };
+
+  // PLAN-115 (CODE-MIN-7): handler para cancelar orden desde historial.
+  // Solo orders en 'confirmed' son cancelables (createOrder las crea asi y
+  // cancelOrder rechaza cualquier otro status con ORDER_INVALID_STATUS).
+  const handleCancelOrder = async (orderId: string) => {
+    if (!tenantId) return;
+    setCancellingOrderId(orderId);
+    try {
+      const success = await cancelOrder(orderId, tenantId);
+      if (!success) {
+        // El store ya setea el error; el componente UI lo muestra via fetchOrders/error
+      }
+    } finally {
+      setCancellingOrderId(null);
+      setCancelConfirm(null);
+    }
+  };
+
+  const requestCancelOrder = (orderId: string) => {
+    const order = productionOrders.find((o) => o.id === orderId);
+    const recipeName = order ? (recipes.find((r) => r.id === order.recipeId)?.name ?? 'Orden') : 'Orden';
+    setCancelConfirm({ orderId, recipeName });
   };
 
   return (
@@ -134,7 +161,12 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
             </div>
           )}
           {activeTab === 'history' && (
-            <ProductionHistory orders={productionOrders} recipes={recipes} />
+            <ProductionHistory
+              orders={productionOrders}
+              recipes={recipes}
+              onCancel={requestCancelOrder}
+              cancellingOrderId={cancellingOrderId}
+            />
           )}
         </>
       )}
@@ -186,6 +218,37 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
         ]}
         onComplete={() => {}}
       />
+
+      {/* PLAN-115 (CODE-MIN-7): confirmacion de cancelacion de orden */}
+      {cancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="p-5 max-w-sm w-full">
+            <h3 className="font-semibold text-base mb-2">Cancelar orden de producción</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Vas a cancelar la orden de <strong>{cancelConfirm.recipeName}</strong>.
+              El stock de ingredientes se revertirá automáticamente.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCancelConfirm(null)}
+                disabled={cancellingOrderId === cancelConfirm.orderId}
+              >
+                Volver
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleCancelOrder(cancelConfirm.orderId)}
+                disabled={cancellingOrderId === cancelConfirm.orderId}
+              >
+                {cancellingOrderId === cancelConfirm.orderId ? 'Cancelando...' : 'Sí, cancelar'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

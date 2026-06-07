@@ -21,7 +21,10 @@ export const RecipeSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(25),
   productId: z.string().uuid(),
   mode: RecipeModeSchema,
-  yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0'),
+  // PLAN-115 (CODE-MED-2): cap defensivo. yieldQuantity es int positivo sin max(),
+  // exponia a inputs absurdos (1e9) que pasan Zod pero revientan UI/memoria. 10k es
+  // mas que suficiente para cualquier producto realista (lotes industriales grandes).
+  yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0').max(10000, 'El yield no puede ser mayor a 10,000'),
   yieldUnit: z.string().min(1),
   wastePct: z.number().min(0).max(100, 'La merma no puede ser mayor a 100%'),
   isActive: z.boolean(),
@@ -40,7 +43,10 @@ export const RecipeLineSchema = z.object({
   tenantId: z.string(),
   recipeId: z.string().uuid(),
   productId: z.string().uuid(),
-  quantity: z.number().positive('La cantidad debe ser mayor a 0'),
+  // PLAN-115 (CODE-MED-2): cap defensivo. 1M es techo realista para ingredientes en
+  // cualquier unidad (kg, unidades, litros). Inputs sin cap exponen a NaN/Infinity en
+  // calculateRecipeCost si el usuario tipea 1e308.
+  quantity: z.number().positive('La cantidad debe ser mayor a 0').max(1_000_000, 'La cantidad no puede ser mayor a 1,000,000'),
   unit: z.string().min(1),
   sortOrder: z.number().int(),
   createdAt: z.string().datetime(),
@@ -53,7 +59,8 @@ export type RecipeLine = z.infer<typeof RecipeLineSchema>;
 
 export const CreateRecipeLineInputSchema = z.object({
   productId: z.string().uuid('Selecciona un ingrediente'),
-  quantity: z.number().positive('La cantidad debe ser mayor a 0'),
+  // PLAN-115 (CODE-MED-2): cap defensivo consistente con RecipeLineSchema
+  quantity: z.number().positive('La cantidad debe ser mayor a 0').max(1_000_000, 'La cantidad no puede ser mayor a 1,000,000'),
   unit: z.string().min(1, 'Selecciona una unidad'),
 });
 
@@ -68,7 +75,8 @@ export const CreateRecipeInputSchema = z.object({
   newProductPriceUsd: z.number().positive('El precio debe ser mayor a 0').optional(),
   newProductCategoryId: z.string().uuid().optional(),
   mode: RecipeModeSchema,
-  yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0'),
+  // PLAN-115 (CODE-MED-2): cap defensivo consistente con RecipeSchema
+  yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0').max(10000, 'El yield no puede ser mayor a 10,000'),
   yieldUnit: z.string().min(1, 'Selecciona una unidad'),
   wastePct: z.number().min(0).max(100).default(0),
   notes: z.string().max(25).optional(),

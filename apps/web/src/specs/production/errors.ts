@@ -57,6 +57,17 @@ export const ProductionErrors = {
   // Usados por calculateConsumptionCost (costCalculator) y por los callers refactorizados.
   INGREDIENT_INSUFFICIENT_STOCK: 'PRODUCTION_INGREDIENT_INSUFFICIENT_STOCK',
   INGREDIENT_NOT_FOUND: 'PRODUCTION_INGREDIENT_NOT_FOUND',
+
+  // PLAN-115 (CODE-MED-4): 7 string literals movidos del codigo al enum para que la
+  // lista de errores sea exhaustiva y facil de mantener. Antes eran magic strings
+  // dispersos en productionService.ts.
+  RECIPES_QUERY_FAILED: 'PRODUCTION_RECIPES_QUERY_FAILED',
+  RECIPE_FETCH_FAILED: 'PRODUCTION_RECIPE_FETCH_FAILED',
+  AVAILABILITY_CHECK_FAILED: 'PRODUCTION_AVAILABILITY_CHECK_FAILED',
+  COST_CALC_FAILED: 'PRODUCTION_COST_CALC_FAILED',
+  ORDER_CREATE_FAILED: 'PRODUCTION_ORDER_CREATE_FAILED',
+  ORDER_CANCEL_FAILED: 'PRODUCTION_ORDER_CANCEL_FAILED',
+  ORDERS_QUERY_FAILED: 'PRODUCTION_ORDERS_QUERY_FAILED',
 } as const;
 
 export type ProductionErrorCode = typeof ProductionErrors[keyof typeof ProductionErrors];

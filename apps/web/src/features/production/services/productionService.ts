@@ -299,14 +299,20 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.RECIPE_DUPLICATE_NAME, 'Ya existe una receta con ese nombre.'));
     }
 
-    // Check duplicate recipe batch for same product
-    if (input.mode === 'batch' && resolvedProductId) {
-      const existing = await db.recipes
-        .where({ tenantId, productId: resolvedProductId, mode: 'batch' })
+    // Check duplicate recipe for same product+mode (1:1 product:recipe per mode).
+    // PLAN-115 (CODE-MED-3): ampliado a AMBOS modes. Antes solo validaba 'batch',
+    // permitiendo que un producto tenga una receta 'batch' Y otra 'assembly' activas
+    // simultaneamente, lo cual es semanticamente ambiguo (cual se usa en POS?).
+    // Ahora: si existe recipe activa del MISMO mode, reject. Si existe del OTRO mode,
+    // se permite (es valido tener ambas, una por canal).
+    if (resolvedProductId) {
+      const existingSameMode = await db.recipes
+        .where({ tenantId, productId: resolvedProductId, mode: input.mode })
         .filter((r) => !r.deletedAt)
         .first();
-      if (existing) {
-        return failure(new AppError(ProductionErrors.RECIPE_DUPLICATE_PRODUCT, 'Este producto ya tiene una receta de producción por lotes.'));
+      if (existingSameMode) {
+        const modeLabel = input.mode === 'batch' ? 'produccion por lotes' : 'ensamblaje';
+        return failure(new AppError(ProductionErrors.RECIPE_DUPLICATE_PRODUCT, `Este producto ya tiene una receta de ${modeLabel}.`));
       }
     }
 
@@ -690,7 +696,7 @@ export const productionService = {
       return success(rows.map((r) => toRecipe(r as unknown as Record<string, unknown>)));
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en getRecipes:', err);
-      return failure(new AppError('PRODUCTION_RECIPES_QUERY_FAILED', 'Error al cargar recetas.'));
+      return failure(new AppError(ProductionErrors.RECIPES_QUERY_FAILED, 'Error al cargar recetas.'));
     }
   },
 
@@ -705,10 +711,15 @@ export const productionService = {
       if (!recipe) {
         return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
       }
+      // PLAN-115 (CODE-MIN-1): decision de diseno - getRecipeById/getRecipeWithLines son
+      // lecturas. NO rechazan recetas inactivas (romperia UI de edicion: el bodeguero
+      // no podria ver/activar una receta desactivada). El flag isActive viaja en el
+      // Recipe retornado. Las verificaciones de "esta receta se puede usar?" ocurren
+      // en expandRecipe:77-79 y createOrder:873-875, que SI rechazan con RECIPE_INACTIVE.
       return success(toRecipe(recipe as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en getRecipeById:', err);
-      return failure(new AppError('RECIPE_FETCH_FAILED', 'Error al cargar la receta.'));
+      return failure(new AppError(ProductionErrors.RECIPE_FETCH_FAILED, 'Error al cargar la receta.'));
     }
   },
 
@@ -722,6 +733,7 @@ export const productionService = {
     if (!recipe) {
       return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
     }
+    // PLAN-115 (CODE-MIN-1): ver nota en getRecipeById. Lecturas no filtran por isActive.
 
     const lines = await db.recipeLines
       .where({ recipeId })
@@ -778,7 +790,7 @@ export const productionService = {
       return success(result);
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en checkIngredientsAvailability:', err);
-      return failure(new AppError('PRODUCTION_AVAILABILITY_CHECK_FAILED', 'Error al verificar disponibilidad de ingredientes.'));
+      return failure(new AppError(ProductionErrors.AVAILABILITY_CHECK_FAILED, 'Error al verificar disponibilidad de ingredientes.'));
     }
   },
 
@@ -834,7 +846,7 @@ export const productionService = {
       });
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en calculateRecipeCost:', err);
-      return failure(new AppError('PRODUCTION_COST_CALC_FAILED', 'Error al calcular costo de la receta.'));
+      return failure(new AppError(ProductionErrors.COST_CALC_FAILED, 'Error al calcular costo de la receta.'));
     }
   },
 
@@ -1095,7 +1107,7 @@ export const productionService = {
     } catch (err) {
       if (err instanceof AppError) return failure(err);
       logger.error(PRODUCTION_MODULE, 'Error en createOrder:', err);
-      return failure(new AppError('PRODUCTION_ORDER_CREATE_FAILED', 'Error al crear la orden de producción.'));
+      return failure(new AppError(ProductionErrors.ORDER_CREATE_FAILED, 'Error al crear la orden de producción.'));
     }
   },
 
@@ -1243,7 +1255,7 @@ export const productionService = {
       return success(undefined);
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en cancelOrder:', err);
-      return failure(new AppError('PRODUCTION_ORDER_CANCEL_FAILED', 'Error al cancelar la orden.'));
+      return failure(new AppError(ProductionErrors.ORDER_CANCEL_FAILED, 'Error al cancelar la orden.'));
     }
   },
 
@@ -1271,10 +1283,24 @@ export const productionService = {
       return success(rows.map((r) => toProductionOrder(r as unknown as Record<string, unknown>)));
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en getOrders:', err);
-      return failure(new AppError('PRODUCTION_ORDERS_QUERY_FAILED', 'Error al cargar órdenes de producción.'));
+      return failure(new AppError(ProductionErrors.ORDERS_QUERY_FAILED, 'Error al cargar órdenes de producción.'));
     }
   },
 
+  /**
+   * Consume ingredientes para un producto de ensamblaje (combo).
+   *
+   * PLAN-115 (CODE-MED-7): CONTRATO IMPORTANTE — esta funcion NO abre su propia
+   * transaccion Dexie. El CALLER es responsable de estar dentro de una tx. Patron
+   * fragil por diseno: posService.createSale abre tx y nos invoca dentro. Si se
+   * agrega un nuevo caller que no abra tx, las mutaciones (products.update,
+   * inventoryLots.update, inventoryMovements.add) quedaran sin rollback atomico.
+   *
+   * Antes de agregar otro caller:
+   *   1. Envolver la llamada en db.transaction('rw', [tablas necesarias], ...)
+   *   2. O refactorizar esta funcion para auto-abrir tx (preferible si se vuelve
+   *      a usar fuera de createSale).
+   */
   async consumeForAssembly(
     productId: string,
     quantity: number,
@@ -1411,6 +1437,16 @@ export const productionService = {
     // PRODUCTION-003 [Paso-4]: Crear lote del combo ensamblado para tracking FIFO.
     // NO se descuenta stock del combo (se vende al instante) — el lote permite
     // trazabilidad temporal del costo real (FIFO) de cada combo producido.
+    //
+    // PLAN-115 (CODE-MED-11): decision de diseno — el comboLot NO actualiza
+    // product.costPrice del producto ensamblado. El producto de ensamblaje
+    // tipicamente no tiene stock propio (se produce al instante de vender), por
+    // que su costPrice historico refleja el costo del ULTIMO combo vendido, no
+    // el costo actual de mercado. Actualizarlo aca seria fragil:
+    //   - En createOrder (batch) SI recalculamos WAC porque hay stock que mantener.
+    //   - En assembly no: el combo no deja inventario, solo deja trazabilidad.
+    // Si en el futuro el producto de ensamblaje acumula stock (caso hibrido), la
+    // decision deberia revisarse y quizas replicar el WAC recalc de createOrder.
     const comboLotId = generateId();
     const comboLot = {
       id: comboLotId,

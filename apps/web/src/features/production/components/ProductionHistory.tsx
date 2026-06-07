@@ -1,11 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Badge, Card, EmptyState, Pagination } from '../../../common/components';
-import { History, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Badge, Button, Card, EmptyState, Pagination } from '../../../common/components';
+import { History, Clock, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
 import type { Recipe, ProductionOrder } from '../types';
 
 interface ProductionHistoryProps {
   orders: ProductionOrder[];
   recipes: Recipe[];
+  // PLAN-115 (CODE-MIN-7): handler para cancelar orden (callback al padre que
+  // muestra confirmacion). Solo se invoca si order.status === 'confirmed'.
+  onCancel?: (orderId: string) => void;
+  // PLAN-115 (CODE-MIN-7): orderId en curso de cancelacion (deshabilita boton + spinner)
+  cancellingOrderId?: string | null;
 }
 
 const PAGE_SIZE = 10;
@@ -18,7 +23,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'dange
   cancelled: { label: 'Cancelada', variant: 'danger', icon: <XCircle size={12} /> },
 };
 
-export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
+export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId }: ProductionHistoryProps) {
   const [page, setPage] = useState(1);
 
   const recipeMap = useMemo(() => {
@@ -63,6 +68,8 @@ export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
 
       {paginatedOrders.map((order) => {
         const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.draft;
+        const canCancel = order.status === 'confirmed' && onCancel != null;
+        const isCancelling = cancellingOrderId === order.id;
 
         return (
           <Card key={order.id} className="p-3">
@@ -86,6 +93,20 @@ export function ProductionHistory({ orders, recipes }: ProductionHistoryProps) {
                   <p>{formatDate(order.createdAt)}</p>
                 </div>
               </div>
+              {/* PLAN-115 (CODE-MIN-7): boton cancelar visible solo si status='confirmed' */}
+              {canCancel && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onCancel(order.id)}
+                  disabled={isCancelling}
+                  className="text-danger hover:bg-danger/10 shrink-0"
+                  aria-label="Cancelar orden"
+                >
+                  <X size={14} className="mr-1" />
+                  {isCancelling ? 'Cancelando...' : 'Cancelar'}
+                </Button>
+              )}
             </div>
           </Card>
         );
