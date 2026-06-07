@@ -3,7 +3,7 @@ import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing, type DexiePurchaseOrderItem, type DexieExpense } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
-import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
@@ -122,7 +122,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name });
       });
       // @event PURCHASE.SUPPLIER_CREATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.SUPPLIER_CREATED',
         module: PURCHASES_MODULE,
         payload: { supplierId: id, name: input.name },
@@ -182,7 +182,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id });
       });
       // @event PURCHASE.SUPPLIER_UPDATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.SUPPLIER_UPDATED',
         module: PURCHASES_MODULE,
         payload: { supplierId: id },
@@ -222,7 +222,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id });
       });
       // @event PURCHASE.SUPPLIER_DELETED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.SUPPLIER_DELETED',
         module: PURCHASES_MODULE,
         payload: { supplierId: id },
@@ -355,7 +355,7 @@ export const purchaseService = {
       });
 
       // @event PURCHASE.CREATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.CREATED',
         module: PURCHASES_MODULE,
         payload: { orderId: id, supplierId: input.supplierId, totalUsd },
@@ -444,7 +444,7 @@ export const purchaseService = {
       });
 
       // @event PURCHASE.UPDATED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.UPDATED',
         module: PURCHASES_MODULE,
         payload: { orderId: id },
@@ -482,7 +482,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id });
       });
       // @event PURCHASE.DELETED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.DELETED',
         module: PURCHASES_MODULE,
         payload: { orderId: id },
@@ -520,7 +520,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id });
       });
       // @event PURCHASE.CONFIRMED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.CONFIRMED',
         module: PURCHASES_MODULE,
         payload: { orderId: id },
@@ -760,7 +760,7 @@ export const purchaseService = {
         }
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.RECEIVED',
         module: PURCHASES_MODULE,
         payload: { orderId: id, status: newStatus },
@@ -794,7 +794,7 @@ export const purchaseService = {
         await outboxService.enqueue('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id });
       });
       // @event PURCHASE.CANCELLED — sin consumidores activos (auditoría únicamente)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'PURCHASE.CANCELLED',
         module: PURCHASES_MODULE,
         payload: { orderId: id },

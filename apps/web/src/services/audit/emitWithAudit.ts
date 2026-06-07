@@ -29,25 +29,12 @@ export interface EmitAuditParams {
   };
 }
 
-/** Emite un evento con feedback UI inmediato + registro de auditoría.
- *  NOTA: El encolado en outbox se realiza DENTRO de la transacción Dexie
- *  (ver outboxService.enqueue() en los servicios) para garantizar atomicidad
- *  (Regla #17). El outbox processor es el único emisor de EventBus (Regla #17).
- *  Esta función solo registra auditoría no crítica. */
-export async function emitWithAudit(
-  params: EmitAuditParams,
-  tx?: OutboxTxScope,
-): Promise<void> {
+/** Registra SOLO un evento en la tabla de auditoría (sin outbox).
+ *  Usar cuando el evento ya fue encolizado vía outboxService.enqueue()
+ *  dentro de una transacción Dexie previa, y solo se necesita el log
+ *  de auditoría post-transacción. */
+export async function logAuditEventOnly(params: EmitAuditParams): Promise<void> {
   const { eventName, module, payload, context } = params;
-
-  // AUDIT-SASA-PERSISTENCE: If tx is provided, ensure persistence in outbox
-  if (tx) {
-    await outboxService.enqueueInTransaction(tx, eventName, module, payload);
-  } else {
-    await outboxService.enqueue(eventName, module, payload);
-  }
-
-  // Registrar en auditoría
   try {
     await logAuditEvent({
       eventName,
@@ -60,7 +47,7 @@ export async function emitWithAudit(
     auditFailureCount = 0;
   } catch (err) {
     auditFailureCount++;
-    console.warn(`[emitWithAudit] Fallo en ${eventName} (${auditFailureCount}/${AUDIT_FAILURE_THRESHOLD}):`, err);
+    console.warn(`[logAuditEventOnly] Fallo en ${eventName} (${auditFailureCount}/${AUDIT_FAILURE_THRESHOLD}):`, err);
 
     if (auditFailureCount >= AUDIT_FAILURE_THRESHOLD && Date.now() - lastFailureAlert > AUDIT_ALERT_COOLDOWN_MS) {
       lastFailureAlert = Date.now();
@@ -68,6 +55,25 @@ export async function emitWithAudit(
       EventBus.emit('AUDIT.FAILED', { module, reason: String(err), consecutiveFailures: AUDIT_FAILURE_THRESHOLD });
     }
   }
+}
+
+/** Emite un evento con feedback UI inmediato + registro de auditoría.
+ *  Encola al outbox (atómico si se pasa tx) y loguea en auditoría.
+ *  Si la transacción ya enqueó el evento vía outboxService.enqueue(...,tx),
+ *  usar logAuditEventOnly en su lugar para evitar duplicación. */
+export async function emitWithAudit(
+  params: EmitAuditParams,
+  tx?: OutboxTxScope,
+): Promise<void> {
+  const { eventName, module, payload, context } = params;
+
+  if (tx) {
+    await outboxService.enqueueInTransaction(tx, eventName, module, payload);
+  } else {
+    await outboxService.enqueue(eventName, module, payload);
+  }
+
+  await logAuditEventOnly({ eventName, module, payload, context });
 }
 
 /** Versión unificada que empareja outbox + audit.
@@ -90,6 +96,6 @@ export function emitWithPersistence(
 ) {
   return {
     enqueueInTransaction: (tx: OutboxTxScope) => outboxService.enqueueInTransaction(tx, eventName, module, payload),
-    auditAfterTransaction: () => emitWithAudit({ eventName, module, payload, context }),
+    auditAfterTransaction: () => logAuditEventOnly({ eventName, module, payload, context }),
   };
 }

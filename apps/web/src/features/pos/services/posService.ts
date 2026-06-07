@@ -6,7 +6,7 @@ import type { DexieCashRegister, LogisCoreDB } from '../../../services/dexie/db'
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { outboxService } from '../../../services/outbox/outboxService';
-import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
@@ -104,7 +104,7 @@ async function autoCloseRegister(
     }, tx);
   });
 
-  await emitWithAudit({
+  await logAuditEventOnly({
     eventName: SystemEvents.BOX_CLOSED,
     module: MODULE_NAME,
     payload: {
@@ -754,16 +754,14 @@ export const posService = {
           itemsCount: items.length,
           ...(discountBs > 0 && { discountBs, discountType, discountValue }),
         }, tx);
-
-        await emitWithAudit({
-          eventName: 'SALE.COMPLETED',
-          module: MODULE_NAME,
-          payload: { saleId, tenantSlug: tenantId, totalBs, paymentMethod, itemsCount: items.length },
-          context: { userId, tenantId, tenantUuid },
-        }, tx);
       });
 
-      // El emitWithAudit ya se hizo dentro de la tx para garantizar persistencia
+      await logAuditEventOnly({
+        eventName: 'SALE.COMPLETED',
+        module: MODULE_NAME,
+        payload: { saleId, tenantSlug: tenantId, totalBs, paymentMethod, itemsCount: items.length },
+        context: { userId, tenantId, tenantUuid },
+      });
 
 
       // Push inmediato para que la venta llegue a la nube sin esperar el timer
@@ -935,16 +933,14 @@ export const posService = {
           openingBalanceBs,
           openedBy: userId,
         }, tx);
-
-        await emitWithAudit({
-          eventName: SystemEvents.BOX_OPENED,
-          module: MODULE_NAME,
-          payload: { registerId: id, tenantSlug: tenantId, openingBalanceBs, openedBy: userId },
-          context: { userId, tenantId, tenantUuid },
-        }, tx);
       });
 
-      // El emitWithAudit ya se hizo dentro de la tx para garantizar persistencia
+      await logAuditEventOnly({
+        eventName: SystemEvents.BOX_OPENED,
+        module: MODULE_NAME,
+        payload: { registerId: id, tenantSlug: tenantId, openingBalanceBs, openedBy: userId },
+        context: { userId, tenantId, tenantUuid },
+      });
 
 
       // Push inmediato para sincronizar apertura de caja a la nube
@@ -1403,7 +1399,7 @@ export const posService = {
         } as unknown as Record<string, unknown>), tenantId);
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'SALE.VOIDED',
         module: MODULE_NAME,
         payload: { saleId, tenantSlug: tenantId },
@@ -1482,16 +1478,14 @@ export const posService = {
           declaredBs: declaredClosingBalanceBs,
           differenceBs,
         }, tx);
-
-        await emitWithAudit({
-          eventName: SystemEvents.BOX_CLOSED,
-          module: MODULE_NAME,
-          payload: { registerId: cashReg.id, tenantSlug: tenantId, expectedBs: expectedClosingBs, declaredBs: declaredClosingBalanceBs, differenceBs },
-          context: { userId, tenantId, tenantUuid },
-        }, tx);
       });
 
-      // El emitWithAudit ya se hizo dentro de la tx para garantizar persistencia
+      await logAuditEventOnly({
+        eventName: SystemEvents.BOX_CLOSED,
+        module: MODULE_NAME,
+        payload: { registerId: cashReg.id, tenantSlug: tenantId, expectedBs: expectedClosingBs, declaredBs: declaredClosingBalanceBs, differenceBs },
+        context: { userId, tenantId, tenantUuid },
+      });
 
 
       // Push inmediato para sincronizar cierre de caja a la nube

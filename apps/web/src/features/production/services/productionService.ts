@@ -408,9 +408,6 @@ export const productionService = {
             await db.products.add(newProductRecord);
             await syncQueue.enqueue('products', 'CREATE', createdProductId, toSnake(newProductRecord as unknown as Record<string, unknown>), tenantId);
             resolvedProductId = createdProductId;
-
-            // Outbox: producto creado desde producción
-            await evRecipe.enqueueInTransaction(tx); // placeholder — emitimos ambos en mismo helper abajo
           }
 
           // 2. Crear receta

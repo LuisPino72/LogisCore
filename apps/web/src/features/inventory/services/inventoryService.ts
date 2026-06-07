@@ -3,7 +3,7 @@ import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing, type DexieProductPresentation } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
-import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
@@ -262,7 +262,7 @@ export const inventoryService = {
         await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'INVENTORY.CREATED',
         module: INVENTORY_MODULE,
         payload: { productId: id, name: input.name, sku: input.sku, stockInicial },
@@ -439,7 +439,7 @@ export const inventoryService = {
         });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'INVENTORY.CREATED',
         module: INVENTORY_MODULE,
         payload: {
@@ -580,7 +580,7 @@ export const inventoryService = {
           }
         }
       });
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'INVENTORY.UPDATED',
         module: INVENTORY_MODULE,
         payload: { productId: id, changes: Object.keys(input) },
@@ -713,7 +713,7 @@ export const inventoryService = {
         await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, changes: Object.keys(input) });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'INVENTORY.UPDATED',
         module: INVENTORY_MODULE,
         payload: { presentationId, changes: Object.keys(input) },
@@ -747,7 +747,7 @@ export const inventoryService = {
         await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, action: 'deleted' });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'INVENTORY.UPDATED',
         module: INVENTORY_MODULE,
         payload: { presentationId, action: 'deleted' },
@@ -833,7 +833,7 @@ export const inventoryService = {
       await syncQueue.enqueue('products', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
       await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { productId: id });
     });
-    await emitWithAudit({
+    await logAuditEventOnly({
       eventName: 'INVENTORY.DELETED',
       module: INVENTORY_MODULE,
       payload: { productId: id, cascadePresentations: presentations.length },
@@ -1006,7 +1006,7 @@ export const inventoryService = {
       await syncQueue.enqueue('categories', 'CREATE', id, { id, name: input.name }, input.tenantId);
       await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name });
     });
-    await emitWithAudit({
+    await logAuditEventOnly({
       eventName: 'INVENTORY.CREATED',
       module: INVENTORY_MODULE,
       payload: { categoryId: id, name: input.name },
@@ -1048,7 +1048,7 @@ export const inventoryService = {
       await syncQueue.enqueue('categories', 'UPDATE', id, { id, name }, tenantId);
       await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name });
     });
-    await emitWithAudit({
+    await logAuditEventOnly({
       eventName: 'INVENTORY.UPDATED',
       module: INVENTORY_MODULE,
       payload: { categoryId: id, name },
@@ -1123,7 +1123,7 @@ export const inventoryService = {
       await syncQueue.enqueue('categories', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
       await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { categoryId: id });
     });
-    await emitWithAudit({
+    await logAuditEventOnly({
       eventName: 'INVENTORY.DELETED',
       module: INVENTORY_MODULE,
       payload: { categoryId: id },
@@ -1238,7 +1238,7 @@ export const inventoryService = {
         });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'INVENTORY.ADJUSTMENT',
         module: INVENTORY_MODULE,
         payload: {

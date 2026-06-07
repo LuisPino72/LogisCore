@@ -4,7 +4,7 @@ import { getDb } from '../../../services/dexie/db';
 import type { DexieCustomer } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
-import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
@@ -121,7 +121,7 @@ export const customerService = {
         });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'CUSTOMER.CREATED',
         module: MODULE_NAME,
         payload: { customerId: id, name: customer.name },
@@ -208,7 +208,7 @@ export const customerService = {
         await outboxService.enqueue('CUSTOMER.UPDATED', MODULE_NAME, { customerId: id });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'CUSTOMER.UPDATED',
         module: MODULE_NAME,
         payload: { customerId: id, name: updated.name },
@@ -266,7 +266,7 @@ export const customerService = {
         await outboxService.enqueue('CUSTOMER.DELETED', MODULE_NAME, { customerId: id });
       });
 
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'CUSTOMER.DELETED',
         module: MODULE_NAME,
         payload: { customerId: id, name: customer.name },

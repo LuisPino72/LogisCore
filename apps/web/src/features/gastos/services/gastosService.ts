@@ -7,7 +7,7 @@ import { GASTOS_ERRORS } from '../../../specs/gastos/errors';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { requireNetwork } from '../../../services/network/requireNetwork';
-import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { emitWithAudit, logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { requireRole } from '../../auth/services/roleGuard';
 import { logger } from '../../../lib/logger';
 
@@ -135,7 +135,7 @@ export const gastosService = {
         await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category });
       });
       // AUDIT-CRUD-006: audit post-tx (outbox único emisor per Regla #17)
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'EXPENSES.CREATED',
         module: 'gastos',
         payload: { expenseId: expense.id, category: expense.category },
@@ -189,7 +189,7 @@ export const gastosService = {
         await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
       });
       // AUDIT-CRUD-007: audit post-tx
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'EXPENSES.UPDATED',
         module: 'gastos',
         payload: { expenseId: id, changes: Object.keys(data) },
@@ -237,7 +237,7 @@ export const gastosService = {
         await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
       });
       // AUDIT-CRUD-008: audit post-tx
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'EXPENSES.DELETED',
         module: 'gastos',
         payload: { expenseId: id },
@@ -404,7 +404,7 @@ export const gastosService = {
         }
       });
       // AUDIT-CRUD-009: audit post-tx
-      await emitWithAudit({
+      await logAuditEventOnly({
         eventName: 'EXPENSES.CANCELLED',
         module: 'gastos',
         payload: { templateId, occurrenceDate, cancelledCount: instances.length },
