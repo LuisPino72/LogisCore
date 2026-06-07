@@ -158,6 +158,23 @@ export const purchaseService = {
       if (!existing) {
         return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
       }
+
+      // PLAN-111 (#3): validar unicidad de RIF al actualizar (mismo patrón que createSupplier:94-108)
+      if (input.rif !== undefined && input.rif !== null && input.rif !== existing.rif) {
+        const rifUpper = input.rif.toUpperCase();
+        const rifDuplicate = await db.suppliers
+          .where({ tenantId })
+          .filter((s) => !s.deletedAt && s.id !== id && s.rif === rifUpper)
+          .first();
+        if (rifDuplicate) {
+          return failure(new AppError(
+            PurchaseErrors.SUPPLIER_RIF_DUPLICATE,
+            `Ya existe otro proveedor activo con RIF ${rifUpper}.`,
+          ));
+        }
+        input.rif = rifUpper;
+      }
+
       const updated = { ...existing, ...input };
       await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
         await db.suppliers.put(updated);
@@ -316,7 +333,7 @@ export const purchaseService = {
       orderId: id,
       productId: item.productId,
       presentationId: item.presentationId,
-      unitMultiplier: item.unitMultiplier,
+      unitMultiplier: item.unitMultiplier ?? 1, // PLAN-111 (#8): default 1 si no llega
       productName: productMap.get(item.productId) ?? '',
       quantity: item.quantity,
       costUsdPerUnit: preciseRound(item.totalCostUsd / item.quantity, 2),
@@ -397,7 +414,7 @@ export const purchaseService = {
       orderId: id,
       productId: item.productId,
       presentationId: item.presentationId,
-      unitMultiplier: item.unitMultiplier,
+      unitMultiplier: item.unitMultiplier ?? 1, // PLAN-111 (#8): default 1 si no llega
       productName: productMap.get(item.productId) ?? '',
       quantity: item.quantity,
       costUsdPerUnit: preciseRound(item.totalCostUsd / item.quantity, 2),
@@ -442,12 +459,21 @@ export const purchaseService = {
 
   async softDeleteOrder(id: string, tenantId: string): Promise<Result<void, AppError>> {
     try {
+      requireRole('owner', 'admin'); // PLAN-111 (#4): role guard consistente con createOrder
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();
       const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
       if (!order) {
         return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
+      }
+      // PLAN-111 (A2): no permitir borrar órdenes received o partially_received
+      // (rompen la cadena FIFO vía inventory lots).
+      if (order.status === 'received' || order.status === 'partially_received') {
+        return failure(new AppError(
+          PurchaseErrors.ORDER_INVALID_STATUS,
+          `No se puede eliminar una orden en estado "${order.status}". Cancélala primero.`,
+        ));
       }
       const deletedAt = new Date().toISOString();
       await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
@@ -471,10 +497,15 @@ export const purchaseService = {
 
   async confirmOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
     try {
+      requireRole('owner', 'admin'); // PLAN-111 (#4): role guard
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();
       const order = await db.purchaseOrders.where({ id }).filter((o) => o.tenantId === tenantId && !o.deletedAt).first();
+      // PLAN-111 (A3): idempotency guard
+      if (order && order.status === 'confirmed') {
+        return success(toOrder(order as unknown as Record<string, unknown>));
+      }
       if (!order) {
         return failure(new AppError(PurchaseErrors.ORDER_NOT_FOUND, 'Orden no encontrada.'));
       }
@@ -509,6 +540,7 @@ export const purchaseService = {
     userId: string,
     exchangeRate: number,
   ): Promise<Result<PurchaseOrder, AppError>> {
+    requireRole('owner', 'admin'); // PLAN-111 (#4): role guard
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -586,13 +618,15 @@ export const purchaseService = {
           if (!item) continue;
 
           const newReceivedQty = item.receivedQuantity + rec.receivedQuantity;
+          // PLAN-111 (#1): throw new AppError — Dexie solo hace rollback con throw,
+          // NO con return failure (que confirma el tx y retorna el value).
           // DINERO-008 (A3): validación "no exceder" DENTRO de la transacción
           // (la pre-validación arriba puede pasar en race conditions con 2 recepciones concurrentes).
           if (newReceivedQty > item.quantity) {
-            return failure(new AppError(
+            throw new AppError(
               PurchaseErrors.ORDER_RECEIVE_EXCEEDS,
               `Recibido excede lo ordenado para producto "${item.productName ?? item.productId.slice(0, 8)}". Ordenado: ${item.quantity}, ya recibido: ${item.receivedQuantity}, intento: ${rec.receivedQuantity}.`,
-            ));
+            );
           }
           await db.purchaseOrderItems.update(item.id, { receivedQuantity: newReceivedQty });
           await syncQueue.enqueue('purchase_order_items', 'UPDATE', item.id, toSnake({
@@ -646,6 +680,8 @@ export const purchaseService = {
               quantity: effectiveQty,
               previousStock,
               newStock,
+              // PLAN-111 (#5): persistir costUsd en inventory_movement (trazabilidad FIFO)
+              costUsd: preciseRound(effectiveQty * itemCostStorage, 2),
               createdAt: now,
             };
             const lot = {
@@ -680,9 +716,11 @@ export const purchaseService = {
 
         let totalReceivedUsd = 0;
         for (const rec of input.items) {
-          const item = itemMap.get(rec.itemId);
-          if (!item || rec.receivedQuantity <= 0) continue;
-          totalReceivedUsd += preciseRound(rec.receivedQuantity * (item.costUsdPerUnit ?? 0), 2);
+          // PLAN-111 (A1): re-leer item DENTRO de la tx (itemMap del outer scope puede tener
+          // costUsdPerUnit stale si la orden fue editada entre el read y el write).
+          const freshItem = await db.purchaseOrderItems.get(rec.itemId);
+          if (!freshItem || rec.receivedQuantity <= 0) continue;
+          totalReceivedUsd += preciseRound(rec.receivedQuantity * (freshItem.costUsdPerUnit ?? 0), 2);
         }
         if (totalReceivedUsd > 0) {
           const currentRate = exchangeRate;
@@ -705,6 +743,9 @@ export const purchaseService = {
           };
           await db.expenses.add(expense);
           await syncQueue.enqueue('expenses', 'CREATE', expenseId, toSnake(expense as unknown as Record<string, unknown>), tenantId);
+          // PLAN-111 (A4): emitir outbox event EXPENSE.CREATED para que módulos downstream
+          // (cash-flow dashboards, etc.) vean este gasto.
+          await outboxService.enqueue('EXPENSE.CREATED', PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
         }
       });
 
@@ -723,6 +764,7 @@ export const purchaseService = {
 
   async cancelOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
     try {
+      requireRole('owner', 'admin'); // PLAN-111 (#4): role guard
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();
@@ -790,7 +832,8 @@ export const purchaseService = {
         const { data: itemsData, error: itemsError } = await supabase
           .from('purchase_order_items')
           .select('*')
-          .eq('tenant_id', tenantId)
+          // PLAN-111 (#6): tenantUuid (UUID), no tenantId (slug) — el column es uuid
+          .eq('tenant_id', tenantUuid)
           .is('deleted_at', null);
 
         if (!itemsError && itemsData && itemsData.length > 0) {
