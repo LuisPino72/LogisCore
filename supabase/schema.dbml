@@ -288,6 +288,8 @@ Table recipe_lines {
   sort_order integer [not null, default: 0]
   created_at timestamptz [default: `now()`]
   deleted_at timestamptz
+
+  Note: 'PLAN-115: recipe_lines_quantity_positive_check CHECK (quantity > 0)'
 }
 
 Table production_orders {
@@ -297,7 +299,8 @@ Table production_orders {
   product_id uuid [not null, ref: > products.id]
   batch_count integer [not null, default: 1]
   quantity_target integer [not null]
-  quantity_produced integer [default: 0]
+  // PLAN-115: NOT NULL DEFAULT 0 + CHECK >= 0 (alineado con TS spec)
+  quantity_produced integer [not null, default: 0]
   status text [not null, default: 'draft']
   planned_date date
   started_at timestamptz
@@ -307,6 +310,8 @@ Table production_orders {
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
   deleted_at timestamptz
+
+  Note: 'PLAN-115 CHECKs: production_orders_batch_count_positive_check CHECK (batch_count > 0), production_orders_quantity_produced_nonneg_check CHECK (quantity_produced >= 0). Indices: idx_production_orders_tenant_status, idx_production_orders_tenant_deleted.'
 }
 
 // Refs adicionales para producción
