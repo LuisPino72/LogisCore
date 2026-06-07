@@ -434,6 +434,16 @@ export class LogisCoreDB extends Dexie {
     this.version(20).stores({
       expenses: 'id, tenantId, category, date, status, nextDueDate, isRecurring, parentExpenseId, purchaseOrderId, [tenantId+date], [tenantId+status], [tenantId+deletedAt], [tenantId+isRecurring], &[parentExpenseId+date], [purchaseOrderId]',
     });
+    // PLAN-112 (M2): Migración v20 → v21 — índice cedula en customers para O(1)
+    // lookup de duplicados. Antes era O(n) con .where({tenantId}).filter().
+    this.version(21).stores({
+      // Solo agregamos `cedula` (non-unique) como índice secundario. El chequeo de
+      // duplicado se hace dentro de la tx en customerService (M2). Usar `&cedula`
+      // como unique NO funciona porque (a) cedula es opcional y (b) queremos
+      // soft-deleted viejos + reactivación. El index acelera el lookup, la tx
+      // serializa races.
+      customers: 'id, tenantId, name, cedula, [tenantId+deletedAt]',
+    });
   }
 }
 

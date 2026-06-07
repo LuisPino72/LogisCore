@@ -22,6 +22,7 @@ import type {
   CustomerHistoryQuery,
 } from '../../../specs/customers';
 import { CustomerErrors } from '../../../specs/customers/errors';
+import { PaymentMethodSchema } from '../../../specs/pos';
 import type { Sale } from '../../pos/types';
 
 const MODULE_NAME = 'CUSTOMERS';
@@ -76,21 +77,13 @@ export const customerService = {
         );
       }
 
-      if (parsed.data.cedula) {
-        const duplicate = await db.customers
-          .where({ tenantId })
-          .filter(c => c.cedula === parsed.data.cedula?.trim().toUpperCase() && !c.deletedAt)
-          .first();
-        if (duplicate) {
-          return failure(new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe un cliente con esta cédula.'));
-        }
-      }
+      const cedulaNormalized = parsed.data.cedula?.trim().toUpperCase() || undefined;
 
       const customer: Customer = {
         id,
         name: parsed.data.name.trim(),
         phone: parsed.data.phone?.trim() || undefined,
-        cedula: parsed.data.cedula?.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
+        cedula: cedulaNormalized,
         address: parsed.data.address?.trim() || undefined,
         creditLimit: parsed.data.creditLimit ?? 0,
         balance: 0,
@@ -99,8 +92,22 @@ export const customerService = {
         updatedAt: now,
       };
 
-      await db.transaction('rw', [db.customers, db.syncQueue, db.outbox], async () => {
-        await db.customers.add({ ...customer, tenantId });
+      // PLAN-112 (M2): check de cedula duplicada DENTRO de la tx (Dexie serializa races).
+      // El check pre-tx era vulnerable a TOCTOU: dos requests concurrentes con la misma
+      // cedula pasaban el check, ambos ejecutaban add() y Dexie no rechazaba (el campo
+      // no es unique en Dexie). Ahora usamos `tx.customers` y la tx garantiza que la
+      // lectura y el add son atómicos. El índice `cedula` (v21) acelera el lookup.
+      await db.transaction('rw', [db.customers, db.syncQueue, db.outbox], async (tx) => {
+        if (cedulaNormalized) {
+          const duplicate = await tx.customers
+            .where({ tenantId, cedula: cedulaNormalized })
+            .filter((c) => !c.deletedAt)
+            .first();
+          if (duplicate) {
+            throw new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe un cliente con esta cédula.');
+          }
+        }
+        await tx.customers.add({ ...customer, tenantId });
         await syncQueue.enqueue(
           'customers',
           'CREATE',
@@ -152,17 +159,9 @@ export const customerService = {
             ),
           );
         }
-
-        if (input.cedula) {
-          const duplicate = await db.customers
-            .where({ tenantId })
-            .filter(c => c.id !== id && c.cedula === input.cedula?.trim().toUpperCase() && !c.deletedAt)
-            .first();
-          if (duplicate) {
-            return failure(new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe otro cliente con esta cédula.'));
-          }
-        }
       }
+
+      const cedulaNormalized = input.cedula?.trim().toUpperCase() || undefined;
 
       const existing = await db.customers
         .where({ id })
@@ -178,14 +177,27 @@ export const customerService = {
         ...existing,
         ...input,
         phone: input.phone?.trim() || undefined,
-        cedula: input.cedula?.trim().toUpperCase() || undefined, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+        cedula: cedulaNormalized, // AUDIT-017: normalizar a mayúsculas
         address: input.address?.trim() || undefined,
         notes: input.notes?.trim() || undefined,
         updatedAt: new Date().toISOString(),
       };
 
-      await db.transaction('rw', [db.customers, db.syncQueue, db.outbox], async () => {
-        await db.customers.put(updated);
+      // PLAN-112 (M2): check de cedula duplicada DENTRO de la tx (mismo patrón que
+      // createCustomer). Permite exclude-self vía filtro en memoria post-where() ya
+      // que `cedula` no es unique en Dexie. Para queries pequeñas por tenant, el
+      // set de resultados es tipicamente 0-1.
+      await db.transaction('rw', [db.customers, db.syncQueue, db.outbox], async (tx) => {
+        if (cedulaNormalized) {
+          const duplicate = await tx.customers
+            .where({ tenantId, cedula: cedulaNormalized })
+            .filter((c) => c.id !== id && !c.deletedAt)
+            .first();
+          if (duplicate) {
+            throw new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe otro cliente con esta cédula.');
+          }
+        }
+        await tx.customers.put(updated);
         await syncQueue.enqueue(
           'customers',
           'UPDATE',
@@ -289,25 +301,31 @@ export const customerService = {
         if (error) {
           logger.warn(MODULE_NAME, 'Pull customers failed:', error.message);
         } else if (data && data.length > 0) {
-          for (const c of data) {
-            const existing = await db.customers.get(c.id as string);
-            if (existing?.deletedAt) {
-              continue;
+          // PLAN-112 (M3): envolver todos los puts en una sola tx. Si algo falla a la
+          // mitad, Dexie hace rollback del batch completo. Antes cada put estaba
+          // fuera de tx: un fallo en el customer 47 de 100 dejaba 46 sucios en Dexie
+          // que el proximo sync no limpiaba.
+          await db.transaction('rw', db.customers, async (tx) => {
+            for (const c of data) {
+              const existing = await tx.customers.get(c.id as string);
+              if (existing?.deletedAt) {
+                continue;
+              }
+              await tx.customers.put({
+                id: c.id as string,
+                tenantId,
+                name: c.name as string,
+                phone: (c.phone as string | null) ?? undefined,
+                cedula: (c.cedula as string | null)?.toUpperCase() ?? undefined, // PLAN-112 (NEW-2): normalizar lectura
+                address: (c.address as string | null) ?? undefined,
+                creditLimit: (c.credit_limit as number) ?? 0,
+                balance: (c.balance as number) ?? 0,
+                notes: (c.notes as string | null) ?? undefined,
+                createdAt: c.created_at as string,
+                updatedAt: c.updated_at as string,
+              });
             }
-            await db.customers.put({
-              id: c.id as string,
-              tenantId,
-              name: c.name as string,
-              phone: (c.phone as string | null) ?? undefined,
-              cedula: (c.cedula as string | null)?.toUpperCase() ?? undefined, // PLAN-112 (NEW-2): normalizar lectura
-              address: (c.address as string | null) ?? undefined,
-              creditLimit: (c.credit_limit as number) ?? 0,
-              balance: (c.balance as number) ?? 0,
-              notes: (c.notes as string | null) ?? undefined,
-              createdAt: c.created_at as string,
-              updatedAt: c.updated_at as string,
-            });
-          }
+          });
           rows = await db.customers
             .where({ tenantId })
             .filter((c) => !c.deletedAt)
@@ -378,31 +396,45 @@ export const customerService = {
       const total = sorted.length;
       const paged = sorted.slice(query.offset, query.offset + query.limit);
 
-      const sales: Sale[] = paged.map((r) => ({
-        id: r.id,
-        tenantId: r.tenantId,
-        userId: r.userId,
-        paymentMethod: r.paymentMethod as Sale['paymentMethod'],
-        subtotalBs: r.subtotalBs,
-        igtfBs: r.igtfBs,
-        ivaBs: r.ivaBs ?? 0,
-        totalBs: r.totalBs,
-        exchangeRate: r.exchangeRate,
-        status: 'completed',
-        voidedAt: r.voidedAt ?? undefined,
-        createdAt: r.createdAt,
-        deletedAt: r.deletedAt ?? undefined,
-        discountType: r.discountType,
-        discountValue: r.discountValue,
-        discountBs: r.discountBs,
-        customerId: r.customerId,
-        // POS-002 (C-6): USD persistidos
-        subtotalUsd: r.subtotalUsd,
-        ivaUsd: r.ivaUsd,
-        igtfUsd: r.igtfUsd,
-        totalUsd: r.totalUsd,
-        discountUsd: r.discountUsd,
-      }));
+      const sales: Sale[] = paged.map((r) => {
+        // PLAN-112 (M7): validar runtime en vez de cast ciego. Dexie guarda paymentMethod
+        // como string libre, pero el union de TS es estricto (4 valores). Si llega
+        // un valor externo (sync desactualizado, dato legacy) TypeScript no lo detecta.
+        // Usamos safeParse y caemos a 'efectivo_bs' (default) si no es válido, logueando
+        // para auditoría.
+        const pmParsed = PaymentMethodSchema.safeParse(r.paymentMethod);
+        const paymentMethod = pmParsed.success
+          ? pmParsed.data
+          : (() => {
+              logger.warn(MODULE_NAME, `paymentMethod invalido en sale ${r.id}:`, r.paymentMethod);
+              return 'efectivo_bs' as const;
+            })();
+        return {
+          id: r.id,
+          tenantId: r.tenantId,
+          userId: r.userId,
+          paymentMethod,
+          subtotalBs: r.subtotalBs,
+          igtfBs: r.igtfBs,
+          ivaBs: r.ivaBs ?? 0,
+          totalBs: r.totalBs,
+          exchangeRate: r.exchangeRate,
+          status: 'completed',
+          voidedAt: r.voidedAt ?? undefined,
+          createdAt: r.createdAt,
+          deletedAt: r.deletedAt ?? undefined,
+          discountType: r.discountType,
+          discountValue: r.discountValue,
+          discountBs: r.discountBs,
+          customerId: r.customerId,
+          // POS-002 (C-6): USD persistidos
+          subtotalUsd: r.subtotalUsd,
+          ivaUsd: r.ivaUsd,
+          igtfUsd: r.igtfUsd,
+          totalUsd: r.totalUsd,
+          discountUsd: r.discountUsd,
+        };
+      });
 
       return success({ sales, total });
     } catch (err) {
