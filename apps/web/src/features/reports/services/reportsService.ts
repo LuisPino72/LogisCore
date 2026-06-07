@@ -89,7 +89,19 @@ interface SaleWithItems {
   }[];
 }
 
+// --- Sales fetch cache (dedup identical concurrent calls from useReports Promise.all) ---
+const salesCache = new Map<string, { data: SaleWithItems[]; ts: number }>();
+const SALES_CACHE_TTL_MS = 500;
+
+function salesCacheKey(tenantId: string, start: string, end: string): string {
+  return `${tenantId}:${start}:${end}`;
+}
+
 async function fetchSalesWithItems(tenantId: string, start: string, end: string): Promise<SaleWithItems[]> {
+  const key = salesCacheKey(tenantId, start, end);
+  const cached = salesCache.get(key);
+  if (cached && Date.now() - cached.ts < SALES_CACHE_TTL_MS) return cached.data;
+
   const db = getDb();
   const sales = await db.sales
     .where('[tenantId+createdAt]')
@@ -105,8 +117,6 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
       .filter((i) => !i.deletedAt)
       .toArray();
 
-    // Si hay ventas pero NO hay items, es una race condition de sync
-    // (sales se sincroniza antes que sale_items). Caemos a Supabase.
     if (allItems.length > 0) {
       const itemsBySaleId = new Map<string, typeof allItems>();
       for (const item of allItems) {
@@ -115,7 +125,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         else itemsBySaleId.set(item.saleId, [item]);
       }
 
-      return sales.map((sale) => ({
+      const result = sales.map((sale) => ({
         sale: {
           id: sale.id,
           totalBs: sale.totalBs,
@@ -136,6 +146,55 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
           costUsdPerUnit: i.costUsdPerUnit,
         })),
       }));
+      salesCache.set(key, { data: result, ts: Date.now() });
+      return result;
+    }
+
+    // Race condition: Dexie has sales but items haven't synced yet.
+    // Merge: use Dexie sales (local authority) + fetch items from Supabase.
+    try {
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+      const { data: cloudItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('sale_id, product_id, product_name, product_sku, quantity, unit_price_usd, cost_usd_per_unit, unit_multiplier')
+        .eq('tenant_id', tenantUuid)
+        .in('sale_id', saleIds)
+        .is('deleted_at', null);
+
+      if (!itemsError && cloudItems && cloudItems.length > 0) {
+        const itemsBySaleId = new Map<string, typeof cloudItems>();
+        for (const item of cloudItems) {
+          const sId = item.sale_id;
+          if (!itemsBySaleId.has(sId)) itemsBySaleId.set(sId, []);
+          itemsBySaleId.get(sId)!.push(item);
+        }
+
+        const result = sales.map((sale) => ({
+          sale: {
+            id: sale.id,
+            totalBs: sale.totalBs,
+            igtfBs: sale.igtfBs,
+            ivaBs: sale.ivaBs,
+            exchangeRate: sale.exchangeRate,
+            paymentMethod: sale.paymentMethod,
+            createdAt: sale.createdAt,
+            discountBs: sale.discountBs,
+          },
+          items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
+            productId: i.product_id,
+            productName: i.product_name || '',
+            productSku: i.product_sku || '',
+            quantity: Number(i.quantity),
+            unitMultiplier: i.unit_multiplier ? Number(i.unit_multiplier) : 1,
+            unitPriceUsd: Number(i.unit_price_usd) || 0,
+            costUsdPerUnit: i.cost_usd_per_unit ? Number(i.cost_usd_per_unit) : undefined,
+          })),
+        }));
+        salesCache.set(key, { data: result, ts: Date.now() });
+        return result;
+      }
+    } catch {
+      // Supabase fetch failed — fall through to full Supabase fallback
     }
   }
 
@@ -170,7 +229,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
       itemsBySaleId.get(sId)!.push(item);
     }
 
-    return cloudSales.map((sale) => ({
+    const cloudResult = cloudSales.map((sale) => ({
       sale: {
         id: sale.id,
         totalBs: Number(sale.total_bs) || 0,
@@ -191,6 +250,8 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         costUsdPerUnit: i.cost_usd_per_unit ? Number(i.cost_usd_per_unit) : undefined,
       })),
     }));
+    salesCache.set(key, { data: cloudResult, ts: Date.now() });
+    return cloudResult;
   } catch {
     return [];
   }
@@ -278,7 +339,6 @@ async function getRateForDateCached(tenantId: string, date: string): Promise<num
 
 export const reportsService = {
   async getExecutiveSummary(tenantId: string, filters: ReportFilters): Promise<Result<ExecutiveSummaryData, AppError>> {
-    requireRole('owner', 'admin');
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
@@ -288,6 +348,7 @@ export const reportsService = {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
     }
     try {
+      requireRole('owner', 'admin');
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
 
@@ -455,7 +516,6 @@ export const reportsService = {
   },
 
   async getProfitOverTime(tenantId: string, filters: ReportFilters): Promise<Result<DailyProfitPoint[], AppError>> {
-    requireRole('owner', 'admin');
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
@@ -465,6 +525,7 @@ export const reportsService = {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
     }
     try {
+      requireRole('owner', 'admin');
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
 
@@ -887,11 +948,24 @@ export const reportsService = {
         // Fallback silencioso
       }
 
+      // Pre-sort sales by createdAt for O(log N) register windowing
+      allSales.sort((a, b) => a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0);
+
       const result: CashRegisterSummaryData[] = registers.map((r) => {
-        // Filter sales that belong to this register (by time range)
         const regStart = r.openedAt ?? r.createdAt;
         const regEnd = r.closedAt ?? end;
-        const regSales = allSales.filter((s) => s.createdAt >= regStart && s.createdAt <= regEnd);
+
+        // Binary search: find first index >= regStart
+        let lo = 0, hi = allSales.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >>> 1;
+          if (allSales[mid].createdAt < regStart) lo = mid + 1; else hi = mid;
+        }
+        // Collect all sales within [regStart, regEnd]
+        const regSales: typeof allSales = [];
+        for (let i = lo; i < allSales.length && allSales[i].createdAt <= regEnd; i++) {
+          regSales.push(allSales[i]);
+        }
 
         // POS-002 (C-6): usar totalUsd persistido si está disponible; fallback a cálculo
         let totalSalesUsd = 0;
@@ -1015,6 +1089,19 @@ export const reportsService = {
         )
         .toArray();
 
+      // Pre-load products for movements without costUsd (bulk, avoids N+1)
+      const productIdsNeeded = new Set<string>();
+      for (const mov of movements) {
+        if (mov.costUsd === undefined || mov.costUsd <= 0) productIdsNeeded.add(mov.productId);
+      }
+      const productMap = new Map<string, { priceUsd: number; isWeighted: boolean }>();
+      if (productIdsNeeded.size > 0) {
+        const products = await db.products.bulkGet([...productIdsNeeded]);
+        for (const p of products) {
+          if (p) productMap.set(p.id, { priceUsd: p.priceUsd ?? 0, isWeighted: p.isWeighted ?? false });
+        }
+      }
+
       const LOSING_REASONS = ['perdida', 'robo', 'vencido', 'consumo_interno', 'otros'] as const;
       const byReason: Record<string, { totalUsd: number; totalBs: number; count: number; estimatedCount: number }> = {};
       for (const reason of LOSING_REASONS) {
@@ -1035,7 +1122,7 @@ export const reportsService = {
           costUsd = mov.costUsd;
         } else {
           // Estimación: |quantity| * priceUsd * 0.5 (costo fallback proporcional a unidades perdidas)
-          const product = await db.products.get(mov.productId);
+          const product = productMap.get(mov.productId);
           const priceUsd = product?.priceUsd ?? 0;
           let unitsLost = Math.abs(mov.quantity);
           if (product?.isWeighted) unitsLost = unitsLost / 1000;
@@ -1077,7 +1164,6 @@ export const reportsService = {
   },
 
   async getSalesDetail(tenantId: string, filters: ReportFilters): Promise<Result<SaleDetail[], AppError>> {
-    requireRole('owner', 'admin');
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
@@ -1087,6 +1173,7 @@ export const reportsService = {
       return failure(new AppError(ReportsErrors.REPORT_INVALID_FILTERS, filtersCheck.error.issues[0]?.message || 'Filtros inválidos.'));
     }
     try {
+      requireRole('owner', 'admin');
       const { start, end } = getDateRange(filters);
       const data = await fetchSalesWithItems(tenantId, start, end);
 
