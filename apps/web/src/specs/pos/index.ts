@@ -48,6 +48,13 @@ export const SaleSchema = z.object({
   discountValue: z.number().min(0).optional(),
   discountBs: z.number().min(0).optional(),
   customerId: z.string().uuid().optional(),
+  // POS-002 (C-6): montos en USD persistidos para auditoría cross-device
+  // e históricos independientes de la tasa de cambio actual
+  subtotalUsd: z.number().min(0),
+  ivaUsd: z.number().min(0),
+  igtfUsd: z.number().min(0),
+  totalUsd: z.number().min(0),
+  discountUsd: z.number().min(0).optional(),
 });
 
 export type Sale = z.infer<typeof SaleSchema>;
@@ -94,7 +101,7 @@ export const CashRegisterSchema = z.object({
   totalIgtfBs: z.number().min(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().nullable(),
+  deletedAt: z.string().datetime().nullable().optional(), // POS-002 (M-1): acepta null | undefined para Dexie
 });
 
 export type CashRegister = z.infer<typeof CashRegisterSchema>;

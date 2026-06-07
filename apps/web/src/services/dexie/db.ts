@@ -107,6 +107,12 @@ export interface DexieSale {
   discountValue?: number;
   discountBs?: number;
   customerId?: string;
+  // POS-002 (C-6): montos en USD persistidos
+  subtotalUsd: number;
+  ivaUsd: number;
+  igtfUsd: number;
+  totalUsd: number;
+  discountUsd?: number;
 }
 
 export interface DexieSaleItem {
@@ -150,7 +156,7 @@ export interface DexieCashRegister {
   totalIgtfBs: number;
   createdAt: string;
   updatedAt: string;
-  deletedAt?: string;
+  deletedAt?: string | null; // POS-002 (M-1): acepta null también para alinear con schema
 }
 
 export interface DexieParkedCart {

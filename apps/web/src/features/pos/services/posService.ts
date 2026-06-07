@@ -15,6 +15,7 @@ import { isSameDayVzla, startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import { PosErrors } from '../../../specs/pos/errors';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import { CreateSaleInputSchema, calculateSaleTotals, MAX_PARKED_CARTS } from '../../../specs/pos';
+import { saleFromSupabase, saleItemFromSupabase, cashRegisterFromSupabase } from './mappers';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
@@ -33,6 +34,25 @@ type VerificationProduct = {
 };
 
 const MODULE_NAME = 'POS';
+
+// POS-002 (M-13): defense-in-depth — filtra lotIds huérfanos antes de sync
+async function filterOrphanLots(
+  lots: Array<{ lotId: string; quantity: number }>,
+): Promise<Array<{ lotId: string; quantity: number }>> {
+  if (lots.length === 0) return lots;
+  const db = getDb();
+  const results = await Promise.all(
+    lots.map(async (cl) => {
+      const lot = await db.inventoryLots.get(cl.lotId);
+      return lot ? cl : null;
+    }),
+  );
+  const filtered = results.filter((cl): cl is { lotId: string; quantity: number } => cl !== null);
+  if (filtered.length < lots.length) {
+    logger.warn(MODULE_NAME, `filterOrphanLots: removed ${lots.length - filtered.length} orphan lotId(s)`);
+  }
+  return filtered;
+}
 
 async function autoCloseRegister(
   db: LogisCoreDB,
@@ -139,33 +159,17 @@ export const posService = {
           .maybeSingle();
 
         if (data) {
-          row = {
-            id: data.id as string,
-            tenantId,
-            isOpen: data.is_open as boolean,
-            openedBy: data.opened_by as string | null,
-            openedAt: data.opened_at as string | null,
-            openingBalanceBs: data.opening_balance_bs as number | null,
-            openingRate: data.opening_rate as number | null,
-            closedBy: data.closed_by as string | null,
-            closedAt: data.closed_at as string | null,
-            closingBalanceBs: data.closing_balance_bs as number | null,
-            closingRate: data.closing_rate as number | null,
-            expectedClosingBs: data.expected_closing_bs as number | null,
-            differenceBs: data.difference_bs as number | null,
-            totalSalesCount: data.total_sales_count as number,
-            totalSalesBs: data.total_sales_bs as number,
-            totalIgtfBs: data.total_igtf_bs as number,
-            createdAt: data.created_at as string,
-            updatedAt: data.updated_at as string,
-          };
-          // POS-002 (M-6): skip remote put si hay pending/failed local — evita overwrite
-          const pendingCount = await db.syncQueue
-            .where('recordId').equals(row.id)
-            .filter((i) => i.status === 'pending' || i.status === 'failed')
-            .count();
-          if (pendingCount === 0) {
-            await db.cashRegisters.put(row);
+          const result = cashRegisterFromSupabase(data, tenantId);
+          if (result.ok) {
+            row = result.data;
+            // POS-002 (M-6): skip remote put si hay pending/failed local — evita overwrite
+            const pendingCount = await db.syncQueue
+              .where('recordId').equals(row!.id)
+              .filter((i) => i.status === 'pending' || i.status === 'failed')
+              .count();
+            if (pendingCount === 0 && row) {
+              await db.cashRegisters.put(row);
+            }
           }
         }
       }
@@ -398,7 +402,10 @@ export const posService = {
       paymentMethod,
       input.discountType && input.discountValue != null ? { type: input.discountType, value: input.discountValue } : null,
     );
-    const { subtotalBs, igtfBs, ivaBs, discountBs } = totals;
+    // POS-002 (C-6): destructurar también USD para persistir
+    const { subtotalBs, igtfBs, ivaBs, discountBs, subtotalUsd, ivaUsd, totalUsd, discountUsd } = totals;
+    // igtfUsd no viene en SaleTotals (es implícito), lo calculamos
+    const igtfUsd = rawExchangeRate > 0 ? preciseRound(igtfBs / rawExchangeRate, 4) : 0;
 
     let discountType: string | undefined;
     let discountValue: number | undefined;
@@ -459,6 +466,12 @@ export const posService = {
           discountValue: discountValue ?? undefined,
           discountBs: discountBs > 0 ? discountBs : undefined,
           customerId: input.customerId ?? undefined,
+          // POS-002 (C-6): persistir USD
+          subtotalUsd,
+          ivaUsd,
+          igtfUsd,
+          totalUsd,
+          discountUsd: discountUsd > 0 ? discountUsd : undefined,
         });
 
         const saleSnakePayload: Record<string, unknown> = {
@@ -473,10 +486,16 @@ export const posService = {
           exchange_rate: rawExchangeRate,
           status: 'completed',
           created_at: now,
+          // POS-002 (C-6): USD persistidos para sync
+          subtotal_usd: subtotalUsd,
+          iva_usd: ivaUsd,
+          igtf_usd: igtfUsd,
+          total_usd: totalUsd,
         };
         if (discountType) saleSnakePayload.discount_type = discountType;
         if (discountValue != null) saleSnakePayload.discount_value = discountValue;
         if (discountBs > 0) saleSnakePayload.discount_bs = discountBs;
+        if (discountUsd > 0) saleSnakePayload.discount_usd = discountUsd;
         if (input.customerId) saleSnakePayload.customer_id = input.customerId;
         await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake(saleSnakePayload), tenantId);
 
@@ -621,7 +640,7 @@ export const posService = {
             presentation_id: cartItem.presentationId ?? null, // POS-001-01: FK to product_presentations must be populated
             presentation_name: cartItem.presentationName ?? null,
             unit_multiplier: cartItem.unitMultiplier ?? 1,
-            consumed_lots: consumedLots.length > 0 ? consumedLots : null, // AUDIT-017-DB / CRIT-DB-003: sync FIFO lot consumption
+            consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null, // POS-002 (M-13) + AUDIT-017-DB / CRIT-DB-003
             created_at: now,
           } as unknown as Record<string, unknown>), tenantId);
 
@@ -684,7 +703,7 @@ export const posService = {
             cost_usd_per_unit: costUsdPerUnit,
             is_weighted: false,
             unit: product.unit,
-            consumed_lots: consumedLots.length > 0 ? consumedLots : null, // AUDIT-017-DB / CRIT-DB-003: sync FIFO lot consumption
+            consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null, // POS-002 (M-13) + AUDIT-017-DB / CRIT-DB-003
             created_at: now,
           } as unknown as Record<string, unknown>), tenantId);
         }
@@ -752,6 +771,12 @@ export const posService = {
         discountType: discountType as 'percentage' | 'fixed' | undefined,
         discountValue: discountValue ?? undefined,
         customerId: input.customerId,
+        // POS-002 (C-6): USD persistidos retornados al caller
+        subtotalUsd,
+        ivaUsd,
+        igtfUsd,
+        totalUsd,
+        discountUsd: discountUsd > 0 ? discountUsd : undefined,
       });
     } catch (err) {
       if (err instanceof AppError) return failure(err);
@@ -914,6 +939,28 @@ export const posService = {
 
       return success({ ...register, deletedAt: null });
     } catch (err) {
+      // POS-002 (C-8): detectar unique violation de uq_cash_registers_one_open_per_tenant
+      // y re-leer la caja abierta existente. Dexie expone el nombre del failing index
+      // en `err.name` o `err.message` con texto "uq_cash_registers_one_open_per_tenant".
+      const errName = (err as { name?: string })?.name ?? '';
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const isUniqueViolation =
+        errName === 'ConstraintError' ||
+        errMsg.includes('uq_cash_registers_one_open_per_tenant');
+
+      if (isUniqueViolation) {
+        // Race condition: otro dispositivo creó la caja entre nuestro check y add.
+        // Re-leer y retornar la existente (idempotente).
+        const existingRemote = await db.cashRegisters
+          .where({ tenantId })
+          .filter((r) => !r.deletedAt && r.isOpen)
+          .first();
+        if (existingRemote) {
+          logger.warn(MODULE_NAME, 'C-8: openCashRegister race detected, returning existing register', { id: existingRemote.id });
+          return success({ ...existingRemote });
+        }
+      }
+
       logger.error('openCashRegister', 'Error:', err);
       return failure(new AppError('BOX_ALREADY_OPEN', 'Error al abrir la caja.'));
     }
@@ -961,22 +1008,10 @@ export const posService = {
           .limit(50);
 
         if (data) {
-          for (const sale of data) {
-            await db.sales.put({
-              id: sale.id as string,
-              tenantId,
-              userId: sale.user_id as string,
-              paymentMethod: sale.payment_method as PaymentMethod,
-              subtotalBs: sale.subtotal_bs as number,
-              igtfBs: sale.igtf_bs as number,
-              ivaBs: sale.iva_bs !== undefined ? (sale.iva_bs as number) : 0,
-              totalBs: sale.total_bs as number,
-              exchangeRate: sale.exchange_rate as number,
-              status: sale.status as 'completed' | 'voided',
-              voidedAt: sale.voided_at as string | undefined,
-              createdAt: sale.created_at as string,
-              deletedAt: sale.deleted_at as string | undefined,
-            });
+          for (const raw of data) {
+            const result = saleFromSupabase(raw, tenantId);
+            if (!result.ok) continue; // POS-002 (M-1): skip malformed rows
+            await db.sales.put(result.data);
           }
         }
       }
@@ -1001,6 +1036,12 @@ export const posService = {
           voidedAt: r.voidedAt ?? undefined,
           createdAt: r.createdAt,
           deletedAt: r.deletedAt ?? undefined,
+          // POS-002 (C-6): USD persistidos
+          subtotalUsd: r.subtotalUsd,
+          ivaUsd: r.ivaUsd,
+          igtfUsd: r.igtfUsd,
+          totalUsd: r.totalUsd,
+          discountUsd: r.discountUsd,
         })),
       });
     } catch (err) {
@@ -1030,25 +1071,10 @@ export const posService = {
           .eq('tenant_id', tenantUuid);
 
         if (data) {
-          for (const item of data) {
-            await db.saleItems.put({
-              id: item.id as string,
-              tenantId: item.tenant_id as string,
-              saleId: item.sale_id as string,
-              productId: item.product_id as string,
-              productName: item.product_name as string,
-              productSku: item.product_sku as string,
-              quantity: item.quantity as number,
-              unitPriceUsd: item.unit_price_usd as number,
-              totalPriceUsd: item.total_price_usd as number,
-              costUsdPerUnit: item.cost_usd_per_unit as number | undefined,
-              isWeighted: item.is_weighted as boolean,
-              unit: item.unit as string,
-              presentationId: item.presentation_id as string | undefined,
-              presentationName: item.presentation_name as string | undefined,
-              unitMultiplier: (item.unit_multiplier as number) ?? 1,
-              createdAt: item.created_at as string,
-            });
+          for (const raw of data) {
+            const result = saleItemFromSupabase(raw);
+            if (!result.ok) continue; // POS-002 (M-1): skip malformed rows
+            await db.saleItems.put(result.data);
           }
           rows = await db.saleItems.where({ saleId }).toArray();
         }
