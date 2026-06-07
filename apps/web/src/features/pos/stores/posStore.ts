@@ -22,6 +22,7 @@ interface PosStore extends PosState {
   clearDiscount: () => void;
   setSearchQuery: (query: string) => void;
   fetchProducts: (tenantId: string, silent?: boolean) => Promise<void>;
+  restoreFavorites: (tenantId: string) => Promise<void>;
   fetchCashRegister: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
@@ -77,6 +78,7 @@ export const usePosStore = create<PosStore>()(
 
   fetchProducts: async (tenantId, silent = false) => {
     if (!silent) set({ loading: true, error: null });
+    await get().restoreFavorites(tenantId); // POS-002 (M-16): restore from localStorage on login/tenant-switch
     const result = await posService.getProductsForSale(tenantId);
     if (result.ok) {
       const favResult = await posService.getFavorites(tenantId);
@@ -162,6 +164,26 @@ export const usePosStore = create<PosStore>()(
     const result = await posService.getParkedCarts(tenantId);
     if (result.ok) {
       set({ parkedCarts: result.data });
+    }
+  },
+
+  // POS-002 (M-16): restaura favoritos desde localStorage (escritos en logout).
+  // Idempotente: skip si el favorite ya existe en Dexie.
+  restoreFavorites: async (tenantId) => {
+    try {
+      const raw = localStorage.getItem(`sasa-favorites-${tenantId}`);
+      if (!raw) return;
+      const productIds = JSON.parse(raw) as string[];
+      if (!Array.isArray(productIds) || productIds.length === 0) return;
+      const db = getDb();
+      const now = new Date().toISOString();
+      for (const productId of productIds) {
+        const existing = await db.productFavorites.get([productId, tenantId]);
+        if (existing) continue;
+        await db.productFavorites.add({ productId, tenantId, createdAt: now });
+      }
+    } catch (err) {
+      console.warn('[posStore] restoreFavorites failed:', err);
     }
   },
 
