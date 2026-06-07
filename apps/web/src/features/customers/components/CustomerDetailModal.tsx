@@ -181,7 +181,8 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
                     <div className="text-right">
                       <p className="text-sm font-bold text-gray-900">{formatBs(sale.totalBs)}</p>
                       <p className="text-[10px] text-text-secondary">
-                        {formatUsd(sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0)}
+                        {/* PLAN-112 (C2): subtotalBs sin impuestos (DINERO-020) */}
+                        {formatUsd(sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0)}
                       </p>
                     </div>
                   </div>

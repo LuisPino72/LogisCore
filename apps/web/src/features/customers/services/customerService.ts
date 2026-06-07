@@ -10,6 +10,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { requireRole } from '../../auth/services/roleGuard';
+import { useAuthStore } from '../../auth/stores/authStore';
 import {
   CreateCustomerInputSchema,
   UpdateCustomerInputSchema,
@@ -30,7 +31,7 @@ function toCustomer(raw: Record<string, unknown>): Customer {
     id: raw.id as string,
     name: raw.name as string,
     phone: (raw.phone as string | undefined) || undefined,
-    cedula: (raw.cedula as string | undefined) || undefined, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+    cedula: (raw.cedula as string | undefined)?.toUpperCase() || undefined, // PLAN-112 (NEW-2): normalizar lectura
     address: (raw.address as string | undefined) || undefined,
     creditLimit: (raw.creditLimit as number) ?? 0,
     balance: (raw.balance as number) ?? 0,
@@ -56,48 +57,48 @@ export const customerService = {
     _userId: string,
     input: CreateCustomerInput,
   ): Promise<Result<Customer, AppError>> {
-    requireRole('owner', 'admin');
-
-    const networkCheck = requireNetwork();
-    if (!networkCheck.ok) return failure(networkCheck.error);
-    const db = getDb();
-    const id = generateId();
-    const now = new Date().toISOString();
-
-    const parsed = CreateCustomerInputSchema.safeParse(input);
-    if (!parsed.success) {
-      return failure(
-        new AppError(
-          CustomerErrors.CUSTOMER_INVALID_INPUT,
-          parsed.error.issues[0]?.message ?? 'Datos inválidos.',
-        ),
-      );
-    }
-
-    if (parsed.data.cedula) {
-      const duplicate = await db.customers
-        .where({ tenantId })
-        .filter(c => c.cedula === parsed.data.cedula?.trim().toUpperCase() && !c.deletedAt)
-        .first();
-      if (duplicate) {
-        return failure(new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe un cliente con esta cédula.'));
-      }
-    }
-
-    const customer: Customer = {
-      id,
-      name: parsed.data.name.trim(),
-      phone: parsed.data.phone?.trim() || undefined,
-      cedula: parsed.data.cedula?.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
-      address: parsed.data.address?.trim() || undefined,
-      creditLimit: parsed.data.creditLimit ?? 0,
-      balance: 0,
-      notes: parsed.data.notes?.trim() || undefined,
-      createdAt: now,
-      updatedAt: now,
-    };
-
     try {
+      requireRole('owner', 'admin');
+
+      const networkCheck = requireNetwork();
+      if (!networkCheck.ok) return failure(networkCheck.error);
+      const db = getDb();
+      const id = generateId();
+      const now = new Date().toISOString();
+
+      const parsed = CreateCustomerInputSchema.safeParse(input);
+      if (!parsed.success) {
+        return failure(
+          new AppError(
+            CustomerErrors.CUSTOMER_INVALID_INPUT,
+            parsed.error.issues[0]?.message ?? 'Datos inválidos.',
+          ),
+        );
+      }
+
+      if (parsed.data.cedula) {
+        const duplicate = await db.customers
+          .where({ tenantId })
+          .filter(c => c.cedula === parsed.data.cedula?.trim().toUpperCase() && !c.deletedAt)
+          .first();
+        if (duplicate) {
+          return failure(new AppError(CustomerErrors.CUSTOMER_DUPLICATE_CEDULA, 'Ya existe un cliente con esta cédula.'));
+        }
+      }
+
+      const customer: Customer = {
+        id,
+        name: parsed.data.name.trim(),
+        phone: parsed.data.phone?.trim() || undefined,
+        cedula: parsed.data.cedula?.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
+        address: parsed.data.address?.trim() || undefined,
+        creditLimit: parsed.data.creditLimit ?? 0,
+        balance: 0,
+        notes: parsed.data.notes?.trim() || undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+
       await db.transaction('rw', [db.customers, db.syncQueue, db.outbox], async () => {
         await db.customers.add({ ...customer, tenantId });
         await syncQueue.enqueue(
@@ -117,10 +118,13 @@ export const customerService = {
         eventName: 'CUSTOMER.CREATED',
         module: MODULE_NAME,
         payload: { customerId: id, name: customer.name },
-        context: { tenantId },
+        context: { tenantId, userId: useAuthStore.getState().session?.userId },
       });
       return success(customer);
     } catch (err) {
+      // PLAN-112 (M1): preservar el código de AppError (e.g. AUTH_SCOPE_DENIED) cuando
+      // requireRole() lanza. Si no es AppError, genérico CUSTOMER_CREATE_ERROR.
+      if (err instanceof AppError) return failure(err);
       logger.error(MODULE_NAME, 'Error en createCustomer:', err);
       return failure(new AppError('CUSTOMER_CREATE_ERROR', 'Error al crear cliente.'));
     }
@@ -131,9 +135,9 @@ export const customerService = {
     input: UpdateCustomerInput,
     tenantId: string,
   ): Promise<Result<Customer, AppError>> {
-    requireRole('owner', 'admin');
-
     try {
+      requireRole('owner', 'admin');
+
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();
@@ -196,19 +200,20 @@ export const customerService = {
         eventName: 'CUSTOMER.UPDATED',
         module: MODULE_NAME,
         payload: { customerId: id, name: updated.name },
-        context: { tenantId },
+        context: { tenantId, userId: useAuthStore.getState().session?.userId },
       });
       return success(toCustomer(updated as unknown as Record<string, unknown>));
     } catch (err) {
+      if (err instanceof AppError) return failure(err); // PLAN-112 (M1)
       logger.error(MODULE_NAME, 'Error en updateCustomer:', err);
       return failure(new AppError('CUSTOMER_UPDATE_ERROR', 'Error al actualizar cliente.'));
     }
   },
 
   async softDeleteCustomer(id: string, tenantId: string): Promise<Result<void, AppError>> {
-    requireRole('owner', 'admin');
-
     try {
+      requireRole('owner', 'admin');
+
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();
@@ -253,10 +258,11 @@ export const customerService = {
         eventName: 'CUSTOMER.DELETED',
         module: MODULE_NAME,
         payload: { customerId: id, name: customer.name },
-        context: { tenantId },
+        context: { tenantId, userId: useAuthStore.getState().session?.userId },
       });
       return success(undefined);
     } catch (err) {
+      if (err instanceof AppError) return failure(err); // PLAN-112 (M1)
       logger.error(MODULE_NAME, 'Error en softDeleteCustomer:', err);
       return failure(new AppError('CUSTOMER_DELETE_ERROR', 'Error al eliminar cliente.'));
     }
@@ -293,7 +299,7 @@ export const customerService = {
               tenantId,
               name: c.name as string,
               phone: (c.phone as string | null) ?? undefined,
-              cedula: (c.cedula as string | null) ?? undefined, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+              cedula: (c.cedula as string | null)?.toUpperCase() ?? undefined, // PLAN-112 (NEW-2): normalizar lectura
               address: (c.address as string | null) ?? undefined,
               creditLimit: (c.credit_limit as number) ?? 0,
               balance: (c.balance as number) ?? 0,
@@ -343,10 +349,16 @@ export const customerService = {
   ): Promise<Result<{ sales: Sale[]; total: number }, AppError>> {
     try {
       const db = getDb();
-      const rows = await db.sales
-        .where({ tenantId, customerId: query.customerId })
+      // PLAN-112 (C1): customerId opcional. Si esta presente, filtra por el; si no,
+      // retorna todas las ventas del tenant que tengan un customerId asignado
+      // (excluye ventas anonimas — la UI del "historial global" lo requiere).
+      const baseQuery = query.customerId
+        ? db.sales.where({ tenantId, customerId: query.customerId })
+        : db.sales.where({ tenantId });
+      const rows = await baseQuery
         .filter((s) => {
           if (s.deletedAt || s.status !== 'completed') return false;
+          if (query.customerId === undefined && !s.customerId) return false; // excluir anonimas en global
           if (query.dateFrom) {
             if (new Date(s.createdAt) < new Date(query.dateFrom)) return false;
           }

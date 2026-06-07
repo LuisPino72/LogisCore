@@ -14,4 +14,6 @@ export const PosErrors = {
   BOX_CLOSED_TODAY: 'BOX_CLOSED_TODAY',
   // AUDIT-FLOW-12-012: Anulación post-cierre aborta para no corromper arqueo.
   SALE_VOID_BOX_CLOSED: 'SALE_VOID_BOX_CLOSED',
+  // PLAN-112 (M6): cliente referenciado en venta no existe o esta soft-deleted.
+  SALE_CUSTOMER_UNAVAILABLE: 'SALE_CUSTOMER_UNAVAILABLE',
 } as const;

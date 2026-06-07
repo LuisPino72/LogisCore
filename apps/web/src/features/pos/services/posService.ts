@@ -396,6 +396,19 @@ export const posService = {
       }
     }
 
+    // PLAN-112 (M6): si la venta referencia un cliente, verificar que no este soft-deleted.
+    // Si el cliente fue eliminado lógicamente, NO permitimos asociar la venta (evita
+    // registrar ventas contra clientes "zombie" que ya no existen en la UI).
+    if (input.customerId) {
+      const customer = await db.customers
+        .where({ id: input.customerId })
+        .filter((c) => c.tenantId === tenantId)
+        .first();
+      if (!customer || customer.deletedAt) {
+        return failure(new AppError(PosErrors.SALE_CUSTOMER_UNAVAILABLE, 'Cliente no disponible. Seleccione otro cliente o venda sin cliente.'));
+      }
+    }
+
     const totals = calculateSaleTotals(
       items.map((i) => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: i.isTaxable })),
       rawExchangeRate,

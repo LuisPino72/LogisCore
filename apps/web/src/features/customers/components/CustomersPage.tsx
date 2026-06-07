@@ -43,7 +43,11 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
 
   useEffect(() => {
     if (activeTab === 'historial-global' && tenantId) {
-      fetchHistory({ customerId: 'all', limit: 50, offset: 0 } as { customerId: string; limit: number; offset: number });
+      // PLAN-112 (C1): customerId undefined = historial global (todas las ventas con cliente del tenant)
+      // PLAN-112 (NEW-1): wirear DatePickers a la query. Zod .datetime() exige ISO 8601 con tiempo.
+      const dateFrom = startDate ? `${startDate}T00:00:00.000Z` : undefined;
+      const dateTo = endDate ? `${endDate}T23:59:59.999Z` : undefined;
+      fetchHistory({ limit: 50, offset: 0, dateFrom, dateTo });
       setRankingLoading(true);
       import('../services/customerService').then(({ customerService }) => {
         customerService.getCustomersRanking(tenantId, 5).then((res) => {
@@ -52,7 +56,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
         });
       });
     }
-  }, [activeTab, tenantId, fetchHistory]);
+  }, [activeTab, tenantId, fetchHistory, startDate, endDate]);
 
   useEffect(() => {
     return () => reset();
@@ -306,8 +310,10 @@ function GlobalHistoryView({
     return r;
   }, [sales, searchQuery, customerMap]);
 
+  // PLAN-112 (C2): usar subtotalBs (sin IGTF+IVA) para consistencia con DINERO-020
+  // y con customerService.getCustomerStats/getCustomersRanking.
   const totalSpentUsd = useMemo(
-    () => filteredSales.reduce((sum, s) => sum + (s.exchangeRate > 0 ? s.totalBs / s.exchangeRate : 0), 0),
+    () => filteredSales.reduce((sum, s) => sum + (s.exchangeRate > 0 ? s.subtotalBs / s.exchangeRate : 0), 0),
     [filteredSales],
   );
 
@@ -443,7 +449,8 @@ function GlobalHistoryView({
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-gray-900">{formatBs(sale.totalBs)}</p>
                     <p className="text-[10px] text-text-secondary">
-                      {formatUsd(sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0)}
+                      {/* PLAN-112 (C2): subtotalBs sin impuestos para alinear con DINERO-020 */}
+                      {formatUsd(sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0)}
                     </p>
                   </div>
                 </div>

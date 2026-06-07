@@ -191,6 +191,8 @@ Table sales {
   voided_at timestamptz
   created_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
+  // PLAN-112: cliente asociado (opcional). SET NULL al eliminar cliente (preserva venta).
+  customer_id uuid [ref: > customers.id, note: 'ON DELETE SET NULL']
 }
 
 Table sale_items {
@@ -315,5 +317,30 @@ Ref: recipe_lines.recipe_id - recipes.id
 Ref: recipe_lines.product_id - products.id
 Ref: production_orders.tenant_id - tenants.id
 Ref: production_orders.recipe_id - recipes.id
+
+// PLAN-112 (C3): tabla customers del modulo CRM (ya aplicada en BD, antes solo existia
+// en Memoria/PROYECTO/Archivo/20260602-PLAN-CUSTOMER-001/migrations/).
+Table customers {
+  id uuid [pk, default: `gen_random_uuid()`]
+  tenant_id uuid [not null, ref: > tenants.id, note: 'ON DELETE NO ACTION (preservar historial)']
+  name text [not null]
+  phone text
+  address text
+  credit_limit numeric(12,2) [default: 0]
+  balance numeric(12,2) [not null, default: 0]
+  notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz
+  // AUDIT-017: cedula (V/E/J/P + 6-8 digitos) agregada en sesion 97
+  // No agregada al SQL archivado original porque se migro como columna sin constraint CHECK
+  // en la migracion real. Plan-112 (NEW-2) lo agregara en migracion idempotente.
+  cedula text
+  Indexes {
+    (tenant_id) [name: 'idx_customers_tenant_id']
+    (tenant_id, deleted_at) [name: 'idx_customers_tenant_deleted']
+    (tenant_id, name) [name: 'idx_customers_name']
+  }
+}
 Ref: production_orders.product_id - products.id
 Ref: production_orders.created_by - auth.users.id

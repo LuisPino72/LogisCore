@@ -55,9 +55,12 @@ export const UpdateCustomerInputSchema = CreateCustomerInputSchema.partial();
 
 export type UpdateCustomerInput = z.infer<typeof UpdateCustomerInputSchema>;
 
+// PLAN-112 (C1): customerId es opcional para soportar "historial global" (todas las
+// ventas del tenant). Si customerId presente, filtra por ese cliente; si no, retorna
+// todas las ventas del tenant que tengan customerId asignado.
 export const CustomerHistoryQuerySchema = z
   .object({
-    customerId: z.string().uuid(),
+    customerId: z.string().uuid().optional(),
     dateFrom: z.string().datetime().optional(),
     dateTo: z.string().datetime().optional(),
     limit: z.number().int().min(1).max(100).default(20),
