@@ -155,7 +155,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     const saleIds = cloudSales.map((s) => s.id);
     const { data: cloudItems, error: itemsError } = await supabase
       .from('sale_items')
-      .select('sale_id, product_id, product_name, product_sku, quantity, unit_price_usd, cost_usd_per_unit')
+      .select('sale_id, product_id, product_name, product_sku, quantity, unit_price_usd, cost_usd_per_unit, unit_multiplier')
       .eq('tenant_id', tenantUuid)
       .in('sale_id', saleIds)
       .is('deleted_at', null);
@@ -185,7 +185,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         productName: i.product_name || '',
         productSku: i.product_sku || '',
         quantity: Number(i.quantity),
-        unitMultiplier: 1,
+        unitMultiplier: i.unit_multiplier ? Number(i.unit_multiplier) : 1, // POS-001-01: read actual multiplier (was hardcoded 1, broke "Pack 6" WAC/COGS)
         unitPriceUsd: Number(i.unit_price_usd) || 0,
         costUsdPerUnit: i.cost_usd_per_unit ? Number(i.cost_usd_per_unit) : undefined,
       })),

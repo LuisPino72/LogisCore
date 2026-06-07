@@ -550,14 +550,17 @@ export const posService = {
             tenant_id: tenantUuid,
             sale_id: saleId,
             product_id: cartItem.productId,
-            product_name: cartItem.name,
-            product_sku: cartItem.sku,
+            product_name: product.name,
+            product_sku: product.sku,
             quantity: cartItem.quantity,
             unit_price_usd: cartItem.unitPriceUsd,
             total_price_usd: cartItem.totalPriceUsd,
             cost_usd_per_unit: costUsdPerUnit,
             is_weighted: product.isWeighted,
             unit: product.unit,
+            presentation_id: cartItem.presentationId ?? null, // POS-001-01: FK to product_presentations must be populated
+            presentation_name: cartItem.presentationName ?? null,
+            unit_multiplier: cartItem.unitMultiplier ?? 1,
             consumed_lots: consumedLots.length > 0 ? consumedLots : null, // AUDIT-017-DB / CRIT-DB-003: sync FIFO lot consumption
             created_at: now,
           } as unknown as Record<string, unknown>), tenantId);
