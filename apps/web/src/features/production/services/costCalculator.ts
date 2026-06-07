@@ -19,6 +19,9 @@ export interface ConsumptionDetail {
   quantity: number;
   costUsdPerUnit: number;
   costUsd: number;
+  // PLAN-115 (CODE-MED-9): version del lote al momento de la lectura, para que el
+  // caller detecte races via optimistic lock (mismo patron que posService:562).
+  version: number;
 }
 
 export interface ConsumptionResult {
@@ -86,6 +89,7 @@ export async function calculateConsumptionCost(
       quantity: consumeQty,
       costUsdPerUnit,
       costUsd,
+      version: lot.version ?? 0,
     });
     remaining -= consumeQty;
   }
@@ -99,6 +103,7 @@ export async function calculateConsumptionCost(
       quantity: d.quantity,
       costUsdPerUnit: d.costUsdPerUnit,
       costUsd: Math.round(d.costUsd * 100) / 100,
+      version: d.version,
     })),
   });
 }

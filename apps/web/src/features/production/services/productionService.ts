@@ -924,8 +924,12 @@ export const productionService = {
       if (!result.ok) return failure(result.error);
       totalIngredientCost += result.data.totalCost;
     }
+    // PLAN-115 (CODE-MED-21): unificar WAC rounding a preciseRound(..., 4) (Regla de Oro #6).
+    // Antes: Math.round(*100)/100 (2 decimales) generaba drift vs cancelOrder que usa 4.
+    // createOrder persiste costPerProducedUnit, que se usa como costUsdPerUnit del lote
+    // creado. Si 2 decimales, lotes viejos pueden tener 19.99 y nuevos 20.0000.
     const costPerProducedUnit = quantityTarget > 0
-      ? Math.round((totalIngredientCost / quantityTarget) * 100) / 100
+      ? preciseRound(totalIngredientCost / quantityTarget, 4)
       : 0;
 
     // 6. Atomic transaction
@@ -1200,8 +1204,14 @@ export const productionService = {
           if (lotToRevert && lotToRevert.remainingQuantity === lotToRevert.quantityAdded) {
             await db.inventoryLots.update(lotToRevert.id, { deletedAt: now, remainingQuantity: 0 });
             await syncQueue.enqueue('inventory_lots', 'UPDATE', lotToRevert.id, { id: lotToRevert.id, deleted_at: now, remaining_quantity: 0 }, tenantId);
+          }
 
-            // DINERO-012 (M2): recalcular WAC del producto terminado después de revertir el lote
+          // PLAN-115 (CODE-MED-22): recalcular WAC del producto terminado SIEMPRE despues
+          // de revertir, no solo si el lote estaba intacto. Si el lote fue parcialmente
+          // vendido (remainingQuantity < quantityAdded), el bloque se saltaba y WAC quedaba
+          // desactualizado. Ahora el calculo ocurre siempre, leyendo remainingLots tras la
+          // posible baja del lote revertido.
+          {
             const remainingLots = await db.inventoryLots
               .where({ productId: order.productId })
               .filter((l) => !l.deletedAt)
@@ -1216,7 +1226,7 @@ export const productionService = {
               ? preciseRound(totalCost / totalQty, 4)
               : 0;
             const productForWac = await db.products.get(order.productId);
-            if (productForWac) {
+            if (productForWac && productForWac.costPrice !== newCostPrice) {
               await db.products.update(order.productId, { costPrice: newCostPrice });
               await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...productForWac, costPrice: newCostPrice } as unknown as Record<string, unknown>), tenantId);
             }
@@ -1276,6 +1286,13 @@ export const productionService = {
     const now = new Date().toISOString();
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
+    // PLAN-115 (CODE-MED-10 + CODE-MIN-9): validar quantity > 0 al inicio.
+    // Sin esto, expandRecipe con quantity=0 retorna lineas con 0,
+    // totalIngredientCost=0, y comboLot se crea con costUsdPerUnit=NaN.
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return failure(new AppError(ProductionErrors.ASSEMBLY_INVALID_QUANTITY, 'La cantidad de ensamblaje debe ser mayor a cero.'));
+    }
+
     const recipe = await db.recipes
       .where({ productId, mode: 'assembly' as const })
       .filter(r => !r.deletedAt && r.isActive)
@@ -1318,9 +1335,20 @@ export const productionService = {
       // Mantener isInsufficient para el reasonType del movement (override manual → ajuste_manual).
       const isInsufficient = ingredient.stock < needed;
 
-      // Update product stock (igual que antes)
+      // Update product stock (PLAN-115 CODE-MED-8): throw si !allowOverride && stock<needed
+      // (consistencia con posService.createSale para items normales). El clamp a 0 era por
+      // diseno para el path allowOverride: true (override manual del bodeguero).
       const previousStock = ingredient.stock;
-      const newStock = Math.max(0, previousStock - needed);
+      let newStock: number;
+      if (previousStock < needed) {
+        if (options.allowOverride) {
+          newStock = 0;
+        } else {
+          return failure(new AppError(ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK, `Stock insuficiente para ingrediente. Necesario: ${needed}, disponible: ${previousStock}.`));
+        }
+      } else {
+        newStock = previousStock - needed;
+      }
 
       await db.products.update(line.productId, { stock: newStock });
       await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
@@ -1329,9 +1357,11 @@ export const productionService = {
       for (const detail of consumedLots) {
         const currentLot = await db.inventoryLots.get(detail.lotId);
         if (!currentLot || currentLot.remainingQuantity <= 0) continue;
-        // PRODUCTION-003 [Paso-3]: Si el costUsdPerUnit cambió entre la lectura del helper y la
-        // actualización, hay conflicto concurrente (mismo control que el version check original).
-        if (currentLot.costUsdPerUnit !== detail.costUsdPerUnit) {
+        // PLAN-115 (CODE-MED-9): optimistic lock sobre `version`, no `costUsdPerUnit`.
+        // costUsdPerUnit casi nunca cambia tras crear el lote (solo con sync manual raro),
+        // asi que el check era dead code. `version` se incrementa en cada update y SI detecta
+        // race conditions reales (mismo patron que posService:562 y consumeFifoInternal:1425).
+        if ((currentLot.version ?? 0) !== (detail.version ?? 0)) {
           throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto en consumo FIFO.');
         }
         const newRemaining = currentLot.remainingQuantity - detail.quantity;

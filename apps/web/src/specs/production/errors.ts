@@ -50,6 +50,8 @@ export const ProductionErrors = {
   ASSEMBLY_INSUFFICIENT_STOCK: 'PRODUCTION_ASSEMBLY_INSUFFICIENT_STOCK',
   ASSEMBLY_PRODUCT_NOT_FOUND: 'PRODUCTION_ASSEMBLY_PRODUCT_NOT_FOUND',
   ASSEMBLY_FAILED: 'PRODUCTION_ASSEMBLY_FAILED',
+  // PLAN-115 (CODE-MED-10 + CODE-MIN-9): previene comboLot con quantity=0 (NaN costUsdPerUnit)
+  ASSEMBLY_INVALID_QUANTITY: 'PRODUCTION_ASSEMBLY_INVALID_QUANTITY',
 
   // PRODUCTION-003 [Paso-3]: Errores del helper compartido de consumo FIFO real
   // Usados por calculateConsumptionCost (costCalculator) y por los callers refactorizados.
