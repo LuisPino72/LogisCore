@@ -1037,6 +1037,7 @@ export const productionService = {
           costUsdPerUnit: costPerProducedUnit,
           createdAt: now,
           updatedAt: now,
+          version: 1,
         };
         await db.inventoryLots.add(finishedLot);
         await syncQueue.enqueue('inventory_lots', 'CREATE', finishedLotId, toSnake(finishedLot as unknown as Record<string, unknown>), tenantId);

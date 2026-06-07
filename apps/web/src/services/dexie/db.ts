@@ -14,10 +14,11 @@ export interface DexieProductPresentation {
   id: string;
   tenantId: string;
   productId: string;
+  childProductId?: string;
   name: string;
   priceUsd: number;
   unitMultiplier: number;
-  stockType: 'shared';
+  stockType: 'shared' | 'independent';
   barcode?: string;
   sortOrder: number;
   createdAt: string;
@@ -37,18 +38,23 @@ export interface DexieProduct {
   isSellable?: boolean;
   unit: 'kg' | 'gr' | 'lt' | 'm' | 'unidad';
   stock: number;
+  stockInCarts?: number;
   stockMin?: number;
   imageUrl?: string;
   costPrice?: number;
   productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both';
+  createdAt?: string;
+  updatedAt?: string;
   deletedAt?: string;
 }
 
 export interface DexieCategory {
   id: string;
-  tenantId: string;
+  tenantId: string | null;
   name: string;
   isPredefined?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   deletedAt?: string;
 }
 
@@ -57,7 +63,7 @@ export interface DexieInventoryMovement {
   tenantId: string;
   productId: string;
   userId: string;
-  type: 'sale' | 'purchase' | 'adjustment' | 'production_output';
+  type: 'sale' | 'purchase' | 'adjustment' | 'production_output' | 'production_consumption';
   quantity: number;
   previousStock: number;
   newStock: number;
@@ -78,7 +84,7 @@ export interface DexieInventoryLot {
   sourceMovementId?: string;
   createdAt: string;
   updatedAt: string;
-  version?: number;
+  version: number;
   deletedAt?: string;
 }
 

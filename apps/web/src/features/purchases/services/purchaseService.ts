@@ -655,11 +655,12 @@ export const purchaseService = {
               quantityAdded: effectiveQty,
               remainingQuantity: effectiveQty,
               costUsdPerUnit: itemCostStorage,
-              sourceMovementId: movementId,
-              createdAt: now,
-              updatedAt: now,
-            };
-            await db.products.update(item.productId, { stock: newStock, costPrice: newCostPrice });
+            sourceMovementId: movementId,
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
+          };
+          await db.products.update(item.productId, { stock: newStock, costPrice: newCostPrice });
             await db.inventoryMovements.add(movement);
             await db.inventoryLots.add(lot);
             await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);

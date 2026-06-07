@@ -14,7 +14,9 @@ import { imageCacheService } from '../../../services/imageCache/imageCacheServic
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage } from '../types';
 import { requireRole } from '../../auth/services/roleGuard';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './mappers';
+import { CreateProductInputSchema, CreateCategoryInputSchema, UpdateCategoryInputSchema } from '../../../specs/inventory';
 
 // AUDIT-BD-001: verified, código usa 'product_presentations' consistentemente (no hay 'from('presentations')' ni '"presentations"' en src)
 
@@ -87,24 +89,31 @@ async function migrateProductTenantIds(
   tenantId: string,
 ): Promise<boolean> {
   const allLocal = await db.products.toArray();
-  const hasCorrupted = allLocal.length > 0 && allLocal.every(r => !r.tenantId);
-  if (hasCorrupted) {
-    await db.products.clear();
-    return true;
+  let migrated = false;
+  for (const row of allLocal) {
+    if (row.tenantId) continue;
+    const match = await db.products
+      .where({ sku: row.sku, tenantId })
+      .first();
+    if (match) {
+      await db.products.update(row.id!, { tenantId });
+      migrated = true;
+    }
   }
 
   const authIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId);
   const needsMigration = allLocal.some(r => !r.deletedAt && r.tenantId && r.tenantId !== tenantId);
-  if (!needsMigration) return false;
+  if (!needsMigration) return migrated;
 
   for (const r of allLocal) {
     if (r.deletedAt || !r.tenantId || r.tenantId === tenantId) continue;
     const otherIsUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.tenantId as string);
     if (authIsUuid !== otherIsUuid) {
       await db.products.update(r.id!, { tenantId });
+      migrated = true;
     }
   }
-  return true;
+  return migrated;
 }
 
 async function getAllPresentations(tenantId: string): Promise<Result<Presentation[], AppError>> {
@@ -163,6 +172,24 @@ export const inventoryService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
+    const inputValidation = CreateProductInputSchema.safeParse(input);
+      if (!inputValidation.success) {
+        return failure(new AppError(
+          InventoryErrors.INVALID_INPUT,
+          inputValidation.error.issues.map((e: { message: string }) => e.message).join('; ')
+        ));
+      }
+
+    if (input.categoryId) {
+      const categoryCheck = await db.categories
+        .where({ id: input.categoryId, tenantId })
+        .filter((c) => !c.deletedAt)
+        .first();
+      if (!categoryCheck) {
+        return failure(new AppError(InventoryErrors.CATEGORY_NOT_FOUND, 'La categoría especificada no existe.'));
+      }
+    }
+
     const id = generateId();
     const now = new Date().toISOString();
 
@@ -224,6 +251,7 @@ export const inventoryService = {
             sourceMovementId: movementId,
             createdAt: now,
             updatedAt: now,
+            version: 0,
           };
           await db.inventoryLots.add(lot);
 
@@ -296,7 +324,7 @@ export const inventoryService = {
       name: string;
       priceUsd: number;
       unitMultiplier: number;
-      stockType: 'shared';
+      stockType: 'shared' | 'independent';
       barcode?: string;
       sortOrder: number;
       createdAt: string;
@@ -388,6 +416,7 @@ export const inventoryService = {
             sourceMovementId: movementId,
             createdAt: now,
             updatedAt: now,
+            version: 0,
           };
           await db.inventoryLots.add(lot);
 
@@ -567,6 +596,14 @@ export const inventoryService = {
 
   async getPresentationsForProduct(productId: string): Promise<Result<Presentation[], AppError>> {
     const db = getDb();
+    const session = useAuthStore.getState().session;
+    if (!session?.tenantId) {
+      return failure(new AppError(InventoryErrors.TENANT_REQUIRED, 'No hay tenant en sesión.'));
+    }
+    const productCheck = await db.products.where({ id: productId, tenantId: session.tenantId }).first();
+    if (!productCheck || productCheck.deletedAt) {
+      return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado en este tenant.'));
+    }
     try {
       let rows = await db.productPresentations
         .where({ productId })
@@ -685,7 +722,7 @@ export const inventoryService = {
       return success(toPresentation(updated as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en updatePresentation:', err);
-      return failure(new AppError('PRODUCT_SKU_DUPLICATE', 'Error al actualizar presentación.'));
+      return failure(new AppError(InventoryErrors.PRESENTATION_UPDATE_FAILED, 'Error al actualizar presentación.'));
     }
   },
 
@@ -756,6 +793,22 @@ export const inventoryService = {
       }
     }
 
+    const activeLots = await db.inventoryLots
+      .where({ productId: id })
+      .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
+      .count();
+    if (activeLots > 0) {
+      return failure(new AppError(InventoryErrors.PRODUCT_HAS_LOTS, `No se puede eliminar: ${activeLots} lote(s) con stock pendiente.`));
+    }
+
+    const activeRecipes = await db.recipes
+      .where({ productId: id })
+      .filter((r) => !r.deletedAt)
+      .count();
+    if (activeRecipes > 0) {
+      return failure(new AppError(InventoryErrors.PRODUCT_HAS_RECIPES, `No se puede eliminar: ${activeRecipes} receta(s) activa(s).`));
+    }
+
     // Cascade: find presentations for soft delete
     const presentations = await db.productPresentations
       .where({ productId: id })
@@ -789,7 +842,9 @@ export const inventoryService = {
     return success(undefined);
   },
 
-  async getProducts(tenantId: string, filters?: ProductFilters): Promise<Result<Product[], AppError>> {
+  async getProducts(tenantId: string, filters?: ProductFilters, pagination?: { limit?: number; offset?: number }): Promise<Result<Product[], AppError>> {
+    const limit = pagination?.limit ?? 100;
+    const offset = pagination?.offset ?? 0;
     try {
       const db = getDb();
 
@@ -810,7 +865,8 @@ export const inventoryService = {
           .from('products')
           .select('*')
           .eq('tenant_id', tenantUuid)
-          .is('deleted_at', null);
+          .is('deleted_at', null)
+          .range(offset, offset + limit - 1);
 
         if (!error && data && data.length > 0) {
           try {
@@ -848,16 +904,17 @@ export const inventoryService = {
               if (lots && lots.length > 0) {
                 for (const lot of lots) {
                   if (isDbClosing()) return;
-                  await db.inventoryLots.put({
-                    id: lot.id, tenantId,
-                    productId: lot.product_id,
-                    quantityAdded: lot.quantity_added,
-                    remainingQuantity: lot.remaining_quantity,
-                    costUsdPerUnit: lot.cost_usd_per_unit,
-                    sourceMovementId: lot.source_movement_id,
-                    createdAt: lot.created_at,
-                    updatedAt: lot.updated_at ?? lot.created_at,
-                  });
+          await db.inventoryLots.put({
+            id: lot.id, tenantId,
+            productId: lot.product_id,
+            quantityAdded: lot.quantity_added,
+            remainingQuantity: lot.remaining_quantity,
+            costUsdPerUnit: lot.cost_usd_per_unit,
+            sourceMovementId: lot.source_movement_id,
+            createdAt: lot.created_at,
+            updatedAt: lot.updated_at ?? lot.created_at,
+            version: lot.version ?? 1,
+          });
                 }
               }
 
@@ -891,6 +948,8 @@ export const inventoryService = {
       rows = await db.products
         .where({ tenantId })
         .filter((p) => !p.deletedAt)
+        .offset(offset)
+        .limit(limit)
         .toArray();
 
       let products = rows.map((r) => toProduct(r as unknown as Record<string, unknown>));
@@ -926,6 +985,11 @@ export const inventoryService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
 
+    const inputValidation = CreateCategoryInputSchema.safeParse({ name: input.name });
+    if (!inputValidation.success) {
+      return failure(new AppError(InventoryErrors.INVALID_INPUT, inputValidation.error.issues.map((e: { message: string }) => e.message).join('; ')));
+    }
+
     const normalizedName = input.name.trim().toLowerCase();
     const existing = await db.categories
       .where({ tenantId: input.tenantId })
@@ -955,14 +1019,29 @@ export const inventoryService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
+
+    const inputValidation = UpdateCategoryInputSchema.safeParse({ name });
+    if (!inputValidation.success) {
+      return failure(new AppError(InventoryErrors.INVALID_INPUT, inputValidation.error.issues.map((e: { message: string }) => e.message).join('; ')));
+    }
+
     // AUDIT-CRUD-005: Tenant-leak fix — validar que la categoría pertenece al tenant antes de update
     const existing = await db.categories
       .where({ tenantId, id })
       .filter((c) => !c.deletedAt)
       .first();
     if (!existing) {
-      return failure(new AppError('CATEGORY_NOT_FOUND', 'Categoría no encontrada en este tenant.'));
+      return failure(new AppError(InventoryErrors.CATEGORY_NOT_FOUND, 'Categoría no encontrada en este tenant.'));
     }
+
+    const duplicate = await db.categories
+      .where({ tenantId })
+      .filter((c) => !c.deletedAt && c.id !== id && c.name.toLowerCase() === name.toLowerCase())
+      .first();
+    if (duplicate) {
+      return failure(new AppError(InventoryErrors.CATEGORY_DUPLICATE, 'Ya existe una categoría con ese nombre.'));
+    }
+
     const updated = { name };
     await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
       await db.categories.update(id, updated);
@@ -991,21 +1070,30 @@ export const inventoryService = {
         const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
         // AUDIT-FLOW-5-005: UNION de categorías del tenant + predefinidas globales (tenant_id NULL).
         // Antes: solo filtraba por tenant_uuid, perdiendo categorías predefinidas visibles para todos.
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .or(`tenant_id.eq.${tenantUuid},tenant_id.is.null`)
-          .is('deleted_at', null);
+        const [tenantCats, predefinedCats] = await Promise.all([
+          supabase.from('categories').select('*').eq('tenant_id', tenantUuid).is('deleted_at', null),
+          supabase.from('categories').select('*').is('tenant_id', null).is('deleted_at', null),
+        ]);
 
-        if (!error && data && data.length > 0) {
-          for (const cat of data) {
-            const localCat = {
-              id: cat.id, tenantId,
-              name: cat.name, isPredefined: cat.is_predefined,
-            };
-            await db.categories.put(localCat);
+        if (!tenantCats.error && !predefinedCats.error) {
+          const combined = [...(tenantCats.data ?? []), ...(predefinedCats.data ?? [])];
+          const seen = new Set<string>();
+          const data = combined.filter((d) => {
+            if (seen.has(d.id)) return false;
+            seen.add(d.id);
+            return true;
+          });
+
+          if (data.length > 0) {
+            for (const cat of data) {
+              const localCat = {
+                id: cat.id, tenantId,
+                name: cat.name, isPredefined: cat.is_predefined,
+              };
+              await db.categories.put(localCat);
+            }
+            rows = data.map((d) => ({ id: d.id, name: d.name, isPredefined: d.is_predefined, tenantId }));
           }
-          rows = data.map((d) => ({ id: d.id, name: d.name, isPredefined: d.is_predefined, tenantId }));
         }
       }
 
@@ -1111,6 +1199,7 @@ export const inventoryService = {
             sourceMovementId: movementId,
             createdAt: now,
             updatedAt: now,
+            version: 1,
           };
           await db.inventoryLots.add(lot);
           movementCostUsd = costPerUnit > 0 ? preciseRound(Math.abs(storageQuantity) * costPerUnit, 2) : undefined;
@@ -1175,12 +1264,23 @@ export const inventoryService = {
       return success(toMovement(resultMovement as unknown as Record<string, unknown>));
     } catch (err) {
       logger.error('adjustStock', 'Error:', err);
-      return failure(new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Error al ajustar stock. Verifica el stock disponible.'));
+      if (err instanceof AppError) {
+        return failure(err);
+      }
+      return failure(new AppError(InventoryErrors.INVENTORY_STOCK_INSUFFICIENT, 'Error al ajustar stock. Verifica el stock disponible.'));
     }
   },
 
   async getProductLots(productId: string): Promise<Result<ActiveLot[], AppError>> {
     const db = getDb();
+    const session = useAuthStore.getState().session;
+    if (!session?.tenantId) {
+      return failure(new AppError(InventoryErrors.TENANT_REQUIRED, 'No hay tenant en sesión.'));
+    }
+    const productCheck = await db.products.where({ id: productId, tenantId: session.tenantId }).first();
+    if (!productCheck || productCheck.deletedAt) {
+      return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado en este tenant.'));
+    }
 
     const lots = await db.inventoryLots
       .where({ productId })
@@ -1345,7 +1445,6 @@ export const inventoryService = {
           name: row.name,
           sku: row.sku,
           priceUsd: (data as Record<string, unknown>).price_usd as number,
-          priceBs: (data as Record<string, unknown>).price_bs as number,
           isWeighted: row.is_weighted ?? false,
           isTaxable: row.is_taxable ?? true,
           isSellable: row.is_sellable ?? true,
@@ -1376,9 +1475,12 @@ export const inventoryService = {
   },
 
   async consumeFifo(productId: string, quantity: number, tenantId: string): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
+    if (!tenantId) {
+      return failure(new AppError(InventoryErrors.TENANT_REQUIRED, 'No hay tenant en sesión.'));
+    }
     const db = getDb();
     let lots = await db.inventoryLots
-      .where({ productId })
+      .where({ tenantId, productId })
       .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
       .sortBy('createdAt');
 
@@ -1388,20 +1490,23 @@ export const inventoryService = {
       const product = await db.products.where({ tenantId, id: productId }).filter(p => !p.deletedAt).first();
       if (product && product.stock >= quantity) {
         const now = new Date().toISOString();
-        const implicitLot = {
-          id: generateId(),
-          tenantId,
-          productId,
-          quantityAdded: product.stock,
-          remainingQuantity: product.stock,
-          costUsdPerUnit: product.isWeighted
-            ? (product.costPrice ?? 0) / 1000
-            : (product.costPrice ?? 0),
-          createdAt: now,
-          updatedAt: now,
-        };
-        await db.inventoryLots.add(implicitLot as never);
-        await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
+          const implicitLot = {
+            id: generateId(),
+            tenantId,
+            productId,
+            quantityAdded: product.stock,
+            remainingQuantity: product.stock,
+            costUsdPerUnit: product.isWeighted
+              ? (product.costPrice ?? 0) / 1000
+              : (product.costPrice ?? 0),
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
+          };
+        await db.transaction('rw', [db.inventoryLots, db.syncQueue], async () => {
+          await db.inventoryLots.add(implicitLot as never);
+          await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
+        });
         lots = [implicitLot as never];
       }
     }
@@ -1409,27 +1514,29 @@ export const inventoryService = {
     let toConsume = quantity;
     const consumed: Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }> = [];
 
-    for (const lot of lots) {
-      if (toConsume <= 0) break;
+    await db.transaction('rw', [db.inventoryLots, db.syncQueue], async () => {
+      for (const lot of lots) {
+        if (toConsume <= 0) break;
 
-      // Optimistic locking: re-read lot just before update and check version
-      const currentLot = await db.inventoryLots.get(lot.id);
-      if (!currentLot) continue;
-      if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
-        return failure(new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto en consumo FIFO. Reintente la operación.'));
+        // Optimistic locking: re-read lot just before update and check version
+        const currentLot = await db.inventoryLots.get(lot.id);
+        if (!currentLot) continue;
+        if (currentLot.version !== lot.version) {
+          throw new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto en consumo FIFO. Reintente la operación.');
+        }
+
+        const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
+        const newRemaining = currentLot.remainingQuantity - consumeQty;
+        const newVersion = currentLot.version + 1;
+        await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
+        await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
+          ...lot, remainingQuantity: newRemaining, version: newVersion,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        consumed.push({ lotId: lot.id, quantity: consumeQty, costUsdPerUnit: lot.costUsdPerUnit });
+        toConsume -= consumeQty;
       }
-
-      const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
-      const newRemaining = currentLot.remainingQuantity - consumeQty;
-      const newVersion = (currentLot.version ?? 0) + 1;
-      await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
-      await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
-        ...lot, remainingQuantity: newRemaining, version: newVersion,
-      } as unknown as Record<string, unknown>), tenantId);
-
-      consumed.push({ lotId: lot.id, quantity: consumeQty, costUsdPerUnit: lot.costUsdPerUnit });
-      toConsume -= consumeQty;
-    }
+    });
 
     if (toConsume > 0) {
       return failure(new AppError(InventoryErrors.INVENTORY_STOCK_INSUFFICIENT, 'Stock insuficiente para completar la operación.'));
@@ -1439,9 +1546,12 @@ export const inventoryService = {
   },
 
   async getMovementHistory(productId: string, tenantId: string): Promise<Result<InventoryMovement[], AppError>> {
+    if (!tenantId) {
+      return failure(new AppError(InventoryErrors.TENANT_REQUIRED, 'No hay tenant en sesión.'));
+    }
     const db = getDb();
     let rows = await db.inventoryMovements
-      .where({ productId })
+      .where({ tenantId, productId })
       .filter((m) => !m.deletedAt)
       .sortBy('createdAt');
 

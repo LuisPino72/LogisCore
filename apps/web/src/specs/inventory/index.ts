@@ -53,7 +53,7 @@ export const PresentationSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(100),
   priceUsd: z.number().positive('Precio debe ser mayor a 0'),
   unitMultiplier: z.number().positive('El multiplicador debe ser mayor a 0').default(1),
-  stockType: z.literal('shared'),
+  stockType: z.enum(['shared', 'independent']),
   barcode: z.string().max(50).optional(),
   sortOrder: z.number().int().default(0),
   createdAt: z.string().datetime().optional(),
@@ -85,6 +85,7 @@ export type CreateProductWithPresentationsInput = z.infer<typeof CreateProductWi
 export const CategorySchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(25),
+  tenantId: z.string().uuid().nullable().optional(),
   isPredefined: z.boolean().optional(),
 });
 
@@ -94,7 +95,7 @@ export const InventoryMovementSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
   productId: z.string().uuid(),
-  type: z.enum(['sale', 'purchase', 'adjustment']),
+  type: z.enum(['sale', 'purchase', 'adjustment', 'production_output', 'production_consumption']),
   quantity: z.number(),
   previousStock: z.number().int(),
   newStock: z.number().int(),
@@ -106,3 +107,12 @@ export const InventoryMovementSchema = z.object({
 });
 
 export type InventoryMovement = z.infer<typeof InventoryMovementSchema>;
+
+export const CreateCategoryInputSchema = z.object({
+  name: z.string().min(1, 'Nombre requerido').max(25, 'Máximo 25 caracteres'),
+  tenantId: z.string().uuid().nullable().optional(),
+});
+
+export const UpdateCategoryInputSchema = z.object({
+  name: z.string().min(1, 'Nombre requerido').max(25, 'Máximo 25 caracteres'),
+});

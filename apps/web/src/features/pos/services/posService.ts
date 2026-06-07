@@ -453,9 +453,10 @@ export const posService = {
               costUsdPerUnit: product.isWeighted
                 ? (product.costPrice ?? 0) / 1000
                 : (product.costPrice ?? 0),
-              createdAt: now,
-              updatedAt: now,
-            };
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
+          };
             await db.inventoryLots.add(implicitLot);
             await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
             lots = [implicitLot];
