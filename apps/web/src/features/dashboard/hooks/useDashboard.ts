@@ -25,7 +25,7 @@ export function useDashboard(tenantId: string | null) {
       mountedRef.current = false;
       reset();
     };
-  }, [tenantId]);
+  }, [tenantId, fetchDashboard, reset]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -41,7 +41,7 @@ export function useDashboard(tenantId: string | null) {
       EventBus.off(sub1);
       EventBus.off(sub2);
     };
-  }, [tenantId, fetchLowStock]);
+  }, [tenantId, fetchDashboard, fetchLowStock]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -56,7 +56,7 @@ export function useDashboard(tenantId: string | null) {
       EventBus.on(SystemEvents.EXPENSES_DELETED, handler),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
-  }, [tenantId]);
+  }, [tenantId, fetchDashboard]);
 
   return {
     tenantInfo,

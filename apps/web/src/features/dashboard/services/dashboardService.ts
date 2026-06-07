@@ -23,14 +23,12 @@ async function cacheTenantInfo(tenantId: string, info: TenantInfoResponse): Prom
   if (!isDbReady()) return;
   try {
     const db = getDb();
-    const existing = await db.tenantRefs.get(tenantId);
     const ref: DexieTenantRef = {
       id: tenantId,
       slug: info.slug,
       name: info.name,
       rif: info.rif,
     };
-    if (existing?.name) ref.name = existing.name;
     await db.tenantRefs.put(ref);
   } catch { /* best-effort */ }
 }
@@ -182,8 +180,7 @@ export const dashboardService = {
         .from('sale_items')
         .select('product_id, product_name, quantity')
         .eq('tenant_id', tenantUuid)
-        .is('deleted_at', null)
-        .limit(1000); // Reduced from 10000; consider SQL view for production
+        .is('deleted_at', null);
 
       if (error) {
         return failure(new AppError(DashboardErrors.DASHBOARD_TOP_PRODUCTS_FAILED, 'Error al cargar productos más vendidos'));
