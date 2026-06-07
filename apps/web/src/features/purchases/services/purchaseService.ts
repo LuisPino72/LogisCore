@@ -723,29 +723,40 @@ export const purchaseService = {
           totalReceivedUsd += preciseRound(rec.receivedQuantity * (freshItem.costUsdPerUnit ?? 0), 2);
         }
         if (totalReceivedUsd > 0) {
-          const currentRate = exchangeRate;
-          const expenseId = generateId();
-          const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-          const expense: DexieExpense = {
-            id: expenseId,
-            tenantId,
-            createdByUserId: userId,
-            category: 'COMPRA_INVENTARIO',
-            amountUsd: totalReceivedUsd,
-            exchangeRate: currentRate,
-            amountBs: preciseRound(totalReceivedUsd * currentRate, 2),
-            description: `Compra orden #${order.id.slice(0, 8)}`,
-            date: today,
-            isRecurring: false,
-            status: 'paid',
-            createdAt: now,
-            updatedAt: now,
-          };
-          await db.expenses.add(expense);
-          await syncQueue.enqueue('expenses', 'CREATE', expenseId, toSnake(expense as unknown as Record<string, unknown>), tenantId);
-          // PLAN-111 (A4): emitir outbox event EXPENSE.CREATED para que módulos downstream
-          // (cash-flow dashboards, etc.) vean este gasto.
-          await outboxService.enqueue('EXPENSE.CREATED', PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
+          // PLAN-113 (C2): idempotency check — si ya hay expense activo para esta orden,
+          // no crear duplicado (race condition: tx commitea pero response se pierde y se reintenta).
+          const existingForOrder = await db.expenses
+            .where({ purchaseOrderId: id })
+            .filter((e) => !e.deletedAt)
+            .first();
+          if (existingForOrder) {
+            logger.warn(PURCHASES_MODULE, 'C2: receiveOrder idempotency, expense already exists', { orderId: id, expenseId: existingForOrder.id });
+          } else {
+            const currentRate = exchangeRate;
+            const expenseId = generateId();
+            const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+            const expense: DexieExpense = {
+              id: expenseId,
+              tenantId,
+              createdByUserId: userId,
+              category: 'COMPRA_INVENTARIO',
+              amountUsd: totalReceivedUsd,
+              exchangeRate: currentRate,
+              amountBs: preciseRound(totalReceivedUsd * currentRate, 2),
+              description: `Compra orden #${order.id.slice(0, 8)}`,
+              date: today,
+              isRecurring: false,
+              status: 'paid',
+              createdAt: now,
+              updatedAt: now,
+              purchaseOrderId: id, // PLAN-113 (C2): FK a purchase_orders para idempotencia
+            };
+            await db.expenses.add(expense);
+            await syncQueue.enqueue('expenses', 'CREATE', expenseId, toSnake(expense as unknown as Record<string, unknown>), tenantId);
+            // PLAN-111 (A4): emitir outbox event EXPENSE.CREATED para que módulos downstream
+            // (cash-flow dashboards, etc.) vean este gasto.
+            await outboxService.enqueue('EXPENSE.CREATED', PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
+          }
         }
       });
 

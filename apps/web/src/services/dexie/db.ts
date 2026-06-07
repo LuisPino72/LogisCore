@@ -292,6 +292,8 @@ export interface DexieExpense {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  // PLAN-113 (C2): FK a purchase_orders para idempotencia de COMPRA_INVENTARIO
+  purchaseOrderId?: string;
 }
 
 export interface DexieRecipe {
@@ -426,6 +428,11 @@ export class LogisCoreDB extends Dexie {
     }).upgrade(async (tx) => {
       const { migrateV18ToV19 } = await import('./migrations/v18-to-v19');
       await migrateV18ToV19({ suppliers: tx.table('suppliers') });
+    });
+    // BACKLOG-100 (PLAN-113 C2+C6): Migración v19 → v20 — purchaseOrderId en expenses
+    // + unique [parentExpenseId+date] para idempotencia de recurring instances.
+    this.version(20).stores({
+      expenses: 'id, tenantId, category, date, status, nextDueDate, isRecurring, parentExpenseId, purchaseOrderId, [tenantId+date], [tenantId+status], [tenantId+deletedAt], [tenantId+isRecurring], &[parentExpenseId+date], [purchaseOrderId]',
     });
   }
 }

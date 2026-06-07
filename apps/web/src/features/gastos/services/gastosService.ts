@@ -9,6 +9,9 @@ import { outboxService } from '../../../services/outbox/outboxService';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { requireRole } from '../../auth/services/roleGuard';
+import { logger } from '../../../lib/logger';
+
+const GASTOS_MODULE = 'gastos';
 
 function mapExpense(e: DexieExpense): Gasto {
   return {
@@ -92,6 +95,14 @@ export const gastosService = {
     const parsed = CreateGastoInputSchema.safeParse(input);
     if (!parsed.success) {
       return failure(new AppError(GASTOS_ERRORS.GASTOS_INVALID_CATEGORY.code, parsed.error.issues[0]?.message || 'Datos inválidos.'));
+    }
+    // PLAN-113 (C3): defense-in-depth — COMPRA_INVENTARIO es auto-generado por receiveOrder.
+    // UI la filtra, pero un cliente API, test o integracion puede bypasear.
+    if (parsed.data.category === 'COMPRA_INVENTARIO') {
+      return failure(new AppError(
+        'GASTOS_MANUAL_COMPRA_NOT_ALLOWED',
+        'COMPRA_INVENTARIO es auto-generado al recibir ordenes de compra.',
+      ));
     }
     try {
       const db = getDb();
@@ -204,6 +215,20 @@ export const gastosService = {
       if (!existing || existing.deletedAt || existing.tenantId !== tenantId) {
         return failure(new AppError(GASTOS_ERRORS.GASTOS_NOT_FOUND.code, GASTOS_ERRORS.GASTOS_NOT_FOUND.message));
       }
+      // PLAN-113 (C4): si es un template recurrente con instances vivas, bloquear soft-delete
+      // para evitar gastos huerfanos en getAll (instances aparecen sin contexto).
+      if (existing.isRecurring && !existing.parentExpenseId) {
+        const liveInstances = await db.expenses
+          .where('parentExpenseId').equals(id)
+          .filter((e) => !e.deletedAt)
+          .count();
+        if (liveInstances > 0) {
+          return failure(new AppError(
+            'GASTOS_RECURRING_HAS_INSTANCES',
+            `Este template tiene ${liveInstances} occurrences activas. Borra o cancela cada una antes de eliminar el template.`,
+          ));
+        }
+      }
       const now = new Date().toISOString();
       // AUDIT-CRUD-008: update + syncQueue + outbox DENTRO de la MISMA tx (Regla #17)
       await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
@@ -263,37 +288,42 @@ export const gastosService = {
 
       const generated: Gasto[] = [];
 
-      for (const tpl of dueTemplates) {
-        const existingInstance = await db.expenses
-          .where('parentExpenseId')
-          .equals(tpl.id)
-          .filter((e) => e.date === today && !e.deletedAt)
-          .first();
-        if (existingInstance) continue;
+      // PLAN-113 (M3): una sola tx batch atomica para todos los templates.
+      // PLAN-113 (C6): try/catch en add() para ConstraintError de unique [parent+date] (race condition).
+      await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        for (const tpl of dueTemplates) {
+          const now = new Date().toISOString();
+          const currentRate = tpl.exchangeRate;
 
-        const now = new Date().toISOString();
-        const currentRate = tpl.exchangeRate;
+          const instance: DexieExpense = {
+            id: generateId(),
+            tenantId,
+            createdByUserId: tpl.createdByUserId,
+            category: tpl.category,
+            amountUsd: tpl.amountUsd,
+            exchangeRate: currentRate,
+            amountBs: preciseRound(tpl.amountUsd * currentRate, 2),
+            description: tpl.description,
+            date: today,
+            isRecurring: false,
+            parentExpenseId: tpl.id,
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now,
+          };
 
-        const instance: DexieExpense = {
-          id: generateId(),
-          tenantId,
-          createdByUserId: tpl.createdByUserId,
-          category: tpl.category,
-          amountUsd: tpl.amountUsd,
-          exchangeRate: currentRate,
-          amountBs: preciseRound(tpl.amountUsd * currentRate, 2),
-          description: tpl.description,
-          date: today,
-          isRecurring: false,
-          parentExpenseId: tpl.id,
-          status: 'pending',
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        // AUDIT-007: Transactional outbox (Regla 17 compliance) — instance + template update atómicos
-        await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
-          await db.expenses.add(instance);
+          try {
+            await db.expenses.add(instance);
+          } catch (err) {
+            // PLAN-113 (C6): ConstraintError del unique [parentExpenseId+date] significa que otra
+            // llamada concurrente ya genero la instance para este (template, date). Skip.
+            const errMsg = err instanceof Error ? err.message : String(err);
+            if (errMsg.includes('parentExpenseId') || errMsg.includes('ConstraintError')) {
+              logger.warn(GASTOS_MODULE, 'C6: recurring instance already exists (race), skipping', { tplId: tpl.id, date: today });
+              continue;
+            }
+            throw err; // otro error: propaga
+          }
           await syncQueue.enqueue('expenses', 'CREATE', instance.id, toSnake(instance as unknown as Record<string, unknown>), tenantId);
           generated.push(mapExpense(instance));
 
@@ -310,8 +340,8 @@ export const gastosService = {
             updatedAt: now,
           });
           await syncQueue.enqueue('expenses', 'UPDATE', tpl.id, { id: tpl.id, next_due_date: nextDateStr, updated_at: now }, tenantId);
-        });
-      }
+        }
+      });
 
       const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
       const remindingTemplates = await db.expenses

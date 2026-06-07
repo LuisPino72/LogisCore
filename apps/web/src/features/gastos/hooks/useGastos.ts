@@ -51,7 +51,9 @@ export function useGastos(tenantId: string | null) {
 
   const createGasto = useCallback(async (input: CreateGastoInput): Promise<Result<Gasto, AppError>> => {
     if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));
-    const userId = useAuthStore.getState().session?.userId ?? '00000000-0000-0000-0000-000000000000';
+    // PLAN-113 (M1): sin sesion real no creamos gastos atribuidos a usuario fantasma
+    const userId = useAuthStore.getState().session?.userId;
+    if (!userId) return failure(new AppError('AUTH_REQUIRED', 'Sin sesion activa. Inicia sesion para crear gastos.'));
     const result = await gastosService.create(tenantId, userId, input);
     if (result.ok) {
       await fetchGastos();
