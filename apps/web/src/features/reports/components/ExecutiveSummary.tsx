@@ -204,7 +204,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
         <KpiCard
           label="IVA Acumulado"
           value={formatDual(data.totalIvaBs, data.totalIvaUsd)}
-          subtitle="Impuesto al valor agregado (16%)"
+          subtitle="Impuesto al Valor Agregado"
           icon={<Receipt size={18} />}
           gradient="blue"
         />

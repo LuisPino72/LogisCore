@@ -422,13 +422,24 @@ export const reportsService = {
         }
       }
 
-      // Non-sellable expenses (compras del período)
-      const nsResult = await this.getNonSellableExpenses(tenantId, start, end);
+      // Non-sellable expenses + Adjustment losses + Operating expenses (parallel, no dependency)
+      const [nsResult, adjResult, operatingExpenses] = await Promise.all([
+        this.getNonSellableExpenses(tenantId, start, end),
+        this.getAdjustmentLossExpenses(tenantId, start, end),
+        (async () => {
+          const db = getDb();
+          const startNorm = start.slice(0, 10);
+          const endNorm = end.slice(0, 10);
+          return db.expenses
+            .where('[tenantId+date]')
+            .between([tenantId, startNorm], [tenantId, endNorm])
+            .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
+            .toArray();
+        })(),
+      ]);
+
       const nonSellableExpensesUsd = nsResult.ok ? nsResult.data.totalUsd : 0;
       const nonSellableExpensesBs = nsResult.ok ? nsResult.data.totalBs : 0;
-
-      // Adjustment loss expenses
-      const adjResult = await this.getAdjustmentLossExpenses(tenantId, start, end);
       const adjustmentLossExpenses = adjResult.ok ? adjResult.data : {
         perdida: { totalUsd: 0, count: 0, estimatedCount: 0 },
         robo: { totalUsd: 0, count: 0, estimatedCount: 0 },
@@ -439,17 +450,7 @@ export const reportsService = {
         totalBs: 0,
         estimatedTotalUsd: 0,
       };
-      // Operating expenses (gastos operativos del período)
       // BACKLOG-106 [REPORTS-001]: Excluir COMPRA_INVENTARIO (el costo ya está en COGS vía purchaseOrder).
-      // Si se incluye acá, grossProfit se reduce doble (una vez en COGS, otra como gasto operativo).
-      const db = getDb();
-      const startNorm = start.slice(0, 10);
-      const endNorm = end.slice(0, 10);
-      const operatingExpenses = await db.expenses
-        .where('[tenantId+date]')
-        .between([tenantId, startNorm], [tenantId, endNorm])
-        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
-        .toArray();
       const operatingExpensesUsd = operatingExpenses.reduce((s, e) => s + e.amountUsd, 0);
       const operatingExpensesBs = operatingExpenses.reduce((s, e) => s + e.amountBs, 0);
 
@@ -1186,6 +1187,7 @@ export const reportsService = {
         const subtotalUsd = sale.exchangeRate > 0 ? preciseRound(subtotalBs / sale.exchangeRate, 2) : 0;
         return {
           id: sale.id,
+          createdAt: sale.createdAt,
           date: dateObj.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
           time: dateObj.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
           itemCount: items.length,
@@ -1199,7 +1201,7 @@ export const reportsService = {
         };
       });
 
-      sales.sort((a, b) => new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime());
+      sales.sort((a, b) => b.createdAt < a.createdAt ? -1 : b.createdAt > a.createdAt ? 1 : 0);
       return success(sales);
     } catch (err) {
       console.error('[reportsService.getSalesDetail]', err);
@@ -1425,7 +1427,7 @@ export const reportsService = {
           date: d.sale.createdAt.slice(0, 10),
           discountBs: preciseRound(d.sale.discountBs || 0, 2),
           discountUsd: d.sale.exchangeRate > 0 ? preciseRound((d.sale.discountBs || 0) / d.sale.exchangeRate, 2) : 0,
-          subtotalBs: preciseRound(d.sale.totalBs + (d.sale.discountBs || 0), 2),
+          subtotalPreDiscountBs: preciseRound(d.sale.totalBs + (d.sale.discountBs || 0), 2),
           totalBs: d.sale.totalBs,
           paymentMethod: d.sale.paymentMethod,
         }))

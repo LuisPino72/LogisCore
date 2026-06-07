@@ -196,15 +196,35 @@ export function useReports(tenantId: string | null) {
     loadTab(activeTab);
   }, [tenantId, filters, activeTab, loadTab]);
 
-  const refetch = useCallback(() => {
+  const REPORTS_TABLES = ['sales', 'sale_items', 'cash_registers', 'expenses', 'products', 'categories', 'inventory_movements', 'exchange_rates'];
+
+  const refetch = useCallback((table?: string) => {
     if (debounceRefetchTimer.current) clearTimeout(debounceRefetchTimer.current);
     debounceRefetchTimer.current = setTimeout(() => {
-      prevKey.current = '';
-      dataCache.current.clear();
-      cacheOrder.current = [];
+      // Granular invalidation: only clear cache keys affected by the synced table
+      if (table && table !== '*') {
+        const affectedTabs: ReportTab[] = [];
+        if (['sales', 'sale_items', 'exchange_rates'].includes(table)) affectedTabs.push('summary', 'profits', 'cash');
+        if (['products', 'categories'].includes(table)) affectedTabs.push('summary', 'products');
+        if (['cash_registers'].includes(table)) affectedTabs.push('summary', 'cash');
+        if (['expenses'].includes(table)) affectedTabs.push('summary');
+        if (['inventory_movements'].includes(table)) affectedTabs.push('summary');
+        if (affectedTabs.length > 0) {
+          const cacheKey = `${tenantId}-${activeTab}-${filters.timeRange}-${filters.startDate ?? ''}-${filters.endDate ?? ''}`;
+          if (affectedTabs.includes(activeTab)) {
+            prevKey.current = '';
+            dataCache.current.delete(cacheKey);
+          }
+        }
+      } else {
+        // Full clear for transaction events or wildcard sync
+        prevKey.current = '';
+        dataCache.current.clear();
+        cacheOrder.current = [];
+      }
       loadTab(activeTab);
     }, REFETCH_DEBOUNCE_MS);
-  }, [loadTab, activeTab]);
+  }, [loadTab, activeTab, tenantId, filters]);
 
   useEffect(() => {
     return () => {
@@ -214,20 +234,22 @@ export function useReports(tenantId: string | null) {
 
   useEffect(() => {
     if (!tenantId) return;
-    const events = [
-      'SALE.COMPLETED',
-      'SALE.VOIDED',
-      SystemEvents.BOX_CLOSED,
-      'PURCHASE.RECEIVED',
-      'INVENTORY.ADJUSTMENT',
-      'EXPENSES.CREATED',
-      'EXPENSES.UPDATED',
-      'EXPENSES.DELETED',
-      'SYNC.REFRESH_TABLE',
-    ] as const;
-    const subs = events.map((event) =>
-      EventBus.on(event, () => refetch())
-    );
+    const subs = [
+      EventBus.on('SALE.COMPLETED', () => refetch()),
+      EventBus.on('SALE.VOIDED', () => refetch()),
+      EventBus.on(SystemEvents.BOX_CLOSED, () => refetch()),
+      EventBus.on('PURCHASE.RECEIVED', () => refetch()),
+      EventBus.on('INVENTORY.ADJUSTMENT', () => refetch()),
+      EventBus.on('EXPENSES.CREATED', () => refetch()),
+      EventBus.on('EXPENSES.UPDATED', () => refetch()),
+      EventBus.on('EXPENSES.DELETED', () => refetch()),
+      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if (!table || table === '*' || REPORTS_TABLES.includes(table)) {
+          refetch(table);
+        }
+      }),
+    ];
     return () => {
       subs.forEach((sub) => EventBus.off(sub));
     };

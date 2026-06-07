@@ -121,6 +121,7 @@ export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topPr
 
 export interface SaleDetail {
   id: string;
+  createdAt: string;
   date: string;
   time: string;
   itemCount: number;
@@ -138,7 +139,7 @@ export interface DiscountBreakdownItem {
   date: string;
   discountBs: number;
   discountUsd: number;
-  subtotalBs: number;
+  subtotalPreDiscountBs: number;
   totalBs: number;
   paymentMethod: string;
 }
