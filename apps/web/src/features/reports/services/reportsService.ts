@@ -847,7 +847,7 @@ export const reportsService = {
       try {
         const { data: cloudSales, error: salesErr } = await supabase
           .from('sales')
-          .select('id, user_id, total_bs, subtotal_bs, igtf_bs, iva_bs, exchange_rate, payment_method, status, created_at')
+          .select('id, user_id, total_bs, subtotal_bs, igtf_bs, iva_bs, exchange_rate, payment_method, status, created_at, subtotal_usd, iva_usd, igtf_usd, total_usd, discount_usd')
           .eq('tenant_id', tenantUuid)
           .eq('status', 'completed')
           .is('deleted_at', null)
@@ -871,6 +871,12 @@ export const reportsService = {
               exchangeRate: Number(s.exchange_rate) || 0,
               status: (s.status as 'completed' | 'voided') || 'completed',
               createdAt: s.created_at as string,
+              // POS-002 (C-6): USD persistidos
+              subtotalUsd: Number(s.subtotal_usd) || 0,
+              ivaUsd: Number(s.iva_usd) || 0,
+              igtfUsd: Number(s.igtf_usd) || 0,
+              totalUsd: Number(s.total_usd) || 0,
+              discountUsd: Number(s.discount_usd) || 0,
             });
           }
           // AUDIT-013: Locales pisan a la nube (offline-first, autoridad local hasta sync)
@@ -887,11 +893,13 @@ export const reportsService = {
         const regEnd = r.closedAt ?? end;
         const regSales = allSales.filter((s) => s.createdAt >= regStart && s.createdAt <= regEnd);
 
-        // Calculate totalSalesUsd from individual sales' own exchangeRate
+        // POS-002 (C-6): usar totalUsd persistido si está disponible; fallback a cálculo
         let totalSalesUsd = 0;
         for (const s of regSales) {
-          if (s.exchangeRate > 0) {
-            totalSalesUsd += preciseRound(s.totalBs / s.exchangeRate, 2);
+          if (s.totalUsd !== undefined && s.totalUsd > 0) {
+            totalSalesUsd = preciseRound(totalSalesUsd + s.totalUsd, 2);
+          } else if (s.exchangeRate > 0) {
+            totalSalesUsd = preciseRound(totalSalesUsd + s.totalBs / s.exchangeRate, 2);
           }
         }
         totalSalesUsd = preciseRound(totalSalesUsd, 2);

@@ -384,6 +384,12 @@ export const customerService = {
         discountValue: r.discountValue,
         discountBs: r.discountBs,
         customerId: r.customerId,
+        // POS-002 (C-6): USD persistidos
+        subtotalUsd: r.subtotalUsd,
+        ivaUsd: r.ivaUsd,
+        igtfUsd: r.igtfUsd,
+        totalUsd: r.totalUsd,
+        discountUsd: r.discountUsd,
       }));
 
       return success({ sales, total });
