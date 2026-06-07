@@ -62,7 +62,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
 
   const handleView = async (sale: Sale) => {
     setSelectedSale(sale);
-    await fetchSaleItems(sale.id);
+    await fetchSaleItems(tenantId, sale.id);
   };
 
   const columns: Column<Sale>[] = [

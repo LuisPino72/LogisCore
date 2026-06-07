@@ -18,7 +18,7 @@ import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
-import { emitWithPersistence } from '../../../services/audit/emitWithAudit';
+import { emitWithAudit, emitWithPersistence } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema, type CalculateRecipeCostResult } from '../../../specs/production';
@@ -1369,7 +1369,14 @@ export const productionService = {
       } as unknown as Record<string, unknown>), tenantId);
     }
 
-    await emitWithPersistence('PRODUCTION.ASSEMBLY_CONSUMED', PRODUCTION_MODULE, { productId, quantity, tenantId }, { userId, tenantId });
+    // POS-002 (C-10): builder discarded bug — emitWithPersistence returns {enqueueInTransaction, auditAfterTransaction}
+    // which must be invoked explicitly. Use emitWithAudit directly (handles outbox + audit correctly).
+    await emitWithAudit({
+      eventName: 'PRODUCTION.ASSEMBLY_CONSUMED',
+      module: PRODUCTION_MODULE,
+      payload: { productId, quantity, tenantId },
+      context: { userId, tenantId },
+    });
 
     // PRODUCTION-003 [Paso-4]: Crear lote del combo ensamblado para tracking FIFO.
     // NO se descuenta stock del combo (se vende al instante) — el lote permite

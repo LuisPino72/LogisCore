@@ -5,6 +5,7 @@ import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import { ReportsFiltersSchema, ValidateTenantInputSchema, TopProductsLimitSchema } from '../../../specs/reports/index';
+import type { PaymentMethod } from '../../../specs/pos';
 import { logger } from '../../../lib/logger';
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import { requireRole } from '../../auth/services/roleGuard';
@@ -862,13 +863,13 @@ export const reportsService = {
               id: s.id as string,
               tenantId,
               userId: (s.user_id as string) || '',
-              paymentMethod: (s.payment_method as string) || 'efectivo_bs',
+              paymentMethod: (s.payment_method as PaymentMethod) || 'efectivo_bs',
               subtotalBs: Number(s.subtotal_bs) || 0,
               igtfBs: Number(s.igtf_bs) || 0,
               ivaBs: Number(s.iva_bs) || 0,
               totalBs: Number(s.total_bs) || 0,
               exchangeRate: Number(s.exchange_rate) || 0,
-              status: (s.status as string) || 'completed',
+              status: (s.status as 'completed' | 'voided') || 'completed',
               createdAt: s.created_at as string,
             });
           }

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { TenantInfo } from '@logiscore/core';
+import type { PaymentMethod } from '../../specs/pos';
 
 // Deshabilitar logs de Dexie (Dexie: read products, etc.)
 Dexie.debug = false;
@@ -92,13 +93,13 @@ export interface DexieSale {
   id: string;
   tenantId: string;
   userId: string;
-  paymentMethod: string;
+  paymentMethod: PaymentMethod;
   subtotalBs: number;
   igtfBs: number;
   ivaBs: number;
   totalBs: number;
   exchangeRate: number;
-  status: string;
+  status: 'completed' | 'voided';
   voidedAt?: string;
   createdAt: string;
   deletedAt?: string;

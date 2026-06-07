@@ -14,11 +14,10 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { isSameDayVzla, startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import { PosErrors } from '../../../specs/pos/errors';
 import { InventoryErrors } from '../../../specs/inventory/errors';
-import { CreateSaleInputSchema, calculateSaleTotals } from '../../../specs/pos';
+import { CreateSaleInputSchema, calculateSaleTotals, MAX_PARKED_CARTS } from '../../../specs/pos';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
-import { useAuthStore } from '../../auth/stores/authStore';
 import { requireRole } from '../../auth/services/roleGuard';
 
 type VerificationProduct = {
@@ -104,7 +103,7 @@ async function autoCloseRegister(
   });
 
   // Push inmediato para sincronizar cierre automático a la nube
-  syncEngine.pushNow().catch(() => {});
+  syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (autoClose):', err));
 }
 
 export const posService = {
@@ -118,7 +117,7 @@ export const posService = {
    * ⚠️ Nota: Si el usuario está offline y no hay datos locales,
    * la función retornará null (no error).
    */
-  async getCashRegister(tenantId: string): Promise<Result<CashRegister | null, AppError>> {
+  async getOpenCashRegister(tenantId: string): Promise<Result<CashRegister | null, AppError>> {
     try {
       const db = getDb();
 
@@ -126,14 +125,6 @@ export const posService = {
         .where({ tenantId })
         .filter((r) => !r.deletedAt && r.isOpen)
         .first();
-
-      if (!row) {
-        row = await db.cashRegisters
-          .where({ tenantId })
-          .filter((r) => !r.deletedAt)
-          .reverse()
-          .first();
-      }
 
       if (!row) {
         if (!navigator.onLine) return success(null);
@@ -144,8 +135,7 @@ export const posService = {
           .select('*')
           .eq('tenant_id', uuid)
           .is('deleted_at', null)
-          .order('created_at', { ascending: false })
-          .limit(1)
+          .eq('is_open', true)
           .maybeSingle();
 
         if (data) {
@@ -169,7 +159,14 @@ export const posService = {
             createdAt: data.created_at as string,
             updatedAt: data.updated_at as string,
           };
-          await db.cashRegisters.put(row);
+          // POS-002 (M-6): skip remote put si hay pending/failed local — evita overwrite
+          const pendingCount = await db.syncQueue
+            .where('recordId').equals(row.id)
+            .filter((i) => i.status === 'pending' || i.status === 'failed')
+            .count();
+          if (pendingCount === 0) {
+            await db.cashRegisters.put(row);
+          }
         }
       }
 
@@ -197,8 +194,71 @@ export const posService = {
         deletedAt: row.deletedAt ?? null,
       });
     } catch (err) {
-      logger.error(MODULE_NAME, 'Error en getCashRegister:', err);
+      logger.error(MODULE_NAME, 'Error en getOpenCashRegister:', err);
       return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Error al consultar el estado de la caja.'));
+    }
+  },
+
+  async getLastClosedCashRegister(tenantId: string): Promise<Result<CashRegister | null, AppError>> {
+    try {
+      const db = getDb();
+      let row = await db.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && !r.isOpen)
+        .reverse()
+        .first();
+
+      if (!row && navigator.onLine) {
+        const uuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data } = await supabase
+          .from('cash_registers')
+          .select('*')
+          .eq('tenant_id', uuid)
+          .is('deleted_at', null)
+          .eq('is_open', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (data) {
+          row = {
+            id: data.id as string,
+            tenantId,
+            isOpen: data.is_open as boolean,
+            openedBy: data.opened_by as string | null,
+            openedAt: data.opened_at as string | null,
+            openingBalanceBs: data.opening_balance_bs as number | null,
+            openingRate: data.opening_rate as number | null,
+            closedBy: data.closed_by as string | null,
+            closedAt: data.closed_at as string | null,
+            closingBalanceBs: data.closing_balance_bs as number | null,
+            closingRate: data.closing_rate as number | null,
+            expectedClosingBs: data.expected_closing_bs as number | null,
+            differenceBs: data.difference_bs as number | null,
+            totalSalesCount: data.total_sales_count as number,
+            totalSalesBs: data.total_sales_bs as number,
+            totalIgtfBs: data.total_igtf_bs as number,
+            createdAt: data.created_at as string,
+            updatedAt: data.updated_at as string,
+          };
+        }
+      }
+
+      if (!row) return success(null);
+      return success({
+        id: row.id, tenantId: row.tenantId, isOpen: row.isOpen,
+        openedBy: row.openedBy, openedAt: row.openedAt,
+        openingBalanceBs: row.openingBalanceBs, openingRate: row.openingRate,
+        closedBy: row.closedBy, closedAt: row.closedAt,
+        closingBalanceBs: row.closingBalanceBs, closingRate: row.closingRate,
+        expectedClosingBs: row.expectedClosingBs, differenceBs: row.differenceBs,
+        totalSalesCount: row.totalSalesCount, totalSalesBs: row.totalSalesBs,
+        totalIgtfBs: row.totalIgtfBs,
+        createdAt: row.createdAt, updatedAt: row.updatedAt,
+        deletedAt: row.deletedAt ?? null,
+      });
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getLastClosedCashRegister:', err);
+      return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Error al consultar la última caja cerrada.'));
     }
   },
 
@@ -675,7 +735,7 @@ export const posService = {
 
 
       // Push inmediato para que la venta llegue a la nube sin esperar el timer
-      syncEngine.pushNow().catch(() => {});
+      syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (createSale):', err));
 
       return success({
         id: saleId,
@@ -850,7 +910,7 @@ export const posService = {
 
 
       // Push inmediato para sincronizar apertura de caja a la nube
-      syncEngine.pushNow().catch(() => {});
+      syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (openCash):', err));
 
       return success({ ...register, deletedAt: null });
     } catch (err) {
@@ -906,13 +966,13 @@ export const posService = {
               id: sale.id as string,
               tenantId,
               userId: sale.user_id as string,
-              paymentMethod: sale.payment_method as string,
+              paymentMethod: sale.payment_method as PaymentMethod,
               subtotalBs: sale.subtotal_bs as number,
               igtfBs: sale.igtf_bs as number,
               ivaBs: sale.iva_bs !== undefined ? (sale.iva_bs as number) : 0,
               totalBs: sale.total_bs as number,
               exchangeRate: sale.exchange_rate as number,
-              status: sale.status as string,
+              status: sale.status as 'completed' | 'voided',
               voidedAt: sale.voided_at as string | undefined,
               createdAt: sale.created_at as string,
               deletedAt: sale.deleted_at as string | undefined,
@@ -949,7 +1009,7 @@ export const posService = {
     }
   },
 
-  async getSaleItems(saleId: string): Promise<Result<SaleItem[], AppError>> {
+  async getSaleItems(tenantId: string, saleId: string): Promise<Result<SaleItem[], AppError>> {
     try {
       const db = getDb();
       let rows = await db.saleItems
@@ -958,7 +1018,7 @@ export const posService = {
         .toArray();
 
       if (rows.length === 0) {
-        const tenantUuid = useAuthStore.getState().session?.tenantId;
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
         // AUDIT-009: Fail-closed on missing tenantUuid — antes caía a query sin filtro (multi-tenant leak)
         if (!tenantUuid) {
           return failure(new AppError('AUTH_REQUIRED', 'Sesión inválida. Inicia sesión para cargar items de venta.'));
@@ -1396,7 +1456,7 @@ export const posService = {
 
 
       // Push inmediato para sincronizar cierre de caja a la nube
-      syncEngine.pushNow().catch(() => {});
+      syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (closeCash):', err));
 
       return success({
         id: cashReg.id,
@@ -1433,13 +1493,22 @@ export const posService = {
       const rows = await db.parkedCarts
         .where({ tenantId })
         .sortBy('createdAt');
-      return success(rows.map((r) => ({
-        id: r.id,
-        tenantId: r.tenantId,
-        name: r.name,
-        cart: JSON.parse(r.cartJson) as import('../types').CartItem[],
-        createdAt: r.createdAt,
-      })));
+      const result: import('../types').ParkedCart[] = [];
+      for (const r of rows) {
+        try {
+          result.push({
+            id: r.id,
+            tenantId: r.tenantId,
+            name: r.name,
+            cart: JSON.parse(r.cartJson) as import('../types').CartItem[],
+            createdAt: r.createdAt,
+          });
+        } catch (err) {
+          // POS-002 (M-9): JSON corrupto se loguea y se ignora, no se propaga el error.
+          logger.warn(MODULE_NAME, `parkedCart ${r.id} tiene cartJson corrupto, se omite:`, err);
+        }
+      }
+      return success(result);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getParkedCarts:', err);
       return failure(new AppError('PARKED_CARTS_FETCH_FAILED', 'Error al cargar ventas en cola.'));
@@ -1450,8 +1519,8 @@ export const posService = {
     try {
       const db = getDb();
       const existingCount = await db.parkedCarts.where({ tenantId }).count();
-      if (existingCount >= 10) {
-        return failure(new AppError('CART_ITEM_WEIGHT_REQUIRED', 'Máximo 10 ventas en cola. Completa o elimina una.'));
+      if (existingCount >= MAX_PARKED_CARTS) {
+        return failure(new AppError('CART_ITEM_WEIGHT_REQUIRED', `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.`));
       }
       const id = generateId();
       await db.parkedCarts.add({

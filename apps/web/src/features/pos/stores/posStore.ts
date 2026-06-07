@@ -13,8 +13,7 @@ import { imageCacheService } from '../../../services/imageCache/imageCacheServic
 import { getDb } from '../../../services/dexie/db';
 import type { CreateSaleInput } from '../../../specs/pos';
 import type { Customer } from '../../../specs/customers';
-
-const MAX_PARKED_CARTS = 10;
+import { MAX_PARKED_CARTS } from '../../../specs/pos';
 
 interface PosStore extends PosState {
   fetchPresentations: (tenantId: string) => Promise<void>;
@@ -42,7 +41,7 @@ interface PosStore extends PosState {
   getTodaySoldProducts: (tenantId: string, maxProducts?: number) => Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>>;
   saleItems: SaleItem[];
   saleItemsLoading: boolean;
-  fetchSaleItems: (saleId: string) => Promise<void>;
+  fetchSaleItems: (tenantId: string, saleId: string) => Promise<void>;
   setSelectedCustomer: (customer: Customer | null) => void;
   reset: () => void;
 }
@@ -151,7 +150,7 @@ export const usePosStore = create<PosStore>()(
 
   fetchCashRegister: async (tenantId, silent = false) => {
     if (!silent) set({ loading: true, error: null });
-    const result = await posService.getCashRegister(tenantId);
+    const result = await posService.getOpenCashRegister(tenantId);
     if (result.ok) {
       set({ cashRegister: result.data, ...(!silent && { loading: false }) });
     } else if (!silent) {
@@ -546,9 +545,9 @@ export const usePosStore = create<PosStore>()(
   saleItems: [],
   saleItemsLoading: false,
 
-  fetchSaleItems: async (saleId) => {
+  fetchSaleItems: async (tenantId, saleId) => {
     set({ saleItemsLoading: true });
-    const result = await posService.getSaleItems(saleId);
+    const result = await posService.getSaleItems(tenantId, saleId);
     if (result.ok) {
       set({ saleItems: result.data, saleItemsLoading: false });
     } else {

@@ -4,6 +4,8 @@ import { z } from 'zod';
 
 export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'efectivo_usd'] as const;
 export type PaymentMethod = typeof PAYMENT_METHODS[number];
+
+export const MAX_PARKED_CARTS = 10; // POS-002: shared between posService and posStore (m-21)
 // AUDIT-FLOW-2-002: IGTF_RATE ahora proviene SOLO de @logiscore/shared (Regla de Oro #8).
 // Eliminado duplicado 0.03 (incorrecto, el canónico está en 0 según motor fiscal VE vigente).
 export { IGTF_RATE } from '@logiscore/shared';
@@ -24,7 +26,6 @@ export const CartItemSchema = z.object({
   presentationId: z.string().uuid().optional(),
   presentationName: z.string().optional(),
   unitMultiplier: z.number().positive().default(1),
-  stockType: z.literal('shared').optional(),
 });
 
 export type CartItem = z.infer<typeof CartItemSchema>;
@@ -67,7 +68,6 @@ export const SaleItemSchema = z.object({
   presentationId: z.string().uuid().optional(),
   presentationName: z.string().optional(),
   unitMultiplier: z.number().positive().default(1),
-  stockType: z.literal('shared').optional(),
   createdAt: z.string().datetime(),
   // AUDIT-012: FIFO restore (track original lot consumption for void)
   consumedLots: z.array(z.object({ lotId: z.string(), quantity: z.number().positive() })).optional(),

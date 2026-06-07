@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Modal, Input, Button } from '../../../common/components';
 import { formatBs } from '@/lib/formatBs';
+import { MAX_CENTS_DIFFERENCE } from '@logiscore/shared';
 import type { Result, AppError } from '@logiscore/core';
 
 type CashMode = 'open' | 'close';
@@ -69,6 +70,17 @@ export function CashRegisterModal({
 
   const expectedClosing = (openingBalanceBs ?? 0) + currentSalesBs;
 
+  // POS-002 (m-22): preview live de diferencia al cerrar caja
+  const differencePreview = useMemo(() => {
+    if (mode !== 'close') return null;
+    const declared = parseFloat(declaredClosing);
+    if (isNaN(declared)) return null;
+    const diff = Math.round((declared - expectedClosing) * 100) / 100;
+    const withinTolerance = Math.abs(diff) <= MAX_CENTS_DIFFERENCE;
+    const adjusted = withinTolerance ? 0 : diff;
+    return { diff: adjusted, isZero: adjusted === 0 };
+  }, [declaredClosing, expectedClosing, mode]);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={mode === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}>
       <div className="flex flex-col gap-4">
@@ -115,6 +127,19 @@ export function CashRegisterModal({
               validation={{ required: true, min: 0 }}
               placeholder="0.00"
             />
+            {differencePreview && (
+              <div className={`text-sm rounded-md px-3 py-2 ${
+                differencePreview.isZero
+                  ? 'bg-green-50 text-green-700'
+                  : 'bg-red-50 text-red-700'
+              }`}>
+                {differencePreview.isZero ? (
+                  <span>Cuadre exacto: {formatBs(0)} (diferencia ≤ {MAX_CENTS_DIFFERENCE} Bs se ajusta a 0)</span>
+                ) : (
+                  <span>Diferencia: {differencePreview.diff > 0 ? '+' : ''}{formatBs(differencePreview.diff)}</span>
+                )}
+              </div>
+            )}
           </>
         )}
 
