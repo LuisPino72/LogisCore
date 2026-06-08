@@ -14,6 +14,7 @@ export interface TopProduct {
   productId: string;
   name: string;
   totalQty: number;
+  isWeighted: boolean;
 }
 
 export interface DashboardState {

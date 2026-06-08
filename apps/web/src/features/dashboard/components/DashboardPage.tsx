@@ -124,7 +124,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                           )}
                           <span className="text-sm text-gray-700 truncate flex-1" title={p.name}>{p.name}</span>
                         </div>
-                        <span className="text-xs text-gray-400 ml-8 block">{p.totalQty} vendidos</span>
+                        <span className="text-xs text-gray-400 ml-8 block">{p.totalQty} {p.isWeighted ? 'kg vendidos' : 'vendidos'}</span>
                       </div>
                       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden ml-8">
                         <div

@@ -167,7 +167,7 @@ export const dashboardService = {
     return inventoryService.getLowStockProducts(tenantId);
   },
 
-  async getTopProducts(tenantId: string, limit = 5): Promise<Result<{ productId: string; name: string; totalQty: number }[], AppError>> {
+  async getTopProducts(tenantId: string, limit = 5): Promise<Result<{ productId: string; name: string; totalQty: number; isWeighted: boolean }[], AppError>> {
     const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
       return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
@@ -178,7 +178,7 @@ export const dashboardService = {
 
       const { data, error } = await supabase
         .from('sale_items')
-        .select('product_id, product_name, quantity')
+        .select('product_id, product_name, quantity, is_weighted')
         .eq('tenant_id', tenantUuid)
         .is('deleted_at', null);
 
@@ -190,19 +190,20 @@ export const dashboardService = {
         return success([]);
       }
 
-      const agg = new Map<string, { name: string; totalQty: number }>();
+      const agg = new Map<string, { name: string; totalQty: number; isWeighted: boolean }>();
       for (const row of data) {
         const id = row.product_id as string;
+        const isWeighted = (row.is_weighted as boolean) ?? false;
         const existing = agg.get(id);
         if (existing) {
           existing.totalQty += Number(row.quantity);
         } else {
-          agg.set(id, { name: row.product_name as string, totalQty: Number(row.quantity) });
+          agg.set(id, { name: row.product_name as string, totalQty: Number(row.quantity), isWeighted });
         }
       }
 
       const sorted = Array.from(agg.entries())
-        .map(([productId, { name, totalQty }]) => ({ productId, name, totalQty }))
+        .map(([productId, { name, totalQty, isWeighted }]) => ({ productId, name, totalQty, isWeighted }))
         .sort((a, b) => b.totalQty - a.totalQty)
         .slice(0, limit);
 
