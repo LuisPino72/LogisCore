@@ -11,8 +11,8 @@ interface ExchangeRateWidgetProps {
   role: string | null;
 }
 
-const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000;
-const STALE_CRITICAL_MS = 24 * 60 * 60 * 1000;
+const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 horas
+const STALE_CRITICAL_MS = 48 * 60 * 60 * 1000; // 48 horas
 
 export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role }) => {
   const { rate, source, fetchedAt, loading, isUpdating, error, updateFromBcv, setManual } =

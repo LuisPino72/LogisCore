@@ -28,7 +28,7 @@ export const ProductSchema = z.object({
   imageUrl: z.string().optional(),
   costPrice: z.number().min(0).optional(),
   productType: ProductTypeEnum.default('resale').optional(),
-  deletedAt: z.string().datetime().optional(),
+  deletedAt: z.string().datetime().nullable().optional(),
   hasAssemblyRecipe: z.boolean().optional(),
 });
 
@@ -54,11 +54,11 @@ export const PresentationSchema = z.object({
   priceUsd: z.number().positive('Precio debe ser mayor a 0'),
   unitMultiplier: z.number().positive('El multiplicador debe ser mayor a 0').default(1),
   stockType: z.enum(['shared', 'independent']),
-  barcode: z.string().max(50).optional(),
+  barcode: z.string().max(50).nullable().optional(),
   sortOrder: z.number().int().default(0),
-  createdAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime().optional(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: z.string().nullable().optional(),
+  updatedAt: z.string().nullable().optional(),
+  deletedAt: z.string().datetime().nullable().optional(),
 });
 
 export type Presentation = z.infer<typeof PresentationSchema>;

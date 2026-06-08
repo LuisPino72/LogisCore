@@ -325,7 +325,7 @@ export const inventoryService = {
       priceUsd: number;
       unitMultiplier: number;
       stockType: 'shared' | 'independent';
-      barcode?: string;
+      barcode?: string | null;
       sortOrder: number;
       createdAt: string;
       updatedAt: string;

@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useExchangeRateStore } from '../stores/exchangeRateStore';
 
-const STALE_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 horas
-const STALE_CRITICAL_MS = 24 * 60 * 60 * 1000; // 24 horas — crítico
+const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 horas — BCV actualiza 1x/día (lun-vie)
+const STALE_CRITICAL_MS = 48 * 60 * 60 * 1000; // 48 horas — dos días sin actualizar
 
 // Closure a nivel de módulo para dedup de alertas (sobrevive re-mounts)
 let lastEmittedStaleLevel = 0;

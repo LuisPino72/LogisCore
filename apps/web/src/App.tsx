@@ -119,8 +119,8 @@ function RateBadgeMobile() {
   // Calcular estado para color y mensaje
   const isMissing = !rate;
   const ageMs = fetchedAt ? Date.now() - new Date(fetchedAt).getTime() : Infinity;
-  const isStale = ageMs > 6 * 60 * 60 * 1000;
-  const isCritical = ageMs > 24 * 60 * 60 * 1000;
+  const isStale = ageMs > 24 * 60 * 60 * 1000;
+  const isCritical = ageMs > 48 * 60 * 60 * 1000;
 
   let colorClass = 'bg-success/10 border-success/20 text-success';
   let textClass = 'text-success/70';
@@ -136,12 +136,12 @@ function RateBadgeMobile() {
     colorClass = 'bg-danger/10 border-danger/30 text-danger';
     textClass = 'text-danger/70';
     displayValue = rate.toFixed(2);
-    title = 'Tasa muy desactualizada (>24h)';
+    title = 'Tasa muy desactualizada (>48h)';
   } else if (isStale) {
     colorClass = 'bg-warning/10 border-warning/30 text-warning';
     textClass = 'text-warning/70';
     displayValue = rate.toFixed(2);
-    title = 'Tasa desactualizada (>6h)';
+    title = 'Tasa desactualizada (>24h)';
   } else {
     displayValue = rate.toFixed(2);
     title = 'Tasa BCV';

@@ -20,11 +20,11 @@ export interface DexieProductPresentation {
   priceUsd: number;
   unitMultiplier: number;
   stockType: 'shared' | 'independent';
-  barcode?: string;
+  barcode?: string | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
-  deletedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface DexieProduct {
@@ -46,7 +46,7 @@ export interface DexieProduct {
   productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both';
   createdAt?: string;
   updatedAt?: string;
-  deletedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface DexieCategory {
