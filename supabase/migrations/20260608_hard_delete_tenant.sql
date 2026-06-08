@@ -38,7 +38,6 @@ BEGIN
   DELETE FROM inventory_movements   WHERE tenant_id = p_tenant_id;
   DELETE FROM inventory_lots        WHERE tenant_id = p_tenant_id;
   DELETE FROM exchange_rates        WHERE tenant_id = p_tenant_id;
-  DELETE FROM outbox                WHERE tenant_id = p_tenant_id;
   DELETE FROM expenses              WHERE tenant_id = p_tenant_id;
   DELETE FROM audit_trail           WHERE tenant_id = p_tenant_id;
   DELETE FROM subscriptions         WHERE tenant_id = p_tenant_id;

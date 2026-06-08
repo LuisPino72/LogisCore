@@ -137,6 +137,11 @@ export const authService = {
 
     const tenantUuidBootstrap = extractTenantId(session);
     if (tenantUuidBootstrap) {
+      const tenantCheck = await authService.checkTenantActive(tenantUuidBootstrap);
+      if (!tenantCheck.ok) {
+        await supabase.auth.signOut();
+        return tenantCheck;
+      }
       const subCheck = await authService.checkSubscriptionActive(tenantUuidBootstrap);
       if (!subCheck.ok) return subCheck;
     }
@@ -208,6 +213,11 @@ export const authService = {
 
     const tenantUuidLogin = extractTenantId(data.session);
     if (tenantUuidLogin) {
+      const tenantCheck = await authService.checkTenantActive(tenantUuidLogin);
+      if (!tenantCheck.ok) {
+        await supabase.auth.signOut({ scope: 'global' });
+        return tenantCheck;
+      }
       const subCheck = await authService.checkSubscriptionActive(tenantUuidLogin);
       if (!subCheck.ok) return subCheck;
     }
@@ -361,6 +371,11 @@ export const authService = {
 
     const tenantUuidRefresh = extractTenantId(session);
     if (tenantUuidRefresh) {
+      const tenantCheck = await authService.checkTenantActive(tenantUuidRefresh);
+      if (!tenantCheck.ok) {
+        await supabase.auth.signOut();
+        return tenantCheck;
+      }
       const subCheck = await authService.checkSubscriptionActive(tenantUuidRefresh);
       if (!subCheck.ok) return subCheck;
     }
@@ -394,6 +409,26 @@ export const authService = {
         'AUTH_SUBSCRIPTION_EXPIRED',
         'Suscripción vencida. Contacta al 04145180265 para renovar.',
       ));
+    }
+
+    return success(undefined);
+  },
+
+  async checkTenantActive(tenantId: string): Promise<Result<void, AppError>> {
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('deleted_at')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (error) {
+      return failure(new AppError('AUTH_TENANT_CHECK_FAILED', 'Error al verificar estado del local.'));
+    }
+    if (!data) {
+      return failure(new AppError('AUTH_TENANT_NOT_FOUND', 'Local no encontrado.'));
+    }
+    if (data.deleted_at) {
+      return failure(new AppError('AUTH_TENANT_DEACTIVATED', 'Este local ha sido desactivado. Contacta al administrador.'));
     }
 
     return success(undefined);
