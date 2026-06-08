@@ -415,6 +415,19 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
        {isEditing && (
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
            <div className="input-wrapper">
+             <label className="input-label">Precio de venta $</label>
+             <Input
+               sanitize="currency"
+               step="0.01"
+               placeholder="2.50"
+               value={formData.priceUsd != null && formData.priceUsd > 0 ? String(formData.priceUsd) : ''}
+               onChange={(e) => setField('priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+               error={errors.priceUsd}
+               validation={{ required: true, min: 0.05, max: 9999 }}
+               inputClassName="text-sm"
+             />
+           </div>
+           <div className="input-wrapper">
              <label className="input-label">
                Stock mínimo (alerta)
                {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
