@@ -179,25 +179,25 @@ export function InsightsCarousel({
         )}
       </div>
 
-      <div className="flex items-center justify-between mt-4 sm:mt-5 pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-5 pt-3 border-t border-gray-100">
         <button
           onClick={() => goTo(current - 1)}
           disabled={current === 0}
-          className="p-3 rounded-xl border-2 border-gray-200 hover:border-primary/40 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-100 transition-all"
+          className="p-2 sm:p-2.5 rounded-xl border-2 border-gray-200 hover:border-primary/40 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-100 transition-all"
           aria-label="Anterior"
         >
-          <ChevronLeft size={26} className="text-gray-700" />
+          <ChevronLeft size={20} className="text-gray-700" />
         </button>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {allSlides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => goTo(idx)}
               className={`rounded-full transition-all duration-300 ${
                 idx === current
-                  ? 'w-8 h-2.5 bg-primary'
-                  : 'w-2.5 h-2.5 bg-gray-300 hover:bg-gray-400'
+                  ? 'w-6 sm:w-8 h-2 sm:h-2.5 bg-primary'
+                  : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-gray-300 hover:bg-gray-400'
               }`}
               aria-label={`Ir a slide ${idx + 1}`}
             />
@@ -207,10 +207,10 @@ export function InsightsCarousel({
         <button
           onClick={() => goTo(current + 1)}
           disabled={current === allSlides.length - 1}
-          className="p-3 rounded-xl border-2 border-gray-200 hover:border-primary/40 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-100 transition-all"
+          className="p-2 sm:p-2.5 rounded-xl border-2 border-gray-200 hover:border-primary/40 hover:bg-primary/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-100 transition-all"
           aria-label="Siguiente"
         >
-          <ChevronRight size={26} className="text-gray-700" />
+          <ChevronRight size={20} className="text-gray-700" />
         </button>
       </div>
     </Card>
