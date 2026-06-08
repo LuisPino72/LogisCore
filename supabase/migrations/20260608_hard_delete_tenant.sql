@@ -41,7 +41,6 @@ BEGIN
   DELETE FROM expenses              WHERE tenant_id = p_tenant_id;
   DELETE FROM audit_trail           WHERE tenant_id = p_tenant_id;
   DELETE FROM subscriptions         WHERE tenant_id = p_tenant_id;
-  DELETE FROM user_active_sessions  WHERE tenant_id = p_tenant_id;
   DELETE FROM user_roles            WHERE tenant_id = p_tenant_id;
 
   -- =========================================================================
