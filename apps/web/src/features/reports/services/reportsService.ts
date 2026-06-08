@@ -674,7 +674,7 @@ export const reportsService = {
         .toArray();
       const productCategoryMap = new Map<string, string | undefined>();
       for (const p of products) {
-        productCategoryMap.set(p.id, p.categoryId);
+        productCategoryMap.set(p.id, p.categoryId ?? undefined);
       }
 
       const categories = await db.categories

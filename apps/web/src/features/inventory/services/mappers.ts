@@ -8,8 +8,20 @@ export function toNumber(val: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
+function sanitizeNulls(raw: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...raw };
+  if (out.sku == null) out.sku = '';
+  if (out.categoryId == null) delete out.categoryId;
+  if (out.stockMin == null) delete out.stockMin;
+  if (out.imageUrl == null) delete out.imageUrl;
+  if (out.costPrice == null) delete out.costPrice;
+  if (out.productType == null) delete out.productType;
+  if (out.hasAssemblyRecipe == null) delete out.hasAssemblyRecipe;
+  return out;
+}
+
 export function toProduct(raw: Record<string, unknown>): Product {
-  return ProductSchema.parse(raw) as Product;
+  return ProductSchema.parse(sanitizeNulls(raw)) as Product;
 }
 
 export function toCategory(raw: Record<string, unknown>): Category {

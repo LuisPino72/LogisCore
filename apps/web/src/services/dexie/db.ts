@@ -15,15 +15,15 @@ export interface DexieProductPresentation {
   id: string;
   tenantId: string;
   productId: string;
-  childProductId?: string;
+  childProductId?: string | null;
   name: string;
   priceUsd: number;
   unitMultiplier: number;
   stockType: 'shared' | 'independent';
   barcode?: string | null;
   sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   deletedAt?: string | null;
 }
 
@@ -31,21 +31,21 @@ export interface DexieProduct {
   id: string;
   tenantId: string;
   name: string;
-  sku: string;
+  sku: string | null;
   priceUsd: number;
-  categoryId?: string;
+  categoryId?: string | null;
   isWeighted: boolean;
   isTaxable: boolean;
   isSellable?: boolean;
   unit: 'kg' | 'gr' | 'lt' | 'm' | 'unidad';
   stock: number;
   stockInCarts?: number;
-  stockMin?: number;
-  imageUrl?: string;
-  costPrice?: number;
+  stockMin?: number | null;
+  imageUrl?: string | null;
+  costPrice?: number | null;
   productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both';
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   deletedAt?: string | null;
 }
 

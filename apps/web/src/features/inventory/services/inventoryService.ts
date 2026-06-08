@@ -1594,7 +1594,7 @@ export const inventoryService = {
     const db = getDb();
     let rows = await db.products
       .where({ tenantId })
-      .filter((p) => !p.deletedAt && p.stockMin !== undefined && p.stockMin > 0)
+      .filter((p) => !p.deletedAt && p.stockMin != null && p.stockMin > 0)
       .toArray();
 
     if (rows.length === 0) {
@@ -1632,7 +1632,7 @@ export const inventoryService = {
 
         rows = await db.products
           .where({ tenantId })
-          .filter((p) => !p.deletedAt && p.stockMin !== undefined && p.stockMin > 0)
+      .filter((p) => !p.deletedAt && p.stockMin != null && p.stockMin > 0)
           .toArray();
       }
     }
