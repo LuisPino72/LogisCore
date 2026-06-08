@@ -172,7 +172,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     setIsSubmitting(true);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { productType, stockInicial, ...validationData } = formData;
+    const { productType, stockInicial, isRawMaterial, productionType, ...validationData } = formData;
 
     if (!validationData.categoryId) {
       const errs = { categoryId: 'Debes seleccionar una categoría' };
