@@ -2,7 +2,6 @@
 -- hard_delete_tenant: Elimina un tenant y TODOS sus datos dependientes
 -- =============================================================================
 -- ORDEN CRÍTICO: respetar FK dependencies (child → parent)
--- Tablas con FK a otras tablas hijas se eliminan PRIMERO.
 -- SECURITY DEFINER: ejecuta con permisos de owner (bypass RLS).
 -- =============================================================================
 
@@ -15,7 +14,7 @@ BEGIN
   -- =========================================================================
   -- 1. Tablas nietas (dependen de otras tablas hijas)
   -- =========================================================================
-  DELETE FROM recipe_lines       WHERE tenant_id = p_tenant_id;
+  DELETE FROM recipe_lines        WHERE tenant_id = p_tenant_id;
   DELETE FROM production_orders   WHERE tenant_id = p_tenant_id;
   DELETE FROM purchase_order_items WHERE tenant_id = p_tenant_id;
   DELETE FROM sale_items          WHERE tenant_id = p_tenant_id;
@@ -31,6 +30,7 @@ BEGIN
   -- =========================================================================
   -- 3. Tablas hoja (sin dependencias otras hijas)
   -- =========================================================================
+  DELETE FROM product_presentations WHERE tenant_id = p_tenant_id;
   DELETE FROM products              WHERE tenant_id = p_tenant_id;
   DELETE FROM categories            WHERE tenant_id = p_tenant_id;
   DELETE FROM suppliers             WHERE tenant_id = p_tenant_id;
@@ -39,8 +39,10 @@ BEGIN
   DELETE FROM inventory_lots        WHERE tenant_id = p_tenant_id;
   DELETE FROM exchange_rates        WHERE tenant_id = p_tenant_id;
   DELETE FROM outbox                WHERE tenant_id = p_tenant_id;
+  DELETE FROM expenses              WHERE tenant_id = p_tenant_id;
   DELETE FROM audit_trail           WHERE tenant_id = p_tenant_id;
   DELETE FROM subscriptions         WHERE tenant_id = p_tenant_id;
+  DELETE FROM user_active_sessions  WHERE tenant_id = p_tenant_id;
   DELETE FROM user_roles            WHERE tenant_id = p_tenant_id;
 
   -- =========================================================================
