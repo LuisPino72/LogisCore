@@ -172,7 +172,9 @@ export const inventoryService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const inputValidation = CreateProductInputSchema.safeParse(input);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { stockInicial, productType: _pt, ...schemaInput } = input as Record<string, unknown>;
+    const inputValidation = CreateProductInputSchema.safeParse(schemaInput);
       if (!inputValidation.success) {
         return failure(new AppError(
           InventoryErrors.INVALID_INPUT,
