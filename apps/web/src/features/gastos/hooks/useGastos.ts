@@ -74,18 +74,26 @@ export function useGastos(tenantId: string | null) {
     const result = await gastosService.update(tenantId, id, input, currentRate);
     if (result.ok) {
       await fetchGastos();
+      const templatesResult = await gastosService.getRecurringTemplates(tenantId);
+      if (templatesResult.ok) {
+        setRecurringTemplates(templatesResult.data);
+      }
     }
     return result;
-  }, [tenantId, fetchGastos]);
+  }, [tenantId, fetchGastos, setRecurringTemplates]);
 
   const removeGasto = useCallback(async (id: string): Promise<Result<void, AppError>> => {
     if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));
     const result = await gastosService.remove(tenantId, id);
     if (result.ok) {
       await fetchGastos();
+      const templatesResult = await gastosService.getRecurringTemplates(tenantId);
+      if (templatesResult.ok) {
+        setRecurringTemplates(templatesResult.data);
+      }
     }
     return result;
-  }, [tenantId, fetchGastos]);
+  }, [tenantId, fetchGastos, setRecurringTemplates]);
 
   return {
     gastos,

@@ -178,15 +178,17 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
           </div>
 
           {isRecurring && (
-            <Select
-              label="Frecuencia"
-              value={recurrenceType}
-              onChange={(e) => setRecurrenceType(e.target.value as 'monthly' | 'yearly')}
-              className="max-w-xs"
-            >
-              <option value="monthly">Mensual</option>
-              <option value="yearly">Anual</option>
-            </Select>
+            <div className="animate-slide-down">
+              <Select
+                label="Frecuencia"
+                value={recurrenceType}
+                onChange={(e) => setRecurrenceType(e.target.value as 'monthly' | 'yearly')}
+                className="max-w-xs"
+              >
+                <option value="monthly">Mensual</option>
+                <option value="yearly">Anual</option>
+              </Select>
+            </div>
           )}
 
           {error && (

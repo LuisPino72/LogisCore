@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, SearchInput, Button, EmptyState, Spinner } from '../../../common/components';
+import { Modal, SearchInput, Button, EmptyState, Spinner, CedulaInput } from '../../../common/components';
 import { User, UserPlus, X } from 'lucide-react';
 import { useCustomerStore } from '../stores/customerStore';
 import { useCustomers } from '../hooks/useCustomers';
@@ -198,18 +198,12 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
             <p className="text-xs text-gray-500 mt-1">{newName.length}/25</p>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Cédula / RIF (opcional)</label>
-            <input
-              type="text"
-              value={newCedula}
-              onChange={(e) => setNewCedula(e.target.value.replace(/[^VEJGPvejpg0-9]/g, '').toUpperCase().slice(0, 9))} // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
-              placeholder="V12345678"
-              className="input uppercase"
-              maxLength={9}
-            />
-            <p className="text-xs text-gray-500 mt-1">Formato: V/E/J/G/P + 6-8 dígitos</p>
-          </div>
+          <CedulaInput
+            label="Cédula / RIF (opcional)"
+            value={newCedula}
+            onChange={setNewCedula}
+            hint="V/E/J/G/P + 6-8 dígitos"
+          />
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">Teléfono (opcional)</label>

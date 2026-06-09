@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Phone, MapPin, CreditCard, FileText, IdCard } from 'lucide-react';
-import { Button, Input, Modal } from '../../../common/components';
+import { Button, Input, Modal, CedulaInput } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
 import {
   CreateCustomerInputSchema,
@@ -109,15 +109,11 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           inputClassName="text-sm"
         />
 
-        <Input
+        <CedulaInput
           label={<span className="flex items-center gap-2"><IdCard size={14} className="text-text-muted" /> Cédula / RIF <span className="text-text-muted font-normal">(opcional)</span></span>}
-          placeholder="V12345678"
           value={cedula}
-          sanitize="rif"
-          onChange={(e) => setCedula(sanitizeValue(e.target.value, 'rif').toUpperCase())}
-          validation={{ pattern: /^$|^[VEJGP]\d{6,8}$/i, maxLength: 9 }}
-          hint="Formato: V/E/J/G/P + 6 a 8 dígitos. Facilita búsqueda."
-          inputClassName="text-sm uppercase"
+          onChange={setCedula}
+          hint="V/E/J/G/P + 6 a 8 dígitos. Facilita búsqueda."
         />
 
         <Input

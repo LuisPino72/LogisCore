@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Truck, Phone, Building2, FileText } from 'lucide-react';
-import { Button, Input, Modal } from '../../../common/components';
+import { Button, Input, Modal, CedulaInput } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import type { CreateSupplierInput, Supplier } from '../../../specs/purchases';
@@ -95,17 +95,12 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           inputClassName="text-sm"
         />
 
-        <Input
+        <CedulaInput
           label={<span className="flex items-center gap-2"><FileText size={14} className="text-text-muted" /> RIF <span className="text-text-muted font-normal">(opcional)</span></span>}
-          placeholder="Ej: J123456789"
           value={rif}
-          onChange={(e) => setRif(e.target.value.toUpperCase())}
-          validation={{
-            pattern: /^[VJEGP]\d{9}$/i,
-            maxLength: 10,
-          }}
-          hint="Formato: V/E/J/G/P + 9 dígitos. Ej: J123456789"
-          inputClassName="text-sm uppercase"
+          onChange={setRif}
+          hint="V/E/J/G/P + 9 dígitos. Ej: J123456789"
+          maxLength={9}
         />
 
         <Input

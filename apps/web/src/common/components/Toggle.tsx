@@ -12,9 +12,10 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
   className,
   ...props
 }, ref) => {
+  const isSmall = size === 'sm';
   return (
-    <label className={cn('flex items-center gap-3 cursor-pointer select-none min-h-11', className)}>
-      <div className="relative flex items-center">
+    <label className={cn('inline-flex items-center gap-3 cursor-pointer select-none min-h-11', className)}>
+      <div className="relative" style={{ width: isSmall ? 36 : 44, height: isSmall ? 20 : 24 }}>
         <input
           ref={ref}
           type="checkbox"
@@ -22,14 +23,12 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(({
           {...props}
         />
         <div className={cn(
-          'rounded-full bg-border peer-checked:bg-primary transition-colors peer-focus-visible:ring-4 peer-focus-visible:ring-primary/15',
-          size === 'sm' ? 'w-9 h-5' : 'w-11 h-6',
-        )}>
-          <div className={cn(
-            'absolute top-0.5 left-0.5 bg-white rounded-full shadow transition-transform',
-            size === 'sm' ? 'w-4 h-4 peer-checked:translate-x-4' : 'w-5 h-5 peer-checked:translate-x-5',
-          )} />
-        </div>
+          'absolute inset-0 rounded-full bg-border peer-checked:bg-primary transition-colors',
+        )} />
+        <div className={cn(
+          'absolute top-0.5 left-0.5 bg-white rounded-full shadow transition-transform',
+          isSmall ? 'w-4 h-4 peer-checked:translate-x-4' : 'w-5 h-5 peer-checked:translate-x-5',
+        )} />
       </div>
       {label && <span className="text-sm text-text">{label}</span>}
     </label>

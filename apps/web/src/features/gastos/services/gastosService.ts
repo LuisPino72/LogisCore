@@ -9,6 +9,7 @@ import { outboxService } from '../../../services/outbox/outboxService';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { emitWithAudit, logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { requireRole } from '../../auth/services/roleGuard';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { logger } from '../../../lib/logger';
 
 const GASTOS_MODULE = 'gastos';
@@ -47,7 +48,7 @@ export const gastosService = {
       let collection = db.expenses
         .where('tenantId')
         .equals(tenantId)
-        .filter((e) => !e.deletedAt && !(e.isRecurring && !e.parentExpenseId));
+        .filter((e) => !e.deletedAt && !e.parentExpenseId);
 
       if (options?.status && options.status !== 'all') {
         collection = collection.filter((e) => e.status === options.status);
@@ -256,7 +257,7 @@ export const gastosService = {
       const templates = await db.expenses
         .where('tenantId')
         .equals(tenantId)
-        .filter((e) => !e.deletedAt && e.isRecurring)
+        .filter((e) => !e.deletedAt && e.isRecurring && !e.parentExpenseId)
         .toArray();
       const sorted = templates
         .sort((a, b) => (a.nextDueDate ?? '').localeCompare(b.nextDueDate ?? ''))
@@ -298,7 +299,7 @@ export const gastosService = {
           const instance: DexieExpense = {
             id: generateId(),
             tenantId,
-            createdByUserId: tpl.createdByUserId,
+            createdByUserId: useAuthStore.getState().session?.userId ?? tpl.createdByUserId ?? 'unknown',
             category: tpl.category,
             amountUsd: tpl.amountUsd,
             exchangeRate: currentRate,

@@ -1,4 +1,5 @@
 export { Alert } from './Alert';
+export { CedulaInput } from './CedulaInput';
 export { AppShell } from './AppShell';
 export { Badge } from './Badge';
 export { BottomNav } from './BottomNav';
