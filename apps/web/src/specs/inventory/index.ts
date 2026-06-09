@@ -101,7 +101,7 @@ export const InventoryMovementSchema = z.object({
   newStock: z.number().int(),
   createdAt: z.string().datetime(),
   userId: z.string().uuid(),
-  reason: z.string().optional(),
+  reason: z.string().nullish(),
   reasonType: z.string().optional(),
   costUsd: z.number().optional(),
 });

@@ -1587,7 +1587,15 @@ export const inventoryService = {
       }
     }
 
-    return success(rows.reverse().map((r) => toMovement(r as unknown as Record<string, unknown>)));
+    const movements: InventoryMovement[] = [];
+    for (const r of rows) {
+      try {
+        movements.push(toMovement(r as unknown as Record<string, unknown>));
+      } catch (e) {
+        logger.error(INVENTORY_MODULE, 'Skipping invalid movement record:', r.id, e);
+      }
+    }
+    return success(movements.reverse());
   },
 
   async getLowStockProducts(tenantId: string): Promise<Result<Product[], AppError>> {

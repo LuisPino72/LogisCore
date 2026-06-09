@@ -29,7 +29,11 @@ export function toCategory(raw: Record<string, unknown>): Category {
 }
 
 export function toMovement(raw: Record<string, unknown>): InventoryMovement {
-  return InventoryMovementSchema.parse(raw) as InventoryMovement;
+  const normalized = { ...raw };
+  if (typeof normalized.createdAt === 'string' && normalized.createdAt.includes(' ')) {
+    normalized.createdAt = normalized.createdAt.replace(' ', 'T');
+  }
+  return InventoryMovementSchema.parse(normalized) as InventoryMovement;
 }
 
 export function toPresentation(raw: Record<string, unknown>): Presentation {
