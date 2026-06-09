@@ -87,7 +87,7 @@
 .btn-full { @apply w-full; }
 .btn-primary { @apply bg-primary text-white hover:bg-primary-dark active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-primary:hover { box-shadow: 0 4px 15px -3px rgba(13, 148, 136, 0.4), 0 2px 4px -2px rgba(13, 148, 136, 0.2); }
-.btn-secondary { @apply bg-white text-gray-00 hover:bg-gray-50 border border-gray-200 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
+.btn-secondary { @apply bg-white text-gray-900 hover:bg-gray-50 border border-gray-200 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-danger { @apply bg-danger text-white hover:bg-red-700 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-ghost { @apply bg-transparent text-gray-600 hover:bg-gray-100 active:scale-[0.98]; }
 .btn-outline { @apply bg-transparent text-primary border border-primary hover:bg-primary/5 active:scale-[0.98]; }
