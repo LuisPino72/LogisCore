@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Button, Badge, Modal, DataTable, EmptyState, Skeleton, DatePicker } from '../../../common/components';
+import { Button, Badge, DataTable, EmptyState, Skeleton, DatePicker, SaleDetailModal } from '../../../common/components';
 import { Eye, Ban, Calendar } from 'lucide-react';
 import { useDebounce } from '../../../common/hooks/useDebounce';
 import { EventBus } from '@logiscore/core';
@@ -8,7 +8,6 @@ import type { Sale } from '../types';
 import type { PaymentMethod } from '../../../specs/pos';
 import { usePosStore } from '../stores/posStore';
 import { METADATA_PAGOS } from '../../../specs/pos';
-import { IGTF_RATE } from '@logiscore/shared';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 const PAGE_SIZE = 20;
@@ -34,9 +33,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   const debouncedEndDate = useDebounce(endDate, 400);
 
   const fetchSalesHistory = usePosStore((s) => s.fetchSalesHistory);
-  const saleItems = usePosStore((s) => s.saleItems);
-  const saleItemsLoading = usePosStore((s) => s.saleItemsLoading);
-  const fetchSaleItems = usePosStore((s) => s.fetchSaleItems);
 
   const handleSort = useCallback((key: string) => {
     setSortDirection((prev) => (sortKey === key ? (prev === 'asc' ? 'desc' : 'asc') : 'desc'));
@@ -60,9 +56,8 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
     return () => EventBus.off(sub);
   }, [page, tenantId, fetchSalesHistory, debouncedStartDate, debouncedEndDate]);
 
-  const handleView = async (sale: Sale) => {
+  const handleView = (sale: Sale) => {
     setSelectedSale(sale);
-    await fetchSaleItems(tenantId, sale.id);
   };
 
   const columns: Column<Sale>[] = [
@@ -202,59 +197,12 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         </div>
       )}
 
-      <Modal
+      <SaleDetailModal
+        saleId={selectedSale?.id ?? null}
+        tenantId={tenantId}
         isOpen={!!selectedSale}
-        onClose={() => { setSelectedSale(null); usePosStore.setState({ saleItems: [] }); }}
-        title="Detalle de venta"
-      >
-        {selectedSale && (
-          <div className="flex flex-col gap-3">
-            <div className="text-sm text-gray-600 space-y-1">
-              <p><strong>Fecha:</strong> {new Date(selectedSale.createdAt).toLocaleString('es-VE')}</p>
-              <p><strong>Método:</strong> {METADATA_PAGOS[selectedSale.paymentMethod as PaymentMethod]?.label ?? selectedSale.paymentMethod}</p>
-              <p><strong>Tasa:</strong> {selectedSale.exchangeRate.toFixed(4)} Bs/$</p>
-            </div>
-
-            <div className="border-t border-border pt-2">
-              <h4 className="text-sm font-semibold mb-2">Productos</h4>
-              {saleItemsLoading ? (
-                <p className="text-xs text-gray-400">Cargando...</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {saleItems.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                      <span>{item.productName}{item.presentationName ? ` - ${item.presentationName}` : ''} x {item.quantity}</span>
-                      <span className="font-medium">{formatUsd(item.totalPriceUsd)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="border-t border-border pt-2 space-y-1">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Subtotal</span>
-                <span>{formatUsd(selectedSale.exchangeRate > 0 ? selectedSale.subtotalBs / selectedSale.exchangeRate : 0)} / {formatBs(selectedSale.subtotalBs)}</span>
-              </div>
-              {selectedSale.igtfBs > 0 && (
-                <div className="flex justify-between text-sm text-gray-600">
-                  {/* AUDIT-FLOW-2-004: porcentaje derivado de IGTF_RATE (Regla #8), no hardcoded. */}
-                  <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
-                  <span>{formatBs(selectedSale.igtfBs)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>IVA (16%)</span>
-                <span>{formatBs(selectedSale.ivaBs ?? 0)}</span>
-              </div>
-              <div className="flex justify-between text-base font-bold">
-                <span>Total</span>
-                <span>{formatBs(selectedSale.totalBs)} / {formatUsd(selectedSale.exchangeRate > 0 ? selectedSale.totalBs / selectedSale.exchangeRate : 0)}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+        onClose={() => setSelectedSale(null)}
+      />
     </div>
   );
 });

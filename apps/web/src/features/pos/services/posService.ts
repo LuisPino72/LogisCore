@@ -1045,12 +1045,12 @@ export const posService = {
           voidedAt: r.voidedAt ?? undefined,
           createdAt: r.createdAt,
           deletedAt: r.deletedAt ?? undefined,
-          // POS-002 (C-6): USD persistidos
           subtotalUsd: r.subtotalUsd,
           ivaUsd: r.ivaUsd,
           igtfUsd: r.igtfUsd,
           totalUsd: r.totalUsd,
           discountUsd: r.discountUsd,
+          customerId: r.customerId ?? undefined,
         })),
       });
     } catch (err) {
@@ -1548,7 +1548,7 @@ export const posService = {
     }
   },
 
-  async parkCart(tenantId: string, name: string, cart: import('../types').CartItem[]): Promise<Result<string, AppError>> {
+  async parkCart(tenantId: string, name: string, cart: import('../types').CartItem[], customerId?: string): Promise<Result<string, AppError>> {
     try {
       const db = getDb();
       const existingCount = await db.parkedCarts.where({ tenantId }).count();
@@ -1560,6 +1560,7 @@ export const posService = {
         id, tenantId,
         name: name.trim() || `Venta #${existingCount + 1}`,
         cartJson: JSON.stringify(cart),
+        customerId,
         createdAt: new Date().toISOString(),
       });
       return success(id);

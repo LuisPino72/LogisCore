@@ -35,6 +35,7 @@ interface CustomerStore {
   deleteCustomer: (id: string, tenantId: string) => Promise<boolean>;
   setSelectedCustomer: (customer: Customer | null) => void;
   reset: () => void;
+  resetModal: () => void;
 }
 
 const initialState = {
@@ -130,4 +131,12 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
   setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
 
   reset: () => set(initialState),
+
+  resetModal: () => set({
+    selectedCustomer: null,
+    history: [],
+    historyTotal: 0,
+    historyLoading: false,
+    stats: null,
+  }),
 }));

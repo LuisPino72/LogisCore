@@ -469,7 +469,6 @@ export function PosPage({ tenantId }: PosPageProps) {
           onMobileToggle={toggleMobileCart}
           selectedCustomer={selectedCustomer}
           onSelectCustomer={() => setShowCustomerPicker(true)}
-          onClearCustomer={() => setSelectedCustomer(null)}
         />
       )}
 

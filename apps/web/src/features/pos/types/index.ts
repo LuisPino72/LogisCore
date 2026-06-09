@@ -19,6 +19,7 @@ export interface ParkedCart {
   tenantId: string;
   name: string;
   cart: CartItem[];
+  customerId?: string;
   createdAt: string;
 }
 

@@ -37,3 +37,5 @@ export { Sidebar } from './Sidebar';
 export type { SidebarModule } from './Sidebar';
 export { Pagination } from './Pagination';
 export { DrillDownModal } from './DrillDownModal';
+
+export { SaleDetailModal } from './SaleDetailModal';

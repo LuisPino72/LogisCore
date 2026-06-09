@@ -18,9 +18,8 @@ interface CartSummaryProps {
   discount: { type: 'percentage' | 'fixed'; value: number } | null;
   onSetDiscount: (type: 'percentage' | 'fixed', value: number) => void;
   onClearDiscount: () => void;
-  selectedCustomer: { id: string; name: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
+  selectedCustomer: { id: string; name: string; cedula?: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
   onSelectCustomer: () => void;
-  onClearCustomer: () => void;
 }
 
 export function CartSummary({
@@ -37,7 +36,6 @@ export function CartSummary({
   onClearDiscount,
   selectedCustomer,
   onSelectCustomer,
-  onClearCustomer,
 }: CartSummaryProps) {
   const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -106,18 +104,16 @@ export function CartSummary({
         <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
           <User size={14} className="text-primary shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-900 truncate">{selectedCustomer.name}</p>
-            {selectedCustomer.phone && (
-              <p className="text-[10px] text-text-secondary truncate">{selectedCustomer.phone}</p>
-            )}
+            <p className="text-xs font-medium text-gray-900 truncate">
+              {selectedCustomer.cedula || selectedCustomer.name}
+            </p>
           </div>
           <button
             type="button"
-            onClick={onClearCustomer}
-            className="p-1 rounded-full hover:bg-danger/10 text-text-secondary hover:text-danger transition-colors shrink-0"
-            title="Quitar cliente"
+            onClick={onSelectCustomer}
+            className="text-[10px] font-medium text-primary hover:text-primary-dark px-1.5 py-0.5 rounded-md hover:bg-primary/10 transition-colors shrink-0"
           >
-            <X size={12} />
+            Cambiar
           </button>
         </div>
       ) : (

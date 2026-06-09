@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Button, Badge, EmptyState, Spinner, Pagination } from '../../../common/components';
+import { Modal, Button, Badge, EmptyState, Spinner, Pagination, SaleDetailModal } from '../../../common/components';
 import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
 import { formatBs, formatUsd } from '@/lib/formatBs';
@@ -18,13 +18,14 @@ interface CustomerDetailModalProps {
 
 export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, canEdit = false }: CustomerDetailModalProps) {
   const [page, setPage] = useState(1);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const history = useCustomerStore((s) => s.history);
   const historyTotal = useCustomerStore((s) => s.historyTotal);
   const historyLoading = useCustomerStore((s) => s.historyLoading);
   const stats = useCustomerStore((s) => s.stats);
   const fetchHistory = useCustomerStore((s) => s.fetchCustomerHistory);
   const fetchStats = useCustomerStore((s) => s.fetchCustomerStats);
-  const reset = useCustomerStore((s) => s.reset);
+  const resetModal = useCustomerStore((s) => s.resetModal);
 
   useEffect(() => {
     if (isOpen && customer) {
@@ -33,9 +34,9 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
       setPage(1);
     }
     return () => {
-      if (!isOpen) reset();
+      if (!isOpen) resetModal();
     };
-  }, [isOpen, customer, tenantId, fetchHistory, fetchStats, reset]);
+  }, [isOpen, customer, tenantId, fetchHistory, fetchStats, resetModal]);
 
   if (!customer) return null;
 
@@ -160,7 +161,8 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
                 {history.map((sale) => (
                   <div
                     key={sale.id}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50/50 transition-colors"
+                    onClick={() => setSelectedSaleId(sale.id)}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50/50 transition-colors cursor-pointer"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-gray-500">
@@ -197,6 +199,13 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
           )}
         </div>
       </div>
+
+      <SaleDetailModal
+        saleId={selectedSaleId}
+        tenantId={tenantId}
+        isOpen={!!selectedSaleId}
+        onClose={() => setSelectedSaleId(null)}
+      />
     </Modal>
   );
 }

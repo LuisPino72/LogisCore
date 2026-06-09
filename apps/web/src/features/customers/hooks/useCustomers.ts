@@ -89,10 +89,16 @@ export function useCustomers(tenantId: string | null) {
       tenantId ? updateCustomer(id, input, tenantId) : Promise.resolve(false),
     deleteCustomer: (id: string) =>
       tenantId ? deleteCustomer(id, tenantId) : Promise.resolve(false),
-    fetchHistory: (query: CustomerHistoryQuery) =>
-      tenantId ? fetchCustomerHistory(query, tenantId) : Promise.resolve(),
-    fetchStats: (customerId: string) =>
-      tenantId ? fetchCustomerStats(customerId, tenantId) : Promise.resolve(),
+    fetchHistory: useCallback(
+      (query: CustomerHistoryQuery) =>
+        tenantId ? fetchCustomerHistory(query, tenantId) : Promise.resolve(),
+      [tenantId, fetchCustomerHistory],
+    ),
+    fetchStats: useCallback(
+      (customerId: string) =>
+        tenantId ? fetchCustomerStats(customerId, tenantId) : Promise.resolve(),
+      [tenantId, fetchCustomerStats],
+    ),
     setSelectedCustomer,
     reset,
     userId: session?.userId ?? null,
