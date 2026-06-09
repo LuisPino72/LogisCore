@@ -226,7 +226,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
       setShowCreateCategory(false);
       setCategoryName('');
     } else {
-      setCategoryError('Error al crear categoría');
+      setCategoryError('Error al crear categoría. Verifica tu conexión e intenta de nuevo.');
     }
   };
 
@@ -494,7 +494,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               </div>
 
               <div className="input-wrapper">
-                <label className="input-label">Costo total del lote($)</label>
+                <label className="input-label">Costo total del lote ($)</label>
                 <Input
                   sanitize="currency"
                   step="0.01"
@@ -520,9 +520,10 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="0"
                   value={formData.stockInicial || ''}
                   onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
+                  error={errors.stockInicial}
                   validation={{ min: 0 }}
                 />
-                <p className="text-[10px] text-gray-400 mt-0.5">
+                <p className="text-[10px] text-gray-600 mt-0.5">
                   {formData.productType === 'pesable_kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
                   {formData.productType === 'pesable_lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
                 </p>
@@ -599,6 +600,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="0"
                   value={formData.stockInicial || ''}
                   onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
+                  error={errors.stockInicial}
                   validation={{ min: 0 }}
                 />
               </div>
@@ -702,6 +704,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 <Plus size={16} />
                 Agregar variante
               </button>
+              {errors.presentations && (
+                <p className="input-error-text mt-1">{errors.presentations}</p>
+              )}
             </div>
 
             <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
@@ -863,6 +868,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         <Plus size={16} />
         Agregar variante
       </button>
+      {errors.presentations && (
+        <p className="input-error-text mt-1">{errors.presentations}</p>
+      )}
 
       <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
         <Settings size={14} className="text-gray-400 shrink-0" />
@@ -1093,7 +1101,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </div>
           </button>
           {!cameraAvailable && (
-            <p className="text-[11px] text-gray-400 text-center pt-1">No se detectó cámara en este dispositivo</p>
+            <p className="text-[11px] text-gray-400 text-center pt-1">No se detectó cámara. Selecciona una imagen de la galería.</p>
           )}
         </div>
       </Modal>

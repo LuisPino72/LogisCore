@@ -87,7 +87,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-text-secondary">Aún no hay registros de caja para este período.</p>
+        <p className="text-sm text-text-secondary">Aún no hay registros de caja. Abre una caja para comenzar a registrar.</p>
       </Card>
     );
   }

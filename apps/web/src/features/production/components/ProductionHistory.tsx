@@ -45,7 +45,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
       <EmptyState
         icon={<History size={48} className="text-gray-300" />}
         title="Sin historial"
-        description="Las órdenes de producción aparecerán aquí."
+        description="Crea una receta y ejecútala para generar tu primer historial."
       />
     );
   }
@@ -77,7 +77,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-medium text-sm truncate">
-                    {recipeMap.get(order.recipeId) || 'Desconocida'}
+                    {recipeMap.get(order.recipeId) || 'Receta eliminada'}
                   </h4>
                   <Badge variant={statusConfig.variant} className="shrink-0">
                     <span className="flex items-center gap-1">

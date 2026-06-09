@@ -34,7 +34,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
           </div>
           <h2 className="text-xl font-title font-bold text-gray-900 mb-2">Acceso restringido</h2>
           <p className="text-sm text-gray-500 max-w-sm">
-            Solo el propietario del local puede acceder al Dashboard.
+            Solo el propietario del local puede acceder al Dashboard. Ve a la sección de Ventas desde el menú.
           </p>
         </div>
       </div>

@@ -89,7 +89,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
     if (ok) {
       addToast({ type: 'success', message: 'Cliente eliminado.', duration: 3000 });
     } else {
-      addToast({ type: 'error', message: error || 'No se pudo eliminar el cliente.' });
+      addToast({ type: 'error', message: error || 'No se pudo eliminar el cliente. Verifica tu conexión e intenta de nuevo.' });
     }
     setConfirmDelete(null);
   };

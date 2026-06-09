@@ -99,7 +99,7 @@ export function GlobalCategorySection({
           </div>
           <div className="sm:hidden space-y-2">
             {paginated.length === 0 ? (
-              <p className="text-center text-sm text-text-secondary py-8">{search ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas.'}</p>
+              <p className="text-center text-sm text-text-secondary py-8">{search ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas. Crea la primera para que esté disponible en todos los nuevos locales.'}</p>
             ) : (
               paginated.map((c) => (
                 <div key={c.id} className="flex flex-col gap-2 px-3 py-3 rounded-lg border border-gray-100 bg-white">

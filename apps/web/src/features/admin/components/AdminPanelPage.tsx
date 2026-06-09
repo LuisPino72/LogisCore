@@ -121,7 +121,7 @@ export function AdminPanelPage() {
       <Card>
         <EmptyState
           icon={<Building2 size={32} />}
-          title="No se pudieron cargar los datos"
+          title="No se pudieron cargar los datos. Desliza hacia abajo para recargar."
           description={error}
         />
       </Card>

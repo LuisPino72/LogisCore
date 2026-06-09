@@ -74,7 +74,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Yield: {recipe.yieldQuantity} {recipe.yieldUnit}
+                    Rendimiento: {recipe.yieldQuantity} {recipe.yieldUnit}
                     {recipe.wastePct > 0 && (
                       <span className="ml-2 text-warning">· Merma: {recipe.wastePct}%</span>
                     )}

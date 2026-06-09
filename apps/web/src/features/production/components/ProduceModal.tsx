@@ -39,7 +39,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
       setEstimatedCost(cost.totalCost);
       setCostWarnings(cost.warnings);
     } catch {
-      setError('Error al verificar disponibilidad.');
+      setError('No se pudo verificar. Verifica tu conexión e intenta de nuevo.');
     } finally {
       setIsChecking(false);
     }
@@ -118,6 +118,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
               onClick={handleConfirm}
               disabled={isProducing || isChecking || !allIngredientsAvailable}
               className="flex items-center gap-2"
+              title={!allIngredientsAvailable && !isChecking && ingredientAvailability.length > 0 ? 'No hay stock suficiente de los ingredientes' : undefined}
             >
               {isProducing ? <Spinner size="sm" /> : <Utensils size={16} />}
               Producir
@@ -141,7 +142,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
                 <div>
                   <h3 className="font-semibold text-sm">{recipe.name}</h3>
                   <p className="text-xs text-gray-500">
-                    Yield por lote: {recipe.yieldQuantity} {recipe.yieldUnit}
+                    Rendimiento por lote: {recipe.yieldQuantity} {recipe.yieldUnit}
                     {recipe.wastePct > 0 && (
                       <span className="ml-1 text-warning">· Merma: {recipe.wastePct}%</span>
                     )}

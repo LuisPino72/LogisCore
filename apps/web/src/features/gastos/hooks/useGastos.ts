@@ -50,7 +50,7 @@ export function useGastos(tenantId: string | null) {
   }, [tenantId, fetchGastos]);
 
   const createGasto = useCallback(async (input: CreateGastoInput): Promise<Result<Gasto, AppError>> => {
-    if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));
+    if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay negocio activo.'));
     // PLAN-113 (M1): sin sesion real no creamos gastos atribuidos a usuario fantasma
     const userId = useAuthStore.getState().session?.userId;
     if (!userId) return failure(new AppError('AUTH_REQUIRED', 'Sin sesion activa. Inicia sesion para crear gastos.'));
@@ -68,7 +68,7 @@ export function useGastos(tenantId: string | null) {
   }, [tenantId, fetchGastos, setRecurringTemplates]);
 
   const updateGasto = useCallback(async (id: string, input: UpdateGastoInput): Promise<Result<Gasto, AppError>> => {
-    if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));
+    if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay negocio activo.'));
     const isPayingPending = input.status === 'paid';
     const currentRate = isPayingPending ? useExchangeRateStore.getState().rate ?? undefined : undefined;
     const result = await gastosService.update(tenantId, id, input, currentRate);
@@ -83,7 +83,7 @@ export function useGastos(tenantId: string | null) {
   }, [tenantId, fetchGastos, setRecurringTemplates]);
 
   const removeGasto = useCallback(async (id: string): Promise<Result<void, AppError>> => {
-    if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay tenant activo.'));
+    if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay negocio activo.'));
     const result = await gastosService.remove(tenantId, id);
     if (result.ok) {
       await fetchGastos();

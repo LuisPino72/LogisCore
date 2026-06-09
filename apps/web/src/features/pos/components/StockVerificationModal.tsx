@@ -57,7 +57,7 @@ export function StockVerificationModal({
         setError(result.error.message);
       }
     } catch {
-      setError('Error al cargar productos para verificación.');
+      setError('Error al cargar productos para verificación. Verifica tu conexión e intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -118,7 +118,7 @@ export function StockVerificationModal({
       addToast({ type: 'success', message: `Stock ajustado de ${adjusted} producto${adjusted > 1 ? 's' : ''}.`, duration: 3000 });
     }
     if (errors > 0) {
-      addToast({ type: 'error', message: `Error al ajustar ${errors} producto${errors > 1 ? 's' : ''}.`, duration: 4000 });
+      addToast({ type: 'error', message: `Error al ajustar ${errors} producto${errors > 1 ? 's' : ''}. Verifica tu conexión e intenta de nuevo.`, duration: 4000 });
     }
 
     setAdjusting(false);
@@ -147,13 +147,13 @@ export function StockVerificationModal({
               {zeroedItems.length > 0 ? (
                 <>
                   <p className="text-xs font-medium text-danger text-center">
-                    {zeroedItems.length} producto{zeroedItems.length > 1 ? 's' : ''} con stock físico en 0 pero con stock lógico mayor a 0:
+                    {zeroedItems.length} producto{zeroedItems.length > 1 ? 's' : ''} con stock físico en 0 pero con stock registrado mayor a 0:
                   </p>
                   <ul className="text-xs text-gray-600 text-left max-h-20 overflow-y-auto space-y-0.5">
                     {zeroedItems.map((item) => (
                       <li key={item.productId} className="flex justify-between">
                         <span className="truncate">{item.productName}</span>
-                        <span className="shrink-0 ml-2 font-mono">Stock lógico: {getLogicalDisplay(item)}</span>
+                        <span className="shrink-0 ml-2 font-mono">Stock registrado: {getLogicalDisplay(item)}</span>
                       </li>
                     ))}
                   </ul>
@@ -235,7 +235,7 @@ export function StockVerificationModal({
 
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div>
-                      <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Stock lógico</label>
+                      <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Stock registrado</label>
                       <p className="text-sm font-mono font-semibold mt-0.5">{displayStock(item.logicalStock, item.unit)}</p>
                     </div>
                     <div>

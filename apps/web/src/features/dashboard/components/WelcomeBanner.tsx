@@ -93,8 +93,8 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription
           }
           <span className="flex-1">
             {expiryUrgency === 'expired'
-              ? 'Suscripción vencida — contacta al 04145180265'
-              : `Suscripción vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''}`
+              ? 'Suscripción vencida — Llama al 0414-518-0265'
+              : `Suscripción vence en ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''}. Contacta al 0414-518-0265 para renovar.`
             }
           </span>
         </div>

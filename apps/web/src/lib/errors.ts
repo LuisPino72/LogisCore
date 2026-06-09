@@ -84,9 +84,9 @@ function makeError(
 
 export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   // ===== CORE =====
-  AUTH_NO_SESSION: makeError('AUTH_NO_SESSION', 'CORE-001', 'No hay sesión activa.', 'CORE'),
-  TENANT_NOT_FOUND: makeError('TENANT_NOT_FOUND', 'CORE-002', 'El tenant no existe.', 'CORE'),
-  SUBSCRIPTION_INACTIVE: makeError('SUBSCRIPTION_INACTIVE', 'CORE-003', 'La suscripción está vencida o inactiva.', 'CORE'),
+  AUTH_NO_SESSION: makeError('AUTH_NO_SESSION', 'CORE-001', 'No hay sesión activa. Inicia sesión de nuevo.', 'CORE'),
+  TENANT_NOT_FOUND: makeError('TENANT_NOT_FOUND', 'CORE-002', 'El negocio no fue encontrado. Contacta al administrador.', 'CORE'),
+  SUBSCRIPTION_INACTIVE: makeError('SUBSCRIPTION_INACTIVE', 'CORE-003', 'La suscripción está vencida. Contacta al 0414-518-0265 para renovar.', 'CORE'),
 
   // ===== PRODUCTS =====
   PRODUCT_NOT_FOUND: makeError('PRODUCT_NOT_FOUND', 'PROD-001', 'Producto no encontrado.', 'PRODUCTS'),
@@ -94,14 +94,14 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
 
   // ===== INVENTORY =====
   INVENTORY_STOCK_INSUFFICIENT: makeError('INVENTORY_STOCK_INSUFFICIENT', 'INV-001', 'Stock insuficiente para la operación.', 'INVENTORY'),
-  INVENTORY_LOT_FIFO_CONFLICT: makeError('INVENTORY_LOT_FIFO_CONFLICT', 'INV-002', 'Conflicto en el consumo de capas FIFO.', 'INVENTORY'),
+  INVENTORY_LOT_FIFO_CONFLICT: makeError('INVENTORY_LOT_FIFO_CONFLICT', 'INV-002', 'Error al procesar el inventario.', 'INVENTORY'),
   CATEGORY_HAS_PRODUCTS: makeError('CATEGORY_HAS_PRODUCTS', 'INV-004', 'No se puede eliminar una categoría que tiene productos asociados.', 'INVENTORY'),
   INVENTORY_ADJUSTMENT_INVALID: makeError('INVENTORY_ADJUSTMENT_INVALID', 'INV-005', 'El ajuste de inventario debe incluir un motivo.', 'INVENTORY'),
-  INVENTORY_LOT_EXHAUSTED: makeError('INVENTORY_LOT_EXHAUSTED', 'INV-006', 'Lote de inventario agotado durante consumo FIFO.', 'INVENTORY'),
+  INVENTORY_LOT_EXHAUSTED: makeError('INVENTORY_LOT_EXHAUSTED', 'INV-006', 'Lote de inventario agotado.', 'INVENTORY'),
   PRODUCT_STOCK_NEGATIVE: makeError('PRODUCT_STOCK_NEGATIVE', 'INV-007', 'El stock del producto no puede ser negativo.', 'INVENTORY'),
 
   // ===== SALES =====
-  SALE_BOX_CLOSED: makeError('SALE_BOX_CLOSED', 'SALE-001', 'La caja está cerrada. Ábrala para realizar ventas.', 'SALES'),
+  SALE_BOX_CLOSED: makeError('SALE_BOX_CLOSED', 'SALE-001', 'La caja está cerrada. Toca "Abrir Caja" para empezar a vender.', 'SALES'),
   SALE_ITEM_STOCK_INSUFFICIENT: makeError('SALE_ITEM_STOCK_INSUFFICIENT', 'SALE-002', 'Stock insuficiente para un item de la venta.', 'SALES'),
   SALE_IGTF_INVALID: makeError('SALE_IGTF_INVALID', 'SALE-003', 'Cálculo de IGTF incorrecto.', 'SALES'),
   SALE_TOTALS_MISMATCH: makeError('SALE_TOTALS_MISMATCH', 'SALE-004', 'Los totales de la venta no cuadran.', 'SALES'),
@@ -118,7 +118,7 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   SALE_TAX_CALCULATION_ERROR: makeError('SALE_TAX_CALCULATION_ERROR', 'SALE-015', 'Error en el cálculo de impuestos.', 'SALES'),
   SALE_DISCOUNT_EXCEEDS_LIMIT: makeError('SALE_DISCOUNT_EXCEEDS_LIMIT', 'SALE-016', 'El descuento excede el límite permitido.', 'SALES'),
   SALE_WEIGHT_PRECISION_ERROR: makeError('SALE_WEIGHT_PRECISION_ERROR', 'SALE-017', 'Error de precisión en producto pesable.', 'SALES'),
-  SALE_FIFO_CONSUMPTION_FAILED: makeError('SALE_FIFO_CONSUMPTION_FAILED', 'SALE-018', 'Fallo en el consumo FIFO de inventario.', 'SALES'),
+  SALE_FIFO_CONSUMPTION_FAILED: makeError('SALE_FIFO_CONSUMPTION_FAILED', 'SALE-018', 'Error al procesar el inventario.', 'SALES'),
   SALE_NEGATIVE_STOCK_ATTEMPTED: makeError('SALE_NEGATIVE_STOCK_ATTEMPTED', 'SALE-019', 'Intento de generar stock negativo.', 'SALES'),
   SALE_ITEM_INVALID: makeError('SALE_ITEM_INVALID', 'SALE-020', 'Item de venta inválido.', 'SALES'),
   SALE_ITEM_NOT_FOUND: makeError('SALE_ITEM_NOT_FOUND', 'SALE-021', 'Item de venta no encontrado.', 'SALES'),
@@ -145,8 +145,8 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   INVOICE_NOT_FOUND: makeError('INVOICE_NOT_FOUND', 'INVC-008', 'La factura no existe.', 'INVOICING'),
   INVOICE_LINKED_TO_SALE: makeError('INVOICE_LINKED_TO_SALE', 'INVC-009', 'No se puede anular una factura vinculada a una venta.', 'INVOICING'),
   INVOICE_CENTS_ADJUSTMENT_NEEDED: makeError('INVOICE_CENTS_ADJUSTMENT_NEEDED', 'INVC-010', 'Ajuste de céntimos necesario en el total.', 'INVOICING'),
-  INVOICE_EXCHANGE_RATE_SNAPSHOT_MISSING: makeError('INVOICE_EXCHANGE_RATE_SNAPSHOT_MISSING', 'INVC-011', 'Exchange rate snapshot requerido para trazabilidad.', 'INVOICING'),
-  INVOICING_TENANT_ID_MUST_BE_SLUG: makeError('INVOICING_TENANT_ID_MUST_BE_SLUG', 'INVC-012', 'En Dexie, tenant_id debe ser slug.', 'INVOICING'),
+  INVOICE_EXCHANGE_RATE_SNAPSHOT_MISSING: makeError('INVOICE_EXCHANGE_RATE_SNAPSHOT_MISSING', 'INVC-011', 'Falta la tasa de cambio para este registro.', 'INVOICING'),
+  INVOICING_TENANT_ID_MUST_BE_SLUG: makeError('INVOICING_TENANT_ID_MUST_BE_SLUG', 'INVC-012', 'Error interno de configuración.', 'INVOICING'),
   SALE_LOCAL_ID_REQUIRED: makeError('SALE_LOCAL_ID_REQUIRED', 'INVC-013', 'El ID de venta es obligatorio.', 'INVOICING'),
   INVOICE_LOCAL_ID_REQUIRED: makeError('INVOICE_LOCAL_ID_REQUIRED', 'INVC-014', 'El ID de factura es obligatorio.', 'INVOICING'),
   FISCAL_INVOICE_IMMUTABLE: makeError('FISCAL_INVOICE_IMMUTABLE', 'INVC-015', 'Los campos fiscales son inmutables post-emisión.', 'INVOICING'),
@@ -154,7 +154,7 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   TAX_RULES_FETCH_FAILED: makeError('TAX_RULES_FETCH_FAILED', 'INVC-017', 'Error al obtener las reglas fiscales.', 'INVOICING'),
   TAX_RULE_IGTF_MUST_BE_3_PERCENT: makeError('TAX_RULE_IGTF_MUST_BE_3_PERCENT', 'INVC-018', 'IGTF debe ser exactamente 3%.', 'INVOICING'),
   TAX_RULE_JURISDICTION_INVALID: makeError('TAX_RULE_JURISDICTION_INVALID', 'INVC-019', 'Jurisdicción inválida.', 'INVOICING'),
-  TAX_RULE_TENANT_ID_MUST_BE_SLUG: makeError('TAX_RULE_TENANT_ID_MUST_BE_SLUG', 'INVC-020', 'En Dexie, tenant_id debe ser slug.', 'INVOICING'),
+  TAX_RULE_TENANT_ID_MUST_BE_SLUG: makeError('TAX_RULE_TENANT_ID_MUST_BE_SLUG', 'INVC-020', 'Error interno de configuración.', 'INVOICING'),
 
   // ===== PURCHASES =====
   // ===== REPORTS =====
@@ -167,12 +167,12 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   ADMIN_PLAN_USER_LIMIT_EXCEEDED: makeError('ADMIN_PLAN_USER_LIMIT_EXCEEDED', 'ADM-003', 'Límite de usuarios del plan alcanzado.', 'ADMIN'),
 
   // ===== SECURITY =====
-  PERMISSION_DENIED: makeError('PERMISSION_DENIED', 'SEC-001', 'No tiene el permiso requerido.', 'SECURITY'),
+  PERMISSION_DENIED: makeError('PERMISSION_DENIED', 'SEC-001', 'No tienes permiso para esta acción. Contacta al administrador.', 'SECURITY'),
   MISSING_BEARER_TOKEN: makeError('MISSING_BEARER_TOKEN', 'SEC-002', 'Token de autorización no proporcionado.', 'SECURITY'),
   INVALID_JWT: makeError('INVALID_JWT', 'SEC-003', 'Token JWT inválido o expirado.', 'SECURITY'),
-  FORBIDDEN_NO_ROLE: makeError('FORBIDDEN_NO_ROLE', 'SEC-004', 'El usuario no tiene un rol activo asignado.', 'SECURITY'),
+  FORBIDDEN_NO_ROLE: makeError('FORBIDDEN_NO_ROLE', 'SEC-004', 'No tienes un rol asignado. Contacta al administrador.', 'SECURITY'),
   ROLE_QUERY_FAILED: makeError('ROLE_QUERY_FAILED', 'SEC-005', 'Error al consultar rol del usuario.', 'SECURITY'),
-  FORBIDDEN_ADMIN_ONLY: makeError('FORBIDDEN_ADMIN_ONLY', 'SEC-006', 'Solo administradores pueden ejecutar esta operación.', 'SECURITY'),
+  FORBIDDEN_ADMIN_ONLY: makeError('FORBIDDEN_ADMIN_ONLY', 'SEC-006', 'Solo los administradores pueden hacer esto. Contacta al administrador.', 'SECURITY'),
   CORS_ORIGIN_DENIED: makeError('CORS_ORIGIN_DENIED', 'SEC-007', 'Origen de petición no permitido.', 'SECURITY'),
   JWT_VERIFICATION_REQUIRED: makeError('JWT_VERIFICATION_REQUIRED', 'SEC-008', 'Acceso anónimo a endpoint protegido.', 'SECURITY'),
 
@@ -196,11 +196,11 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   DLQ_VALIDATION_FAILED: makeError('DLQ_VALIDATION_FAILED', 'DLQ-005', 'Validación de entrada DLQ falló.', 'DLQ'),
 
   // ===== AUDIT =====
-  AUDIT_DETAILS_MISMATCH: makeError('AUDIT_DETAILS_MISMATCH', 'AUD-001', 'Details no coincide con esquema del evento.', 'AUDIT'),
+  AUDIT_DETAILS_MISMATCH: makeError('AUDIT_DETAILS_MISMATCH', 'AUD-001', 'Error en los datos del evento.', 'AUDIT'),
 
   // ===== EVENTBUS =====
-  EVENTBUS_PAYLOAD_VALIDATION_FAILED: makeError('EVENTBUS_PAYLOAD_VALIDATION_FAILED', 'EVB-001', 'Payload del evento no coincide con el esquema SDD.', 'EVENTBUS'),
-  EVENTBUS_INVALID_EVENT_NAME: makeError('EVENTBUS_INVALID_EVENT_NAME', 'EVB-002', 'Nombre del evento no sigue el formato MODULO.ACCION.', 'EVENTBUS'),
+  EVENTBUS_PAYLOAD_VALIDATION_FAILED: makeError('EVENTBUS_PAYLOAD_VALIDATION_FAILED', 'EVB-001', 'Error en los datos del evento.', 'EVENTBUS'),
+  EVENTBUS_INVALID_EVENT_NAME: makeError('EVENTBUS_INVALID_EVENT_NAME', 'EVB-002', 'Nombre de evento inválido.', 'EVENTBUS'),
 
   // ===== TENANT TRANSLATOR =====
   TENANT_INVALID_SLUG_FORMAT: makeError('TENANT_INVALID_SLUG_FORMAT', 'TEN-001', 'Formato de slug inválido.', 'TENANT'),
@@ -209,7 +209,7 @@ export const ERROR_CATALOG: Record<string, AppErrorDefinition> = {
   // ===== POS =====
   SALE_NO_ITEMS: makeError('SALE_NO_ITEMS', 'POS-004', 'No hay productos en el carrito.', 'POS'),
   SALE_STOCK_INSUFFICIENT: makeError('SALE_STOCK_INSUFFICIENT', 'POS-005', 'Stock insuficiente para completar la venta.', 'POS'),
-  SALE_EXCHANGE_RATE_NOT_FOUND: makeError('SALE_EXCHANGE_RATE_NOT_FOUND', 'POS-006', 'No hay tasa de cambio configurada. Configure la tasa antes de vender.', 'POS'),
+  SALE_EXCHANGE_RATE_NOT_FOUND: makeError('SALE_EXCHANGE_RATE_NOT_FOUND', 'POS-006', 'No hay tasa de cambio. Ve a "Tasa" y configúrala antes de vender.', 'POS'),
   BOX_ALREADY_OPEN: makeError('BOX_ALREADY_OPEN', 'POS-007', 'Ya existe una caja abierta para este local.', 'POS'),
   BOX_ALREADY_CLOSED: makeError('BOX_ALREADY_CLOSED', 'POS-008', 'La caja ya está cerrada.', 'POS'),
   BOX_OPENING_BALANCE_REQUIRED: makeError('BOX_OPENING_BALANCE_REQUIRED', 'POS-009', 'Debe ingresar un monto inicial para abrir la caja.', 'POS'),

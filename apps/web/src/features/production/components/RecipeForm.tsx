@@ -110,7 +110,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           addToast({ type: 'success', message: 'Receta actualizada.' });
           onClose();
         } else {
-          addToast({ type: 'error', message: 'Error al actualizar la receta.' });
+          addToast({ type: 'error', message: 'Error al actualizar la receta. Verifica tu conexión e intenta de nuevo.' });
         }
       } else {
         const result = await createRecipe(tenantId, userId, input);
@@ -118,7 +118,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           addToast({ type: 'success', message: 'Receta creada.' });
           onClose();
         } else {
-          addToast({ type: 'error', message: 'Error al crear la receta.' });
+          addToast({ type: 'error', message: 'Error al crear la receta. Verifica tu conexión e intenta de nuevo.' });
         }
       }
     } finally {
@@ -186,7 +186,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 <span className="text-sm font-semibold">Nuevo producto terminado</span>
               </div>
               <p className="text-xs text-teal-600">
-                Se creará un nuevo producto con stock=0. Al ejecutar la receta, se generarán lotes con su costo.
+                Se creará un nuevo producto que empezará sin stock. Al ejecutar la receta, se generarán lotes con su costo.
               </p>
               <Input
                 label="Nombre del producto"
@@ -401,7 +401,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 className="w-full flex items-center justify-between"
               >
                 <span className="text-sm font-medium text-gray-700">
-                  {showPreview ? 'Ocultar' : 'Ver'} preview de expansión
+                  {showPreview ? 'Ocultar' : 'Ver'} desglose de ingredientes
                   {hasSubRecipes && (
                     <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md">
                       {previewLines.filter((l) => l.isSubRecipe).length} sub-receta(s)
@@ -435,7 +435,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     ))}
                   </ul>
                   <p className="mt-2 text-[11px] text-gray-500 italic">
-                    El preview muestra las líneas tal como se guardarán. La expansión completa (con ingredientes base)
+                    El desglose muestra las líneas tal como se guardarán. La expansión completa (con ingredientes base)
                     se calculará al ejecutar la receta.
                   </p>
                 </Card>

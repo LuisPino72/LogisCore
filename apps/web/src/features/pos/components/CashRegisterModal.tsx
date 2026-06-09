@@ -134,7 +134,7 @@ export function CashRegisterModal({
                   : 'bg-red-50 text-red-700'
               }`}>
                 {differencePreview.isZero ? (
-                  <span>Cuadre exacto: {formatBs(0)} (diferencia ≤ {MAX_CENTS_DIFFERENCE} Bs se ajusta a 0)</span>
+                  <span>Cuadre exacto: {formatBs(0)} (diferencia ≤ {MAX_CENTS_DIFFERENCE} Bs está dentro del margen aceptable)</span>
                 ) : (
                   <span>Diferencia: {differencePreview.diff > 0 ? '+' : ''}{formatBs(differencePreview.diff)}</span>
                 )}

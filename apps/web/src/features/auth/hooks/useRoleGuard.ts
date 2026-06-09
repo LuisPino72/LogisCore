@@ -25,7 +25,7 @@ export function useRoleGuard(...allowedRoles: UserRole[]): void {
     try {
       requireRole(...allowedRoles);
     } catch (err: unknown) {
-      const message = isAppError(err) ? err.message : 'Acceso denegado.';
+      const message = isAppError(err) ? err.message : 'No tienes permiso para ver esta sección. Contacta al administrador.';
       addToast({ type: 'error', message });
       navigate('/pos', { replace: true });
     }

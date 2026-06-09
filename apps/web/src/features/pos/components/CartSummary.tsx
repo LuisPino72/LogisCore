@@ -40,6 +40,7 @@ export function CartSummary({
   const [showDiscountInput, setShowDiscountInput] = useState(false);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [discountInput, setDiscountInput] = useState('');
+  const [discountError, setDiscountError] = useState('');
 
   const totals = calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount);
   const { subtotalUsd, subtotalBs, igtfBs, ivaBs, discountBs, discountUsd, totalBs, totalUsd, ivaUsd } = totals;
@@ -49,12 +50,22 @@ export function CartSummary({
 
   const handleApplyDiscount = () => {
     const val = parseFloat(discountInput);
-    if (!val || val <= 0) return;
-    if (discountType === 'percentage' && val > 100) return;
-    if (discountType === 'fixed' && val > subtotalUsd) return;
+    if (!val || val <= 0) {
+      setDiscountError('El descuento debe ser mayor a 0.');
+      return;
+    }
+    if (discountType === 'percentage' && val > 100) {
+      setDiscountError('El descuento porcentual no puede ser mayor a 100%.');
+      return;
+    }
+    if (discountType === 'fixed' && val > subtotalUsd) {
+      setDiscountError('El descuento no puede ser mayor al subtotal.');
+      return;
+    }
     onSetDiscount(discountType, val);
     setShowDiscountInput(false);
     setDiscountInput('');
+    setDiscountError('');
   };
 
   return (
@@ -176,10 +187,11 @@ export function CartSummary({
               className="flex-1"
               autoFocus
             />
+            {discountError && <p className="text-xs text-danger">{discountError}</p>}
             <Button variant="primary" size="sm" onClick={handleApplyDiscount}>
               Aplicar
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => { setShowDiscountInput(false); setDiscountInput(''); }}>
+            <Button variant="ghost" size="sm" onClick={() => { setShowDiscountInput(false); setDiscountInput(''); setDiscountError(''); }}>
               Cancelar
             </Button>
           </div>

@@ -365,7 +365,7 @@ export const posService = {
       .first();
 
     if (!cashReg) {
-      return failure(new AppError(PosErrors.SALE_BOX_CLOSED, 'La caja esta cerrada. Abrala para realizar ventas.'));
+      return failure(new AppError(PosErrors.SALE_BOX_CLOSED, 'La caja está cerrada. Ábrala para realizar ventas.'));
     }
 
     const openedDate = cashReg.openedAt ? new Date(cashReg.openedAt) : null;
@@ -384,7 +384,7 @@ export const posService = {
 
     const parsed = CreateSaleInputSchema.safeParse(input);
     if (!parsed.success) {
-      return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Datos de venta invalidos: ' + parsed.error.issues.map((e: { message: string }) => e.message).join(', ')));
+      return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Datos de venta inválidos: ' + parsed.error.issues.map((e: { message: string }) => e.message).join(', ')));
     }
 
     // Validate item coherence: totalPriceUsd must equal quantity * unitPriceUsd (tolerance 0.01)
@@ -560,7 +560,7 @@ export const posService = {
             const currentLot = await db.inventoryLots.get(lot.id);
             if (!currentLot || currentLot.remainingQuantity <= 0) continue;
             if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
-              throw new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto en consumo FIFO. Reintente la operación.');
+              throw new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto de inventario concurrente. Reintente la operación.');
             }
             const lotCost = currentLot.costUsdPerUnit ?? 0;
             const newVersion = (currentLot.version ?? 0) + 1;
@@ -1427,7 +1427,7 @@ export const posService = {
       .first();
 
     if (!cashReg) {
-      return failure(new AppError(PosErrors.BOX_ALREADY_CLOSED, 'La caja ya esta cerrada.'));
+      return failure(new AppError(PosErrors.BOX_ALREADY_CLOSED, 'La caja ya está cerrada.'));
     }
 
     const now = new Date().toISOString();

@@ -597,7 +597,7 @@ export const customerService = {
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getCustomerAcquisitionStats:', err);
       return failure(
-        new AppError(CustomerErrors.CUSTOMER_FETCH_FAILED, 'Error al calcular acquisition.'),
+        new AppError(CustomerErrors.CUSTOMER_FETCH_FAILED, 'Error al calcular estadísticas de adquisición.'),
       );
     }
   },

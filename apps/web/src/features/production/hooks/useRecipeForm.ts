@@ -123,7 +123,7 @@ export function useRecipeForm() {
       }
     }
 
-    if (form.yieldQuantity <= 0) newErrors.yieldQuantity = 'El yield debe ser mayor a 0';
+    if (form.yieldQuantity <= 0) newErrors.yieldQuantity = 'La cantidad producida debe ser mayor a 0';
     if (!form.yieldUnit) newErrors.yieldUnit = 'Selecciona una unidad';
     if (form.wastePct < 0 || form.wastePct > 100) newErrors.wastePct = 'La merma debe ser entre 0 y 100%';
     if (form.lines.length === 0) newErrors.lines = 'Agrega al menos un ingrediente';
@@ -177,7 +177,7 @@ export function useRecipeForm() {
 
     // Assembly mode: yield must be 1
     if (form.mode === 'assembly' && form.yieldQuantity !== 1) {
-      w.push({ field: 'yieldQuantity', message: 'En modo ensamblaje, el yield siempre es 1 unidad.', type: 'info' });
+      w.push({ field: 'yieldQuantity', message: 'En modo ensamblaje, la cantidad producida siempre es 1 unidad.', type: 'info' });
     }
 
     // PRODUCTION-003 [Paso-5] — Ingredient cost warnings (espejo del warning en calculateRecipeCost)

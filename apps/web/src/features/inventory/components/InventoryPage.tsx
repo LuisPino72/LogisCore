@@ -109,7 +109,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         if (publicUrl) {
           EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
         } else {
-          addToast({ type: 'warning', message: 'Producto creado, pero la imagen no se pudo subir.', duration: 5000 });
+          addToast({ type: 'warning', message: 'Producto creado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });
         }
       }
     } else {
@@ -133,7 +133,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       if (publicUrl) {
         EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
       } else {
-        addToast({ type: 'warning', message: 'Producto actualizado, pero la imagen no se pudo subir.', duration: 5000 });
+        addToast({ type: 'warning', message: 'Producto actualizado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });
       }
     }
     setEditProduct(null);
@@ -169,7 +169,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   }, [loading, hasLoadedOnce]);
 
   if (!tenantId) {
-    return <EmptyState icon={<Package size={48} />} title="Selecciona un tenant" description="No hay tenant activo" />;
+    return <EmptyState icon={<Package size={48} />} title="Selecciona tu negocio" description="No hay un negocio activo" />;
   }
 
   if (!hasLoadedOnce) {
@@ -337,7 +337,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 <h2 className="text-sm font-title font-bold text-gray-900">Historial de movimientos</h2>
               </div>
               {!isOwner ? (
-                <p className="text-sm text-text-secondary text-center py-4">Solo el propietario puede ver el historial.</p>
+                <p className="text-sm text-text-secondary text-center py-4">Solo el propietario puede ver el historial. Pide acceso al propietario.</p>
               ) : (
                 <MovementHistory products={products} tenantId={tenantId} />
               )}

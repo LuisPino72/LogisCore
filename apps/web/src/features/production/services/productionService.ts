@@ -58,7 +58,7 @@ export async function expandRecipe(
   if (depth > MAX_RECIPE_DEPTH) {
     return failure(new AppError(
       ProductionErrors.RECIPE_MAX_DEPTH_EXCEEDED,
-      `La receta anida ${depth} niveles. Máximo permitido: ${MAX_RECIPE_DEPTH}.`,
+      `La receta tiene ${depth} niveles de anidamiento. Máximo permitido: ${MAX_RECIPE_DEPTH}.`,
     ));
   }
 
@@ -93,7 +93,7 @@ export async function expandRecipe(
     if (!product || product.deletedAt) {
       return failure(new AppError(
         ProductionErrors.SUB_RECIPE_NOT_FOUND,
-        `Sub-receta no encontrada para el producto: ${line.productId}`,
+        'Sub-receta no encontrada para un producto de la receta.',
       ));
     }
 
@@ -151,7 +151,7 @@ export async function validateCycles(
       if (visited.has(line.productId)) {
         return failure(new AppError(
           ProductionErrors.RECIPE_CYCLE_DETECTED,
-          `No se puede guardar: la receta forma un ciclo. "${line.productId}" ya fue visitado.`,
+          'No se puede guardar: la receta forma un ciclo.',
         ));
       }
 
@@ -320,7 +320,7 @@ export const productionService = {
     for (const line of input.lines) {
       const ingredient = await db.products.get(line.productId);
       if (!ingredient || ingredient.deletedAt) {
-        return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
+        return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado. Verifica los productos de la receta.'));
       }
       // PRODUCTION-001-003: Permitir producto_terminado SI tiene receta activa (sub-receta)
       if (ingredient.productType === 'producto_terminado') {
@@ -504,7 +504,7 @@ export const productionService = {
         if (!lineRaw.id) {
           const ingredient = await db.products.get(line.productId);
           if (!ingredient || ingredient.deletedAt) {
-            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado: ${line.productId}`));
+            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado. Verifica los productos de la receta.'));
           }
           // PRODUCTION-001-003: Permitir producto_terminado SI tiene receta activa
           if (ingredient.productType === 'producto_terminado') {
@@ -1385,7 +1385,7 @@ export const productionService = {
         // asi que el check era dead code. `version` se incrementa en cada update y SI detecta
         // race conditions reales (mismo patron que posService:562 y consumeFifoInternal:1425).
         if ((currentLot.version ?? 0) !== (detail.version ?? 0)) {
-          throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto en consumo FIFO.');
+          throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto de inventario. Reintente la operación.');
         }
         const newRemaining = currentLot.remainingQuantity - detail.quantity;
         const newVersion = (currentLot.version ?? 0) + 1;
@@ -1486,7 +1486,7 @@ async function consumeFifoInternal(
     const currentLot = await db.inventoryLots.get(lot.id);
     if (!currentLot) continue;
     if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
-      return failure(new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto en consumo FIFO.'));
+      return failure(new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto de inventario. Reintente la operación.'));
     }
 
     const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);

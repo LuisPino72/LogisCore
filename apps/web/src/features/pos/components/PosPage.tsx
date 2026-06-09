@@ -159,7 +159,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       }
     } catch (err) {
       logger.error('POS', 'Error inesperado al procesar el pago', err);
-      addToast({ type: 'error', message: 'Error inesperado al procesar el pago.', duration: 5000 });
+      addToast({ type: 'error', message: 'Error al procesar el pago. Verifica tu conexión e intenta de nuevo.', duration: 5000 });
     } finally {
       setProcessing(false);
     }
@@ -300,7 +300,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       addToast({ type: 'success', message: 'Venta anulada. Stock restaurado.', duration: 4000 });
       fetchSalesHistory(tenantId);
     } else {
-      addToast({ type: 'error', message: result.error?.message ?? 'Error al anular la venta.', duration: 4000 });
+      addToast({ type: 'error', message: result.error?.message ?? 'Error al anular la venta. Verifica tu conexión e intenta de nuevo.', duration: 4000 });
     }
   }, [voidConfirmId, tenantId, userId, addToast, fetchSalesHistory]);
 

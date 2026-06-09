@@ -113,7 +113,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
       // Usamos el error del store que ya fue actualizado por deleteSupplier
       addToast({
         type: 'error',
-        message: storeError || 'No se pudo eliminar el proveedor',
+        message: storeError || 'No se pudo eliminar el proveedor. Verifica tu conexión e intenta de nuevo.',
       });
     }
   };

@@ -221,7 +221,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
         )}
         {showDropdown && filteredProducts.length === 0 && (
           <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-4 text-sm text-gray-400 text-center">
-            No hay productos
+            No hay productos. Crea productos primero desde Inventario.
           </div>
         )}
       </div>
@@ -243,7 +243,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
             data={visibleMovements}
             loading={loading}
             keyExtractor={(m: InventoryMovement) => m.id}
-            emptyMessage="Sin movimientos aún"
+            emptyMessage="Sin movimientos aún. Aparecerán cuando registres ventas, compras o ajustes."
             emptyIcon={<History size={32} />}
             renderCardOnMobile
           />

@@ -407,7 +407,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         rowClassName={(p: Product) => {
           return p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= getDisplayStockMin(p)! ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
         }}
-        emptyMessage="No encontramos productos con ese nombre o filtro"
+        emptyMessage="No encontramos productos. Intenta con otro nombre o limpia los filtros."
         renderCardOnMobile
         renderCard={(product: Product) => (
           <div className="card-body">
@@ -506,7 +506,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
             <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : variantModalData.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">No hay variantes</p>
+          <p className="text-sm text-gray-500 text-center py-4">No hay variantes. Agrega variantes desde "Editar" producto.</p>
         ) : (
           <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
             {variantModalData.map((v, i) => (

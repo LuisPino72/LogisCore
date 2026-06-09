@@ -41,7 +41,7 @@ export function AllUsersSection({ allUsers, page, totalPages, onPageChange }: Al
         <DataTable
           columns={columns}
           data={allUsers}
-          emptyMessage="No hay usuarios registrados."
+          emptyMessage="No hay usuarios registrados. Crea un local con empleados primero."
           keyExtractor={(u: GlobalUser) => u.id}
           renderCardOnMobile
         />

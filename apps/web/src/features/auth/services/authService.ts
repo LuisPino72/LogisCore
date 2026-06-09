@@ -184,7 +184,7 @@ export const authService = {
     }
 
     if (!data.session) {
-      return failure(new AppError('AUTH_NO_SESSION', 'No se pudo iniciar sesión.'));
+      return failure(new AppError('AUTH_NO_SESSION', 'No se pudo iniciar sesión. Intenta de nuevo o contacta al administrador.'));
     }
 
     const role = extractRole(data.session);
@@ -398,7 +398,7 @@ export const authService = {
       .maybeSingle();
 
     if (error) {
-      return failure(new AppError('AUTH_SUBSCRIPTION_CHECK_FAILED', 'Error al verificar suscripción.'));
+      return failure(new AppError('AUTH_SUBSCRIPTION_CHECK_FAILED', 'Error al verificar la suscripción. Intenta de nuevo.'));
     }
     if (!data) {
       return success(undefined);
@@ -407,7 +407,7 @@ export const authService = {
     if (data.status !== 'active' || new Date(data.expires_at) < new Date()) {
       return failure(new AppError(
         'AUTH_SUBSCRIPTION_EXPIRED',
-        'Suscripción vencida. Contacta al 04145180265 para renovar.',
+        'Suscripción vencida. Llama al 0414-518-0265 para renovar.',
       ));
     }
 
@@ -422,10 +422,10 @@ export const authService = {
       .maybeSingle();
 
     if (error) {
-      return failure(new AppError('AUTH_TENANT_CHECK_FAILED', 'Error al verificar estado del local.'));
+      return failure(new AppError('AUTH_TENANT_CHECK_FAILED', 'Error al verificar el local. Intenta de nuevo.'));
     }
     if (!data) {
-      return failure(new AppError('AUTH_TENANT_NOT_FOUND', 'Local no encontrado.'));
+      return failure(new AppError('AUTH_TENANT_NOT_FOUND', 'Local no encontrado. Contacta al administrador.'));
     }
     if (data.deleted_at) {
       return failure(new AppError('AUTH_TENANT_DEACTIVATED', 'Este local ha sido desactivado. Contacta al administrador.'));

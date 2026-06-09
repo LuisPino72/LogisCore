@@ -226,7 +226,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                 ))}
                 {order.items.length > 3 && (
                   <div className="text-[11px] text-text-secondary text-center pt-1 border-t border-gray-100/80 mt-1">
-                    +{order.items.length - 3} items más
+                    +{order.items.length - 3} artículos más
                   </div>
                 )}
               </div>

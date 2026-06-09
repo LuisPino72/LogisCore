@@ -79,8 +79,8 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
   const statusStyles = {
     fresh: { color: 'success', label: 'BCV', icon: DollarSign, pulse: false },
     stale: { color: 'warning', label: 'Desactualizada', icon: AlertCircle, pulse: true },
-    critical: { color: 'danger', label: '¡MUY VIEJA!', icon: AlertCircle, pulse: true },
-    missing: { color: 'danger', label: 'Sin tasa', icon: AlertCircle, pulse: true },
+    critical: { color: 'danger', label: 'Desactualizada — toca "Actualizar"', icon: AlertCircle, pulse: true },
+    missing: { color: 'danger', label: 'Sin tasa — toca "Cargar tasa AHORA"', icon: AlertCircle, pulse: true },
   } as const;
   const currentStyle = statusStyles[rateStatus];
   const StatusIcon = currentStyle.icon;
