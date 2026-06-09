@@ -154,8 +154,8 @@ function RateBadgeMobile() {
       }`}
       title={title}
     >
-      <DollarSign size={10} className="shrink-0" />
-      <span className={`text-[10px] font-medium whitespace-nowrap ${textClass}`}>Tasa Bs</span>
+      <DollarSign size={12} className="shrink-0" />
+      <span className={`text-[11px] font-medium whitespace-nowrap ${textClass}`}>Tasa Bs</span>
       <span className="text-xs font-bold whitespace-nowrap">{displayValue}</span>
     </div>
   );

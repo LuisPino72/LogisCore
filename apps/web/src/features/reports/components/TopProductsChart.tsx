@@ -34,7 +34,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-text-secondary">Aún no hay datos de productos para este período.</p>
+        <p className="text-sm text-gray-600">Aún no hay datos de productos para este período.</p>
       </Card>
     );
   }
@@ -85,23 +85,23 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-700 wrap-break-word text-xs sm:text-sm">{p.name}</p>
-                  <p className="text-[10px] sm:text-[11px] text-text-secondary">
+                  <p className="text-[10px] sm:text-[11px] text-gray-600">
                     {p.quantitySold.toFixed(p.quantitySold % 1 !== 0 ? 2 : 0)} u
                   </p>
                 </div>
               </div>
               <div className="flex gap-3 sm:gap-4 mb-1 sm:mb-0.5">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] sm:text-[10px] text-text-secondary uppercase tracking-wide">Ingreso</p>
+                  <p className="text-[9px] sm:text-[10px] text-gray-600 uppercase tracking-wide">Ingreso</p>
                   <p className="text-xs sm:text-sm font-medium text-gray-700 truncate">
                     {formatBs(p.revenueBs)}
                   </p>
-                  <p className="text-[10px] sm:text-[11px] text-text-secondary">
+                  <p className="text-[10px] sm:text-[11px] text-gray-600">
                     {formatUsd(p.revenueUsd)}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] sm:text-[10px] text-text-secondary uppercase tracking-wide">Ganancia Bruta</p>
+                  <p className="text-[9px] sm:text-[10px] text-gray-600 uppercase tracking-wide">Ganancia Bruta</p>
                   <p className={`text-xs sm:text-sm font-semibold truncate ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
                     {formatBs(p.profitBs)}
                   </p>
@@ -126,3 +126,4 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
     </Card>
   );
 }
+

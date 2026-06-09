@@ -116,7 +116,7 @@ export function InsightsCarousel({
   if (!hasData) {
     return (
       <Card className="p-4 sm:p-6">
-        <p className="text-sm text-text-secondary text-center">Aún no hay suficientes datos para mostrar análisis en este período.</p>
+        <p className="text-sm text-gray-600 text-center">Aún no hay suficientes datos para mostrar análisis en este período.</p>
       </Card>
     );
   }
@@ -130,12 +130,12 @@ export function InsightsCarousel({
     <Card className="p-3 sm:p-5">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h3 className="text-sm font-title font-bold text-gray-900">{active.slide.title}</h3>
-        <span className="text-[10px] sm:text-[11px] text-text-secondary font-medium">{getValueLabel(active.slide)}</span>
+        <span className="text-[10px] sm:text-[11px] text-gray-600 font-medium">{getValueLabel(active.slide)}</span>
       </div>
 
       <div className="space-y-3 sm:space-y-2.5 min-h-[200px] sm:min-h-[220px]">
         {active.data.length === 0 ? (
-          <p className="text-sm text-text-secondary py-6 text-center">{active.slide.emptyMessage}</p>
+          <p className="text-sm text-gray-600 py-6 text-center">{active.slide.emptyMessage}</p>
         ) : (
           active.data.map((item, idx) => {
             const pct = maxValue > 0 ? (Math.abs(item.value) / maxValue) * 100 : 0;
@@ -146,7 +146,7 @@ export function InsightsCarousel({
                     idx === 0 && active.slide.id !== 'worst-cats' && active.slide.id !== 'worst-prods'
                       ? 'bg-amber-400'
                       : idx === 1 && active.slide.id !== 'worst-cats' && active.slide.id !== 'worst-prods'
-                      ? 'bg-gray-400'
+                      ? 'bg-gray-600'
                       : idx === 2 && active.slide.id !== 'worst-cats' && active.slide.id !== 'worst-prods'
                       ? 'bg-amber-700'
                       : 'bg-gray-300'
@@ -155,7 +155,7 @@ export function InsightsCarousel({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-gray-700 wrap-break-word text-xs sm:text-sm leading-tight">{item.name}</p>
-                    <p className="text-[10px] sm:text-[11px] text-text-secondary">{item.secondary}</p>
+                    <p className="text-[10px] sm:text-[11px] text-gray-600">{item.secondary}</p>
                   </div>
                   <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 ${
                     item.value >= 0 ? 'text-gray-900' : 'text-danger'
@@ -216,3 +216,4 @@ export function InsightsCarousel({
     </Card>
   );
 }
+

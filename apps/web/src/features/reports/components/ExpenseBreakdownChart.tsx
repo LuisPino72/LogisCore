@@ -35,11 +35,11 @@ function CustomCenterLabel({ totalBs }: { totalBs: number }) {
       textAnchor="middle"
       dominantBaseline="central"
     >
-      <tspan x="50%" dy="-0.4em" className="fill-gray-500" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
+      <tspan x="50%" dy="-0.4em" className="fill-gray-600" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
       <tspan x="50%" dy="1.4em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 800 }}>
         {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
       </tspan>
-      <tspan x="50%" dy="1.3em" className="fill-gray-500" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
+      <tspan x="50%" dy="1.3em" className="fill-gray-600" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
     </text>
   );
 }
@@ -66,7 +66,7 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-text-secondary">A&uacute;n no hay gastos registrados para este per&iacute;odo.</p>
+        <p className="text-sm text-gray-600">A&uacute;n no hay gastos registrados para este per&iacute;odo.</p>
       </Card>
     );
   }
@@ -81,7 +81,7 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
   return (
     <Card className="p-4">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-1">Desglose de Gastos</h3>
-      <p className="text-[11px] text-text-secondary mb-4">{formatBs(totalBs)} / {formatUsd(totalUsd)}</p>
+      <p className="text-[12px] text-gray-600 mb-4">{formatBs(totalBs)} / {formatUsd(totalUsd)}</p>
       <div className="h-48 overflow-hidden" ref={containerRef}>
         {ready ? (
         <ResponsiveContainer width="100%" height="100%" key="chart-ready">
@@ -121,9 +121,9 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
                 style={{ backgroundColor: CATEGORY_COLORS[d.type] ?? '#9ca3af' }}
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-gray-700 break-words">{d.label}</p>
-                <p className="text-[11px] text-text-secondary">{formatBs(d.amountBs)}</p>
-                <p className="text-[11px] text-text-secondary">{formatUsd(d.amountUsd)}</p>
+                <p className="font-medium text-gray-700 wrap-break-word">{d.label}</p>
+                <p className="text-[11px] text-gray-600">{formatBs(d.amountBs)}</p>
+                <p className="text-[11px] text-gray-600">{formatUsd(d.amountUsd)}</p>
               </div>
               <div className="flex flex-col items-end shrink-0">
                 <span className="font-semibold text-gray-900">{pct}%</span>
@@ -135,3 +135,4 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
     </Card>
   );
 }
+

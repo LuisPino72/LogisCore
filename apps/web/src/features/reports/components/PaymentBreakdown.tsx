@@ -17,11 +17,11 @@ function CustomCenterLabel({ totalBs }: { totalBs: number }) {
       textAnchor="middle"
       dominantBaseline="central"
     >
-      <tspan x="50%" dy="-0.4em" className="fill-gray-500" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
+      <tspan x="50%" dy="-0.4em" className="fill-gray-600" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
       <tspan x="50%" dy="1.4em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 800 }}>
         {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
       </tspan>
-      <tspan x="50%" dy="1.3em" className="fill-gray-500" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
+      <tspan x="50%" dy="1.3em" className="fill-gray-600" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
     </text>
   );
 }
@@ -48,7 +48,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-text-secondary">Aún no hay datos de pagos para este período.</p>
+        <p className="text-sm text-gray-600">Aún no hay datos de pagos para este período.</p>
       </Card>
     );
   }
@@ -103,12 +103,12 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
             />
             <div className="min-w-0 flex-1">
               <p className="font-medium text-gray-700 truncate">{d.label}</p>
-              <p className="text-[11px] text-text-secondary">{formatBs(d.totalBs)}</p>
-              <p className="text-[11px] text-text-secondary">{formatUsd(d.totalUsd)}</p>
+              <p className="text-[11px] text-gray-600">{formatBs(d.totalBs)}</p>
+              <p className="text-[11px] text-gray-600">{formatUsd(d.totalUsd)}</p>
             </div>
             <div className="flex flex-col items-end shrink-0">
               <span className="font-semibold text-gray-900">{d.percentage}%</span>
-              <span className="text-[10px] text-text-secondary">{d.count} trans.</span>
+              <span className="text-[10px] text-gray-600">{d.count} trans.</span>
             </div>
           </div>
         ))}
@@ -116,3 +116,4 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
     </Card>
   );
 }
+

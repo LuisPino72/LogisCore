@@ -423,7 +423,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               <div className="text-sm font-semibold text-gray-900 text-center w-full wrap-break-word">
                 {product.name}
               </div>
-              <div className="text-[10px] text-text-secondary font-mono text-center">
+              <div className="text-[12px] text-text-secondary font-mono text-center">
                 {product.sku}
               </div>
               {productIdsWithVariants.has(product.id) && (

@@ -43,7 +43,7 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-text-secondary">Aún no hay datos de ganancias para este período.</p>
+        <p className="text-sm text-gray-600">Aún no hay datos de ganancias para este período.</p>
       </Card>
     );
   }
@@ -73,19 +73,19 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
         <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <p className="text-[10px] sm:text-xs text-text-secondary">Ganancia Total</p>
+          <p className="text-[10px] sm:text-xs text-gray-600">Ganancia Total</p>
           <div className="truncate">{formatDual(totalProfit, totalProfitUsd, 'text-primary')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-primary/3 border border-primary/10">
-          <p className="text-[10px] sm:text-xs text-text-secondary">Ventas Totales</p>
+          <p className="text-[10px] sm:text-xs text-gray-600">Ventas Totales</p>
           <div className="truncate">{formatDual(totalSales, totalSalesUsd, 'text-primary-dark')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-danger/5 border border-danger/20">
-          <p className="text-[10px] sm:text-xs text-text-secondary">Gasto Total</p>
+          <p className="text-[10px] sm:text-xs text-gray-600">Gasto Total</p>
           <div className="truncate">{formatDual(totalCost, totalCostUsd, 'text-danger')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-accent/5 border border-accent/20">
-          <p className="text-[10px] sm:text-xs text-text-secondary">Transacciones</p>
+          <p className="text-[10px] sm:text-xs text-gray-600">Transacciones</p>
           <p className="text-xs sm:text-base font-bold text-accent-dark truncate">{totalTransactions}</p>
         </div>
       </div>
@@ -135,3 +135,4 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
     </Card>
   );
 }
+
