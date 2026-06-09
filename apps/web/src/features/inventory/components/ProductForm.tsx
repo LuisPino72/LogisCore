@@ -523,10 +523,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="input-wrapper">
               <label className="input-label">
-                Costo por unidad (requerido)
-                {formData.unit === 'kg' && ' ($/Kg)'}
-                {formData.unit === 'lt' && ' ($/Lt)'}
-                {formData.unit === 'unidad' && ' ($/unidad)'}
+                Costo total de la compra (requerido) ($)
               </label>
               <Input
                 sanitize="currency"
@@ -539,7 +536,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 inputClassName="text-sm"
               />
               <p className="text-[10px] text-gray-600 mt-0.5">
-                Costo total pagado por la unidad de medida
+                Se dividirá automáticamente entre el stock inicial para obtener el costo por unidad.
               </p>
             </div>
 

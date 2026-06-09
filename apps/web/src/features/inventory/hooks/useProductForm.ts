@@ -240,7 +240,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
     // Validación: materia prima requiere costo
     if (options.creationType === 'raw_material' && (!formData.costPrice || formData.costPrice <= 0)) {
-      const errs = { costPrice: 'El costo es requerido para materia prima. Ingresa el costo por unidad de medida.' };
+      const errs = { costPrice: 'El costo total de la compra es requerido para materia prima.' };
       setErrors(errs);
       setIsSubmitting(false);
       return { success: false, errors: errs };
