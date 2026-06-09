@@ -121,7 +121,7 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
                 style={{ backgroundColor: CATEGORY_COLORS[d.type] ?? '#9ca3af' }}
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-gray-700 truncate">{d.label}</p>
+                <p className="font-medium text-gray-700 break-words">{d.label}</p>
                 <p className="text-[11px] text-text-secondary">{formatBs(d.amountBs)}</p>
                 <p className="text-[11px] text-text-secondary">{formatUsd(d.amountUsd)}</p>
               </div>

@@ -596,7 +596,7 @@ export const posService = {
           }
           await db.products.update(cartItem.productId, { stock: newStock });
 
-          const costUsdPerUnitStorage = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 2) : 0;
+          const costUsdPerUnitStorage = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 6) : 0;
           const costUsdPerUnit = product.isWeighted
             ? preciseRound(costUsdPerUnitStorage * 1000, 4)
             : costUsdPerUnitStorage;
