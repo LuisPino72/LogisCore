@@ -99,11 +99,11 @@ export const InventoryMovementSchema = z.object({
   quantity: z.number(),
   previousStock: z.number().int(),
   newStock: z.number().int(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string(),
   userId: z.string().uuid(),
   reason: z.string().nullish(),
-  reasonType: z.string().optional(),
-  costUsd: z.number().optional(),
+  reasonType: z.string().nullish(),
+  costUsd: z.number().nullish(),
 });
 
 export type InventoryMovement = z.infer<typeof InventoryMovementSchema>;
