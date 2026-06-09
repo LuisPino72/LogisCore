@@ -19,8 +19,8 @@ function smartAxisFormat(value: number): string {
 function formatDual(bs: number, usd: number, colorClass: string): React.ReactNode {
   return (
     <div className="flex flex-col leading-tight">
-      <span className={`text-[10px] sm:text-sm font-bold ${colorClass} truncate`}>{formatBs(bs)}</span>
-      <span className={`text-[10px] sm:text-sm font-bold ${colorClass} truncate`}>{formatUsd(usd)}</span>
+      <span className={`text-[12px] sm:text-sm font-bold ${colorClass} truncate`}>{formatBs(bs)}</span>
+      <span className={`text-[12px] sm:text-sm font-bold ${colorClass} truncate`}>{formatUsd(usd)}</span>
     </div>
   );
 }
@@ -73,25 +73,25 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
         <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <p className="text-[10px] sm:text-xs text-gray-600">Ganancia Total</p>
+          <p className="text-[12px] sm:text-xs text-gray-600">Ganancia Total</p>
           <div className="truncate">{formatDual(totalProfit, totalProfitUsd, 'text-primary')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-primary/3 border border-primary/10">
-          <p className="text-[10px] sm:text-xs text-gray-600">Ventas Totales</p>
+          <p className="text-[12px] sm:text-xs text-gray-600">Ventas Totales</p>
           <div className="truncate">{formatDual(totalSales, totalSalesUsd, 'text-primary-dark')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-danger/5 border border-danger/20">
-          <p className="text-[10px] sm:text-xs text-gray-600">Gasto Total</p>
+          <p className="text-[12px] sm:text-xs text-gray-600">Gasto Total</p>
           <div className="truncate">{formatDual(totalCost, totalCostUsd, 'text-danger')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-accent/5 border border-accent/20">
-          <p className="text-[10px] sm:text-xs text-gray-600">Transacciones</p>
+          <p className="text-[12px] sm:text-xs text-gray-600">Transacciones</p>
           <p className="text-xs sm:text-base font-bold text-accent-dark truncate">{totalTransactions}</p>
         </div>
       </div>
 
       {data.length >= 2 && (
-        <div className={`flex items-center gap-1.5 p-1.5 sm:p-2 rounded-lg mb-4 text-[10px] sm:text-sm ${trend >= 0 ? 'bg-success/5 text-success' : 'bg-danger/5 text-danger'}`}>
+        <div className={`flex items-center gap-1.5 p-1.5 sm:p-2 rounded-lg mb-4 text-[12px] sm:text-sm ${trend >= 0 ? 'bg-success/5 text-success' : 'bg-danger/5 text-danger'}`}>
           {trend >= 0 ? <TrendingUp size={12} className="sm:w-4 sm:h-4" /> : <TrendingDown size={12} className="sm:w-4 sm:h-4" />}
           <span className="font-medium">
             {trend >= 0 ? 'Al alza' : 'A la baja'}: {Math.abs(trend).toFixed(1)}%

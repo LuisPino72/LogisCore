@@ -352,7 +352,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-medium text-gray-600 uppercase tracking-wide hidden sm:block">Periodo</label>
+            <label className="text-[12px] font-medium text-gray-600 uppercase tracking-wide hidden sm:block">Periodo</label>
             <Select
               value={filters.timeRange}
               onChange={(e) => handleTimeRangeChange(e.target.value)}
