@@ -130,7 +130,7 @@ export function InsightsCarousel({
     <Card className="p-3 sm:p-5">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h3 className="text-sm font-title font-bold text-gray-900">{active.slide.title}</h3>
-        <span className="text-[10px] sm:text-[11px] text-gray-600 font-medium">{getValueLabel(active.slide)}</span>
+        <span className="text-[11px] sm:text-xs text-gray-700 font-medium">{getValueLabel(active.slide)}</span>
       </div>
 
       <div className="space-y-3 sm:space-y-2.5 min-h-[200px] sm:min-h-[220px]">
@@ -142,7 +142,7 @@ export function InsightsCarousel({
             return (
               <div key={idx}>
                 <div className="flex items-start gap-2 sm:gap-3 mb-0.5">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white shrink-0 mt-0.5 ${
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold text-white shrink-0 mt-0.5 ${
                     idx === 0 && active.slide.id !== 'worst-cats' && active.slide.id !== 'worst-prods'
                       ? 'bg-amber-400'
                       : idx === 1 && active.slide.id !== 'worst-cats' && active.slide.id !== 'worst-prods'
@@ -155,7 +155,7 @@ export function InsightsCarousel({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-gray-700 wrap-break-word text-xs sm:text-sm leading-tight">{item.name}</p>
-                    <p className="text-[10px] sm:text-[11px] text-gray-600">{item.secondary}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-700">{item.secondary}</p>
                   </div>
                   <span className={`text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 ${
                     item.value >= 0 ? 'text-gray-900' : 'text-danger'

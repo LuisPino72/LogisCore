@@ -13,7 +13,7 @@ function formatDual(bs: number, usd: number): React.ReactNode {
   return (
     <div className="flex flex-col leading-tight">
       <span className="text-xs sm:text-lg font-bold text-gray-900 truncate">{formatBs(bs)}</span>
-      <span className="text-xs sm:text-lg font-semibold text-gray-600 truncate">{formatUsd(usd)}</span>
+      <span className="text-xs sm:text-lg font-semibold text-gray-700 truncate">{formatUsd(usd)}</span>
     </div>
   );
 }
@@ -64,9 +64,9 @@ function KpiCard({
         {icon}
       </div>
       <div className="space-y-1 pr-8 sm:pr-10">
-        <p className="text-[12px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide">{label}</p>
+        <p className="text-xs sm:text-sm font-medium text-gray-700 uppercase tracking-wide">{label}</p>
         <div className="truncate">{value}</div>
-        {subtitle && <div className="text-[12px] sm:text-xs text-gray-600 truncate">{subtitle}</div>}
+        {subtitle && <div className="text-xs sm:text-sm text-gray-700 truncate">{subtitle}</div>}
         {trend && (
           <div className={`flex items-center gap-1 text-[11px] sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
             {trend.positive ? <ArrowUpRight size={10} className="sm:w-3 sm:h-3" /> : <TrendingDown size={10} className="sm:w-3 sm:h-3" />}
@@ -161,7 +161,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
               data.totalCostUsd + data.totalExpensesUsd,
             )}
             subtitle={
-              <div className="flex flex-col gap-0.5 text-[12px] sm:text-xs text-gray-600">
+              <div className="flex flex-col gap-0.5 text-xs sm:text-sm text-gray-700">
                 <div className="flex items-center gap-1">
                   <Tooltip content="Suma del costo de adquisición de los productos vendidos (COGS).">
                     <span className="underline decoration-dotted cursor-help">Costo compras</span>
@@ -194,7 +194,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           value={
             <div className="flex flex-col leading-tight">
               <span className="text-xs sm:text-lg font-bold text-danger truncate">-{formatBs(data.totalDiscountBs)}</span>
-              <span className="text-xs sm:text-lg font-semibold text-gray-600 truncate">-{formatUsd(data.totalDiscountUsd)}</span>
+              <span className="text-xs sm:text-lg font-semibold text-gray-700 truncate">-{formatUsd(data.totalDiscountUsd)}</span>
             </div>
           }
           icon={<DollarSign size={18} />}
@@ -221,7 +221,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
             <ShoppingCart size={14} className="sm:w-4.5 sm:h-4.5 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] sm:text-xs text-gray-600">Producto m&aacute;s rentable</p>
+            <p className="text-xs sm:text-sm text-gray-700">Producto m&aacute;s rentable</p>
             <p className="text-xs sm:text-sm font-semibold text-gray-900 wrap-break-word">{data.topProductName}</p>
           </div>
           <Badge variant="info" className="shrink-0">

@@ -19,8 +19,8 @@ function smartAxisFormat(value: number): string {
 function formatDual(bs: number, usd: number, colorClass: string): React.ReactNode {
   return (
     <div className="flex flex-col leading-tight">
-      <span className={`text-[12px] sm:text-sm font-bold ${colorClass} truncate`}>{formatBs(bs)}</span>
-      <span className={`text-[12px] sm:text-sm font-bold ${colorClass} truncate`}>{formatUsd(usd)}</span>
+      <span className={`text-xs sm:text-sm font-bold ${colorClass} truncate`}>{formatBs(bs)}</span>
+      <span className={`text-xs sm:text-sm font-bold ${colorClass} truncate`}>{formatUsd(usd)}</span>
     </div>
   );
 }
@@ -73,25 +73,25 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
         <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <p className="text-[12px] sm:text-xs text-gray-600">Ganancia Total</p>
+          <p className="text-xs sm:text-sm text-gray-700">Ganancia Total</p>
           <div className="truncate">{formatDual(totalProfit, totalProfitUsd, 'text-primary')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-primary/3 border border-primary/10">
-          <p className="text-[12px] sm:text-xs text-gray-600">Ventas Totales</p>
+          <p className="text-xs sm:text-sm text-gray-700">Ventas Totales</p>
           <div className="truncate">{formatDual(totalSales, totalSalesUsd, 'text-primary-dark')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-danger/5 border border-danger/20">
-          <p className="text-[12px] sm:text-xs text-gray-600">Gasto Total</p>
+          <p className="text-xs sm:text-sm text-gray-700">Gasto Total</p>
           <div className="truncate">{formatDual(totalCost, totalCostUsd, 'text-danger')}</div>
         </div>
         <div className="p-2 sm:p-3 rounded-lg bg-accent/5 border border-accent/20">
-          <p className="text-[12px] sm:text-xs text-gray-600">Transacciones</p>
+          <p className="text-xs sm:text-sm text-gray-700">Transacciones</p>
           <p className="text-xs sm:text-base font-bold text-accent-dark truncate">{totalTransactions}</p>
         </div>
       </div>
 
       {data.length >= 2 && (
-        <div className={`flex items-center gap-1.5 p-1.5 sm:p-2 rounded-lg mb-4 text-[12px] sm:text-sm ${trend >= 0 ? 'bg-success/5 text-success' : 'bg-danger/5 text-danger'}`}>
+        <div className={`flex items-center gap-1.5 p-1.5 sm:p-2 rounded-lg mb-4 text-xs sm:text-sm ${trend >= 0 ? 'bg-success/5 text-success' : 'bg-danger/5 text-danger'}`}>
           {trend >= 0 ? <TrendingUp size={12} className="sm:w-4 sm:h-4" /> : <TrendingDown size={12} className="sm:w-4 sm:h-4" />}
           <span className="font-medium">
             {trend >= 0 ? 'Al alza' : 'A la baja'}: {Math.abs(trend).toFixed(1)}%
@@ -114,15 +114,15 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-            <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="#9ca3af" interval="preserveStartEnd" angle={-15} textAnchor="end" height={50} />
-            <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={smartAxisFormat} width={60} tickCount={6} />
+            <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#9ca3af" interval="preserveStartEnd" angle={-15} textAnchor="end" height={50} />
+            <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={smartAxisFormat} width={60} tickCount={6} />
             <Tooltip
               formatter={(value, name) => [formatBs(Number(value)), name === 'profitBs' ? 'Ganancia' : name === 'salesBs' ? 'Ventas' : 'Costo']}
-              labelStyle={{ fontSize: 11 }}
-              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 11 }}
+              labelStyle={{ fontSize: 12 }}
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
             />
             <Legend
-              wrapperStyle={{ fontSize: 10 }}
+              wrapperStyle={{ fontSize: 11 }}
               formatter={(value) => (value === 'profitBs' ? 'Ganancia Bruta' : value === 'salesBs' ? 'Ventas' : 'Costo')}
             />
             <Area type="monotone" dataKey="salesBs" stroke="#14B8A6" fillOpacity={1} fill="url(#colorSales)" strokeWidth={2} />

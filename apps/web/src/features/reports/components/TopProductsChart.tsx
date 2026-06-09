@@ -50,12 +50,12 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} key="chart-ready">
           <BarChart data={data.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 9 }} stroke="#9ca3af" tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}K` : `${v}`} />
-            <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} stroke="#9ca3af" width={45} />
+            <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}K` : `${v}`} />
+            <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} stroke="#9ca3af" width={45} />
             <Tooltip
               formatter={(value) => [formatBs(Number(value)), 'Ganancia']}
-              labelStyle={{ fontSize: 11 }}
-              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 11 }}
+              labelStyle={{ fontSize: 12 }}
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
             />
             <Bar dataKey="profitBs" radius={[0, 4, 4, 0]}>
               {data.slice(0, 10).map((_, index) => (
@@ -77,7 +77,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
               <div className="flex items-start gap-2 sm:gap-3 mb-1 sm:mb-0.5">
                 {isTop3 && (
                   <span
-                    className="w-5 h-5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white shrink-0 mt-0.5 sm:mt-0"
+                    className="w-5 h-5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold text-white shrink-0 mt-0.5 sm:mt-0"
                     style={{ backgroundColor: RANK_COLORS[index] }}
                   >
                     {index + 1}
@@ -85,27 +85,27 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-700 wrap-break-word text-xs sm:text-sm">{p.name}</p>
-                  <p className="text-[10px] sm:text-[11px] text-gray-600">
+                  <p className="text-[11px] sm:text-xs text-gray-700">
                     {p.quantitySold.toFixed(p.quantitySold % 1 !== 0 ? 2 : 0)} u
                   </p>
                 </div>
               </div>
               <div className="flex gap-3 sm:gap-4 mb-1 sm:mb-0.5">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] sm:text-[10px] text-gray-600 uppercase tracking-wide">Ingreso</p>
+                  <p className="text-[11px] sm:text-xs text-gray-700 uppercase tracking-wide">Ingreso</p>
                   <p className="text-xs sm:text-sm font-medium text-gray-700 truncate">
                     {formatBs(p.revenueBs)}
                   </p>
-                  <p className="text-[10px] sm:text-[11px] text-gray-600">
+                  <p className="text-[11px] sm:text-xs text-gray-700">
                     {formatUsd(p.revenueUsd)}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] sm:text-[10px] text-gray-600 uppercase tracking-wide">Ganancia Bruta</p>
+                  <p className="text-[11px] sm:text-xs text-gray-700 uppercase tracking-wide">Ganancia Bruta</p>
                   <p className={`text-xs sm:text-sm font-semibold truncate ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
                     {formatBs(p.profitBs)}
                   </p>
-                  <p className={`text-[10px] sm:text-[11px] ${p.profitBs >= 0 ? 'text-success/70' : 'text-danger/70'}`}>
+                  <p className={`text-[11px] sm:text-xs ${p.profitBs >= 0 ? 'text-success/70' : 'text-danger/70'}`}>
                     {formatUsd(p.profitUsd)}
                   </p>
                 </div>

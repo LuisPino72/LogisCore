@@ -97,7 +97,7 @@
 
 /* ───────────────────── INPUT ───────────────────── */
 .input-wrapper { @apply flex flex-col gap-1.5; }
-.input-label { @apply font-medium text-gray-700 transition-colors duration-150; font-size: var(--text-fluid-xs); }
+.input-label { @apply font-medium text-gray-800 transition-colors duration-150; font-size: var(--text-fluid-xs); }
 .input {
   @apply w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-surface-alt outline-none transition-all duration-150 placeholder:text-text-muted; font-size: var(--text-fluid-sm);
 }

@@ -314,7 +314,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Distribución</p>
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
-            <span className="text-xs text-gray-600 w-24 shrink-0 text-right">{item.range as string}</span>
+            <span className="text-xs text-gray-700 w-24 shrink-0 text-right">{item.range as string}</span>
             <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary/60 rounded-full transition-all duration-300"
@@ -322,7 +322,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               />
             </div>
             <span className="text-xs font-semibold text-gray-700 w-8 text-right">{item.count as number}</span>
-            <span className="text-xs text-gray-600 w-12 text-right">{String(item.percentage)}%</span>
+            <span className="text-xs text-gray-700 w-12 text-right">{String(item.percentage)}%</span>
           </div>
         ))}
       </div>
@@ -347,12 +347,12 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           </div>
           <div>
             <h1 className="text-xl font-title font-bold" style={{ fontSize: 'var(--text-fluid-xl)' }}>Reportes</h1>
-            <p className="text-xs text-gray-600">Análisis de ventas y ganancias</p>
+            <p className="text-xs text-gray-700">Análisis de ventas y ganancias</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-gray-600 uppercase tracking-wide hidden sm:block">Periodo</label>
+            <label className="text-xs font-medium text-gray-700 uppercase tracking-wide hidden sm:block">Periodo</label>
             <Select
               value={filters.timeRange}
               onChange={(e) => handleTimeRangeChange(e.target.value)}
@@ -541,7 +541,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-900">Generando PDF</p>
-              <p className="text-xs text-gray-600 mt-1">Esto puede tomar unos segundos...</p>
+              <p className="text-xs text-gray-700 mt-1">Esto puede tomar unos segundos...</p>
             </div>
             <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full animate-shimmer" style={{ width: '40%', backgroundSize: '200px 100%' }} />

@@ -35,11 +35,11 @@ function CustomCenterLabel({ totalBs }: { totalBs: number }) {
       textAnchor="middle"
       dominantBaseline="central"
     >
-      <tspan x="50%" dy="-0.4em" className="fill-gray-600" style={{ fontSize: 12, fontWeight: 600 }}>Total</tspan>
+      <tspan x="50%" dy="-0.4em" className="fill-gray-700" style={{ fontSize: 13, fontWeight: 600 }}>Total</tspan>
       <tspan x="50%" dy="1.4em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 800 }}>
         {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
       </tspan>
-      <tspan x="50%" dy="1.3em" className="fill-gray-600" style={{ fontSize: 10, fontWeight: 500 }}>Bs</tspan>
+      <tspan x="50%" dy="1.3em" className="fill-gray-700" style={{ fontSize: 12, fontWeight: 500 }}>Bs</tspan>
     </text>
   );
 }
@@ -81,7 +81,7 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
   return (
     <Card className="p-4">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-1">Desglose de Gastos</h3>
-      <p className="text-[12px] text-gray-600 mb-4">{formatBs(totalBs)} / {formatUsd(totalUsd)}</p>
+      <p className="text-xs text-gray-700 mb-4">{formatBs(totalBs)} / {formatUsd(totalUsd)}</p>
       <div className="h-48 overflow-hidden" ref={containerRef}>
         {ready ? (
         <ResponsiveContainer width="100%" height="100%" key="chart-ready">
@@ -103,7 +103,7 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
             </Pie>
             <Tooltip
               formatter={(value, name) => [formatBs(Number(value)), name]}
-              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 11 }}
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
             />
             <CustomCenterLabel totalBs={totalBs} />
           </PieChart>
@@ -122,8 +122,8 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
               />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-700 wrap-break-word">{d.label}</p>
-                <p className="text-[11px] text-gray-600">{formatBs(d.amountBs)}</p>
-                <p className="text-[11px] text-gray-600">{formatUsd(d.amountUsd)}</p>
+                <p className="text-xs text-gray-700">{formatBs(d.amountBs)}</p>
+                <p className="text-xs text-gray-700">{formatUsd(d.amountUsd)}</p>
               </div>
               <div className="flex flex-col items-end shrink-0">
                 <span className="font-semibold text-gray-900">{pct}%</span>

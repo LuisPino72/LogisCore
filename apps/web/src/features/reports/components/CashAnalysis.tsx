@@ -42,11 +42,11 @@ function DiffIndicator({ differenceBs, differenceUsd }: { differenceBs: number |
       <span className="text-danger mt-0.5">{icon}</span>
       <div className="flex flex-col">
         <span className="text-sm font-semibold text-danger">Desajuste</span>
-        <span className="text-[10px] text-danger">
+        <span className="text-[11px] text-danger">
           {(isPositive ? '+' : '-')}{formatBs(Math.abs(differenceBs))}
         </span>
         {differenceUsd !== undefined && differenceUsd !== null && (
-          <span className="text-[10px] text-danger">
+          <span className="text-[11px] text-danger">
             {(isPositive ? '+' : '-')}{formatUsd(Math.abs(differenceUsd))}
           </span>
         )}
@@ -87,7 +87,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-gray-600">Aún no hay registros de caja. Abre una caja para comenzar a registrar.</p>
+        <p className="text-sm text-gray-700">Aún no hay registros de caja. Abre una caja para comenzar a registrar.</p>
       </Card>
     );
   }
@@ -120,20 +120,20 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                     </Badge>
                   </div>
                   {reg.closedAt && (
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-700 mt-1">
                       Cerrada el {formatDate(reg.closedAt)}
                     </p>
                   )}
                 </div>
                 <div className="text-right sm:text-right shrink-0 sm:ml-3">
-                  <p className="text-xs text-gray-600">Ventas</p>
+                  <p className="text-xs text-gray-700">Ventas</p>
                   <p className="text-sm font-bold text-gray-900">{formatDual(reg.totalSalesBs, reg.totalSalesUsd)}</p>
                 </div>
               </div>
 
               {reg.closedAt && expected > 0 && (
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-600">
+                  <div className="flex justify-between text-xs text-gray-700">
                     <span>Apertura + Ventas</span>
                     <span>Esperado</span>
                   </div>
@@ -147,7 +147,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                       style={{ width: `${salesPct}%` }}
                     />
                   </div>
-                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-[11px] text-gray-600">
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-xs text-gray-700">
                     <span>Apertura: {formatDual(opening, openingUsd)}</span>
                     <span>Esperado: {formatDual(expected, expectedUsd)}</span>
                   </div>
@@ -156,11 +156,11 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div className="p-2 rounded-lg bg-primary/5">
-                  <p className="text-gray-600">Apertura</p>
+                  <p className="text-gray-700">Apertura</p>
                   <p className="font-semibold text-primary">{formatDual(reg.openingBalanceBs, reg.openingBalanceUsd)}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-primary/10">
-                  <p className="text-gray-600">Esperado</p>
+                  <p className="text-gray-700">Esperado</p>
                   <p className="font-semibold text-primary-dark">
                     {reg.expectedClosingBs !== undefined ? formatDual(reg.expectedClosingBs, reg.expectedClosingUsd ?? 0) : '-'}
                   </p>
@@ -170,7 +170,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 text-xs text-gray-600 pt-1 border-t border-gray-100">
+              <div className="flex items-center gap-4 text-xs text-gray-700 pt-1 border-t border-gray-100">
                 <span>{reg.totalSalesCount} transacciones</span>
               </div>
             </div>
