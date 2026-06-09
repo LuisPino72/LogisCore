@@ -164,6 +164,7 @@ export interface DexieParkedCart {
   tenantId: string;
   name: string;
   cartJson: string;
+  customerId?: string;
   createdAt: string;
 }
 

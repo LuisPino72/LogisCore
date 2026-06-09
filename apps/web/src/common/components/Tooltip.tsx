@@ -91,6 +91,26 @@ export function Tooltip({
     help: 'bg-primary text-white',
   };
 
+  const handleClick = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
+    
+    if (!isMobile) {
+      // Ocultar instantáneamente al hacer click en desktop (evita tooltips pegados sobre modales)
+      setVisible(false);
+      setClosing(false);
+    } else {
+      toggle();
+    }
+  };
+
+  // En dispositivos móviles táctiles (hover: none), los tooltips sobre botones
+  // de acción (info/warning) son molestos y se quedan pegados. Solo permitimos
+  // tooltips interactivos para variantes de ayuda 'help'.
+  if (isMobile && variant !== 'help') {
+    return <>{children}</>;
+  }
+
   return (
     <div
       ref={triggerRef}
@@ -99,7 +119,7 @@ export function Tooltip({
       onMouseLeave={!isMobile ? hide : undefined}
       onFocus={!isMobile ? show : undefined}
       onBlur={!isMobile ? hide : undefined}
-      onClick={isMobile ? toggle : undefined}
+      onClick={handleClick}
       role={isMobile ? 'button' : undefined}
       tabIndex={isMobile ? 0 : undefined}
       aria-describedby={visible ? tooltipId : undefined}
