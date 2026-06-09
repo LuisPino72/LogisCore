@@ -201,6 +201,11 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       validationData.priceUsd = presentations[0]?.priceUsd || 0.05;
     }
 
+    // Materia prima no tiene precio de venta, pero Zod exige > 0
+    if (options.creationType === 'raw_material' && validationData.priceUsd <= 0) {
+      validationData.priceUsd = 0.01;
+    }
+
     const parsed = CreateProductInputSchema.safeParse(validationData);
 
     if (!parsed.success) {

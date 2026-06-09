@@ -53,6 +53,7 @@ const mocks = vi.hoisted(() => {
     data: null,
     error: null,
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chainableFrom: any = {
     select: vi.fn(() => chainableFrom),
     eq: vi.fn(() => chainableFrom),

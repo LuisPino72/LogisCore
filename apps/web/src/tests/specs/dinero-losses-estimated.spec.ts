@@ -24,7 +24,7 @@ function createMockDb() {
     products: {
       get: vi.fn(async (id: string) => mockProducts.find((p) => p.id === id) ?? null),
     },
-    exchangeRates: { where: vi.fn((field: string) => ({ equals: vi.fn(() => ({ filter: () => ({ toArray: async () => [] }), toArray: async () => [] })), reverse: vi.fn(() => ({ sortBy: vi.fn(async () => []) })) })) },
+    exchangeRates: { where: vi.fn((_field: string) => ({ equals: vi.fn(() => ({ filter: () => ({ toArray: async () => [] }), toArray: async () => [] })), reverse: vi.fn(() => ({ sortBy: vi.fn(async () => []) })) })) },
   };
 }
 
