@@ -77,7 +77,7 @@ export function FileUpload({
           <div className="flex flex-col items-center gap-2 text-gray-500">
             <Upload size={32} />
             <p className="text-sm">Arrastra archivos aquí o haz clic para seleccionar</p>
-            <p className="text-xs text-gray-400">Máx. {Math.round(maxSize / 1024 / 1024)} MB{accept ? ` · ${accept}` : ''}</p>
+            <p className="text-xs text-gray-600">Máx. {Math.round(maxSize / 1024 / 1024)} MB{accept ? ` · ${accept}` : ''}</p>
           </div>
         )}
       </div>

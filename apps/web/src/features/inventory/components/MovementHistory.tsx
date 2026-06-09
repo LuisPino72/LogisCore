@@ -220,7 +220,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
           </div>
         )}
         {showDropdown && filteredProducts.length === 0 && (
-          <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-4 text-sm text-gray-400 text-center">
+          <div className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-4 text-sm text-gray-600 text-center">
             No hay productos. Crea productos primero desde Inventario.
           </div>
         )}

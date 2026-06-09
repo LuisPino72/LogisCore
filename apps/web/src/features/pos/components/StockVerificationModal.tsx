@@ -222,7 +222,7 @@ export function StockVerificationModal({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm leading-tight truncate">{item.productName}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-600 mt-0.5">
                         {item.soldToday > 0 && `Vendido: ${item.soldToday} ${unitsLabel(item.unit)}`}
                         {item.isLowStock && !item.isZeroStock && <span className="text-warning ml-1">(bajo stock)</span>}
                         {item.isZeroStock && <span className="text-danger ml-1">(agotado)</span>}
@@ -235,11 +235,11 @@ export function StockVerificationModal({
 
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div>
-                      <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Stock registrado</label>
+                      <label className="text-[10px] text-gray-600 font-medium uppercase tracking-wide">Stock registrado</label>
                       <p className="text-sm font-mono font-semibold mt-0.5">{displayStock(item.logicalStock, item.unit)}</p>
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Stock físico</label>
+                      <label className="text-[10px] text-gray-600 font-medium uppercase tracking-wide">Stock físico</label>
                       <Input
                         sanitize="number"
                         decimals={item.isWeighted ? 2 : 0}
@@ -250,7 +250,7 @@ export function StockVerificationModal({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Diferencia</label>
+                      <label className="text-[10px] text-gray-600 font-medium uppercase tracking-wide">Diferencia</label>
                       <p className={`text-sm font-mono font-semibold mt-0.5 ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : ''}`}>
                         {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                       </p>

@@ -166,7 +166,7 @@ export const ProductGrid = memo(function ProductGrid({
                         </button>
                       ))}
                       {filtered.length === 0 && (
-                        <div className="w-full text-center text-sm text-gray-400 py-4">
+                        <div className="w-full text-center text-sm text-gray-600 py-4">
                           No se encontraron categorías
                         </div>
                       )}

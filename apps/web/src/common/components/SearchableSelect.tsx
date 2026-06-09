@@ -159,7 +159,7 @@ export function SearchableSelect({
             }}
           >
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-xs text-gray-400 text-center">{noResultsText}</div>
+              <div className="px-3 py-4 text-xs text-gray-600 text-center">{noResultsText}</div>
             ) : (
               filteredOptions.map((opt, idx) => (
                 <button

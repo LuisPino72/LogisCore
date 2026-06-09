@@ -111,7 +111,7 @@ export function AdminPanelPage() {
     return (
       <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-3">
         <Spinner size="lg" />
-        <p className="text-sm text-gray-400 animate-pulse">Cargando panel de administración...</p>
+        <p className="text-sm text-gray-600 animate-pulse">Cargando panel de administración...</p>
       </div>
     );
   }

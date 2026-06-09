@@ -33,7 +33,7 @@ export function PresentationSelector({
     >
       <div className="space-y-2 pt-2">
         {sorted.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">No hay presentaciones disponibles para este producto.</p>
+          <p className="text-sm text-gray-600 text-center py-4">No hay presentaciones disponibles para este producto.</p>
         ) : sorted.map((pres) => {
           let stockDisplay = '—';
           let hasStock = true;

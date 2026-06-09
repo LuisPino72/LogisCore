@@ -18,7 +18,7 @@ function DiffIndicator({ differenceBs, differenceUsd }: { differenceBs: number |
     return (
       <div className="flex items-center gap-1.5 p-2 rounded-lg bg-gray-50">
         <Minus size={14} className="text-gray-400" />
-        <span className="text-sm text-gray-400">Sin cerrar</span>
+        <span className="text-sm text-gray-600">Sin cerrar</span>
       </div>
     );
   }

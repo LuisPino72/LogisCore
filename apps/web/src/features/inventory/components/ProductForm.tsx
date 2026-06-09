@@ -361,7 +361,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           />
         </div>
       </div>
-      <p className="text-[10px] text-gray-400 -mt-2">JPG, PNG o WebP. Se comprime automáticamente.</p>
+      <p className="text-[10px] text-gray-600 -mt-2">JPG, PNG o WebP. Se comprime automáticamente.</p>
       {imageError && (
         <p className="text-[11px] text-danger -mt-1">{imageError}</p>
       )}
@@ -504,7 +504,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   validation={{ min: 0, max: 9999.99 }}
                   inputClassName="text-sm"
                 />
-                <p className="text-[10px] text-gray-400 mt-0.5">Costo total pagado por el lote de productos.</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">Costo total pagado por el lote de productos.</p>
               </div>
 
               <div className="input-wrapper">
@@ -829,8 +829,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Multiplicador (unidades base) {!pres.id && <span className="text-gray-400">— nuevo</span>}
-                  {pres.id && <span className="text-gray-400">— fijo</span>}
+                  Multiplicador (unidades base) {!pres.id && <span className="text-gray-600">— nuevo</span>}
+                  {pres.id && <span className="text-gray-600">— fijo</span>}
                 </label>
                 <Input
                   sanitize="number"
@@ -1101,7 +1101,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </div>
           </button>
           {!cameraAvailable && (
-            <p className="text-[11px] text-gray-400 text-center pt-1">No se detectó cámara. Selecciona una imagen de la galería.</p>
+            <p className="text-[11px] text-gray-600 text-center pt-1">No se detectó cámara. Selecciona una imagen de la galería.</p>
           )}
         </div>
       </Modal>

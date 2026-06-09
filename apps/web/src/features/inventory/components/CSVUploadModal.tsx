@@ -296,12 +296,12 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
               </div>
               {results.filter((r) => r.status === 'error').slice(0, 5).map((r, i) => (
                 <div key={i} className="text-xs text-gray-600">
-                  <span className="font-mono text-gray-400">Fila {r.rowIndex}:</span>{' '}
+                  <span className="font-mono text-gray-600">Fila {r.rowIndex}:</span>{' '}
                   {r.errors.map((e) => e.message).join(', ')}
                 </div>
               ))}
               {errorCount > 5 && (
-                <p className="text-[10px] text-gray-400">... y {errorCount - 5} errores más</p>
+                <p className="text-[10px] text-gray-600">... y {errorCount - 5} errores más</p>
               )}
             </div>
           )}
@@ -351,7 +351,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                 </tbody>
               </table>
               {parsedRows.length > 5 && (
-                <p className="text-[10px] text-gray-400 text-center mt-2">Mostrando 5 de {parsedRows.length} filas</p>
+                <p className="text-[10px] text-gray-600 text-center mt-2">Mostrando 5 de {parsedRows.length} filas</p>
               )}
             </div>
           )}
@@ -397,7 +397,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
               return (
                 <div key={i} className="border border-gray-200 rounded-xl p-3 sm:p-4 space-y-3 bg-white">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-400">Fila {i + 1}</span>
+                    <span className="text-xs font-medium text-gray-600">Fila {i + 1}</span>
                     <button
                       type="button"
                       onClick={() => deleteEditRow(i)}
@@ -520,7 +520,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
         <div className="flex flex-col items-center gap-4 py-8">
           <Loader2 size={32} className="text-primary animate-spin" />
           <p className="text-sm text-gray-600">Importando productos...</p>
-          <p className="text-xs text-gray-400">Esto puede tomar unos segundos</p>
+          <p className="text-xs text-gray-600">Esto puede tomar unos segundos</p>
         </div>
       )}
 

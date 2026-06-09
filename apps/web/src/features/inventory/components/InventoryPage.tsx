@@ -521,7 +521,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                     validation={{ min: 0, max: 999999 }}
                     inputClassName="text-sm"
                   />
-                  <p className="text-[10px] text-gray-400 mt-0.5">
+                  <p className="text-[10px] text-gray-600 mt-0.5">
                     Costo total de las unidades que entran (para ajustes positivos).
                   </p>
                 </div>
