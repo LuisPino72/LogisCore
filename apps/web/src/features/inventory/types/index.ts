@@ -37,7 +37,7 @@ export interface ProductFormData {
   isTaxable: boolean;
   isSellable: boolean;
   isRawMaterial: boolean;
-  productType: 'unidad' | 'pesable_kg' | 'pesable_lt';
+  productType: 'unidad' | 'pesable_kg' | 'pesable_lt' | 'raw_material';
   productionType?: 'materia_prima';
   unit: string;
   stockInicial: number;
@@ -67,7 +67,7 @@ export interface ActiveLot {
 
 export type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
-export type ProductTypeFilter = 'all' | 'simple' | 'weighted' | 'with_variants';
+export type ProductTypeFilter = 'all' | 'simple' | 'weighted' | 'with_variants' | 'raw_material';
 
 export type TabKey = 'productos' | 'categorias' | 'historial';
 

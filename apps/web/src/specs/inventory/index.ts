@@ -10,6 +10,7 @@ export const ProductTypeEnum = z.enum(['resale', 'materia_prima', 'producto_term
 export type ProductType = z.infer<typeof ProductTypeEnum>;
 
 // PRODUCTION-003 [Paso-1]: Inventario solo permite materia prima y resale. Producto terminado se crea desde Producción.
+// 'raw_material' se usa en el form y se mapea a 'materia_prima' en el servicio.
 export const InventoryProductTypeEnum = z.enum(['resale', 'materia_prima']);
 
 export const ProductSchema = z.object({

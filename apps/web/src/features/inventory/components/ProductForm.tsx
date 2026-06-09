@@ -74,7 +74,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const [creationType, setCreationType] = useState<'simple' | 'weighted' | 'variants' | null>(
+  const [creationType, setCreationType] = useState<'simple' | 'weighted' | 'variants' | 'raw_material' | null>(
     isEditing ? (editProduct?.isWeighted ? 'weighted' : null) : null
   );
 
@@ -135,11 +135,17 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     }
   }, [showImagePicker]);
 
-  const creationSteps = [
-    { id: 'type', label: 'Tipo' },
-    { id: 'basic', label: 'Datos básicos' },
-    { id: 'inventory', label: 'Inventario y venta' },
-  ];
+  const creationSteps = creationType === 'raw_material'
+    ? [
+        { id: 'type', label: 'Tipo' },
+        { id: 'basic', label: 'Datos básicos' },
+        { id: 'inventory', label: 'Inventario' },
+      ]
+    : [
+        { id: 'type', label: 'Tipo' },
+        { id: 'basic', label: 'Datos básicos' },
+        { id: 'inventory', label: 'Inventario y venta' },
+      ];
 
   const editBasicSteps = [
     { id: 'basic', label: 'Datos básicos' },
@@ -316,6 +322,29 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <span className="block text-xs text-gray-500 mt-0.5">Múltiples presentaciones: caja, pack, sabores.</span>
         </div>
       </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          setCreationType('raw_material');
+          setShowPresentations(false);
+          setField('productType', 'raw_material');
+          setCurrentStep(1);
+        }}
+        className="group relative flex items-start gap-4 p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-amber-400 hover:bg-amber-50 hover:shadow-sm transition-all duration-200 text-left"
+      >
+        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 group-hover:bg-amber-15 transition-colors">
+          <svg width="20" height="20" className="text-amber-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
+            <path d="M8.5 2h7"/>
+            <path d="M7 16.5h10"/>
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <span className="block text-sm font-semibold text-gray-800 group-hover:text-amber-600 transition-colors">Materia prima</span>
+          <span className="block text-xs text-gray-500 mt-0.5">Ingrediente para producción. No se vende.</span>
+        </div>
+      </button>
     </div>
   );
 
@@ -449,6 +478,140 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
   const renderInventoryStep = () => {
     const isVariants = creationType === 'variants';
+    const isRawMaterial = creationType === 'raw_material';
+
+    // Formulario simplificado para materia prima
+    if (isRawMaterial) {
+      return (
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center">
+              <svg width="14" height="14" className="text-amber-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
+                <path d="M8.5 2h7"/>
+                <path d="M7 16.5h10"/>
+              </svg>
+            </div>
+            <h3 className="text-xs font-title font-semibold text-amber-700 uppercase tracking-wide">Inventario - Materia Prima</h3>
+            <div className="flex-1 h-px bg-amber-200" />
+          </div>
+
+          <div className="input-wrapper">
+            <label className="input-label">Unidad de medida</label>
+            <Select
+              className="max-w-xs"
+              value={formData.unit}
+              onChange={(e) => {
+                const unit = e.target.value;
+                setField('unit', unit);
+                const isWeighted = unit === 'kg' || unit === 'lt';
+                setField('isWeighted', isWeighted);
+                setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : 'unidad');
+              }}
+            >
+              <option value="kg">Kilogramos (Kg)</option>
+              <option value="lt">Litros (Lt)</option>
+              <option value="unidad">Unidad</option>
+            </Select>
+            <p className="text-[10px] text-gray-600 mt-0.5">
+              {formData.unit === 'kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
+              {formData.unit === 'lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
+              {formData.unit === 'unidad' && 'Se guarda como unidades enteras'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="input-wrapper">
+              <label className="input-label">
+                Costo por unidad (requerido)
+                {formData.unit === 'kg' && ' ($/Kg)'}
+                {formData.unit === 'lt' && ' ($/Lt)'}
+                {formData.unit === 'unidad' && ' ($/unidad)'}
+              </label>
+              <Input
+                sanitize="currency"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.costPrice > 0 ? String(formData.costPrice) : ''}
+                onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                error={errors.costPrice}
+                validation={{ required: true, min: 0.01, max: 9999.99 }}
+                inputClassName="text-sm"
+              />
+              <p className="text-[10px] text-gray-600 mt-0.5">
+                Costo total pagado por la unidad de medida
+              </p>
+            </div>
+
+            <div className="input-wrapper">
+              <label className="input-label">
+                Stock inicial (requerido)
+                {formData.unit === 'kg' && ' (Kg)'}
+                {formData.unit === 'lt' && ' (Lt)'}
+              </label>
+              <Input
+                sanitize="number"
+                decimals={formData.unit === 'unidad' ? 0 : 2}
+                step={formData.unit === 'unidad' ? '1' : '0.01'}
+                placeholder={formData.unit === 'unidad' ? 'Ej: 100' : 'Ej: 10.5'}
+                value={formData.stockInicial || ''}
+                onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
+                error={errors.stockInicial}
+                validation={{ required: true, min: 0.01 }}
+                inputClassName="text-sm"
+              />
+              <p className="text-[10px] text-gray-600 mt-0.5">
+                {formData.unit === 'kg' && 'Cantidad inicial en kilogramos'}
+                {formData.unit === 'lt' && 'Cantidad inicial en litros'}
+                {formData.unit === 'unidad' && 'Cantidad inicial en unidades'}
+              </p>
+            </div>
+          </div>
+
+          <div className="input-wrapper">
+            <label className="input-label">
+              Stock mínimo (alerta)
+              {formData.unit === 'kg' && ' (Kg)'}
+              {formData.unit === 'lt' && ' (Lt)'}
+            </label>
+            <Input
+              sanitize="number"
+              decimals={0}
+              placeholder="0"
+              value={formData.stockMin || ''}
+              onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+              validation={{ min: 0, max: 999 }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <svg width="14" height="14" className="text-amber-600 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" x2="12" y1="8" y2="12"/>
+              <line x1="12" x2="12.01" y1="16" y2="16"/>
+            </svg>
+            <div className="flex-1">
+              <p className="text-xs font-medium text-amber-800">Materia prima para producción</p>
+              <p className="text-[10px] text-amber-600 mt-0.5">Este producto no aparece en el POS. Se usa como ingrediente en recetas de producción.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <svg width="14" height="14" className="text-blue-600 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <div className="flex-1">
+              <p className="text-xs font-medium text-blue-800">Características automáticas</p>
+              <ul className="text-[10px] text-blue-600 mt-0.5 space-y-0.5">
+                <li>• No disponible para venta (POS)</li>
+                <li>• Sin impuestos (IVA)</li>
+                <li>• Costo requerido para cálculos FIFO</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-4 animate-fade-in">
@@ -561,29 +724,6 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   checked={formData.isSellable}
                   onChange={(e) => setField('isSellable', e.target.checked)}
                 />
-                <Checkbox
-                  label="¿Es materia prima?"
-                  checked={formData.isRawMaterial}
-                  onChange={(e) => setField('isRawMaterial', e.target.checked)}
-                  disabled={isEditing}
-                />
-                {formData.isRawMaterial && (
-                  <div className="ml-6 mt-1">
-                    <Select
-                      label="Rol en producción"
-                      value={formData.productionType ?? ''}
-                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima')}
-                      disabled={isEditing}
-                      error={errors.productionType}
-                    >
-                      <option value="">Selecciona...</option>
-                      <option value="materia_prima">Materia prima (ingrediente)</option>
-                    </Select>
-                    {isEditing && (
-                      <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </>
@@ -722,29 +862,6 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   checked={formData.isSellable}
                   onChange={(e) => setField('isSellable', e.target.checked)}
                 />
-                <Checkbox
-                  label="¿Es materia prima?"
-                  checked={formData.isRawMaterial}
-                  onChange={(e) => setField('isRawMaterial', e.target.checked)}
-                  disabled={isEditing}
-                />
-                {formData.isRawMaterial && (
-                  <div className="ml-6 mt-1">
-                    <Select
-                      label="Rol en producción"
-                      value={formData.productionType ?? ''}
-                      onChange={(e) => setField('productionType', e.target.value as 'materia_prima')}
-                      disabled={isEditing}
-                      error={errors.productionType}
-                    >
-                      <option value="">Selecciona...</option>
-                      <option value="materia_prima">Materia prima (ingrediente)</option>
-                    </Select>
-                    {isEditing && (
-                      <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </>
@@ -885,29 +1002,6 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             checked={formData.isSellable}
             onChange={(e) => setField('isSellable', e.target.checked)}
           />
-          <Checkbox
-            label="¿Es materia prima?"
-            checked={formData.isRawMaterial}
-            onChange={(e) => setField('isRawMaterial', e.target.checked)}
-            disabled={isEditing}
-          />
-          {formData.isRawMaterial && (
-            <div className="ml-6 mt-1">
-              <Select
-                label="Rol en producción"
-                value={formData.productionType ?? ''}
-                onChange={(e) => setField('productionType', e.target.value as 'materia_prima')}
-                disabled={isEditing}
-                error={errors.productionType}
-              >
-                <option value="">Selecciona...</option>
-                <option value="materia_prima">Materia prima (ingrediente)</option>
-              </Select>
-              {isEditing && (
-                <p className="text-[10px] text-text-secondary mt-1 italic">Fijo: no se puede cambiar después de crear el producto</p>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

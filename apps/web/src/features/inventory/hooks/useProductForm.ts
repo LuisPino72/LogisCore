@@ -22,7 +22,7 @@ const generateAutoSku = (name: string, existingSkus: string[]) => {
 interface UseProductFormOptions {
   initialValues?: Partial<ProductFormData>;
   editProductId?: string;
-  creationType?: 'simple' | 'weighted' | 'variants' | null;
+  creationType?: 'simple' | 'weighted' | 'variants' | 'raw_material' | null;
   onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }) => Promise<boolean>;
 }
 
@@ -81,6 +81,14 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       if (key === 'productType') {
         next.isWeighted = value === 'pesable_kg' || value === 'pesable_lt';
         next.unit = value === 'pesable_kg' ? 'kg' : value === 'pesable_lt' ? 'lt' : 'unidad';
+      }
+
+      // Materia prima: auto-set isSellable e isTaxable a false
+      if (key === 'productType' && value === 'raw_material') {
+        next.isSellable = false;
+        next.isTaxable = false;
+        next.isWeighted = false;
+        next.unit = 'unidad';
       }
 
       if (key === 'isRawMaterial') {
@@ -230,6 +238,22 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       }
     }
 
+    // Validación: materia prima requiere costo
+    if (options.creationType === 'raw_material' && (!formData.costPrice || formData.costPrice <= 0)) {
+      const errs = { costPrice: 'El costo es requerido para materia prima. Ingresa el costo por unidad de medida.' };
+      setErrors(errs);
+      setIsSubmitting(false);
+      return { success: false, errors: errs };
+    }
+
+    // Validación: materia prima requiere stock inicial
+    if (options.creationType === 'raw_material' && (!formData.stockInicial || formData.stockInicial <= 0)) {
+      const errs = { stockInicial: 'El stock inicial es requerido para materia prima. Ingresa la cantidad inicial.' };
+      setErrors(errs);
+      setIsSubmitting(false);
+      return { success: false, errors: errs };
+    }
+
     if (formData.sku.trim()) {
       const existingProducts = useInventoryStore.getState().products;
       const skuExists = existingProducts.some(
@@ -301,7 +325,12 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     const submitData: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared'; productType?: 'resale' | 'materia_prima' } = {
       ...parsed.data,
       stockInicial: isEditing ? 0 : formData.stockInicial,
-      productType: formData.isRawMaterial ? 'materia_prima' : 'resale',
+      // Mapear raw_material a materia_prima para la BD
+      productType: options.creationType === 'raw_material' ? 'materia_prima' : 
+                   formData.isRawMaterial ? 'materia_prima' : 'resale',
+      // Materia prima no es vendible ni taxable
+      isSellable: options.creationType === 'raw_material' ? false : parsed.data.isSellable,
+      isTaxable: options.creationType === 'raw_material' ? false : parsed.data.isTaxable,
     };
 
     if (presentations.length > 0) {

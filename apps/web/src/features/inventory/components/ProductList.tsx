@@ -67,12 +67,13 @@ function getStockVariant(stock: number, product: { stockMin?: number; isWeighted
   return 'success';
 }
 
-function applyProductTypeFilter(product: { isWeighted: boolean; id: string }, filter: ProductTypeFilter, productIdsWithVariants: Set<string>): boolean {
+function applyProductTypeFilter(product: { isWeighted: boolean; id: string; productType?: string }, filter: ProductTypeFilter, productIdsWithVariants: Set<string>): boolean {
   switch (filter) {
     case 'all': return true;
-    case 'simple': return !product.isWeighted && !productIdsWithVariants.has(product.id);
-    case 'weighted': return product.isWeighted;
+    case 'simple': return !product.isWeighted && !productIdsWithVariants.has(product.id) && product.productType !== 'materia_prima';
+    case 'weighted': return product.isWeighted && product.productType !== 'materia_prima';
     case 'with_variants': return productIdsWithVariants.has(product.id);
+    case 'raw_material': return product.productType === 'materia_prima';
   }
 }
 
@@ -156,6 +157,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
     { value: 'simple', label: 'Simples' },
     { value: 'weighted', label: 'Pesables' },
     { value: 'with_variants', label: 'Con variantes' },
+    { value: 'raw_material', label: 'Materia prima' },
   ];
 
   const fuzzyResults = useProductFuzzySearch(products, searchQuery);
@@ -208,6 +210,11 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   Pesable
                 </span>
               )}
+              {product.productType === 'materia_prima' && (
+                <span className="hidden md:inline-flex text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  Materia prima
+                </span>
+              )}
             </div>
             <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
               {productIdsWithVariants.has(product.id) && (
@@ -231,6 +238,13 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                 <div className="flex md:hidden mt-1">
                   <span className="text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     Pesable
+                  </span>
+                </div>
+              )}
+              {product.productType === 'materia_prima' && (
+                <div className="flex md:hidden mt-1">
+                  <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    Materia prima
                   </span>
                 </div>
               )}
