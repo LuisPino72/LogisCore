@@ -50,12 +50,18 @@ export function SearchableSelect({
   const selectedOption = options.find((o) => o.value === value);
 
   const fuse = useMemo(
-    () => new Fuse(options, {
-      keys: ['label'],
-      threshold: 0.4,
-      ignoreLocation: true,
-      includeScore: false,
-    }),
+    () => {
+      const normalizedOptions = options.map(opt => ({
+        ...opt,
+        normalizedLabel: normalizeText(opt.label)
+      }));
+      return new Fuse(normalizedOptions, {
+        keys: ['normalizedLabel', 'label'],
+        threshold: 0.3,
+        ignoreLocation: true,
+        includeScore: false,
+      });
+    },
     [options],
   );
 
