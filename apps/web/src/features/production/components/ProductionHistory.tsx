@@ -63,7 +63,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-gray-700 mb-2">
-        {orders.length} orden(es) en total
+        {orders.length} orden(es) registrada(s)
       </h3>
 
       {paginatedOrders.map((order) => {
@@ -72,11 +72,11 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
         const isCancelling = cancellingOrderId === order.id;
 
         return (
-          <Card key={order.id} className="p-3">
-            <div className="flex items-start justify-between gap-2">
+          <Card key={order.id} className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium text-sm wrap-break-word">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <h4 className="font-semibold text-sm wrap-break-word">
                     {recipeMap.get(order.recipeId) || 'Receta eliminada'}
                   </h4>
                   <Badge variant={statusConfig.variant} className="shrink-0">
@@ -86,21 +86,21 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                     </span>
                   </Badge>
                 </div>
-                <div className="text-xs text-gray-500 space-y-0.5">
-                  <p>
-                    Lotes: {order.batchCount} · Total: {order.quantityTarget} unidades
-                  </p>
-                  <p>{formatDate(order.createdAt)}</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                  <span>{order.batchCount} lote(s)</span>
+                  <span>·</span>
+                  <span>{order.quantityTarget} unidades</span>
+                  <span>·</span>
+                  <span>{formatDate(order.createdAt)}</span>
                 </div>
               </div>
-              {/* PLAN-115 (CODE-MIN-7): boton cancelar visible solo si status='confirmed' */}
               {canCancel && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onCancel(order.id)}
                   disabled={isCancelling}
-                  className="text-danger hover:bg-danger/10 shrink-0"
+                  className="text-danger hover:bg-danger/10 shrink-0 self-start min-h-[44px]"
                   aria-label="Cancelar orden"
                 >
                   <X size={14} className="mr-1" />

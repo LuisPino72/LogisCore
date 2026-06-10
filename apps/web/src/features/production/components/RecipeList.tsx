@@ -90,7 +90,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                       variant="primary"
                       size="sm"
                       onClick={() => onProduce(recipe)}
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-1 min-h-[44px]"
                     >
                       <Utensils size={14} />
                       <span className="hidden sm:inline">Producir</span>
@@ -100,7 +100,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                     variant="ghost"
                     size="sm"
                     onClick={() => onEdit(recipe)}
-                    className="p-2"
+                    className="p-2 min-h-[44px] min-w-[44px]"
                   >
                     <Edit3 size={16} />
                   </Button>
@@ -108,7 +108,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                     variant="ghost"
                     size="sm"
                     onClick={() => setConfirmDelete(recipe)}
-                    className="p-2 text-danger hover:text-danger"
+                    className="p-2 text-danger hover:text-danger min-h-[44px] min-w-[44px]"
                   >
                     <Trash2 size={16} />
                   </Button>
@@ -123,15 +123,15 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
       {confirmDelete && (
         <Modal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Eliminar Receta">
           <div className="p-4">
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-4 wrap-break-word">
               ¿Estás seguro de eliminar la receta <strong>{confirmDelete.name}</strong>?
               Esta acción no se puede deshacer.
             </p>
             <div className="flex gap-2 justify-end">
-              <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
+              <Button variant="ghost" onClick={() => setConfirmDelete(null)} className="min-h-[44px]">
                 Cancelar
               </Button>
-              <Button variant="danger" onClick={handleDelete}>
+              <Button variant="danger" onClick={handleDelete} className="min-h-[44px]">
                 Eliminar
               </Button>
             </div>

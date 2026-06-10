@@ -138,10 +138,10 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
             {/* Recipe Info */}
             <Card className="p-3 bg-primary/5 border-primary/20">
               <div className="flex items-center gap-2">
-                <Utensils size={18} className="text-primary" />
-                <div>
+                <Utensils size={18} className="text-primary shrink-0" />
+                <div className="min-w-0">
                   <h3 className="font-semibold text-sm wrap-break-word">{recipe.name}</h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 wrap-break-word">
                     Rendimiento por lote: {recipe.yieldQuantity} {recipe.yieldUnit}
                     {recipe.wastePct > 0 && (
                       <span className="ml-1 text-warning">· Merma: {recipe.wastePct}%</span>
@@ -161,9 +161,10 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
               max={1000}
             />
 
-            {/* Total Production */}
-            <div className="text-sm text-gray-600">
-              Producirás: <strong>{recipe.yieldQuantity * batchCount} {recipe.yieldUnit}</strong>
+            {/* Total Production — more prominent */}
+            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/10">
+              <span className="text-sm text-gray-600">Total a producir:</span>
+              <span className="font-bold text-base text-primary">{recipe.yieldQuantity * batchCount} {recipe.yieldUnit}</span>
             </div>
 
             {/* Ingredient Availability */}
@@ -178,13 +179,13 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
                   {ingredientAvailability.map((item) => (
                     <div
                       key={item.productId}
-                      className={`flex items-center justify-between min-w-0 p-2 rounded-lg text-sm ${
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-2.5 rounded-lg text-sm ${
                         item.sufficient
                           ? 'bg-success/5 border border-success/20'
                           : 'bg-danger/5 border border-danger/20'
                       }`}
                     >
-                      <span className="truncate flex-1 wrap-break-word">{item.productName}</span>
+                      <span className="wrap-break-word font-medium">{item.productName}</span>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`font-mono text-xs ${item.sufficient ? 'text-success' : 'text-danger'}`}>
                           {item.needed} / {item.available} {item.unit}
@@ -203,9 +204,9 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
 
             {/* Cost Estimate */}
             {(estimatedCost > 0 || costWarnings.length > 0) && (
-              <div className="flex items-center justify-between flex-wrap p-2 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <span className="text-sm text-gray-600">Costo estimado:</span>
-                <span className="font-semibold text-sm">${estimatedCost.toFixed(2)}</span>
+                <span className="font-bold text-base text-gray-800">${estimatedCost.toFixed(2)}</span>
               </div>
             )}
 
@@ -214,24 +215,24 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
               <Alert variant="warning" icon={<AlertTriangle size={16} />} title="Costo estimado impreciso">
                 <ul className="list-disc list-inside text-sm space-y-0.5">
                   {costWarnings.map((msg) => (
-                    <li key={msg}>{msg}</li>
+                    <li key={msg} className="wrap-break-word">{msg}</li>
                   ))}
                 </ul>
-                <p className="mt-1 text-xs">El costo puede ser incorrecto. Registra el costo de los ingredientes faltantes para mejorar la precisión.</p>
+                <p className="mt-1 text-xs wrap-break-word">El costo puede ser incorrecto. Registra el costo de los ingredientes faltantes para mejorar la precisión.</p>
               </Alert>
             )}
 
         {/* Warning */}
         {!allIngredientsAvailable && !isChecking && ingredientAvailability.length > 0 && (
           <Alert variant="warning" icon={<AlertTriangle size={16} />}>
-            No hay suficiente stock de algunos ingredientes. Ajusta la cantidad de lotes o repone inventario.
+            <span className="wrap-break-word">No hay suficiente stock de algunos ingredientes. Ajusta la cantidad de lotes o repone inventario.</span>
           </Alert>
         )}
 
         {/* Error */}
         {error && (
           <Alert variant="error">
-            {error}
+            <span className="wrap-break-word">{error}</span>
           </Alert>
         )}
           </>

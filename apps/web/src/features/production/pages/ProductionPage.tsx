@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ChefHat, Plus, History, Utensils, Package } from 'lucide-react';
-import { Button, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding } from '../../../common/components';
+import { Button, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding, Modal } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { useProduction } from '../hooks/useProduction';
 import { RecipeList } from '../components/RecipeList';
@@ -160,7 +160,7 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
                           <div>
                             <h3 className="font-semibold text-sm wrap-break-word">{recipe.name}</h3>
                               <p className="text-xs text-gray-500 wrap-break-word">
-                              Yield: {recipe.yieldQuantity} {recipe.yieldUnit}
+                              Rendimiento: {recipe.yieldQuantity} {recipe.yieldUnit}
                             </p>
                           </div>
                           {recipe.wastePct > 0 && (
@@ -242,15 +242,13 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
         onComplete={() => {}}
       />
 
-      {/* PLAN-115 (CODE-MIN-7): confirmacion de cancelacion de orden */}
+      {/* Confirmar cancelación de orden */}
       {cancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="p-5 max-w-sm w-full">
-            <h3 className="font-semibold text-base mb-2">Cancelar orden de producción</h3>
-            <p className="text-sm text-gray-600 mb-4 wrap-break-word">
-              Vas a cancelar la orden de <strong>{cancelConfirm.recipeName}</strong>.
-              El stock de ingredientes se revertirá automáticamente.
-            </p>
+        <Modal
+          isOpen={!!cancelConfirm}
+          onClose={() => setCancelConfirm(null)}
+          title="Cancelar orden"
+          footer={
             <div className="flex gap-2 justify-end">
               <Button
                 variant="ghost"
@@ -269,8 +267,13 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
                 {cancellingOrderId === cancelConfirm.orderId ? 'Cancelando...' : 'Sí, cancelar'}
               </Button>
             </div>
-          </Card>
-        </div>
+          }
+        >
+          <p className="text-sm text-gray-600 wrap-break-word">
+            Vas a cancelar la orden de <strong>{cancelConfirm.recipeName}</strong>.
+            El stock de ingredientes se revertirá automáticamente.
+          </p>
+        </Modal>
       )}
     </div>
   );
