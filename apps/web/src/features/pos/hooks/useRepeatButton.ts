@@ -24,6 +24,7 @@ export function useRepeatButton({ onAction, initialDelay = 500 }: UseRepeatButto
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    wasHoldingRef.current = false;
     setIsRepeating(null);
   }, []);
 

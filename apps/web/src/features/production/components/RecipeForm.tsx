@@ -180,6 +180,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   // EDIT MODE — Simplified: Step 1 (name + ingredients), Step 2 (waste + notes)
   // ═══════════════════════════════════════════════════════════
   if (isEdit) {
+    const maxSteps = 2;
     return (
       <Modal
         isOpen={true}
@@ -199,7 +200,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               <Button variant="ghost" onClick={onClose}>
                 Cancelar
               </Button>
-              {currentStep < totalSteps ? (
+              {currentStep < maxSteps ? (
                 <Button variant="primary" onClick={handleNext} className="flex items-center gap-1">
                   Siguiente
                   <ArrowRight size={14} />
@@ -219,7 +220,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           </div>
         }
       >
-        <ProgressBar currentStep={currentStep} totalSteps={totalSteps} isEdit={true} />
+        <ProgressBar currentStep={currentStep} totalSteps={maxSteps} isEdit={true} />
 
         <div className="space-y-4">
           {/* ════════ PASO 1: Nombre + Ingredientes ════════ */}

@@ -86,7 +86,14 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         <div className="flex flex-col flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-800 wrap-break-word">{item.name}</p>
           {item.presentationName && (
-            <span className="text-[11px] text-text-muted">{item.presentationName}</span>
+            <span className="text-[11px] text-text-muted">
+              {item.presentationName}
+              {item.unitMultiplier > 1 && (
+                <span className="ml-1 text-text-secondary font-medium">
+                  × {item.unitMultiplier} u
+                </span>
+              )}
+            </span>
           )}
         </div>
         <div className="text-right shrink-0">
