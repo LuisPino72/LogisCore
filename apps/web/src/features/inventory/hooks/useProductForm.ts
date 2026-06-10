@@ -225,7 +225,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       return { success: false, errors: fieldErrors };
     }
 
-    if (validationData.priceUsd > 0 && validationData.priceUsd < 0.05) {
+    if (options.creationType !== 'raw_material' && validationData.priceUsd > 0 && validationData.priceUsd < 0.05) {
       const errs = { priceUsd: 'El precio parece muy bajo. ¿Estás seguro?' };
       setErrors(errs);
       setIsSubmitting(false);

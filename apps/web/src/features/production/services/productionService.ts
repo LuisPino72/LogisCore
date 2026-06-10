@@ -32,9 +32,9 @@ import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProd
  * a la unidad de almacenamiento del producto (gramos para kg, ml para lt, unidades para unidad).
  */
 export function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit: string): number {
-  if (productUnit === 'kg' && recipeUnit === 'g') return qty;
+  if (productUnit === 'kg' && recipeUnit === 'g') return qty / 1000;
   if (productUnit === 'kg' && recipeUnit === 'kg') return qty * 1000;
-  if (productUnit === 'lt' && recipeUnit === 'ml') return qty;
+  if (productUnit === 'lt' && recipeUnit === 'ml') return qty / 1000;
   if (productUnit === 'lt' && recipeUnit === 'lt') return qty * 1000;
   if (productUnit === 'unidad' && recipeUnit === 'unidad') return qty;
   if (productUnit === 'gr' && recipeUnit === 'g') return qty;
@@ -469,8 +469,9 @@ export const productionService = {
       };
       return success(toRecipe(finalRecipe as unknown as Record<string, unknown>));
     } catch (err) {
-      logger.error(PRODUCTION_MODULE, 'Error en createRecipe:', err);
-      return failure(new AppError(ProductionErrors.RECIPE_CREATE_FAILED, 'Error al crear la receta.'));
+      console.error('[Production] Error en createRecipe:', err);
+      const msg = err instanceof Error ? err.message : 'Error al crear la receta.';
+      return failure(new AppError(ProductionErrors.RECIPE_CREATE_FAILED, msg));
     }
   },
 

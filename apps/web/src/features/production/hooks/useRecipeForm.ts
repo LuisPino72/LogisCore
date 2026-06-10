@@ -109,9 +109,6 @@ export function useRecipeForm() {
 
     // PRODUCTION-003 [Paso-2]: productId puede ser vacío (auto-crear) o un UUID
     const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
-    if (!isNewProduct && !form.productId) {
-      newErrors.productId = 'Selecciona un producto terminado o crea uno nuevo';
-    }
     // Si es nuevo producto, validar campos
     if (isNewProduct) {
       if (!form.newProductName.trim()) newErrors.newProductName = 'Nombre del producto requerido';

@@ -57,13 +57,19 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
 
   createRecipe: async (tenantId, userId, input) => {
     set({ loading: true, error: null });
-    const result = await productionService.createRecipe(tenantId, userId, input);
-    if (result.ok) {
-      set((s) => ({ recipes: [result.data, ...s.recipes], loading: false }));
-      return result.data;
+    try {
+      const result = await productionService.createRecipe(tenantId, userId, input);
+      if (result.ok) {
+        set((s) => ({ recipes: [result.data, ...s.recipes], loading: false }));
+        return result.data;
+      }
+      set({ loading: false, error: result.error });
+      return null;
+    } catch (err) {
+      console.error('[ProductionStore] createRecipe threw:', err);
+      set({ loading: false, error: null });
+      return null;
     }
-    set({ loading: false, error: result.error });
-    return null;
   },
 
   updateRecipe: async (id, input, tenantId) => {

@@ -17,12 +17,13 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const {
     form, errors, warnings,
     updateField, addLine, updateLine, removeLine,
-    validate, toInput,
+    toInput,
     getAvailableIngredients, getAvailableProducts,
     getExpandPreview, categories,
   } = useRecipeForm();
 
   const { createRecipe, updateRecipe, getRecipeWithLines } = useProductionStore();
+  const storeError = useProductionStore((s) => s.error);
   const { addToast } = useToastStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(!!recipe);
@@ -97,7 +98,10 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const hasSubRecipes = previewLines.some((l) => l.isSubRecipe);
 
   const handleSubmit = async () => {
-    if (!(await validate()) || !tenantId || !userId) return;
+    if (!tenantId || !userId) {
+      addToast({ type: 'error', message: 'Sesión no disponible. Recarga la página.' });
+      return;
+    }
 
     const input = await toInput();
     if (!input) return;
@@ -110,7 +114,8 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           addToast({ type: 'success', message: 'Receta actualizada.' });
           onClose();
         } else {
-          addToast({ type: 'error', message: 'Error al actualizar la receta. Verifica tu conexión e intenta de nuevo.' });
+          const errMsg = storeError?.message || 'Error al actualizar la receta. Verifica tu conexión e intenta de nuevo.';
+          addToast({ type: 'error', message: errMsg });
         }
       } else {
         const result = await createRecipe(tenantId, userId, input);
@@ -118,7 +123,8 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           addToast({ type: 'success', message: 'Receta creada.' });
           onClose();
         } else {
-          addToast({ type: 'error', message: 'Error al crear la receta. Verifica tu conexión e intenta de nuevo.' });
+          const errMsg = storeError?.message || 'Error al crear la receta. Verifica tu conexión e intenta de nuevo.';
+          addToast({ type: 'error', message: errMsg });
         }
       }
     } finally {
@@ -196,7 +202,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 error={errors.newProductName}
                 validation={{ required: true, maxLength: 25 }}
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input
                   label="SKU"
                   value={form.newProductSku}
@@ -254,7 +260,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Modo</label>
               <div className="flex gap-2">
@@ -288,7 +294,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Cantidad producida"
               type="number"
@@ -350,7 +356,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                           <p className="text-xs text-danger mt-1">{errors[`line_${index}_product`]}</p>
                         )}
                       </div>
-                    <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                       <Input
                         type="number"
                         value={line.quantity}

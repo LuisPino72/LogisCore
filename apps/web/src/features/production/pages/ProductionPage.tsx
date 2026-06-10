@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChefHat, Plus, History, Utensils, Package } from 'lucide-react';
 import { Button, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding } from '../../../common/components';
+import { useToastStore } from '../../../stores/toastStore';
 import { useProduction } from '../hooks/useProduction';
 import { RecipeList } from '../components/RecipeList';
 import { RecipeForm } from '../components/RecipeForm';
@@ -20,6 +21,7 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
     userId,
     cancelOrder,
   } = useProduction(tenantId);
+  const { addToast } = useToastStore();
 
   const [showRecipeForm, setShowRecipeForm] = useState(false);
   const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
@@ -64,7 +66,10 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
   // Solo orders en 'confirmed' son cancelables (createOrder las crea asi y
   // cancelOrder rechaza cualquier otro status con ORDER_INVALID_STATUS).
   const handleCancelOrder = async (orderId: string) => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      addToast({ type: 'error', message: 'Sesión no disponible.' });
+      return;
+    }
     setCancellingOrderId(orderId);
     try {
       const success = await cancelOrder(orderId, tenantId);
@@ -102,6 +107,24 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
             <span className="hidden sm:inline">Nueva Receta</span>
           </Button>
         )}
+      </div>
+
+      {/* Desktop tabs */}
+      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm mb-4">
+        {bottomNavItems.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={tab.onClick}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === tab.id
+                ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Content */}

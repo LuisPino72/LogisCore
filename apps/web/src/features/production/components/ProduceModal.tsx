@@ -178,7 +178,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
                   {ingredientAvailability.map((item) => (
                     <div
                       key={item.productId}
-                      className={`flex items-center justify-between p-2 rounded-lg text-sm ${
+                      className={`flex items-center justify-between min-w-0 p-2 rounded-lg text-sm ${
                         item.sufficient
                           ? 'bg-success/5 border border-success/20'
                           : 'bg-danger/5 border border-danger/20'
@@ -203,7 +203,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
 
             {/* Cost Estimate */}
             {(estimatedCost > 0 || costWarnings.length > 0) && (
-              <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between flex-wrap p-2 bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-600">Costo estimado:</span>
                 <span className="font-semibold text-sm">${estimatedCost.toFixed(2)}</span>
               </div>

@@ -23,7 +23,10 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
   );
 
   const handleDelete = async () => {
-    if (!confirmDelete || !tenantId) return;
+    if (!confirmDelete || !tenantId) {
+      if (!tenantId) addToast({ type: 'error', message: 'Sesión no disponible.' });
+      return;
+    }
     const success = await deleteRecipe(confirmDelete.id, tenantId);
     if (success) {
       addToast({ type: 'success', message: 'Receta eliminada.' });
@@ -60,8 +63,8 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
       ) : (
         <div className="space-y-2">
           {filteredRecipes.map((recipe) => (
-            <Card key={recipe.id} className="p-4">
-              <div className="flex items-start justify-between gap-3">
+            <Card key={recipe.id} className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-sm truncate">{recipe.name}</h3>
@@ -81,7 +84,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 sm:shrink-0">
                   {recipe.mode === 'batch' && (
                     <Button
                       variant="primary"
