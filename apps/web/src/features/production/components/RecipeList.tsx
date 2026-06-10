@@ -84,7 +84,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1 sm:shrink-0">
+                <div className="flex items-center gap-1 justify-center sm:justify-end sm:shrink-0">
                   {recipe.mode === 'batch' && (
                     <Button
                       variant="primary"
