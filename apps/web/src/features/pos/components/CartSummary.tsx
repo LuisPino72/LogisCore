@@ -174,7 +174,7 @@ export function CartSummary({
               }`}
             >
               <DollarSign size={12} className="inline mr-1" />
-              $
+             Dólares
             </button>
           </div>
           <div className="flex gap-2">
