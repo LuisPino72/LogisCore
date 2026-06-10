@@ -1,5 +1,5 @@
 import { Card, Spinner } from '@/common/components';
-import { ChefHat, Package, AlertTriangle, TrendingUp, Hash, DollarSign } from 'lucide-react';
+import { ChefHat, Package, AlertTriangle, TrendingUp, Hash, DollarSign, ChevronRight } from 'lucide-react';
 import type { ProductionSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -11,8 +11,8 @@ interface ProductionReportProps {
 
 interface KpiCardProps {
   label: string;
-  value: string;
-  subtitle?: string;
+  value: React.ReactNode;
+  subtitle?: React.ReactNode;
   icon: React.ReactNode;
   gradient: 'blue' | 'green' | 'amber' | 'red';
   onClick?: () => void;
@@ -40,17 +40,21 @@ function KpiCard({ label, value, subtitle, icon, gradient, onClick }: KpiCardPro
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-          <p className="text-lg sm:text-xl font-bold text-gray-900 mt-0.5 truncate">{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 mt-0.5 truncate">{subtitle}</p>}
-        </div>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconBgs[gradient]}`}>
-          {icon}
-        </div>
+      <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1 sm:p-1.5 rounded-lg ${iconBgs[gradient]}`}>
+        {icon}
       </div>
+      <div className="space-y-0.5 sm:space-y-1 pr-7 sm:pr-9">
+        <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wide leading-tight">{label}</p>
+        <div className="text-base sm:text-lg font-bold text-gray-900 leading-tight truncate">{value}</div>
+        {subtitle && <div className="text-[10px] sm:text-xs text-gray-500 leading-tight truncate">{subtitle}</div>}
+      </div>
+      {onClick && (
+        <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 text-gray-600/40">
+          <ChevronRight size={14} />
+        </div>
+      )}
     </Card>
   );
 }
@@ -76,46 +80,46 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
   }
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+    <div className="space-y-3 sm:space-y-4">
+      <h3 className="text-xs sm:text-sm font-semibold text-gray-700 flex items-center gap-2">
         <ChefHat size={16} className="text-primary" />
         Producción
       </h3>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 min-[380px]:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
         <KpiCard
           label="Recetas Activas"
           value={String(data.activeRecipes)}
           subtitle={`${data.totalRecipes} total`}
-          icon={<ChefHat size={18} />}
+          icon={<ChefHat size={14} className="sm:w-4 sm:h-4" />}
           gradient="blue"
           onClick={() => onKpiClick?.('produccionRecetas')}
         />
         <KpiCard
-          label="Órdenes (Período)"
+          label="Órdenes"
           value={String(data.totalOrders)}
           subtitle={`${data.completedOrders} completadas`}
-          icon={<Package size={18} />}
+          icon={<Package size={14} className="sm:w-4 sm:h-4" />}
           gradient="green"
           onClick={() => onKpiClick?.('produccionOrdenes')}
         />
         <KpiCard
-          label="Unidades Producidas"
+          label="Unidades"
           value={String(data.totalQuantityProduced)}
-          icon={<Hash size={18} />}
+          icon={<Hash size={14} className="sm:w-4 sm:h-4" />}
           gradient="amber"
           onClick={() => onKpiClick?.('produccionOrdenes')}
         />
         <KpiCard
-          label="Merma Promedio"
+          label="Merma"
           value={`${data.averageWastePct}%`}
-          icon={<AlertTriangle size={18} />}
+          icon={<AlertTriangle size={14} className="sm:w-4 sm:h-4" />}
           gradient={data.averageWastePct > 10 ? 'red' : 'green'}
         />
         <KpiCard
-          label="Costo Ingredientes"
+          label="Costo Ing."
           value={formatUsd(data.totalIngredientCostUsd)}
-          icon={<DollarSign size={18} />}
+          icon={<DollarSign size={14} className="sm:w-4 sm:h-4" />}
           gradient="red"
           onClick={() => onKpiClick?.('produccionRecetas')}
         />
@@ -124,7 +128,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
             label="Más Producida"
             value={data.mostProducedRecipe}
             subtitle={`${data.mostProducedQuantity} unidades`}
-            icon={<TrendingUp size={18} />}
+            icon={<TrendingUp size={14} className="sm:w-4 sm:h-4" />}
             gradient="blue"
             onClick={() => onKpiClick?.('produccionRecetas')}
           />
