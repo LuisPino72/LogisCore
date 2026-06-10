@@ -3,6 +3,7 @@ import { CreateProductInputSchema, CreatePresentationInputSchema } from '../../.
 import type { ProductFormData, CreateProductInput, CreatePresentationInput } from '../types';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { inventoryService } from '../services/inventoryService';
+import { getDb } from '@/services/dexie/db';
 
 type PresentationFormData = CreatePresentationInput & { id?: string };
 
@@ -40,6 +41,7 @@ interface UseProductFormReturn {
   removePresentation: (index: number) => void;
   updatePresentation: (index: number, field: keyof CreatePresentationInput, value: unknown) => void;
   generateSku: () => void;
+  detectedAssembly: boolean;
 }
 
 const defaultFormData: ProductFormData = {
@@ -76,6 +78,34 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [presentations, setPresentations] = useState<PresentationFormData[]>([]);
   const [presentationsLoading, setPresentationsLoading] = useState(!!options.editProductId);
+  const [detectedAssembly, setDetectedAssembly] = useState(false);
+
+  // Auto-detect assembly from recipes table when editing
+  useEffect(() => {
+    if (!options.editProductId) return;
+    const detect = async () => {
+      try {
+        const db = getDb();
+        const allRecipes = await db.recipes.toArray();
+        const isAsm = allRecipes.some(
+          r => r.productId === options.editProductId && !r.deletedAt && r.isActive && r.mode === 'assembly'
+        );
+        if (isAsm) {
+          setDetectedAssembly(true);
+          // Fix isRawMaterial if it was incorrectly set
+          setFormData(prev => {
+            if (prev.isRawMaterial) {
+              return { ...prev, isRawMaterial: false, productionType: undefined, productType: prev.isWeighted ? (prev.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad' };
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // silent
+      }
+    };
+    detect();
+  }, [options.editProductId]);
 
   const setField = useCallback(<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {
     if (options.editProductId && key === 'productType') return;
@@ -191,7 +221,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       validationData.costPrice = undefined as unknown as number;
     }
 
-    if (!validationData.categoryId) {
+    if (!validationData.categoryId && !detectedAssembly) {
       const errs = { categoryId: 'Debes seleccionar una categoría' };
       setErrors(errs);
       setIsSubmitting(false);
@@ -341,11 +371,12 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       ...parsed.data,
       stockInicial: isEditing ? 0 : formData.stockInicial,
       // Mapear raw_material a materia_prima para la BD
-      productType: options.creationType === 'raw_material' ? 'materia_prima' : 
+      productType: detectedAssembly ? 'resale' :
+                   options.creationType === 'raw_material' ? 'materia_prima' : 
                    formData.isRawMaterial ? 'materia_prima' : 'resale',
-      // Materia prima no es vendible ni taxable
-      isSellable: options.creationType === 'raw_material' ? false : parsed.data.isSellable,
-      isTaxable: options.creationType === 'raw_material' ? false : parsed.data.isTaxable,
+      // Materia prima no es vendible ni taxable (pero ensamblados sí deben ser vendibles)
+      isSellable: (!detectedAssembly && options.creationType === 'raw_material') ? false : parsed.data.isSellable,
+      isTaxable: (!detectedAssembly && options.creationType === 'raw_material') ? false : parsed.data.isTaxable,
     };
 
     if (presentations.length > 0) {
@@ -374,5 +405,6 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     removePresentation,
     updatePresentation,
     generateSku,
+    detectedAssembly,
   };
 }

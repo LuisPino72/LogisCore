@@ -88,10 +88,8 @@ export const usePosStore = create<PosStore>()(
       const recipesMap: PosStore['assemblyRecipesMap'] = {};
       try {
         const db = getDb();
-        const assemblyRecipes = await db.recipes
-          .where({ mode: 'assembly' as const })
-          .filter(r => !r.deletedAt && r.isActive)
-          .toArray();
+        const allRecipes = await db.recipes.toArray();
+        const assemblyRecipes = allRecipes.filter(r => !r.deletedAt && r.isActive && r.mode === 'assembly');
         for (const recipe of assemblyRecipes) {
           const lines = await db.recipeLines
             .where({ recipeId: recipe.id })

@@ -279,15 +279,22 @@ export const posService = {
   async getProductsForSale(tenantId: string): Promise<Result<Product[], AppError>> {
     try {
       const db = getDb();
-      const assemblyRecipes = await db.recipes
-        .where({ mode: 'assembly' as const })
-        .filter(r => !r.deletedAt && r.isActive)
-        .toArray();
-      const assemblyProductIds = new Set(assemblyRecipes.map(r => r.productId));
+      const allRecipes = await db.recipes.toArray();
+      const assemblyProductIds = new Set(
+        allRecipes
+          .filter(r => !r.deletedAt && r.isActive && r.mode === 'assembly')
+          .map(r => r.productId)
+      );
 
       let rows = await db.products
         .where({ tenantId })
-        .filter((p) => !p.deletedAt && p.isSellable !== false && (p.stock > 0 || assemblyProductIds.has(p.id)))
+        .filter((p) => {
+          if (p.deletedAt || p.isSellable === false) return false;
+          if (p.stock > 0) return true;
+          if (assemblyProductIds.has(p.id)) return true;
+          // Fallback: cualquier receta activa → aparece en POS
+          return allRecipes.some(r => r.productId === p.id && !r.deletedAt && r.isActive);
+        })
         .toArray();
 
       if (rows.length === 0) {
@@ -328,7 +335,12 @@ export const posService = {
           }
           rows = await db.products
             .where({ tenantId })
-            .filter((p) => !p.deletedAt && p.isSellable !== false && (p.stock > 0 || assemblyProductIds.has(p.id)))
+            .filter((p) => {
+              if (p.deletedAt || p.isSellable === false) return false;
+              if (p.stock > 0) return true;
+              if (assemblyProductIds.has(p.id)) return true;
+              return allRecipes.some(r => r.productId === p.id && !r.deletedAt && r.isActive);
+            })
             .toArray();
         }
       }

@@ -131,6 +131,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (imageFile) {
       const publicUrl = await uploadProductImage(imageFile, tenantId, editProduct.id);
       if (publicUrl) {
+        setEditProduct(prev => prev ? { ...prev, imageUrl: publicUrl } : null);
         EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
       } else {
         addToast({ type: 'warning', message: 'Producto actualizado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });

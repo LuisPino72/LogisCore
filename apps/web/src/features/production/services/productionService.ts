@@ -422,6 +422,8 @@ export const productionService = {
               productType: 'producto_terminado',
             };
             await db.products.add(newProductRecord);
+            // Forzar productType en Dexie después de add (defensa)
+            await db.products.update(createdProductId, { productType: 'producto_terminado' });
             await syncQueue.enqueue('products', 'CREATE', createdProductId, toSnake(newProductRecord as unknown as Record<string, unknown>), tenantId);
             resolvedProductId = createdProductId;
           }
