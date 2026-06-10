@@ -65,7 +65,7 @@ export async function expandRecipe(
   if (visited.has(recipeId)) {
     return failure(new AppError(
       ProductionErrors.RECIPE_CYCLE_DETECTED,
-      'Esta receta forma un ciclo. No se puede expandir.',
+      'La receta forma un ciclo. No se puede expandir.',
     ));
   }
 

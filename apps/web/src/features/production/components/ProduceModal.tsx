@@ -26,6 +26,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   const [isProducing, setIsProducing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
 
   const fetchAvailability = useCallback(async (count: number) => {
     if (!recipe || count <= 0) return;
@@ -51,10 +52,17 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   }, []);
 
   const handleBatchChange = async (value: number) => {
-    if (value > 0) {
-      setBatchCountState(value);
-      await fetchAvailability(value);
+    if (value <= 0) {
+      setBatchError('Debes producir al menos 1 lote.');
+      return;
     }
+    if (value > 1000) {
+      setBatchError('No se pueden producir más de 1000 lotes por orden.');
+      return;
+    }
+    setBatchError(null);
+    setBatchCountState(value);
+    await fetchAvailability(value);
   };
 
   const allIngredientsAvailable = ingredientAvailability.length > 0 && ingredientAvailability.every((i) => i.sufficient);
@@ -159,6 +167,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
               onChange={(e) => handleBatchChange(Number(e.target.value))}
               min={1}
               max={1000}
+              error={batchError || undefined}
             />
 
             {/* Total Production — more prominent */}
