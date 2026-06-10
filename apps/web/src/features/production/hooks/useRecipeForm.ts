@@ -159,65 +159,106 @@ export function useRecipeForm() {
   }, [form]);
 
   // Wizard step validation — validates only the current step's fields
-  const validateStep = useCallback(async (step: number): Promise<boolean> => {
+  // isEdit changes the step mapping: edit step 1 = name + ingredients, edit step 2 = waste
+  const validateStep = useCallback(async (step: number, isEdit = false): Promise<boolean> => {
     const stepErrors: Record<string, string> = {};
 
-    if (step === 1) {
-      if (!form.name.trim()) stepErrors.name = 'Nombre requerido';
-      if (form.name.trim().length > 25) stepErrors.name = 'Máximo 25 caracteres';
+    if (isEdit) {
+      // EDIT MODE: step 1 = name + ingredients, step 2 = waste/notes
+      if (step === 1) {
+        if (!form.name.trim()) stepErrors.name = 'Nombre requerido';
+        if (form.name.trim().length > 25) stepErrors.name = 'Máximo 25 caracteres';
 
-      const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
-      if (isNewProduct) {
-        if (!form.newProductName.trim()) stepErrors.newProductName = 'Nombre del producto requerido';
-        if (form.newProductName.length > 25) stepErrors.newProductName = 'Máximo 25 caracteres';
-        if (!form.newProductSku.trim()) stepErrors.newProductSku = 'SKU del producto requerido';
-        if (form.newProductSku.length > 18) stepErrors.newProductSku = 'Máximo 18 caracteres';
-        if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
-          stepErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
+        // Also validate ingredients in step 1 (combined)
+        if (form.lines.length === 0) stepErrors.lines = 'Agrega al menos un ingrediente';
+
+        const ingredientIds = form.lines.map((l) => l.productId).filter(Boolean);
+        const uniqueIds = new Set(ingredientIds);
+        if (ingredientIds.length !== uniqueIds.size) {
+          stepErrors.lines = 'No puede haber ingredientes duplicados';
+        }
+
+        const realProductId = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '' ? '' : form.productId;
+        if (realProductId && form.lines.length > 0) {
+          const cycleCheck = await validateCycles(
+            realProductId,
+            form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
+          );
+          if (!cycleCheck.ok) {
+            stepErrors.lines = cycleCheck.error.message;
+          }
+        }
+
+        form.lines.forEach((line, i) => {
+          if (!line.productId) stepErrors[`line_${i}_product`] = 'Selecciona un ingrediente';
+          if (line.quantity <= 0) stepErrors[`line_${i}_quantity`] = 'Cantidad debe ser mayor a 0';
+          if (line.quantity > 99999) stepErrors[`line_${i}_quantity`] = 'Cantidad máxima: 99,999';
+        });
+      }
+
+      if (step === 2) {
+        if (form.wastePct < 0 || form.wastePct > 100) stepErrors.wastePct = 'La merma debe ser entre 0 y 100%';
+      }
+    } else {
+      // CREATE MODE: step 1 = info, step 2 = ingredients, step 3 = config
+      if (step === 1) {
+        if (!form.name.trim()) stepErrors.name = 'Nombre requerido';
+        if (form.name.trim().length > 25) stepErrors.name = 'Máximo 25 caracteres';
+
+        const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
+        if (isNewProduct) {
+          if (!form.newProductName.trim()) stepErrors.newProductName = 'Nombre del producto requerido';
+          if (form.newProductName.length > 25) stepErrors.newProductName = 'Máximo 25 caracteres';
+          if (!form.newProductSku.trim()) stepErrors.newProductSku = 'SKU del producto requerido';
+          if (form.newProductSku.length > 18) stepErrors.newProductSku = 'Máximo 18 caracteres';
+          if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
+            stepErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
+          }
         }
       }
-    }
 
-    if (step === 2) {
-      if (form.lines.length === 0) stepErrors.lines = 'Agrega al menos un ingrediente';
+      if (step === 2) {
+        if (form.lines.length === 0) stepErrors.lines = 'Agrega al menos un ingrediente';
 
-      const ingredientIds = form.lines.map((l) => l.productId).filter(Boolean);
-      const uniqueIds = new Set(ingredientIds);
-      if (ingredientIds.length !== uniqueIds.size) {
-        stepErrors.lines = 'No puede haber ingredientes duplicados';
-      }
-
-      const realProductId = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '' ? '' : form.productId;
-      if (realProductId && form.lines.length > 0) {
-        const cycleCheck = await validateCycles(
-          realProductId,
-          form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
-        );
-        if (!cycleCheck.ok) {
-          stepErrors.lines = cycleCheck.error.message;
+        const ingredientIds = form.lines.map((l) => l.productId).filter(Boolean);
+        const uniqueIds = new Set(ingredientIds);
+        if (ingredientIds.length !== uniqueIds.size) {
+          stepErrors.lines = 'No puede haber ingredientes duplicados';
         }
+
+        const realProductId = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '' ? '' : form.productId;
+        if (realProductId && form.lines.length > 0) {
+          const cycleCheck = await validateCycles(
+            realProductId,
+            form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
+          );
+          if (!cycleCheck.ok) {
+            stepErrors.lines = cycleCheck.error.message;
+          }
+        }
+
+        form.lines.forEach((line, i) => {
+          if (!line.productId) stepErrors[`line_${i}_product`] = 'Selecciona un ingrediente';
+          if (line.quantity <= 0) stepErrors[`line_${i}_quantity`] = 'Cantidad debe ser mayor a 0';
+          if (line.quantity > 99999) stepErrors[`line_${i}_quantity`] = 'Cantidad máxima: 99,999';
+        });
       }
 
-      form.lines.forEach((line, i) => {
-        if (!line.productId) stepErrors[`line_${i}_product`] = 'Selecciona un ingrediente';
-        if (line.quantity <= 0) stepErrors[`line_${i}_quantity`] = 'Cantidad debe ser mayor a 0';
-        if (line.quantity > 99999) stepErrors[`line_${i}_quantity`] = 'Cantidad máxima: 99,999';
-      });
-    }
-
-    if (step === 3) {
-      if (form.yieldQuantity <= 0) stepErrors.yieldQuantity = 'La cantidad producida debe ser mayor a 0';
-      if (!form.yieldUnit) stepErrors.yieldUnit = 'Selecciona una unidad';
-      if (form.wastePct < 0 || form.wastePct > 100) stepErrors.wastePct = 'La merma debe ser entre 0 y 100%';
+      if (step === 3) {
+        if (form.yieldQuantity <= 0) stepErrors.yieldQuantity = 'La cantidad producida debe ser mayor a 0';
+        if (!form.yieldUnit) stepErrors.yieldUnit = 'Selecciona una unidad';
+        if (form.wastePct < 0 || form.wastePct > 100) stepErrors.wastePct = 'La merma debe ser entre 0 y 100%';
+      }
     }
 
     setErrors(stepErrors);
     return Object.keys(stepErrors).length === 0;
   }, [form]);
 
-  const nextStep = useCallback(async () => {
-    if (currentStep < TOTAL_STEPS) {
-      const valid = await validateStep(currentStep);
+  const nextStep = useCallback(async (isEdit = false) => {
+    const maxSteps = isEdit ? 2 : TOTAL_STEPS;
+    if (currentStep < maxSteps) {
+      const valid = await validateStep(currentStep, isEdit);
       if (valid) {
         setErrors({});
         setCurrentStep((s) => s + 1);
@@ -232,16 +273,15 @@ export function useRecipeForm() {
     }
   }, [currentStep]);
 
-  const goToStep = useCallback(async (step: number) => {
-    if (step < 1 || step > TOTAL_STEPS) return;
-    // Can only go back freely, or forward if all previous steps are valid
+  const goToStep = useCallback(async (step: number, isEdit = false) => {
+    const maxSteps = isEdit ? 2 : TOTAL_STEPS;
+    if (step < 1 || step > maxSteps) return;
     if (step < currentStep) {
       setErrors({});
       setCurrentStep(step);
     } else if (step > currentStep) {
-      // Validate all steps up to target
       for (let s = currentStep; s < step; s++) {
-        const valid = await validateStep(s);
+        const valid = await validateStep(s, isEdit);
         if (!valid) return;
       }
       setErrors({});
