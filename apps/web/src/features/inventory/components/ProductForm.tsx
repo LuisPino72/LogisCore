@@ -532,7 +532,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 const unit = e.target.value;
                 setField('unit', unit);
                 if (creationType === 'raw_material') {
-                  setField('isWeighted', false);
+                  // Materia prima pesada (kg/lt) SÍ necesita isWeighted para conversión stock
+                  setField('isWeighted', unit === 'kg' || unit === 'lt');
                 } else {
                   setField('isWeighted', unit === 'kg' || unit === 'lt');
                   setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : 'unidad');

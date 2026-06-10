@@ -92,8 +92,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       if (key === 'productType' && value === 'raw_material') {
         next.isSellable = false;
         next.isTaxable = false;
-        next.isWeighted = false;
-        next.unit = 'unidad';
+        // NO forzar isWeighted ni unit — el usuario puede elegir kg/lt para materia prima pesada
       }
 
       if (key === 'isRawMaterial') {

@@ -41,6 +41,22 @@ export function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit:
   if (productUnit === 'm' && recipeUnit === 'ml') return qty;
   return qty;
 }
+
+/**
+ * Convierte la cantidad de un ingrediente a unidades de almacenamiento BASE (gramos/ml/unidades).
+ * A diferencia de recipeQtyToStorage que retorna la unidad del producto (kg, lt),
+ * esta función retorna SIEMPRE la unidad base (g, ml, unidad) para que coincida con product.stock.
+ */
+export function recipeQtyToStorageBase(qty: number, recipeUnit: string, productUnit: string): number {
+  if (productUnit === 'kg' && recipeUnit === 'g') return qty;
+  if (productUnit === 'kg' && recipeUnit === 'kg') return qty * 1000;
+  if (productUnit === 'lt' && recipeUnit === 'ml') return qty;
+  if (productUnit === 'lt' && recipeUnit === 'lt') return qty * 1000;
+  if (productUnit === 'unidad' && recipeUnit === 'unidad') return qty;
+  if (productUnit === 'gr' && recipeUnit === 'g') return qty;
+  if (productUnit === 'm' && recipeUnit === 'ml') return qty;
+  return qty;
+}
 import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder, DexieProduct } from '../../../services/dexie/db';
 
 const PRODUCTION_MODULE = 'PRODUCTION';
@@ -336,7 +352,7 @@ export const productionService = {
       if (ingredient.stock <= 0) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
       }
-      const needed = recipeQtyToStorage(line.quantity, line.unit, ingredient.unit);
+      const needed = recipeQtyToStorageBase(line.quantity, line.unit, ingredient.unit);
       if (needed > ingredient.stock) {
         return failure(new AppError(
           ProductionErrors.RECIPE_INGREDIENT_EXCEEDS_STOCK,
@@ -521,7 +537,7 @@ export const productionService = {
           if (ingredient.stock <= 0) {
             return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
           }
-          const needed = recipeQtyToStorage(line.quantity, line.unit, ingredient.unit);
+          const needed = recipeQtyToStorageBase(line.quantity, line.unit, ingredient.unit);
           if (needed > ingredient.stock) {
             return failure(new AppError(
               ProductionErrors.RECIPE_INGREDIENT_EXCEEDS_STOCK,
@@ -766,10 +782,11 @@ export const productionService = {
       const result: IngredientAvailability[] = [];
 
       for (const line of expandedLines) {
-        // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
+        // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
+        // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
         const product = await db.products.get(line.productId);
         const neededInStorage = product
-          ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+          ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
           : line.quantity * wasteMultiplier;
         const needed = Math.ceil(neededInStorage);
         const available = product ? product.stock : 0;
@@ -820,10 +837,11 @@ export const productionService = {
 
       for (const line of expandedLines) {
         const product = await db.products.get(line.productId);
-        // BUGFIX-MATHCEIL-001 [Paso-2]: Usar recipeQtyToStorage para que calculateRecipeCost
-        // reporte la misma cantidad en storage units (g/ml) que createOrder consume.
+        // BUGFIX-MATHCEIL-001 [Paso-2]: Usar recipeQtyToStorageBase para que calculateRecipeCost
+        // reporte la misma cantidad en storage base units (g/ml) que createOrder consume.
+        // product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
         const neededInStorage = product
-          ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+          ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
           : line.quantity * wasteMultiplier;
         if (product && product.costPrice != null && product.costPrice > 0) {
           // El costPrice del producto está en $/display_unit (kg/lt/unidad).
@@ -902,10 +920,11 @@ export const productionService = {
 
     // 4. Check ingredient availability
     for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
+      // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
       const product = await db.products.get(line.productId);
       const neededInStorage = product
-        ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+        ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
         : line.quantity * wasteMultiplier;
       const needed = Math.ceil(neededInStorage);
       if (!product || product.stock < needed) {
@@ -924,10 +943,11 @@ export const productionService = {
     // PRODUCTION-003 [Paso-3]: Reemplazado cálculo manual con helper FIFO real.
     let totalIngredientCost = 0;
     for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Pasar cantidad en storage units al helper FIFO.
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Pasar cantidad en storage base units (g/ml) al helper FIFO.
+      // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
       const product = await db.products.get(line.productId);
       const neededInStorage = product
-        ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+        ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
         : line.quantity * wasteMultiplier;
       const needed = Math.ceil(neededInStorage);
       const result = await calculateConsumptionCost(line.productId, needed);
@@ -945,10 +965,11 @@ export const productionService = {
     // 6. Atomic transaction
     // Re-validate stock right before transaction (concurrency guard)
     for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
+      // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
       const freshProduct = await db.products.get(line.productId);
       const neededInStorage = freshProduct
-        ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, freshProduct.unit)
+        ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, freshProduct.unit)
         : line.quantity * wasteMultiplier;
       const needed = Math.ceil(neededInStorage);
       if (!freshProduct || freshProduct.stock < needed) {
@@ -1001,8 +1022,9 @@ export const productionService = {
           const product = await db.products.get(line.productId);
           if (!product) throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado.');
 
-          // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
-          const neededInStorage = recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit);
+          // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
+          // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
+          const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
           const needed = Math.ceil(neededInStorage);
 
           const previousStock = product.stock;
@@ -1146,11 +1168,11 @@ export const productionService = {
           const wasteMultiplier = 1 + (recipe.wastePct / 100);
 
           for (const line of lines) {
-            // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
-            // (Bug histórico: Math.ceil(0.5) = 1 inflaba el revertimiento de la cancelación.)
+            // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
+            // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
             const product = await db.products.get(line.productId);
             const neededInStorage = product
-              ? recipeQtyToStorage(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
+              ? recipeQtyToStorageBase(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
               : line.quantity * order.batchCount * wasteMultiplier;
             const needed = Math.ceil(neededInStorage);
             if (product) {
@@ -1340,15 +1362,15 @@ export const productionService = {
     const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = [];
 
     for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage units antes del Math.ceil para no inflar fracciones.
-      // (Bug histórico: Math.ceil(0.5) = 1 hacía que 1 combo con 0.5 kg de Harina consumiera 1 kg completo.)
+      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
+      // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
       const ingredient = await db.products.get(line.productId);
 
       if (!ingredient) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado.`));
       }
 
-      const neededInStorage = recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, ingredient.unit);
+      const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, ingredient.unit);
       const needed = Math.ceil(neededInStorage);
 
       // PRODUCTION-003 [Paso-3]: Usando helper compartido para cálculo FIFO y plan de consumo.
