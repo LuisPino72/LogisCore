@@ -290,16 +290,16 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       }
     }
 
-    // Validación: materia prima requiere costo
-    if (options.creationType === 'raw_material' && (!formData.costPrice || formData.costPrice <= 0)) {
+    // Validación: materia prima requiere costo (solo en creación)
+    if (!isEditing && options.creationType === 'raw_material' && (!formData.costPrice || formData.costPrice <= 0)) {
       const errs = { costPrice: 'El costo total de la compra es requerido para materia prima.' };
       setErrors(errs);
       setIsSubmitting(false);
       return { success: false, errors: errs };
     }
 
-    // Validación: materia prima requiere stock inicial
-    if (options.creationType === 'raw_material' && (!formData.stockInicial || formData.stockInicial <= 0)) {
+    // Validación: materia prima requiere stock inicial (solo en creación)
+    if (!isEditing && options.creationType === 'raw_material' && (!formData.stockInicial || formData.stockInicial <= 0)) {
       const errs = { stockInicial: 'El stock inicial es requerido para materia prima. Ingresa la cantidad inicial.' };
       setErrors(errs);
       setIsSubmitting(false);
