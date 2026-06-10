@@ -19,14 +19,26 @@ export function useRepeatButton({ onAction, initialDelay = 500 }: UseRepeatButto
   const startTimeRef = useRef(0);
   const wasHoldingRef = useRef(false);
 
-  const stopRepeat = useCallback(() => {
+  const clearTimer = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    wasHoldingRef.current = false;
     setIsRepeating(null);
   }, []);
+
+  // Para mouseUp / touchEnd: limpia timer pero PRESERVA wasHoldingRef
+  // para que handleClick pueda tragar el click duplicado post-hold
+  const stopRepeat = useCallback(() => {
+    clearTimer();
+  }, [clearTimer]);
+
+  // Para mouseLeave: resetea TODO incluyendo wasHoldingRef
+  // para que el siguiente click funcione
+  const cancelRepeat = useCallback(() => {
+    clearTimer();
+    wasHoldingRef.current = false;
+  }, [clearTimer]);
 
   const startHold = useCallback((delta: number) => {
     stopRepeat();
@@ -54,5 +66,5 @@ export function useRepeatButton({ onAction, initialDelay = 500 }: UseRepeatButto
     onAction(delta);
   }, [onAction]);
 
-  return { startHold, stopRepeat, handleClick, isRepeating };
+  return { startHold, stopRepeat, cancelRepeat, handleClick, isRepeating };
 }

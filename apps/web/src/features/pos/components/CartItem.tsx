@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useRef } from 'react';
 import { Button, Input } from '../../../common/components';
 import { Trash2, Minus, Plus } from 'lucide-react';
 import type { CartItem } from '../types';
@@ -23,7 +23,8 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
 
   const [localQty, setLocalQty] = useState<string | null>(null);
 
-  const qtyRef = { current: item.quantity };
+  const qtyRef = useRef(item.quantity);
+  qtyRef.current = item.quantity;
 
   const applyDelta = useCallback((delta: number) => {
     setLocalQty(null);
@@ -32,7 +33,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     onUpdateQuantity(item.productId, next, item.presentationId);
   }, [step, decimals, onUpdateQuantity, item.productId]);
 
-  const { startHold, stopRepeat, handleClick, isRepeating } = useRepeatButton({
+  const { startHold, stopRepeat, cancelRepeat, handleClick, isRepeating } = useRepeatButton({
     onAction: applyDelta,
   });
 
@@ -109,11 +110,12 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
           <div className="flex items-center gap-1">
             <button
               type="button"
+              onMouseDown={() => startHold(-step)}
               onMouseUp={stopRepeat}
-              onMouseLeave={stopRepeat}
+              onMouseLeave={cancelRepeat}
               onTouchStart={() => startHold(-step)}
               onTouchEnd={stopRepeat}
-              onTouchCancel={stopRepeat}
+              onTouchCancel={cancelRepeat}
               onClick={() => handleClick(-step)}
               className={`${btnBase} ${isRepeating === 'minus' ? btnActive : btnIdle}`}
               aria-label="Reducir cantidad"
@@ -136,11 +138,12 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
 
             <button
               type="button"
+              onMouseDown={() => startHold(step)}
               onMouseUp={stopRepeat}
-              onMouseLeave={stopRepeat}
+              onMouseLeave={cancelRepeat}
               onTouchStart={() => startHold(step)}
               onTouchEnd={stopRepeat}
-              onTouchCancel={stopRepeat}
+              onTouchCancel={cancelRepeat}
               onClick={() => handleClick(step)}
               className={`${btnBase} ${isRepeating === 'plus' ? btnActive : btnIdle}`}
               aria-label="Aumentar cantidad"

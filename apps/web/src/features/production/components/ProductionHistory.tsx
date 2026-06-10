@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Badge, Button, Card, EmptyState, Pagination } from '../../../common/components';
-import { History, Clock, CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
+import { History, Clock, CheckCircle2, XCircle, AlertCircle, X, Eye } from 'lucide-react';
 import type { Recipe, ProductionOrder } from '../types';
+import { ProductionDetailModal } from './ProductionDetailModal';
+import { useProductionStore } from '../stores/productionStore';
 
 interface ProductionHistoryProps {
   orders: ProductionOrder[];
@@ -11,6 +13,7 @@ interface ProductionHistoryProps {
   onCancel?: (orderId: string) => void;
   // PLAN-115 (CODE-MIN-7): orderId en curso de cancelacion (deshabilita boton + spinner)
   cancellingOrderId?: string | null;
+  tenantId: string;
 }
 
 const PAGE_SIZE = 10;
@@ -23,8 +26,32 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'dange
   cancelled: { label: 'Cancelada', variant: 'danger', icon: <XCircle size={12} /> },
 };
 
-export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId }: ProductionHistoryProps) {
+export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId, tenantId }: ProductionHistoryProps) {
   const [page, setPage] = useState(1);
+  const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
+  const [ordersWithSales, setOrdersWithSales] = useState<Set<string>>(new Set());
+  const { hasOrderSales } = useProductionStore();
+
+  // Verificar ventas asociadas para órdenes confirmadas
+  useEffect(() => {
+    const checkSales = async () => {
+      const confirmedOrders = orders.filter(o => o.status === 'confirmed');
+      const withSales = new Set<string>();
+
+      for (const order of confirmedOrders) {
+        const hasSales = await hasOrderSales(tenantId, order.id);
+        if (hasSales) {
+          withSales.add(order.id);
+        }
+      }
+
+      setOrdersWithSales(withSales);
+    };
+
+    if (orders.length > 0) {
+      checkSales();
+    }
+  }, [orders, tenantId, hasOrderSales]);
 
   const recipeMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -68,7 +95,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
 
       {paginatedOrders.map((order) => {
         const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.draft;
-        const canCancel = order.status === 'confirmed' && onCancel != null;
+        const canCancel = order.status === 'confirmed' && onCancel != null && !ordersWithSales.has(order.id);
         const isCancelling = cancellingOrderId === order.id;
 
         return (
@@ -94,25 +121,46 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                   <span>{formatDate(order.createdAt)}</span>
                 </div>
               </div>
-              {canCancel && (
+              <div className="flex items-center gap-2 shrink-0 self-start">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onCancel(order.id)}
-                  disabled={isCancelling}
-                  className="text-danger hover:bg-danger/10 shrink-0 self-start min-h-[44px]"
-                  aria-label="Cancelar orden"
+                  onClick={() => setSelectedOrder(order)}
+                  className="text-primary hover:bg-primary/10 min-h-[44px]"
+                  aria-label="Ver detalles"
                 >
-                  <X size={14} className="mr-1" />
-                  {isCancelling ? 'Cancelando...' : 'Cancelar'}
+                  <Eye size={14} className="mr-1" />
+                  Ver Detalles
                 </Button>
-              )}
+                {canCancel && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onCancel(order.id)}
+                    disabled={isCancelling}
+                    className="text-danger hover:bg-danger/10 min-h-[44px]"
+                    aria-label="Cancelar orden"
+                  >
+                    <X size={14} className="mr-1" />
+                    {isCancelling ? 'Cancelando...' : 'Cancelar'}
+                  </Button>
+                )}
+              </div>
             </div>
           </Card>
         );
       })}
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+
+      {selectedOrder && (
+        <ProductionDetailModal
+          isOpen={!!selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          order={selectedOrder}
+          tenantId={tenantId}
+        />
+      )}
     </div>
   );
 }

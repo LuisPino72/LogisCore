@@ -189,6 +189,7 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
               recipes={recipes}
               onCancel={requestCancelOrder}
               cancellingOrderId={cancellingOrderId}
+              tenantId={tenantId || ''}
             />
           )}
         </>

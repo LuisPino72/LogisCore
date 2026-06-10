@@ -1486,6 +1486,199 @@ export const productionService = {
     return success({ consumedLots: assemblyConsumedLots, totalIngredientCost });
   },
 
+  // ===== ORDER DETAILS =====
+
+  async getOrderDetails(
+    tenantId: string,
+    orderId: string,
+  ): Promise<Result<{
+    order: ProductionOrder;
+    recipe: Recipe;
+    lines: RecipeLine[];
+    ingredientCosts: Array<{
+      productId: string;
+      productName: string;
+      quantity: number;
+      unit: string;
+      costPerUnit: number;
+      totalCost: number;
+    }>;
+    totalCost: number;
+    costPerUnit: number;
+  }, AppError>> {
+    try {
+      const db = getDb();
+
+      const order = await db.productionOrders
+        .where({ tenantId, id: orderId })
+        .filter((o) => !o.deletedAt)
+        .first();
+      if (!order) {
+        return failure(new AppError(ProductionErrors.ORDER_NOT_FOUND, 'Orden de producción no encontrada.'));
+      }
+
+      const recipe = await db.recipes.get(order.recipeId);
+      if (!recipe || recipe.deletedAt) {
+        return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
+      }
+
+      const lines = await db.recipeLines
+        .where({ recipeId: order.recipeId })
+        .filter((l) => !l.deletedAt)
+        .sortBy('sortOrder');
+
+      const wasteMultiplier = 1 + (recipe.wastePct / 100);
+      const ingredientCosts: Array<{
+        productId: string;
+        productName: string;
+        quantity: number;
+        unit: string;
+        costPerUnit: number;
+        totalCost: number;
+      }> = [];
+
+      let totalCost = 0;
+
+      for (const line of lines) {
+        const product = await db.products.get(line.productId);
+        const productName = product?.name || 'Desconocido';
+        const neededInStorage = product
+          ? recipeQtyToStorageBase(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
+          : line.quantity * order.batchCount * wasteMultiplier;
+        const needed = Math.ceil(neededInStorage);
+        const costPerUnit = product?.costPrice ?? 0;
+        const lineCost = needed * costPerUnit;
+        totalCost += lineCost;
+
+        ingredientCosts.push({
+          productId: line.productId,
+          productName,
+          quantity: needed,
+          unit: line.unit,
+          costPerUnit,
+          totalCost: preciseRound(lineCost, 2),
+        });
+      }
+
+      const costPerUnit = order.quantityTarget > 0
+        ? preciseRound(totalCost / order.quantityTarget, 4)
+        : 0;
+
+      return success({
+        order: toProductionOrder(order as unknown as Record<string, unknown>),
+        recipe: toRecipe(recipe as unknown as Record<string, unknown>),
+        lines: lines.map((l) => toRecipeLine(l as unknown as Record<string, unknown>)),
+        ingredientCosts,
+        totalCost: preciseRound(totalCost, 2),
+        costPerUnit,
+      });
+    } catch (err) {
+      logger.error(PRODUCTION_MODULE, 'Error en getOrderDetails:', err);
+      return failure(new AppError(ProductionErrors.ORDERS_QUERY_FAILED, 'Error al cargar detalles de la orden.'));
+    }
+  },
+
+  async getOrderInventoryMovements(
+    tenantId: string,
+    orderId: string,
+  ): Promise<Result<Array<{
+    id: string;
+    productName: string;
+    type: string;
+    quantity: number;
+    previousStock: number;
+    newStock: number;
+    createdAt: string;
+  }>, AppError>> {
+    try {
+      const db = getDb();
+
+      const order = await db.productionOrders
+        .where({ tenantId, id: orderId })
+        .filter((o) => !o.deletedAt)
+        .first();
+      if (!order) {
+        return failure(new AppError(ProductionErrors.ORDER_NOT_FOUND, 'Orden de producción no encontrada.'));
+      }
+
+      // Buscar movimientos de inventario del producto terminado (production_output)
+      // y de ingredientes (adjustment con reasonType consumo_interno) alrededor de la fecha de la orden
+      const orderDate = order.completedAt || order.createdAt;
+      const startDate = new Date(new Date(orderDate).getTime() - 60000).toISOString(); // 1 min antes
+      const endDate = new Date(new Date(orderDate).getTime() + 60000).toISOString(); // 1 min después
+
+      const movements = await db.inventoryMovements
+        .where({ tenantId })
+        .filter((m) => {
+          if (m.createdAt < startDate || m.createdAt > endDate) return false;
+          // Movimientos del producto terminado (production_output)
+          if (m.productId === order.productId && m.type === 'production_output') return true;
+          // Movimientos de ingredientes (consumo_interno)
+          if (m.type === 'adjustment' && m.reasonType === 'consumo_interno') return true;
+          return false;
+        })
+        .toArray();
+
+      const result = [];
+      for (const m of movements) {
+        const product = await db.products.get(m.productId);
+        result.push({
+          id: m.id,
+          productName: product?.name || 'Desconocido',
+          type: m.type,
+          quantity: m.quantity,
+          previousStock: m.previousStock,
+          newStock: m.newStock,
+          createdAt: m.createdAt,
+        });
+      }
+
+      return success(result);
+    } catch (err) {
+      logger.error(PRODUCTION_MODULE, 'Error en getOrderInventoryMovements:', err);
+      return failure(new AppError(ProductionErrors.ORDERS_QUERY_FAILED, 'Error al cargar movimientos de inventario.'));
+    }
+  },
+
+  async hasOrderSales(
+    tenantId: string,
+    orderId: string,
+  ): Promise<Result<boolean, AppError>> {
+    try {
+      const db = getDb();
+
+      const order = await db.productionOrders
+        .where({ tenantId, id: orderId })
+        .filter((o) => !o.deletedAt)
+        .first();
+      if (!order) {
+        return failure(new AppError(ProductionErrors.ORDER_NOT_FOUND, 'Orden de producción no encontrada.'));
+      }
+
+      // Buscar ventas del producto terminado después de la orden
+      const orderDate = order.completedAt || order.createdAt;
+      const sales = await db.sales
+        .where({ tenantId })
+        .filter((s) => !s.deletedAt && s.createdAt >= orderDate)
+        .toArray();
+
+      for (const sale of sales) {
+        const items = await db.saleItems
+          .where({ saleId: sale.id })
+          .filter((i) => i.productId === order.productId)
+          .toArray();
+        if (items.length > 0) {
+          return success(true);
+        }
+      }
+
+      return success(false);
+    } catch (err) {
+      logger.error(PRODUCTION_MODULE, 'Error en hasOrderSales:', err);
+      return failure(new AppError(ProductionErrors.ORDERS_QUERY_FAILED, 'Error al verificar ventas de la orden.'));
+    }
+  },
+
   // ===== INTERNAL HELPERS =====
 };
 

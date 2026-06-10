@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createAppError } from '@logiscore/core';
-import type { Recipe, ProductionOrder, ProductionState, RecipeFilters, ProductionOrderFilters, IngredientAvailability, RecipeWithLines, CreateRecipeInput, UpdateRecipeInput, CreateProductionOrderInput } from '../types';
+import type { Recipe, RecipeLine, ProductionOrder, ProductionState, RecipeFilters, ProductionOrderFilters, IngredientAvailability, RecipeWithLines, CreateRecipeInput, UpdateRecipeInput, CreateProductionOrderInput } from '../types';
 import { productionService } from '../services/productionService';
 
 interface ProductionStore extends ProductionState {
@@ -17,6 +17,33 @@ interface ProductionStore extends ProductionState {
   fetchOrders: (tenantId: string, filters?: ProductionOrderFilters, silent?: boolean) => Promise<void>;
   createOrder: (tenantId: string, userId: string, input: CreateProductionOrderInput) => Promise<ProductionOrder | null>;
   cancelOrder: (orderId: string, tenantId: string) => Promise<boolean>;
+
+  // Order Details
+  getOrderDetails: (tenantId: string, orderId: string) => Promise<{
+    order: ProductionOrder;
+    recipe: Recipe;
+    lines: RecipeLine[];
+    ingredientCosts: Array<{
+      productId: string;
+      productName: string;
+      quantity: number;
+      unit: string;
+      costPerUnit: number;
+      totalCost: number;
+    }>;
+    totalCost: number;
+    costPerUnit: number;
+  } | null>;
+  getOrderInventoryMovements: (tenantId: string, orderId: string) => Promise<Array<{
+    id: string;
+    productName: string;
+    type: string;
+    quantity: number;
+    previousStock: number;
+    newStock: number;
+    createdAt: string;
+  }> | null>;
+  hasOrderSales: (tenantId: string, orderId: string) => Promise<boolean>;
 
   // Assembly
   checkIngredientsAvailability: (recipeId: string, batchCount: number) => Promise<IngredientAvailability[]>;
@@ -144,6 +171,26 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   },
 
   // ===== ASSEMBLY =====
+
+  getOrderDetails: async (tenantId, orderId) => {
+    const result = await productionService.getOrderDetails(tenantId, orderId);
+    if (result.ok) return result.data;
+    set({ error: result.error });
+    return null;
+  },
+
+  getOrderInventoryMovements: async (tenantId, orderId) => {
+    const result = await productionService.getOrderInventoryMovements(tenantId, orderId);
+    if (result.ok) return result.data;
+    set({ error: result.error });
+    return null;
+  },
+
+  hasOrderSales: async (tenantId, orderId) => {
+    const result = await productionService.hasOrderSales(tenantId, orderId);
+    if (result.ok) return result.data;
+    return false;
+  },
 
   checkIngredientsAvailability: async (recipeId, batchCount) => {
     const result = await productionService.checkIngredientsAvailability(recipeId, batchCount);
