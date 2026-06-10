@@ -95,7 +95,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <p className="text-xs text-gray-500 shrink-0 order-last sm:order-none">
+        <p className="text-xs text-gray-500 shrink-0 order-last sm:order-0">
           {item.isWeighted ? item.unit : 'u'} x {formatUsd(item.unitPriceUsd)}
         </p>
         <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
@@ -114,7 +114,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
               <Minus size={16} className={`transition-transform duration-150 ${isRepeating === 'minus' ? 'scale-110' : ''}`} />
             </button>
 
-            <div className="w-14 sm:w-16">
+            <div className="w-18 sm:w-22">
               <Input
                 type="text"
                 inputMode="decimal"

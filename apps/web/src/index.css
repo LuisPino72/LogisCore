@@ -182,6 +182,7 @@
     max-height: 100dvh !important;
     border-radius: 0 !important;
   }
+  .modal-cart .modal-body { padding: 0; overflow-y: hidden; display: flex; flex-direction: column; }
 }
 
 /* ───────────────────── TOAST ───────────────────── */

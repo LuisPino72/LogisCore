@@ -47,7 +47,7 @@ export const CartPanel = memo(function CartPanel({
 
   const renderContent = useCallback(
     () => (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 min-h-0">
         <div className="hidden md:block px-3 py-2 border-b border-border">
           <h3 className="text-sm font-semibold text-gray-700">Carrito ({itemCount})</h3>
         </div>
@@ -74,7 +74,7 @@ export const CartPanel = memo(function CartPanel({
         </div>
 
         {cart.length > 0 && (
-          <div className="px-3 pb-3">
+          <div className="px-3 pb-3 shrink-0">
             <CartSummary
               items={cart}
               exchangeRateBs={exchangeRateBs}
@@ -124,11 +124,7 @@ export const CartPanel = memo(function CartPanel({
           title={`Carrito (${itemCount})`}
           className="max-w-none! m-0! modal-cart"
         >
-          <div className="flex flex-col h-dvh">
-            <div className="flex-1 overflow-y-auto">
-              {renderContent()}
-            </div>
-          </div>
+          {renderContent()}
         </Modal>
       </div>
     </>
