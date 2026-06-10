@@ -414,7 +414,7 @@ export const productionService = {
               priceUsd: input.newProductPriceUsd!,
               categoryId: input.newProductCategoryId,
               isWeighted: false,
-              isTaxable: true,
+              isTaxable: input.newProductIsTaxable ?? false,
               isSellable: true,
               unit: 'unidad',
               stock: 0,

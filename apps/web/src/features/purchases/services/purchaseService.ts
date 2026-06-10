@@ -294,16 +294,22 @@ export const purchaseService = {
       return failure(new AppError('PURCHASE_DUPLICATE_PRODUCTS', 'No puede haber dos items del mismo producto en la orden.'));
     }
 
-    // P6: Validar que todos los productIds existan
+    // P6: Validar que todos los productIds existan y no sean producto_terminado
     const invalidProducts: string[] = [];
+    const forbiddenProducts: string[] = [];
     for (const item of input.items) {
       const product = await db.products.where({ id: item.productId }).filter((p) => p.tenantId === tenantId && !p.deletedAt).first();
       if (!product) {
         invalidProducts.push(item.productId.slice(0, 8));
+      } else if (product.productType === 'producto_terminado') {
+        forbiddenProducts.push(product.name);
       }
     }
     if (invalidProducts.length > 0) {
       return failure(new AppError('PURCHASE_INVALID_PRODUCTS', `Productos no encontrados: ${invalidProducts.join(', ')}`));
+    }
+    if (forbiddenProducts.length > 0) {
+      return failure(new AppError('PURCHASE_FORBIDDEN_PRODUCT_TYPE', `No se pueden comprar productos terminados: ${forbiddenProducts.join(', ')}`));
     }
 
     const id = generateId();

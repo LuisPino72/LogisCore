@@ -28,6 +28,7 @@ interface RecipeFormState {
   newProductSku: string;
   newProductPriceUsd: number;
   newProductCategoryId: string;
+  newProductIsTaxable: boolean;
 }
 
 export interface FormWarning {
@@ -49,6 +50,7 @@ const INITIAL_STATE: RecipeFormState = {
   newProductSku: '',
   newProductPriceUsd: 0,
   newProductCategoryId: '',
+  newProductIsTaxable: false,
 };
 
 export function useRecipeForm() {
@@ -381,6 +383,7 @@ export function useRecipeForm() {
       input.newProductSku = form.newProductSku.trim();
       input.newProductPriceUsd = form.newProductPriceUsd;
       if (form.newProductCategoryId) input.newProductCategoryId = form.newProductCategoryId;
+      input.newProductIsTaxable = form.newProductIsTaxable;
     } else {
       input.productId = form.productId;
     }

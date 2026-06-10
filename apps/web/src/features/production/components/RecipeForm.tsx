@@ -575,6 +575,16 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               </Card>
             )}
 
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.newProductIsTaxable}
+                onChange={(e) => updateField('newProductIsTaxable', e.target.checked)}
+                className="rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-gray-700">Cobrar IVA (16%) al producto terminado</span>
+            </label>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Modo</label>
               <div className="flex gap-2">

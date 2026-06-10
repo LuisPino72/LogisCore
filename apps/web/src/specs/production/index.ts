@@ -74,6 +74,7 @@ export const CreateRecipeInputSchema = z.object({
   newProductSku: z.string().min(1, 'SKU del producto requerido').max(18).optional(),
   newProductPriceUsd: z.number().positive('El precio debe ser mayor a 0').optional(),
   newProductCategoryId: z.string().uuid().optional(),
+  newProductIsTaxable: z.boolean().optional(),
   mode: RecipeModeSchema,
   // PLAN-115 (CODE-MED-2): cap defensivo consistente con RecipeSchema
   yieldQuantity: z.number().int().positive('El yield debe ser mayor a 0').max(10000, 'El yield no puede ser mayor a 10,000'),

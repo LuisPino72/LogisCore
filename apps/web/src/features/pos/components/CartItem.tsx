@@ -94,59 +94,59 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
           {priceBs && <p className="text-[10px] text-text-muted">{priceBs}</p>}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-gray-500 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <p className="text-xs text-gray-500 shrink-0 order-last sm:order-none">
           {item.isWeighted ? item.unit : 'u'} x {formatUsd(item.unitPriceUsd)}
         </p>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onMouseDown={() => startHold(-step)}
-            onMouseUp={stopRepeat}
-            onMouseLeave={stopRepeat}
-            onTouchStart={() => startHold(-step)}
-            onTouchEnd={stopRepeat}
-            onTouchCancel={stopRepeat}
-            onClick={() => handleClick(-step)}
-            className={`${btnBase} ${isRepeating === 'minus' ? btnActive : btnIdle}`}
-            aria-label="Reducir cantidad"
-          >
-            <Minus size={16} className={`transition-transform duration-150 ${isRepeating === 'minus' ? 'scale-110' : ''}`} />
-          </button>
+        <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onMouseUp={stopRepeat}
+              onMouseLeave={stopRepeat}
+              onTouchStart={() => startHold(-step)}
+              onTouchEnd={stopRepeat}
+              onTouchCancel={stopRepeat}
+              onClick={() => handleClick(-step)}
+              className={`${btnBase} ${isRepeating === 'minus' ? btnActive : btnIdle}`}
+              aria-label="Reducir cantidad"
+            >
+              <Minus size={16} className={`transition-transform duration-150 ${isRepeating === 'minus' ? 'scale-110' : ''}`} />
+            </button>
 
-          <div className="w-16">
-            <Input
-              type="text"
-              inputMode="decimal"
-              step={step}
-              value={displayQty}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              validation={{ min: 0.01, max: 99999 }}
-              className="text-center py-1.5 text-sm font-semibold"
-            />
+            <div className="w-14 sm:w-16">
+              <Input
+                type="text"
+                inputMode="decimal"
+                step={step}
+                value={displayQty}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                validation={{ min: 0.01, max: 99999 }}
+                className="text-center py-1.5 text-sm font-semibold"
+              />
+            </div>
+
+            <button
+              type="button"
+              onMouseUp={stopRepeat}
+              onMouseLeave={stopRepeat}
+              onTouchStart={() => startHold(step)}
+              onTouchEnd={stopRepeat}
+              onTouchCancel={stopRepeat}
+              onClick={() => handleClick(step)}
+              className={`${btnBase} ${isRepeating === 'plus' ? btnActive : btnIdle}`}
+              aria-label="Aumentar cantidad"
+            >
+              <Plus size={16} className={`transition-transform duration-150 ${isRepeating === 'plus' ? 'scale-110' : ''}`} />
+            </button>
           </div>
-
-          <button
-            type="button"
-            onMouseDown={() => startHold(step)}
-            onMouseUp={stopRepeat}
-            onMouseLeave={stopRepeat}
-            onTouchStart={() => startHold(step)}
-            onTouchEnd={stopRepeat}
-            onTouchCancel={stopRepeat}
-            onClick={() => handleClick(step)}
-            className={`${btnBase} ${isRepeating === 'plus' ? btnActive : btnIdle}`}
-            aria-label="Aumentar cantidad"
-          >
-            <Plus size={16} className={`transition-transform duration-150 ${isRepeating === 'plus' ? 'scale-110' : ''}`} />
-          </button>
 
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onRemove(item.productId, item.presentationId)}
-            className="p-2.5 min-w-11 min-h-11 ml-1"
+            className="p-2 min-w-9 min-h-9 sm:min-w-11 sm:min-h-11 sm:ml-1 active:bg-danger/10"
           >
             <Trash2 size={16} className="text-danger" />
           </Button>

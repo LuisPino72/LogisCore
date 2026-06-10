@@ -67,7 +67,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
   useEffect(() => {
     if (isOpen) {
       usePurchaseStore.getState().fetchProductsForOrder(tenantId).then((res) => {
-        if (res.ok) setProducts(res.data);
+        if (res.ok) setProducts(res.data.filter((p) => p.productType !== 'producto_terminado'));
       });
       if (editOrder) {
         setSupplierId(editOrder.supplierId);
