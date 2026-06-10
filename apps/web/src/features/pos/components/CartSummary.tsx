@@ -162,7 +162,7 @@ export function CartSummary({
               }`}
             >
               <Percent size={12} className="inline mr-1" />
-              %
+              Porcentaje
             </button>
             <button
               type="button"
