@@ -67,7 +67,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-sm truncate">{recipe.name}</h3>
+                    <h3 className="font-semibold text-sm wrap-break-word">{recipe.name}</h3>
                     <Badge variant={recipe.mode === 'batch' ? 'info' : 'success'} className="shrink-0">
                       {recipe.mode === 'batch' ? (
                         <><Package size={12} className="mr-1" />Lote</>

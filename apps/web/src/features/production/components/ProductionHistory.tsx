@@ -76,7 +76,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium text-sm truncate">
+                  <h4 className="font-medium text-sm wrap-break-word">
                     {recipeMap.get(order.recipeId) || 'Receta eliminada'}
                   </h4>
                   <Badge variant={statusConfig.variant} className="shrink-0">

@@ -131,7 +131,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
         {confirmStep ? (
           <Alert variant="warning" icon={<HelpCircle size={20} />} title={`¿Estás seguro de producir ${batchCount} lote(s)?`}>
             <p>Se descontarán los ingredientes del inventario y se creará stock de producto terminado. Esta acción no se puede deshacer.</p>
-            <p className="mt-1"><strong>{recipe.name}</strong> · {recipe.yieldQuantity * batchCount} {recipe.yieldUnit} · ${estimatedCost.toFixed(2)}</p>
+            <p className="mt-1 wrap-break-word"><strong>{recipe.name}</strong> · {recipe.yieldQuantity * batchCount} {recipe.yieldUnit} · ${estimatedCost.toFixed(2)}</p>
           </Alert>
         ) : (
           <>
@@ -140,7 +140,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
               <div className="flex items-center gap-2">
                 <Utensils size={18} className="text-primary" />
                 <div>
-                  <h3 className="font-semibold text-sm">{recipe.name}</h3>
+                  <h3 className="font-semibold text-sm wrap-break-word">{recipe.name}</h3>
                   <p className="text-xs text-gray-500">
                     Rendimiento por lote: {recipe.yieldQuantity} {recipe.yieldUnit}
                     {recipe.wastePct > 0 && (
@@ -184,7 +184,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
                           : 'bg-danger/5 border border-danger/20'
                       }`}
                     >
-                      <span className="truncate flex-1">{item.productName}</span>
+                      <span className="truncate flex-1 wrap-break-word">{item.productName}</span>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`font-mono text-xs ${item.sufficient ? 'text-success' : 'text-danger'}`}>
                           {item.needed} / {item.available} {item.unit}

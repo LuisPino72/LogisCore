@@ -158,8 +158,8 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
                       <Card key={recipe.id} className="p-4 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between mb-3">
                           <div>
-                            <h3 className="font-semibold text-sm">{recipe.name}</h3>
-                            <p className="text-xs text-gray-500">
+                            <h3 className="font-semibold text-sm wrap-break-word">{recipe.name}</h3>
+                              <p className="text-xs text-gray-500 wrap-break-word">
                               Yield: {recipe.yieldQuantity} {recipe.yieldUnit}
                             </p>
                           </div>
@@ -247,7 +247,7 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="p-5 max-w-sm w-full">
             <h3 className="font-semibold text-base mb-2">Cancelar orden de producción</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-4 wrap-break-word">
               Vas a cancelar la orden de <strong>{cancelConfirm.recipeName}</strong>.
               El stock de ingredientes se revertirá automáticamente.
             </p>
