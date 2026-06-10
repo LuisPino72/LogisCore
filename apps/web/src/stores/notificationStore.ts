@@ -52,7 +52,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (!tenantId) return;
     const result = await notificationService.addNotification({ ...n, tenantId });
     if (result.ok) {
-      set((s) => ({ notifications: [result.data, ...s.notifications] }));
+      set((s) => {
+        const exists = s.notifications.some((existing) => existing.id === result.data.id);
+        if (exists) return s;
+        return { notifications: [result.data, ...s.notifications] };
+      });
     }
   },
 
