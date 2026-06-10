@@ -4,8 +4,14 @@ import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
   TopProductData,
+  TopCategoryData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
+  ExpenseBreakdownItem,
+  CustomersSummaryData,
+  CustomerRankingItem,
+  ProductionSummaryData,
+  RecipeProfitabilityItem,
 } from '../types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
@@ -13,8 +19,14 @@ interface ExportAllData {
   summary: ExecutiveSummaryData | null;
   profitOverTime: DailyProfitPoint[];
   topProducts: TopProductData[];
+  topCategories: TopCategoryData[];
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
+  expenseBreakdown: ExpenseBreakdownItem[];
+  customersSummary: CustomersSummaryData | null;
+  customersRanking: CustomerRankingItem[];
+  productionSummary: ProductionSummaryData | null;
+  recipeProfitability: RecipeProfitabilityItem[];
 }
 
 interface SheetConfig {
@@ -50,8 +62,12 @@ function buildSheets(data: ExportAllData): SheetConfig[] {
   sheets.push(buildSummarySheet(data.summary));
   sheets.push(buildProfitSheet(data.profitOverTime));
   sheets.push(buildProductsSheet(data.topProducts));
+  sheets.push(buildCategoriesSheet(data.topCategories));
   sheets.push(buildPaymentsSheet(data.paymentBreakdown));
+  sheets.push(buildExpensesSheet(data.expenseBreakdown));
   sheets.push(buildCashSheet(data.cashAnalysis));
+  sheets.push(buildCustomersSheet(data.customersSummary, data.customersRanking));
+  sheets.push(buildProductionSheet(data.productionSummary, data.recipeProfitability));
 
   return sheets;
 }
@@ -120,6 +136,46 @@ function buildProductsSheet(topProducts: TopProductData[]): SheetConfig {
   return { name: 'Productos', headers: ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [30, 10, 14, 10, 14, 10, 14, 10, 10] };
 }
 
+function buildCategoriesSheet(topCategories: TopCategoryData[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
+  topCategories.forEach((c) => {
+    rows.push([
+      c.categoryName,
+      c.productCount,
+      c.quantitySold,
+      formatBs(c.revenueBs),
+      formatUsd(c.revenueUsd),
+      formatBs(c.costBs),
+      formatUsd(c.costUsd),
+      formatBs(c.profitBs),
+      formatUsd(c.profitUsd),
+      `${c.marginPercent}%`,
+    ]);
+  });
+  return { name: 'Categorías', headers: ['Categoría', 'Productos', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [25, 10, 10, 14, 10, 14, 10, 14, 10, 10] };
+}
+
+function buildExpensesSheet(expenseBreakdown: ExpenseBreakdownItem[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
+  const totalBs = expenseBreakdown.reduce((s, e) => s + e.amountBs, 0);
+  const totalUsd = expenseBreakdown.reduce((s, e) => s + e.amountUsd, 0);
+
+  expenseBreakdown.forEach((e) => {
+    const pctBs = totalBs > 0 ? ((e.amountBs / totalBs) * 100).toFixed(1) : '0';
+    rows.push([
+      e.label,
+      formatBs(e.amountBs),
+      formatUsd(e.amountUsd),
+      `${pctBs}%`,
+    ]);
+  });
+
+  rows.push(['', '', '', '']);
+  rows.push(['TOTAL', formatBs(totalBs), formatUsd(totalUsd), '100%']);
+
+  return { name: 'Gastos', headers: ['Tipo de Gasto', 'Monto Bs', 'Monto $', '% del Total'], rows, colWidths: [30, 16, 12, 12] };
+}
+
 function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): SheetConfig {
   const rows: (string | number | undefined | null)[][] = [];
   paymentBreakdown.forEach((p) => {
@@ -147,6 +203,81 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): SheetConfig {
     ]);
   });
   return { name: 'Caja', headers: ['Caja', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'], rows, colWidths: [12, 14, 10, 14, 10, 14, 10, 14, 10, 14, 10, 10] };
+}
+
+function buildCustomersSheet(summary: CustomersSummaryData | null, ranking: CustomerRankingItem[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
+
+  if (summary) {
+    rows.push(
+      ['--- RESUMEN ---', '', '', '', '', '', ''],
+      ['Total Clientes', summary.totalCustomers, '', '', '', '', ''],
+      ['Activos (30d)', summary.activeCustomers, '', '', '', '', ''],
+      ['Tasa Retención %', `${summary.retentionRate}%`, '', '', '', '', ''],
+      ['Ticket Promedio', formatBs(summary.averageTicketBs), formatUsd(summary.averageTicketUsd), '', '', '', ''],
+      ['Top Cliente', summary.topCustomerName ?? 'N/A', formatUsd(summary.topCustomerSpentUsd ?? 0), '', '', '', ''],
+      ['', '', '', '', '', '', ''],
+      ['--- RANKING ---', '', '', '', '', '', ''],
+    );
+  }
+
+  ranking.forEach((c) => {
+    rows.push([
+      c.customerName,
+      c.cedula ?? 'N/A',
+      c.purchaseCount,
+      formatBs(c.totalSpentBs),
+      formatUsd(c.totalSpentUsd),
+      formatUsd(c.averageTicketUsd),
+      c.lastPurchaseAt
+        ? new Date(c.lastPurchaseAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'N/A',
+    ]);
+  });
+
+  return {
+    name: 'Clientes',
+    headers: ['Nombre', 'Cédula', 'Compras', 'Total Gastado Bs', 'Total Gastado $', 'Ticket Prom $', 'Última Compra'],
+    rows,
+    colWidths: [25, 14, 10, 16, 12, 14, 14],
+  };
+}
+
+function buildProductionSheet(summary: ProductionSummaryData | null, profitability: RecipeProfitabilityItem[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
+
+  if (summary) {
+    rows.push(
+      ['--- RESUMEN ---', '', '', '', '', '', ''],
+      ['Recetas Activas', summary.activeRecipes, '', '', '', '', ''],
+      ['Órdenes Totales', summary.totalOrders, '', '', '', '', ''],
+      ['Unidades Producidas', summary.totalQuantityProduced, '', '', '', '', ''],
+      ['Merma Promedio %', `${summary.averageWastePct}%`, '', '', '', '', ''],
+      ['Costo Total Ingredientes', formatBs(summary.totalIngredientCostBs), formatUsd(summary.totalIngredientCostUsd), '', '', '', ''],
+      ['Más Producida', summary.mostProducedRecipe ?? 'N/A', summary.mostProducedQuantity ? `${summary.mostProducedQuantity} unidades` : '', '', '', '', ''],
+      ['', '', '', '', '', '', ''],
+      ['--- RANKING RECETAS ---', '', '', '', '', '', ''],
+    );
+  }
+
+  profitability.forEach((r) => {
+    rows.push([
+      r.recipeName,
+      r.productName,
+      r.mode === 'batch' ? 'Lotes' : 'Ensamblaje',
+      r.timesProduced,
+      formatUsd(r.costPerUnitUsd),
+      `${r.wastePct}%`,
+      r.totalQuantityProduced,
+    ]);
+  });
+
+  return {
+    name: 'Producción',
+    headers: ['Receta', 'Producto', 'Tipo', 'Veces Producida', 'Costo/Unidad $', 'Merma %', 'Unidades Totales'],
+    rows,
+    colWidths: [25, 25, 14, 14, 14, 10, 14],
+  };
 }
 
 export function useExport() {

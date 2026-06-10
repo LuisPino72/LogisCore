@@ -115,9 +115,9 @@ export interface CashRegisterSummaryData {
 
 
 
-export type ReportTab = 'summary' | 'profits' | 'products' | 'cash';
+export type ReportTab = 'summary' | 'profits' | 'products' | 'cash' | 'more';
 
-export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos';
+export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos' | 'topClientes' | 'clientesRanking' | 'produccionRecetas' | 'produccionOrdenes';
 
 export interface SaleDetail {
   id: string;
@@ -156,6 +156,62 @@ export interface TicketDistributionItem {
   count: number;
   percentage: number;
   cumulative: number;
+}
+
+// ===== CUSTOMERS REPORT =====
+
+export interface CustomerRankingItem {
+  customerId: string;
+  customerName: string;
+  cedula?: string;
+  purchaseCount: number;
+  totalSpentUsd: number;
+  totalSpentBs: number;
+  averageTicketUsd: number;
+  lastPurchaseAt: string | null;
+  firstPurchaseAt: string | null;
+}
+
+export interface CustomersSummaryData {
+  totalCustomers: number;
+  activeCustomers: number;
+  newCustomers: number;
+  returningCustomers: number;
+  retentionRate: number;
+  averageTicketUsd: number;
+  averageTicketBs: number;
+  topCustomerName?: string;
+  topCustomerSpentUsd?: number;
+}
+
+// ===== PRODUCTION REPORT =====
+
+export interface RecipeProfitabilityItem {
+  recipeId: string;
+  recipeName: string;
+  productName: string;
+  mode: 'batch' | 'assembly';
+  totalCostUsd: number;
+  totalCostBs: number;
+  timesProduced: number;
+  totalQuantityProduced: number;
+  yieldUnit: string;
+  costPerUnitUsd: number;
+  wastePct: number;
+}
+
+export interface ProductionSummaryData {
+  totalRecipes: number;
+  activeRecipes: number;
+  totalOrders: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  totalQuantityProduced: number;
+  mostProducedRecipe?: string;
+  mostProducedQuantity?: number;
+  averageWastePct: number;
+  totalIngredientCostUsd: number;
+  totalIngredientCostBs: number;
 }
 
 

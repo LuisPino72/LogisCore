@@ -23,6 +23,15 @@ export function useDrillDown(tenantId: string | null, filters: ReportFilters) {
         result = await reportsService.getTicketDistribution(tenantId, filters);
       } else if (type === 'descuentos') {
         result = await reportsService.getDiscountBreakdown(tenantId, filters);
+      } else if (type === 'topClientes' || type === 'clientesRanking') {
+        result = await reportsService.getCustomersRanking(tenantId, filters);
+      } else if (type === 'produccionRecetas') {
+        result = await reportsService.getRecipeProfitability(tenantId, filters);
+      } else if (type === 'produccionOrdenes') {
+        const orderResult = await reportsService.getProductionSummary(tenantId, filters);
+        if (orderResult.ok) {
+          result = { ok: true as const, data: [orderResult.data] };
+        }
       }
       if (result?.ok) setDrillDownData(result.data as unknown as Record<string, unknown>[]);
     } finally {

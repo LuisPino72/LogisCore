@@ -22,6 +22,10 @@ import type {
   DiscountBreakdownItem,
   ExpenseBreakdownItem,
   TicketDistributionItem,
+  CustomerRankingItem,
+  CustomersSummaryData,
+  RecipeProfitabilityItem,
+  ProductionSummaryData,
 } from '../types';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -1437,6 +1441,343 @@ export const reportsService = {
     } catch (err) {
       console.error('[reportsService.getDiscountBreakdown]', err);
       return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener desglose de descuentos.'));
+    }
+  },
+
+  // ===== CUSTOMERS REPORT =====
+
+  async getCustomersSummary(tenantId: string, filters: ReportFilters): Promise<Result<CustomersSummaryData, AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    try {
+      const db = getDb();
+      const { start, end } = getDateRange(filters);
+
+      // Get all customers
+      const customers = await db.customers
+        .where({ tenantId })
+        .filter((c) => !c.deletedAt)
+        .toArray();
+
+      // Get sales in period
+      const sales = await db.sales
+        .where({ tenantId })
+        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end)
+        .toArray();
+
+      // Get customers who bought in period
+      const customerIdsInPeriod = new Set(sales.filter((s) => s.customerId).map((s) => s.customerId));
+      const activeCustomers = customers.filter((c) => customerIdsInPeriod.has(c.id));
+
+      // New customers (created in period)
+      const newCustomers = customers.filter((c) => c.createdAt >= start && c.createdAt <= end);
+
+      // Returning customers (existed before period but bought in period)
+      const returningCustomers = activeCustomers.filter((c) => c.createdAt < start);
+
+      // Calculate average ticket
+      const salesWithCustomer = sales.filter((s) => s.customerId);
+      const totalSpentBs = salesWithCustomer.reduce((sum, s) => sum + (s.totalBs || 0), 0);
+      const avgTicketBs = salesWithCustomer.length > 0 ? preciseRound(totalSpentBs / salesWithCustomer.length, 2) : 0;
+      const avgTicketUsd = salesWithCustomer.length > 0 && salesWithCustomer[0]?.exchangeRate
+        ? preciseRound(avgTicketBs / salesWithCustomer[0].exchangeRate, 2)
+        : 0;
+
+      // Retention rate
+      const totalWithSales = activeCustomers.length;
+      const retentionRate = totalWithSales > 0 ? preciseRound((returningCustomers.length / totalWithSales) * 100, 1) : 0;
+
+      // Top customer
+      const customerSpending = new Map<string, { name: string; total: number }>();
+      for (const sale of salesWithCustomer) {
+        const customer = customers.find((c) => c.id === sale.customerId);
+        if (customer) {
+          const existing = customerSpending.get(customer.id) || { name: customer.name, total: 0 };
+          existing.total += sale.totalBs || 0;
+          customerSpending.set(customer.id, existing);
+        }
+      }
+      let topCustomer: { name: string; total: number } | undefined;
+      for (const [, data] of customerSpending) {
+        if (!topCustomer || data.total > topCustomer.total) {
+          topCustomer = data;
+        }
+      }
+
+      return success({
+        totalCustomers: customers.length,
+        activeCustomers: activeCustomers.length,
+        newCustomers: newCustomers.length,
+        returningCustomers: returningCustomers.length,
+        retentionRate,
+        averageTicketUsd: avgTicketUsd,
+        averageTicketBs: avgTicketBs,
+        topCustomerName: topCustomer?.name,
+        topCustomerSpentUsd: topCustomer && salesWithCustomer[0]?.exchangeRate
+          ? preciseRound(topCustomer.total / salesWithCustomer[0].exchangeRate, 2)
+          : undefined,
+      });
+    } catch (err) {
+      console.error('[reportsService.getCustomersSummary]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener resumen de clientes.'));
+    }
+  },
+
+  async getCustomersRanking(tenantId: string, filters: ReportFilters): Promise<Result<CustomerRankingItem[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    try {
+      const db = getDb();
+      const { start, end } = getDateRange(filters);
+
+      const customers = await db.customers
+        .where({ tenantId })
+        .filter((c) => !c.deletedAt)
+        .toArray();
+
+      const sales = await db.sales
+        .where({ tenantId })
+        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end && !!s.customerId)
+        .toArray();
+
+      // Group sales by customer
+      const customerStats = new Map<string, {
+        purchaseCount: number;
+        totalSpentBs: number;
+        lastPurchaseAt: string | null;
+        firstPurchaseAt: string | null;
+        exchangeRate: number;
+      }>();
+
+      for (const sale of sales) {
+        if (!sale.customerId) continue;
+        const existing = customerStats.get(sale.customerId) || {
+          purchaseCount: 0,
+          totalSpentBs: 0,
+          lastPurchaseAt: null,
+          firstPurchaseAt: null,
+          exchangeRate: sale.exchangeRate || 1,
+        };
+        existing.purchaseCount++;
+        existing.totalSpentBs += sale.totalBs || 0;
+        if (!existing.lastPurchaseAt || sale.createdAt > existing.lastPurchaseAt) {
+          existing.lastPurchaseAt = sale.createdAt;
+        }
+        if (!existing.firstPurchaseAt || sale.createdAt < existing.firstPurchaseAt) {
+          existing.firstPurchaseAt = sale.createdAt;
+        }
+        if (sale.exchangeRate > 0) existing.exchangeRate = sale.exchangeRate;
+        customerStats.set(sale.customerId, existing);
+      }
+
+      // Build ranking
+      const ranking: CustomerRankingItem[] = [];
+      for (const [customerId, stats] of customerStats) {
+        const customer = customers.find((c) => c.id === customerId);
+        if (!customer) continue;
+        ranking.push({
+          customerId,
+          customerName: customer.name,
+          cedula: customer.cedula,
+          purchaseCount: stats.purchaseCount,
+          totalSpentUsd: stats.exchangeRate > 0 ? preciseRound(stats.totalSpentBs / stats.exchangeRate, 2) : 0,
+          totalSpentBs: preciseRound(stats.totalSpentBs, 2),
+          averageTicketUsd: stats.purchaseCount > 0 && stats.exchangeRate > 0
+            ? preciseRound(stats.totalSpentBs / stats.purchaseCount / stats.exchangeRate, 2)
+            : 0,
+          lastPurchaseAt: stats.lastPurchaseAt,
+          firstPurchaseAt: stats.firstPurchaseAt,
+        });
+      }
+
+      // Sort by total spent descending
+      ranking.sort((a, b) => b.totalSpentUsd - a.totalSpentUsd);
+
+      return success(ranking.slice(0, 50));
+    } catch (err) {
+      console.error('[reportsService.getCustomersRanking]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener ranking de clientes.'));
+    }
+  },
+
+  // ===== PRODUCTION REPORT =====
+
+  async getProductionSummary(tenantId: string, filters: ReportFilters): Promise<Result<ProductionSummaryData, AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    try {
+      const db = getDb();
+      const { start, end } = getDateRange(filters);
+
+      const recipes = await db.recipes
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt)
+        .toArray();
+
+      const orders = await db.productionOrders
+        .where({ tenantId })
+        .filter((o) => !o.deletedAt && o.createdAt >= start && o.createdAt <= end)
+        .toArray();
+
+      const completedOrders = orders.filter((o) => o.status === 'done' || o.status === 'confirmed');
+      const cancelledOrders = orders.filter((o) => o.status === 'cancelled');
+      const totalQuantityProduced = orders.reduce((sum, o) => sum + (o.quantityProduced || o.quantityTarget), 0);
+
+      // Most produced recipe
+      const recipeProduction = new Map<string, { name: string; quantity: number }>();
+      for (const order of orders) {
+        if (order.status === 'cancelled') continue;
+        const recipe = recipes.find((r) => r.id === order.recipeId);
+        if (recipe) {
+          const existing = recipeProduction.get(order.recipeId) || { name: recipe.name, quantity: 0 };
+          existing.quantity += order.quantityProduced || order.quantityTarget;
+          recipeProduction.set(order.recipeId, existing);
+        }
+      }
+      let mostProduced: { name: string; quantity: number } | undefined;
+      for (const [, data] of recipeProduction) {
+        if (!mostProduced || data.quantity > mostProduced.quantity) {
+          mostProduced = data;
+        }
+      }
+
+      // Average waste
+      const recipesWithWaste = recipes.filter((r) => r.wastePct > 0);
+      const avgWaste = recipesWithWaste.length > 0
+        ? preciseRound(recipesWithWaste.reduce((sum, r) => sum + r.wastePct, 0) / recipesWithWaste.length, 1)
+        : 0;
+
+      // Total ingredient cost (from inventory movements)
+      const movements = await db.inventoryMovements
+        .where({ tenantId })
+        .filter((m) => !m.deletedAt && m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.createdAt >= start && m.createdAt <= end)
+        .toArray();
+      const totalIngredientCost = movements.reduce((sum, m) => sum + (m.costUsd || 0), 0);
+
+      return success({
+        totalRecipes: recipes.length,
+        activeRecipes: recipes.filter((r) => r.isActive).length,
+        totalOrders: orders.length,
+        completedOrders: completedOrders.length,
+        cancelledOrders: cancelledOrders.length,
+        totalQuantityProduced,
+        mostProducedRecipe: mostProduced?.name,
+        mostProducedQuantity: mostProduced?.quantity,
+        averageWastePct: avgWaste,
+        totalIngredientCostUsd: preciseRound(totalIngredientCost, 2),
+        totalIngredientCostBs: 0, // Will be calculated with exchange rate if needed
+      });
+    } catch (err) {
+      console.error('[reportsService.getProductionSummary]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener resumen de producción.'));
+    }
+  },
+
+  async getRecipeProfitability(tenantId: string, filters: ReportFilters): Promise<Result<RecipeProfitabilityItem[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+    }
+    try {
+      const db = getDb();
+      const { start, end } = getDateRange(filters);
+
+      const recipes = await db.recipes
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt)
+        .toArray();
+
+      const orders = await db.productionOrders
+        .where({ tenantId })
+        .filter((o) => !o.deletedAt && o.createdAt >= start && o.createdAt <= end && o.status !== 'cancelled')
+        .toArray();
+
+      // Calculate recipe profitability
+      const recipeStats = new Map<string, {
+        recipeName: string;
+        productName: string;
+        mode: 'batch' | 'assembly';
+        totalCostUsd: number;
+        timesProduced: number;
+        totalQuantityProduced: number;
+        yieldUnit: string;
+        wastePct: number;
+      }>();
+
+      for (const order of orders) {
+        const recipe = recipes.find((r) => r.id === order.recipeId);
+        if (!recipe) continue;
+
+        // Get product name
+        const product = await db.products.get(recipe.productId);
+        const productName = product?.name || 'Desconocido';
+
+        const existing = recipeStats.get(order.recipeId) || {
+          recipeName: recipe.name,
+          productName,
+          mode: recipe.mode,
+          totalCostUsd: 0,
+          timesProduced: 0,
+          totalQuantityProduced: 0,
+          yieldUnit: recipe.yieldUnit,
+          wastePct: recipe.wastePct,
+        };
+
+        existing.timesProduced++;
+        existing.totalQuantityProduced += order.quantityProduced || order.quantityTarget;
+
+        recipeStats.set(order.recipeId, existing);
+      }
+
+      // Get ingredient costs from movements
+      const movements = await db.inventoryMovements
+        .where({ tenantId })
+        .filter((m) => !m.deletedAt && m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.createdAt >= start && m.createdAt <= end)
+        .toArray();
+
+      // Simple cost distribution (proportional to quantity produced)
+      const totalQuantity = Array.from(recipeStats.values()).reduce((sum, r) => sum + r.totalQuantityProduced, 0);
+      const totalCost = movements.reduce((sum, m) => sum + (m.costUsd || 0), 0);
+
+      for (const [, stats] of recipeStats) {
+        if (totalQuantity > 0) {
+          stats.totalCostUsd = preciseRound((stats.totalQuantityProduced / totalQuantity) * totalCost, 2);
+        }
+      }
+
+      // Convert to array and calculate cost per unit
+      const result: RecipeProfitabilityItem[] = [];
+      for (const [recipeId, stats] of recipeStats) {
+        result.push({
+          recipeId,
+          recipeName: stats.recipeName,
+          productName: stats.productName,
+          mode: stats.mode,
+          totalCostUsd: stats.totalCostUsd,
+          totalCostBs: 0, // Will be calculated with exchange rate if needed
+          timesProduced: stats.timesProduced,
+          totalQuantityProduced: stats.totalQuantityProduced,
+          yieldUnit: stats.yieldUnit,
+          costPerUnitUsd: stats.totalQuantityProduced > 0
+            ? preciseRound(stats.totalCostUsd / stats.totalQuantityProduced, 4)
+            : 0,
+          wastePct: stats.wastePct,
+        });
+      }
+
+      // Sort by times produced descending
+      result.sort((a, b) => b.timesProduced - a.timesProduced);
+
+      return success(result);
+    } catch (err) {
+      console.error('[reportsService.getRecipeProfitability]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener rentabilidad de recetas.'));
     }
   },
 };

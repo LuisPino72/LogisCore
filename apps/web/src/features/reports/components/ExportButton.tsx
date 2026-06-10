@@ -6,23 +6,35 @@ import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
   TopProductData,
+  TopCategoryData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
+  ExpenseBreakdownItem,
+  CustomersSummaryData,
+  CustomerRankingItem,
+  ProductionSummaryData,
+  RecipeProfitabilityItem,
 } from '../types';
 
 interface ExportButtonProps {
   summary: ExecutiveSummaryData | null;
   profitOverTime: DailyProfitPoint[];
   topProducts: TopProductData[];
+  topCategories: TopCategoryData[];
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
+  expenseBreakdown: ExpenseBreakdownItem[];
+  customersSummary: CustomersSummaryData | null;
+  customersRanking: CustomerRankingItem[];
+  productionSummary: ProductionSummaryData | null;
+  recipeProfitability: RecipeProfitabilityItem[];
   loading: boolean;
   onPrint: () => void;
   isGeneratingPdf?: boolean;
 }
 
 export function ExportButton({
-  summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis, loading, onPrint, isGeneratingPdf = false,
+  summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability, loading, onPrint, isGeneratingPdf = false,
 }: ExportButtonProps) {
   const { exportExcelAll } = useExport();
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -30,7 +42,7 @@ export function ExportButton({
   const handleExcel = async () => {
     setIsExportingExcel(true);
     try {
-      await exportExcelAll({ summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis });
+      await exportExcelAll({ summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability });
     } finally {
       setIsExportingExcel(false);
     }

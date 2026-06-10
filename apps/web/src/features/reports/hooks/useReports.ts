@@ -11,6 +11,10 @@ import type {
   PaymentBreakdownData,
   CashRegisterSummaryData,
   ExpenseBreakdownItem,
+  CustomersSummaryData,
+  CustomerRankingItem,
+  ProductionSummaryData,
+  RecipeProfitabilityItem,
   ReportTab,
 } from '../types';
 
@@ -26,11 +30,17 @@ interface ReportsState {
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
   expenseBreakdown: ExpenseBreakdownItem[];
+  customersSummary: CustomersSummaryData | null;
+  customersRanking: CustomerRankingItem[];
+  productionSummary: ProductionSummaryData | null;
+  recipeProfitability: RecipeProfitabilityItem[];
 }
 
 const initialState: ReportsState = {
   loading: false, error: null,
   summary: null, profitOverTime: [], topProducts: [], topCategories: [], paymentBreakdown: [], cashAnalysis: [], expenseBreakdown: [],
+  customersSummary: null, customersRanking: [],
+  productionSummary: null, recipeProfitability: [],
 };
 
 export function useReports(tenantId: string | null) {
@@ -168,6 +178,23 @@ export function useReports(tenantId: string | null) {
       let res: Result<unknown, AppError>;
       if (tab === 'profits') res = await reportsService.getProfitOverTime(tenantId, filters);
       else if (tab === 'cash') res = await reportsService.getCashAnalysis(tenantId, filters);
+      else if (tab === 'more') {
+        const [cs, cr, ps, rp] = await Promise.all([
+          reportsService.getCustomersSummary(tenantId, filters),
+          reportsService.getCustomersRanking(tenantId, filters),
+          reportsService.getProductionSummary(tenantId, filters),
+          reportsService.getRecipeProfitability(tenantId, filters),
+        ]);
+        const errs = [cs, cr, ps, rp].filter((r) => !r.ok).map((r) => r.error.message);
+        apply({
+          customersSummary: cs.ok ? cs.data : null,
+          customersRanking: cr.ok ? cr.data : [],
+          productionSummary: ps.ok ? ps.data : null,
+          recipeProfitability: rp.ok ? rp.data : [],
+        }, errs.length ? errs.join('. ') : null);
+        preloadAdjacent(tab);
+        return;
+      }
       else return;
 
       if (res.ok) {
@@ -185,7 +212,7 @@ export function useReports(tenantId: string | null) {
   }, [tenantId, filters]);
 
   const preloadAdjacent = useCallback((currentTab: ReportTab) => {
-    const tabs: ReportTab[] = ['summary', 'profits', 'products', 'cash'];
+    const tabs: ReportTab[] = ['summary', 'profits', 'products', 'cash', 'more'];
     const idx = tabs.indexOf(currentTab);
     if (idx > 0) preloadTabData(tabs[idx - 1]);
     if (idx < tabs.length - 1) preloadTabData(tabs[idx + 1]);
@@ -196,7 +223,7 @@ export function useReports(tenantId: string | null) {
     loadTab(activeTab);
   }, [tenantId, filters, activeTab, loadTab]);
 
-  const REPORTS_TABLES = ['sales', 'sale_items', 'cash_registers', 'expenses', 'products', 'categories', 'inventory_movements', 'exchange_rates'];
+  const REPORTS_TABLES = ['sales', 'sale_items', 'cash_registers', 'expenses', 'products', 'categories', 'inventory_movements', 'exchange_rates', 'customers', 'recipes', 'recipe_lines', 'production_orders'];
 
   const refetch = useCallback((table?: string) => {
     if (debounceRefetchTimer.current) clearTimeout(debounceRefetchTimer.current);
@@ -208,7 +235,9 @@ export function useReports(tenantId: string | null) {
         if (['products', 'categories'].includes(table)) affectedTabs.push('summary', 'products');
         if (['cash_registers'].includes(table)) affectedTabs.push('summary', 'cash');
         if (['expenses'].includes(table)) affectedTabs.push('summary');
-        if (['inventory_movements'].includes(table)) affectedTabs.push('summary');
+        if (['inventory_movements'].includes(table)) affectedTabs.push('summary', 'more');
+        if (['customers'].includes(table)) affectedTabs.push('more');
+        if (['recipes', 'recipe_lines', 'production_orders'].includes(table)) affectedTabs.push('more');
         if (affectedTabs.length > 0) {
           const cacheKey = `${tenantId}-${activeTab}-${filters.timeRange}-${filters.startDate ?? ''}-${filters.endDate ?? ''}`;
           if (affectedTabs.includes(activeTab)) {

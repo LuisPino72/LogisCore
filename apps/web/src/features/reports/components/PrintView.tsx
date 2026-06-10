@@ -3,8 +3,14 @@ import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
   TopProductData,
+  TopCategoryData,
   PaymentBreakdownData,
   CashRegisterSummaryData,
+  ExpenseBreakdownItem,
+  CustomersSummaryData,
+  CustomerRankingItem,
+  ProductionSummaryData,
+  RecipeProfitabilityItem,
 } from '../types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
@@ -16,8 +22,14 @@ interface PrintViewProps {
   summary: ExecutiveSummaryData | null;
   profitOverTime: DailyProfitPoint[];
   topProducts: TopProductData[];
+  topCategories: TopCategoryData[];
   paymentBreakdown: PaymentBreakdownData[];
   cashAnalysis: CashRegisterSummaryData[];
+  expenseBreakdown: ExpenseBreakdownItem[];
+  customersSummary: CustomersSummaryData | null;
+  customersRanking: CustomerRankingItem[];
+  productionSummary: ProductionSummaryData | null;
+  recipeProfitability: RecipeProfitabilityItem[];
 }
 
 const printStyles = `
@@ -159,7 +171,7 @@ const printStyles = `
 `;
 
 export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function PrintView(
-  { summary, profitOverTime, topProducts, paymentBreakdown, cashAnalysis },
+  { summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability },
   ref,
 ) {
   const reportDate = new Date().toLocaleDateString('es-VE', {
@@ -272,6 +284,47 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
         </div>
       )}
 
+      {/* Top Categorías */}
+      {topCategories.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Top Categorías por Ganancia</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Productos</th>
+                  <th>Vendidos</th>
+                  <th>Ingreso Bs</th>
+                  <th>Ingreso $</th>
+                  <th>Gasto Bs</th>
+                  <th>Gasto $</th>
+                  <th>Ganancia Bs</th>
+                  <th>Ganancia $</th>
+                  <th>Margen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topCategories.map((c, i) => (
+                  <tr key={i}>
+                    <td>{c.categoryName}</td>
+                    <td>{c.productCount}</td>
+                    <td>{c.quantitySold}</td>
+                    <td>{formatBs(c.revenueBs)}</td>
+                    <td>{formatUsd(c.revenueUsd)}</td>
+                    <td>{formatBs(c.costBs)}</td>
+                    <td>{formatUsd(c.costUsd)}</td>
+                    <td>{formatBs(c.profitBs)}</td>
+                    <td>{formatUsd(c.profitUsd)}</td>
+                    <td>{c.marginPercent}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Métodos de Pago */}
       {paymentBreakdown.length > 0 && (
         <div className="print-section">
@@ -297,6 +350,45 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                     <td>{p.percentage}%</td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Desglose de Gastos */}
+      {expenseBreakdown.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Desglose de Gastos</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Tipo de Gasto</th>
+                  <th>Monto Bs</th>
+                  <th>Monto $</th>
+                  <th>% del Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenseBreakdown.map((e, i) => {
+                  const totalBs = expenseBreakdown.reduce((s, x) => s + x.amountBs, 0);
+                  const pctBs = totalBs > 0 ? ((e.amountBs / totalBs) * 100).toFixed(1) : '0';
+                  return (
+                    <tr key={i}>
+                      <td>{e.label}</td>
+                      <td>{formatBs(e.amountBs)}</td>
+                      <td>{formatUsd(e.amountUsd)}</td>
+                      <td>{pctBs}%</td>
+                    </tr>
+                  );
+                })}
+                <tr style={{ fontWeight: 700, borderTop: '2px solid #0D9488' }}>
+                  <td>TOTAL</td>
+                  <td>{formatBs(expenseBreakdown.reduce((s, e) => s + e.amountBs, 0))}</td>
+                  <td>{formatUsd(expenseBreakdown.reduce((s, e) => s + e.amountUsd, 0))}</td>
+                  <td>100%</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -340,6 +432,96 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                     <td>{r.differenceBs !== undefined ? formatBs(r.differenceBs) : '-'}</td>
                     <td>{r.differenceUsd !== undefined ? formatUsd(r.differenceUsd) : '-'}</td>
                     <td>{r.status === 'open' ? 'Abierta' : 'Cerrada'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Clientes */}
+      {customersRanking.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Ranking de Clientes</h2>
+          {customersSummary && (
+            <div className="print-kpi-grid" style={{ marginBottom: 12 }}>
+              <KpiCard label="Total Clientes" value={String(customersSummary.totalCustomers)} />
+              <KpiCard label="Activos (30d)" value={String(customersSummary.activeCustomers)} />
+              <KpiCard label="Retención" value={`${customersSummary.retentionRate}%`} />
+              <KpiCard label="Ticket Promedio" value={formatDual(customersSummary.averageTicketBs, customersSummary.averageTicketUsd)} />
+            </div>
+          )}
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>C&eacute;dula</th>
+                  <th>Compras</th>
+                  <th>Total Gastado Bs</th>
+                  <th>Total Gastado $</th>
+                  <th>Ticket Prom $</th>
+                  <th>&Uacute;ltima Compra</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customersRanking.map((c, i) => (
+                  <tr key={i}>
+                    <td>{c.customerName}</td>
+                    <td>{c.cedula ?? 'N/A'}</td>
+                    <td>{c.purchaseCount}</td>
+                    <td>{formatBs(c.totalSpentBs)}</td>
+                    <td>{formatUsd(c.totalSpentUsd)}</td>
+                    <td>{formatUsd(c.averageTicketUsd)}</td>
+                    <td>{c.lastPurchaseAt ? new Date(c.lastPurchaseAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Producción */}
+      {recipeProfitability.length > 0 && (
+        <div className="print-section">
+          <h2 className="print-section-title">Producción — Rentabilidad de Recetas</h2>
+          {productionSummary && (
+            <div className="print-kpi-grid" style={{ marginBottom: 12 }}>
+              <KpiCard label="Recetas Activas" value={String(productionSummary.activeRecipes)} />
+              <KpiCard label="Órdenes" value={String(productionSummary.totalOrders)} />
+              <KpiCard label="Unidades Producidas" value={String(productionSummary.totalQuantityProduced)} />
+              <KpiCard label="Merma Promedio" value={`${productionSummary.averageWastePct}%`} />
+              <KpiCard label="Costo Ingredientes" value={formatDual(productionSummary.totalIngredientCostBs, productionSummary.totalIngredientCostUsd)} />
+              {productionSummary.mostProducedRecipe && (
+                <KpiCard label="Más Producida" value={productionSummary.mostProducedRecipe} subtitle={`${productionSummary.mostProducedQuantity} unidades`} />
+              )}
+            </div>
+          )}
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Receta</th>
+                  <th>Producto</th>
+                  <th>Tipo</th>
+                  <th>Veces Producida</th>
+                  <th>Costo/Unidad $</th>
+                  <th>Merma %</th>
+                  <th>Unidades</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recipeProfitability.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.recipeName}</td>
+                    <td>{r.productName}</td>
+                    <td>{r.mode === 'batch' ? 'Lotes' : 'Ensamblaje'}</td>
+                    <td>{r.timesProduced}</td>
+                    <td>{formatUsd(r.costPerUnitUsd)}</td>
+                    <td>{r.wastePct}%</td>
+                    <td>{r.totalQuantityProduced}</td>
                   </tr>
                 ))}
               </tbody>

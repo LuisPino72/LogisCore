@@ -1,7 +1,7 @@
 import { useState, Suspense, lazy, useRef, useCallback, type ReactNode } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip, DrillDownModal } from '@/common/components';
 import type { Column } from '@/common/components';
-import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer } from 'lucide-react';
+import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer, Users } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { useDrillDown } from '../hooks/useDrillDown';
@@ -19,6 +19,8 @@ const TopProductsChart = lazy(() => import('./TopProductsChart').then((m) => ({ 
 const PaymentBreakdown = lazy(() => import('./PaymentBreakdown').then((m) => ({ default: m.PaymentBreakdown })));
 const CashAnalysis = lazy(() => import('./CashAnalysis').then((m) => ({ default: m.CashAnalysis })));
 const ExpenseBreakdownChart = lazy(() => import('./ExpenseBreakdownChart').then((m) => ({ default: m.ExpenseBreakdownChart })));
+const CustomersReport = lazy(() => import('./CustomersReport').then((m) => ({ default: m.CustomersReport })));
+const ProductionReport = lazy(() => import('./ProductionReport').then((m) => ({ default: m.ProductionReport })));
 
 const TIME_RANGE_OPTIONS: { value: ReportTimeRange; label: string }[] = [
   { value: 'today', label: 'Hoy' },
@@ -34,6 +36,7 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'profits', label: 'Ganancias', icon: <BarChart3 size={20} /> },
   { id: 'products', label: 'Productos', icon: <ShoppingBag size={20} /> },
   { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
+  { id: 'more', label: 'Más', icon: <Users size={20} /> },
 ];
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -160,6 +163,79 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
       ];
     },
   },
+  topClientes: {
+    title: 'Top Clientes por Gasto',
+    columns: [
+      { key: 'customerName', header: 'Cliente', render: (item) => <span className="wrap-break-word">{item.customerName as string}</span> },
+      { key: 'purchaseCount', header: 'Compras', className: 'text-center' },
+      { key: 'totalSpentUsd', header: 'Total $', render: (item) => formatUsd(item.totalSpentUsd as number) },
+      { key: 'totalSpentBs', header: 'Total Bs', render: (item) => formatBs(item.totalSpentBs as number), hideOnMobile: true },
+      { key: 'averageTicketUsd', header: 'Ticket Prom.', render: (item) => formatUsd(item.averageTicketUsd as number), hideOnMobile: true },
+      { key: 'lastPurchaseAt', header: 'Última Compra', render: (item) => item.lastPurchaseAt ? new Date(item.lastPurchaseAt as string).toLocaleDateString('es-VE') : '-', hideOnMobile: true },
+    ],
+    footerSummary: (data) => {
+      const totalSpentBs = data.reduce((s, d) => s + (d.totalSpentBs as number), 0);
+      const totalSpentUsd = data.reduce((s, d) => s + (d.totalSpentUsd as number), 0);
+      const totalPurchases = data.reduce((s, d) => s + (d.purchaseCount as number), 0);
+      return [
+        { label: 'Total', value: `${formatBs(totalSpentBs)} / ${formatUsd(totalSpentUsd)}` },
+        { label: 'Transacciones', value: String(totalPurchases) },
+      ];
+    },
+  },
+  clientesRanking: {
+    title: 'Ranking de Clientes',
+    columns: [
+      { key: 'customerName', header: 'Cliente', render: (item) => <span className="wrap-break-word">{item.customerName as string}</span> },
+      { key: 'cedula', header: 'Cédula', hideOnMobile: true },
+      { key: 'purchaseCount', header: 'Compras', className: 'text-center' },
+      { key: 'totalSpentUsd', header: 'Total $', render: (item) => formatUsd(item.totalSpentUsd as number) },
+      { key: 'totalSpentBs', header: 'Total Bs', render: (item) => formatBs(item.totalSpentBs as number), hideOnMobile: true },
+      { key: 'averageTicketUsd', header: 'Ticket Prom.', render: (item) => formatUsd(item.averageTicketUsd as number), hideOnMobile: true },
+      { key: 'lastPurchaseAt', header: 'Última Compra', render: (item) => item.lastPurchaseAt ? new Date(item.lastPurchaseAt as string).toLocaleDateString('es-VE') : '-', hideOnMobile: true },
+    ],
+    footerSummary: (data) => {
+      const totalSpentBs = data.reduce((s, d) => s + (d.totalSpentBs as number), 0);
+      const totalSpentUsd = data.reduce((s, d) => s + (d.totalSpentUsd as number), 0);
+      return [
+        { label: 'Total', value: `${formatBs(totalSpentBs)} / ${formatUsd(totalSpentUsd)}` },
+        { label: 'Clientes', value: String(data.length) },
+      ];
+    },
+  },
+  produccionRecetas: {
+    title: 'Rentabilidad por Receta',
+    columns: [
+      { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
+      { key: 'productName', header: 'Producto', hideOnMobile: true, render: (item) => <span className="wrap-break-word">{item.productName as string}</span> },
+      { key: 'mode', header: 'Tipo', className: 'text-center', render: (item) => item.mode === 'batch' ? 'Lotes' : 'Ensamblaje' },
+      { key: 'timesProduced', header: 'Veces', className: 'text-center' },
+      { key: 'totalQuantityProduced', header: 'Producido', className: 'text-center' },
+      { key: 'costPerUnitUsd', header: 'Costo/Unidad', render: (item) => formatUsd(item.costPerUnitUsd as number) },
+      { key: 'wastePct', header: 'Merma', render: (item) => `${item.wastePct}%`, className: 'text-center' },
+    ],
+    footerSummary: (data) => {
+      const totalProduced = data.reduce((s, d) => s + (d.totalQuantityProduced as number), 0);
+      const totalCost = data.reduce((s, d) => s + (d.totalCostUsd as number), 0);
+      return [
+        { label: 'Total Producido', value: String(totalProduced) },
+        { label: 'Costo Total', value: formatUsd(totalCost) },
+      ];
+    },
+  },
+  produccionOrdenes: {
+    title: 'Órdenes de Producción',
+    columns: [
+      { key: 'totalRecipes', header: 'Recetas Totales', className: 'text-center' },
+      { key: 'activeRecipes', header: 'Recetas Activas', className: 'text-center' },
+      { key: 'totalOrders', header: 'Órdenes', className: 'text-center' },
+      { key: 'completedOrders', header: 'Completadas', className: 'text-center' },
+      { key: 'cancelledOrders', header: 'Canceladas', className: 'text-center' },
+      { key: 'totalQuantityProduced', header: 'Unidades', className: 'text-center' },
+      { key: 'averageWastePct', header: 'Merma Prom.', render: (item) => `${item.averageWastePct}%`, className: 'text-center' },
+      { key: 'totalIngredientCostUsd', header: 'Costo Ingredientes', render: (item) => formatUsd(item.totalIngredientCostUsd as number) },
+    ],
+  },
 };
 
 interface ReportsPageProps {
@@ -188,6 +264,10 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     paymentBreakdown,
     cashAnalysis,
     expenseBreakdown,
+    customersSummary,
+    customersRanking,
+    productionSummary,
+    recipeProfitability,
   } = useReports(tenantId);
 
   const { activeDrillDown, drillDownData, drillDownLoading, openDrillDown, closeDrillDown } = useDrillDown(tenantId, filters);
@@ -369,8 +449,14 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               summary={summary}
               profitOverTime={profitOverTime}
               topProducts={topProducts}
+              topCategories={topCategories}
               paymentBreakdown={paymentBreakdown}
               cashAnalysis={cashAnalysis}
+              expenseBreakdown={expenseBreakdown}
+              customersSummary={customersSummary}
+              customersRanking={customersRanking}
+              productionSummary={productionSummary}
+              recipeProfitability={recipeProfitability}
               loading={loading}
               onPrint={handlePrint}
               isGeneratingPdf={isGeneratingPdf}
@@ -478,6 +564,12 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             <CashAnalysis data={cashAnalysis} loading={loading} />
           </Suspense>
         </div>
+        <div className={`print-section space-y-4 sm:space-y-6 ${activeTab !== 'more' ? 'hidden' : ''}`}>
+          <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+            <CustomersReport data={customersSummary} loading={loading} onKpiClick={openDrillDown} />
+            <ProductionReport data={productionSummary} loading={loading} onKpiClick={openDrillDown} />
+          </Suspense>
+        </div>
       </div>
     </div>
 
@@ -515,8 +607,14 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           summary={summary}
           profitOverTime={profitOverTime}
           topProducts={topProducts}
+          topCategories={topCategories}
           paymentBreakdown={paymentBreakdown}
           cashAnalysis={cashAnalysis}
+          expenseBreakdown={expenseBreakdown}
+          customersSummary={customersSummary}
+          customersRanking={customersRanking}
+          productionSummary={productionSummary}
+          recipeProfitability={recipeProfitability}
         />
       </div>
 
