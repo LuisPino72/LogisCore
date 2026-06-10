@@ -13,7 +13,7 @@ function sanitizeNulls(raw: Record<string, unknown>): Record<string, unknown> {
   if (out.sku == null) out.sku = '';
   if (out.categoryId == null) delete out.categoryId;
   if (out.stockMin == null) delete out.stockMin;
-  if (out.imageUrl == null) delete out.imageUrl;
+  if (out.imageUrl == null || (typeof out.imageUrl === 'number' && isNaN(out.imageUrl))) delete out.imageUrl;
   if (out.costPrice == null) delete out.costPrice;
   if (out.productType == null) delete out.productType;
   if (out.hasAssemblyRecipe == null) delete out.hasAssemblyRecipe;

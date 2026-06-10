@@ -502,6 +502,10 @@ export const inventoryService = {
         delete safeInput.imageUrl;
       }
       const updated = { ...existing, ...safeInput };
+      logger.info('updateProduct', `[updateProduct] imageUrl in input: ${input.imageUrl ?? 'undefined'}`);
+      logger.info('updateProduct', `[updateProduct] safeInput.imageUrl: ${safeInput.imageUrl ?? 'undefined'}`);
+      logger.info('updateProduct', `[updateProduct] existing.imageUrl: ${existing.imageUrl ?? 'undefined'}`);
+      logger.info('updateProduct', `[updateProduct] updated.imageUrl: ${updated.imageUrl ?? 'undefined'}`);
 
       await db.transaction('rw', [
         db.products,
@@ -1326,6 +1330,7 @@ export const inventoryService = {
     const ext = compressedFile.name.split('.').pop() ?? 'jpg';
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const filePath = `${tenantUuid}/${productId}.${ext}`;
+    logger.info('uploadProductImage', `filePath: ${filePath}, ext: ${ext}, original ext: ${file.name.split('.').pop()}`);
 
     let token: string;
     try {
@@ -1371,6 +1376,7 @@ export const inventoryService = {
     }
 
     const publicUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/Products/${filePath}`;
+    logger.info('uploadProductImage', `publicUrl generada: ${publicUrl}`);
 
     try {
       const db = getDb();
@@ -1380,9 +1386,10 @@ export const inventoryService = {
         await deleteStorageImage(oldProduct.imageUrl, token);
       }
       await db.products.update(productId, { imageUrl: publicUrl });
+      logger.info('uploadProductImage', `Dexie updated: productId=${productId}, imageUrl=${publicUrl}`);
 
       const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/products?id=eq.${productId}`;
-      await fetch(restUrl, {
+      const patchRes = await fetch(restUrl, {
         method: 'PATCH',
         headers: {
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -1391,10 +1398,12 @@ export const inventoryService = {
         },
         body: JSON.stringify({ image_url: publicUrl }),
       });
+      logger.info('uploadProductImage', `REST PATCH status: ${patchRes.status}`);
 
       const dbItem = await db.products.get(productId);
       if (dbItem) {
         await syncQueue.enqueue('products', 'UPDATE', productId, toSnake({ ...dbItem, image_url: publicUrl } as unknown as Record<string, unknown>), tenantId);
+        logger.info('uploadProductImage', `syncQueue enqueued for productId=${productId}`);
       }
     } catch (err) {
       logger.error('uploadProductImage', 'DB update error:', err);

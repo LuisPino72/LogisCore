@@ -215,10 +215,18 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { productType, stockInicial, ...validationData } = formData;
+    console.log('[useProductForm] formData.imageUrl:', JSON.stringify((formData as unknown as Record<string, unknown>).imageUrl));
+    console.log('[useProductForm] validationData keys:', Object.keys(validationData));
+    console.log('[useProductForm] validationData.imageUrl:', JSON.stringify((validationData as unknown as Record<string, unknown>).imageUrl));
 
     // costPrice: 0 no pasa min(0.01) de Zod — usar undefined para que sea truly optional
     if (!validationData.costPrice || validationData.costPrice <= 0) {
       validationData.costPrice = undefined as unknown as number;
+    }
+
+    // priceUsd: productos no vendibles pueden tener precio 0, pero Zod exige > 0
+    if (!validationData.isSellable && (!validationData.priceUsd || validationData.priceUsd <= 0)) {
+      validationData.priceUsd = 0.01 as unknown as number;
     }
 
     if (!validationData.categoryId && !detectedAssembly) {
