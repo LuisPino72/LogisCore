@@ -1155,7 +1155,8 @@ export const productionService = {
       const ev = emitWithPersistence('PRODUCTION.ORDER_CANCELLED', PRODUCTION_MODULE, { orderId }, { userId: undefined, tenantId });
       await db.transaction('rw', [
         db.productionOrders, db.products, db.inventoryMovements,
-        db.inventoryLots, db.syncQueue, db.outbox,
+        db.inventoryLots, db.recipes, db.recipeLines,
+        db.syncQueue, db.outbox,
       ], async (tx) => {
         // Revert ingredient consumption
         const recipe = await db.recipes.get(order.recipeId);
