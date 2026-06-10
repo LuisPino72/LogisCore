@@ -74,8 +74,15 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  const isRawMaterialEdit = isEditing && (editProduct?.productType === 'materia_prima');
   const [creationType, setCreationType] = useState<'simple' | 'weighted' | 'variants' | 'raw_material' | null>(
-    isEditing ? (editProduct?.isWeighted ? 'weighted' : null) : null
+    isEditing
+      ? isRawMaterialEdit
+        ? 'raw_material'
+        : editProduct?.isWeighted
+        ? 'weighted'
+        : null
+      : null
   );
 
   const initialValues = editProduct ? {
@@ -441,7 +448,27 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         </div>
       </div>
 
-       {isEditing && (
+       {isEditing && isRawMaterialEdit && (
+         <div className="grid grid-cols-1 gap-3">
+           <div className="input-wrapper">
+             <label className="input-label">
+               Stock mínimo (alerta)
+               {editProduct?.unit === 'kg' && ' (Kg)'}
+               {editProduct?.unit === 'lt' && ' (Lt)'}
+             </label>
+             <Input
+               sanitize="number"
+               decimals={0}
+               placeholder="0"
+               value={formData.stockMin || ''}
+               onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+               validation={{ min: 0, max: 999 }}
+             />
+           </div>
+         </div>
+       )}
+
+       {isEditing && !isRawMaterialEdit && (
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
            <div className="input-wrapper">
              <label className="input-label">Precio de venta en $</label>
@@ -504,9 +531,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               onChange={(e) => {
                 const unit = e.target.value;
                 setField('unit', unit);
-                const isWeighted = unit === 'kg' || unit === 'lt';
-                setField('isWeighted', isWeighted);
-                setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : 'unidad');
+                if (creationType === 'raw_material') {
+                  setField('isWeighted', false);
+                } else {
+                  setField('isWeighted', unit === 'kg' || unit === 'lt');
+                  setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : 'unidad');
+                }
               }}
             >
               <option value="kg">Kilogramos (Kg)</option>

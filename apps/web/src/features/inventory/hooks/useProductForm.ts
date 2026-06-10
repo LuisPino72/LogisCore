@@ -60,12 +60,17 @@ const defaultFormData: ProductFormData = {
 };
 
 export function useProductForm(options: UseProductFormOptions): UseProductFormReturn {
-  const [formData, setFormData] = useState<ProductFormData>({
-    ...defaultFormData,
-    ...options.initialValues,
-    productType: options.initialValues?.isWeighted
-      ? options.initialValues?.unit === 'lt' ? 'pesable_lt' : 'pesable_kg'
-      : 'unidad',
+  const [formData, setFormData] = useState<ProductFormData>(() => {
+    const base = { ...defaultFormData, ...options.initialValues };
+    if (options.initialValues?.isRawMaterial) {
+      return { ...base, productType: 'raw_material', isRawMaterial: true, productionType: 'materia_prima' };
+    }
+    return {
+      ...base,
+      productType: options.initialValues?.isWeighted
+        ? options.initialValues?.unit === 'lt' ? 'pesable_lt' : 'pesable_kg'
+        : 'unidad',
+    };
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -259,10 +264,11 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       return { success: false, errors: errs };
     }
 
-    if (formData.sku.trim()) {
+    const trimmedSku = formData.sku.trim();
+    if (trimmedSku) {
       const existingProducts = useInventoryStore.getState().products;
       const skuExists = existingProducts.some(
-        (p) => p.sku && p.sku.toLowerCase() === formData.sku.trim().toLowerCase() && (!options.editProductId || p.id !== options.editProductId)
+        (p) => p.sku && p.sku.toLowerCase() === trimmedSku.toLowerCase() && (!options.editProductId || p.id !== options.editProductId)
       );
       if (skuExists) {
         const errs = { sku: 'Ya existe un producto con este código SKU' };

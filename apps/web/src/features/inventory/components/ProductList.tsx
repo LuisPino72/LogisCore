@@ -205,7 +205,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   No vendible
                 </span>
               )}
-              {product.isWeighted && (
+              {product.isWeighted && product.productType !== 'materia_prima' && (
                 <span className="hidden md:inline-flex text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   Pesable
                 </span>
@@ -234,7 +234,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   </span>
                 </div>
               )}
-              {product.isWeighted && (
+              {product.isWeighted && product.productType !== 'materia_prima' && (
                 <div className="flex md:hidden mt-1">
                   <span className="text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     Pesable
@@ -255,9 +255,12 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         key: 'price',
         header: 'Precio',
         hideLabelOnMobile: true,
-        render: (product) => (
-          <span className="text-xs font-semibold">{formatUsd(product.priceUsd)}</span>
-        ),
+        render: (product) =>
+          product.productType === 'materia_prima' ? (
+            <span className="text-xs text-gray-400">—</span>
+          ) : (
+            <span className="text-xs font-semibold">{formatUsd(product.priceUsd)}</span>
+          ),
       },
       {
         key: 'stock',
@@ -453,16 +456,18 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   No vendible
                 </span>
               )}
-              {product.isWeighted && (
+              {product.isWeighted && product.productType !== 'materia_prima' && (
                 <span className="text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   Pesable
                 </span>
               )}
               <div className="mt-1 text-xs text-gray-600 space-y-1 flex flex-col items-center">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-gray-500">Precio</span>
-                  <span className="text-gray-800 text-sm font-semibold">{formatUsd(product.priceUsd)}</span>
-                </div>
+                {product.productType !== 'materia_prima' && (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-gray-500">Precio</span>
+                    <span className="text-gray-800 text-sm font-semibold">{formatUsd(product.priceUsd)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-gray-500">Total</span>
                   <Badge variant={getStockVariant(product.stock, product)}>
