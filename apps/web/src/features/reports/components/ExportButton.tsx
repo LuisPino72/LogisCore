@@ -31,10 +31,11 @@ interface ExportButtonProps {
   loading: boolean;
   onPrint: () => void;
   isGeneratingPdf?: boolean;
+  fetchMoreTabData?: () => Promise<void>;
 }
 
 export function ExportButton({
-  summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability, loading, onPrint, isGeneratingPdf = false,
+  summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability, loading, onPrint, isGeneratingPdf = false, fetchMoreTabData,
 }: ExportButtonProps) {
   const { exportExcelAll } = useExport();
   const [isExportingExcel, setIsExportingExcel] = useState(false);
@@ -42,10 +43,16 @@ export function ExportButton({
   const handleExcel = async () => {
     setIsExportingExcel(true);
     try {
+      await fetchMoreTabData?.();
       await exportExcelAll({ summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability });
     } finally {
       setIsExportingExcel(false);
     }
+  };
+
+  const handlePrint = async () => {
+    await fetchMoreTabData?.();
+    onPrint();
   };
 
   return (
@@ -64,7 +71,7 @@ export function ExportButton({
       <Button
         variant="primary"
         size="sm"
-        onClick={onPrint}
+        onClick={handlePrint}
         disabled={loading || isGeneratingPdf}
         className="rounded-l-none active:scale-[0.97]"
       >

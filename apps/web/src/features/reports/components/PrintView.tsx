@@ -116,14 +116,14 @@ const printStyles = `
   }
 
   .print-table-wrap {
-    overflow: hidden;
+    overflow: visible;
   }
 
   .print-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 7.5pt;
-    table-layout: fixed;
+    font-size: 7pt;
+    table-layout: auto;
   }
 
   .print-table th {
@@ -131,16 +131,19 @@ const printStyles = `
     color: white;
     font-weight: 600;
     text-align: left;
-    padding: 6px 8px;
+    padding: 5px 6px;
     border: 1px solid #0F766E;
-    font-size: 7pt;
+    font-size: 6.5pt;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    white-space: nowrap;
   }
 
   .print-table td {
-    padding: 5px 8px;
+    padding: 4px 6px;
     border: 1px solid #d0d0d0;
+    word-break: break-word;
+    font-size: 7pt;
   }
 
   .print-table tr:nth-child(even) td {
@@ -410,6 +413,28 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                   <th>Ventas $</th>
                   <th>Esperado Bs</th>
                   <th>Esperado $</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cashAnalysis.map((r, i) => (
+                  <tr key={`${i}-a`}>
+                    <td style={{ fontWeight: 600 }}>{new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
+                    <td>{formatBs(r.openingBalanceBs)}</td>
+                    <td>{formatUsd(r.openingBalanceUsd)}</td>
+                    <td>{formatBs(r.totalSalesBs)}</td>
+                    <td>{formatUsd(r.totalSalesUsd)}</td>
+                    <td>{r.expectedClosingBs !== undefined ? formatBs(r.expectedClosingBs) : '-'}</td>
+                    <td>{r.expectedClosingUsd !== undefined ? formatUsd(r.expectedClosingUsd) : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="print-table-wrap" style={{ marginTop: -1 }}>
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Caja</th>
                   <th>Cierre Bs</th>
                   <th>Cierre $</th>
                   <th>Diferencia Bs</th>
@@ -419,14 +444,8 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               </thead>
               <tbody>
                 {cashAnalysis.map((r, i) => (
-                  <tr key={i}>
-                    <td>{new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
-                    <td>{formatBs(r.openingBalanceBs)}</td>
-                    <td>{formatUsd(r.openingBalanceUsd)}</td>
-                    <td>{formatBs(r.totalSalesBs)}</td>
-                    <td>{formatUsd(r.totalSalesUsd)}</td>
-                    <td>{r.expectedClosingBs !== undefined ? formatBs(r.expectedClosingBs) : '-'}</td>
-                    <td>{r.expectedClosingUsd !== undefined ? formatUsd(r.expectedClosingUsd) : '-'}</td>
+                  <tr key={`${i}-b`}>
+                    <td style={{ fontWeight: 600 }}>{new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
                     <td>{r.closingBalanceBs !== undefined ? formatBs(r.closingBalanceBs) : '-'}</td>
                     <td>{r.closingBalanceUsd !== undefined ? formatUsd(r.closingBalanceUsd) : '-'}</td>
                     <td>{r.differenceBs !== undefined ? formatBs(r.differenceBs) : '-'}</td>

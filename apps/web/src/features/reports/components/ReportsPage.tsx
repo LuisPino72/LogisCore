@@ -268,6 +268,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     customersRanking,
     productionSummary,
     recipeProfitability,
+    fetchMoreTabData,
   } = useReports(tenantId);
 
   const { activeDrillDown, drillDownData, drillDownLoading, openDrillDown, closeDrillDown } = useDrillDown(tenantId, filters);
@@ -460,6 +461,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               loading={loading}
               onPrint={handlePrint}
               isGeneratingPdf={isGeneratingPdf}
+              fetchMoreTabData={fetchMoreTabData}
             />
           </Tooltip>
         </div>

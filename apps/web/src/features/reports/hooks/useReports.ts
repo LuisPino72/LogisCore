@@ -307,10 +307,33 @@ export function useReports(tenantId: string | null) {
     [state.topProducts]
   );
 
+  const fetchMoreTabData = useCallback(async () => {
+    if (!tenantId) return;
+    if (state.customersSummary && state.productionSummary) return;
+
+    try {
+      const [cs, cr, ps, rp] = await Promise.all([
+        reportsService.getCustomersSummary(tenantId, filters),
+        reportsService.getCustomersRanking(tenantId, filters),
+        reportsService.getProductionSummary(tenantId, filters),
+        reportsService.getRecipeProfitability(tenantId, filters),
+      ]);
+      setState((prev) => ({
+        ...prev,
+        customersSummary: cs.ok ? cs.data : prev.customersSummary,
+        customersRanking: cr.ok ? cr.data : prev.customersRanking,
+        productionSummary: ps.ok ? ps.data : prev.productionSummary,
+        recipeProfitability: rp.ok ? rp.data : prev.recipeProfitability,
+      }));
+    } catch {
+      // Silent fail — export will show empty data
+    }
+  }, [tenantId, filters, state.customersSummary, state.productionSummary]);
+
   return {
     filters, setFilters, activeTab, setActiveTab,
     ...state,
     topCategories, worstCategories, worstProducts, topByVolume,
-    refetch,
+    refetch, fetchMoreTabData,
   };
 }
