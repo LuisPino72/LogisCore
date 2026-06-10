@@ -8,6 +8,7 @@ import type { Product, Category, TabState, StockFilter, ProductTypeFilter } from
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 import { useInventoryStore } from '../stores/inventoryStore';
+import { getDb } from '@/services/dexie/db';
 
 interface ProductListProps {
   products: Product[];
@@ -84,6 +85,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
   const [productTypeFilter, setProductTypeFilter] = useState<ProductTypeFilter>(initialTabState.productTypeFilter ?? 'all');
   const [page, setPage] = useState(initialTabState.page);
   const [productIdsWithVariants, setProductIdsWithVariants] = useState<Set<string>>(new Set());
+  const [assemblyProductIds, setAssemblyProductIds] = useState<Set<string>>(new Set());
   const [variantModalProductId, setVariantModalProductId] = useState<string | null>(null);
   const [variantModalData, setVariantModalData] = useState<{ name: string; priceUsd: number }[]>([]);
   const [variantModalLoading, setVariantModalLoading] = useState(false);
@@ -116,6 +118,22 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
     };
     load();
   }, [products, tenantId]);
+
+  useEffect(() => {
+    const loadAssembly = async () => {
+      try {
+        const db = getDb();
+        const recipes = await db.recipes
+          .where({ tenantId })
+          .filter((r) => !r.deletedAt && r.isActive && r.mode === 'assembly')
+          .toArray();
+        setAssemblyProductIds(new Set(recipes.map((r) => r.productId)));
+      } catch {
+        // silent
+      }
+    };
+    loadAssembly();
+  }, [tenantId]);
 
   useEffect(() => {
     setPage(1);
@@ -166,8 +184,11 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
       const result = searchQuery ? fuzzyResults : products;
       return result
         .filter((p) => applyProductTypeFilter(p, productTypeFilter, productIdsWithVariants))
-        .filter((p) => applyStockFilter(p.stock, p, stockFilter));
-  }, [searchQuery, fuzzyResults, products, stockFilter, productTypeFilter, productIdsWithVariants]);
+        .filter((p) => {
+          if (stockFilter !== 'all' && assemblyProductIds.has(p.id)) return false;
+          return applyStockFilter(p.stock, p, stockFilter);
+        });
+  }, [searchQuery, fuzzyResults, products, stockFilter, productTypeFilter, productIdsWithVariants, assemblyProductIds]);
 
   const columns = useMemo((): Column<Product>[] => {
     const cols: Column<Product>[] = [

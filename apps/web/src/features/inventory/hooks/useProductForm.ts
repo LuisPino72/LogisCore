@@ -186,6 +186,11 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { productType, stockInicial, ...validationData } = formData;
 
+    // costPrice: 0 no pasa min(0.01) de Zod — usar undefined para que sea truly optional
+    if (!validationData.costPrice || validationData.costPrice <= 0) {
+      validationData.costPrice = undefined as unknown as number;
+    }
+
     if (!validationData.categoryId) {
       const errs = { categoryId: 'Debes seleccionar una categoría' };
       setErrors(errs);

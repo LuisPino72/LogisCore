@@ -1600,9 +1600,17 @@ export const inventoryService = {
 
   async getLowStockProducts(tenantId: string): Promise<Result<Product[], AppError>> {
     const db = getDb();
+
+    // Excluir productos con receta de ensamblaje (stock es ilimitado por diseño)
+    const assemblyRecipes = await db.recipes
+      .where({ tenantId })
+      .filter((r) => !r.deletedAt && r.isActive && r.mode === 'assembly')
+      .toArray();
+    const assemblyProductIds = new Set(assemblyRecipes.map((r) => r.productId));
+
     let rows = await db.products
       .where({ tenantId })
-      .filter((p) => !p.deletedAt && p.stockMin != null && p.stockMin > 0)
+      .filter((p) => !p.deletedAt && !assemblyProductIds.has(p.id) && p.stockMin != null && p.stockMin > 0)
       .toArray();
 
     if (rows.length === 0) {
@@ -1640,7 +1648,7 @@ export const inventoryService = {
 
         rows = await db.products
           .where({ tenantId })
-      .filter((p) => !p.deletedAt && p.stockMin != null && p.stockMin > 0)
+      .filter((p) => !p.deletedAt && !assemblyProductIds.has(p.id) && p.stockMin != null && p.stockMin > 0)
           .toArray();
       }
     }
