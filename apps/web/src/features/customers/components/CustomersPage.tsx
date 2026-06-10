@@ -361,7 +361,7 @@ function GlobalHistoryView({
           <p className="text-lg font-bold text-primary">{filteredSales.length}</p>
         </div>
         <div className="rounded-xl border border-accent/20 bg-linear-to-br from-accent/5 to-accent/10 p-3">
-          <p className="text-xs text-text-secondary">Total (USD)</p>
+          <p className="text-xs text-text-secondary">Total (Dólares)</p>
           <p className="text-lg font-bold text-accent">{formatUsd(totalSpentUsd)}</p>
         </div>
         <div className="rounded-xl border border-info/20 bg-linear-to-br from-info/5 to-info/10 p-3 hidden sm:block">
@@ -433,7 +433,7 @@ function GlobalHistoryView({
                   className="px-3 py-2.5 rounded-lg border border-gray-100 bg-white hover:bg-gray-50/50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-gray-900 min-w-0 break-words">
+                    <p className="text-sm font-semibold text-gray-900 min-w-0 wrap-break-word">
                       {customer?.name ?? 'Cliente eliminado'}
                     </p>
                     <p className="text-sm font-bold text-gray-900 shrink-0">{formatBs(sale.totalBs)}</p>
