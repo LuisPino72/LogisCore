@@ -27,6 +27,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   const [error, setError] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
+  const [excessiveStockWarning, setExcessiveStockWarning] = useState<string | null>(null);
 
   const fetchAvailability = useCallback(async (count: number) => {
     if (!recipe || count <= 0) return;
@@ -61,6 +62,15 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
       return;
     }
     setBatchError(null);
+    
+    // Check for excessive stock warning (> 100k units)
+    const totalProduction = recipe.yieldQuantity * value;
+    if (totalProduction > 100_000) {
+      setExcessiveStockWarning(`⚠️ Se producirán ${totalProduction.toLocaleString()} ${recipe.yieldUnit}. ¿Estás seguro? Stock muy alto.`);
+    } else {
+      setExcessiveStockWarning(null);
+    }
+    
     setBatchCountState(value);
     await fetchAvailability(value);
   };
@@ -175,6 +185,14 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
               <span className="text-sm text-gray-600">Total a producir:</span>
               <span className="font-bold text-base text-primary">{recipe.yieldQuantity * batchCount} {recipe.yieldUnit}</span>
             </div>
+
+            {/* Excessive Stock Warning */}
+            {excessiveStockWarning && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <span className="text-sm text-amber-800 wrap-break-word">{excessiveStockWarning}</span>
+              </div>
+            )}
 
             {/* Ingredient Availability */}
             <div>
