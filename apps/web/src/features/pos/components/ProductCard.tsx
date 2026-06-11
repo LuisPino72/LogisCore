@@ -13,9 +13,10 @@ interface ProductCardProps {
   exchangeRateBs: number;
   presentationCount?: number;
   onReorder?: (product: Product) => void;
+  hasAssemblyRecipe?: boolean;
 }
 
-export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount, onReorder }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount, onReorder, hasAssemblyRecipe }: ProductCardProps) {
   const priceBs = exchangeRateBs > 0
     ? formatBs(product.priceUsd * exchangeRateBs)
     : null;
@@ -28,7 +29,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
     ? (product.unit === 'kg' || product.unit === 'lt' ? product.stock / 1000 : product.stock)
     : product.stock;
   const isLowStock = stockInDisplay <= (product.stockMin ?? 5);
-  const isOutOfStock = stockInDisplay <= 0;
+  const isOutOfStock = stockInDisplay <= 0 && !hasAssemblyRecipe;
 
   return (
     <Card
@@ -91,7 +92,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
             </span>
           </div>
         )}
-        {isOutOfStock && onReorder && (
+        {isOutOfStock && !hasAssemblyRecipe && onReorder && (
           <button
             type="button"
             onClick={(e) => {

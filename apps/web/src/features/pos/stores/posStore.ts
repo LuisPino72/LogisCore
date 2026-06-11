@@ -26,9 +26,9 @@ interface PosStore extends PosState {
   fetchCashRegister: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
-  addToCart: (product: Product, quantity: number, presentation?: PresentationSelection) => void;
+  addToCart: (product: Product, quantity: number, presentation?: PresentationSelection) => Promise<void>;
   removeFromCart: (productId: string, presentationId?: string) => void;
-  updateCartItemQuantity: (productId: string, quantity: number, presentationId?: string) => void;
+  updateCartItemQuantity: (productId: string, quantity: number, presentationId?: string) => Promise<void>;
   clearCart: () => void;
   parkCart: (tenantId: string, name: string) => Promise<boolean>;
   loadParkedCart: (cart: ParkedCart) => void;
@@ -245,7 +245,7 @@ export const usePosStore = create<PosStore>()(
     return get().favoriteProductIds.has(productId);
   },
 
-  addToCart: (product, quantity, presentation?) => {
+  addToCart: async (product, quantity, presentation?) => {
     const { cart } = get();
     set({ error: null });
 
@@ -266,10 +266,11 @@ export const usePosStore = create<PosStore>()(
         const recipeData = get().assemblyRecipesMap[product.id];
         if (recipeData) {
           const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+          const db = getDb();
           for (const line of recipeData.lines) {
             const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
-            const ingredient = get().products.find(p => p.id === line.productId);
-            if (!ingredient || ingredient.stock < needed) {
+            const ingredient = await db.products.get(line.productId);
+            if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
               set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
               return;
             }
@@ -341,10 +342,11 @@ export const usePosStore = create<PosStore>()(
       const recipeData = get().assemblyRecipesMap[product.id];
       if (recipeData) {
         const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+        const db = getDb();
         for (const line of recipeData.lines) {
           const needed = Math.ceil(line.quantity * totalRequested * wasteMultiplier);
-          const ingredient = get().products.find(p => p.id === line.productId);
-          if (!ingredient || ingredient.stock < needed) {
+          const ingredient = await db.products.get(line.productId);
+          if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
             set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
             return;
           }
@@ -397,7 +399,7 @@ export const usePosStore = create<PosStore>()(
     }
   },
 
-  updateCartItemQuantity: (productId, quantity, presentationId?: string) => {
+  updateCartItemQuantity: async (productId, quantity, presentationId?: string) => {
     const cartItem = get().cart.find(item => item.productId === productId && (!presentationId || item.presentationId === presentationId));
     if (!cartItem) return;
 
@@ -433,10 +435,11 @@ export const usePosStore = create<PosStore>()(
       const recipeData = get().assemblyRecipesMap[productId];
       if (recipeData) {
         const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+        const db = getDb();
         for (const line of recipeData.lines) {
           const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
-          const ingredient = get().products.find(p => p.id === line.productId);
-          if (!ingredient || ingredient.stock < needed) {
+          const ingredient = await db.products.get(line.productId);
+          if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
             set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
             return;
           }

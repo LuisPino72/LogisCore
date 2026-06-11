@@ -208,6 +208,7 @@ export const ProductGrid = memo(function ProductGrid({
                 isFavorite={favoriteIds.has(product.id)}
                 exchangeRateBs={exchangeRateBs}
                 onReorder={onReorder}
+                hasAssemblyRecipe={product.hasAssemblyRecipe}
               />
             ))}
           </div>
