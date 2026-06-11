@@ -513,6 +513,9 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 onChange={(value) => updateField('productId', value)}
                 placeholder="Selecciona el producto"
               />
+              {errors.productId && (
+                <p className="text-xs text-danger mt-1 wrap-break-word">{errors.productId}</p>
+              )}
             </div>
 
             {isCreatingNewProduct && (

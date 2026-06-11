@@ -207,7 +207,9 @@ export function useRecipeForm() {
         if (!form.name.trim()) stepErrors.name = 'Nombre requerido';
         if (form.name.trim().length > 25) stepErrors.name = 'Máximo 25 caracteres';
 
-        const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
+        const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL;
+        const hasSelectedProduct = form.productId && form.productId !== NEW_PRODUCT_SENTINEL;
+        
         if (isNewProduct) {
           if (!form.newProductName.trim()) stepErrors.newProductName = 'Nombre del producto requerido';
           if (form.newProductName.length > 25) stepErrors.newProductName = 'Máximo 25 caracteres';
@@ -216,6 +218,9 @@ export function useRecipeForm() {
           if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
             stepErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
           }
+        } else if (!hasSelectedProduct) {
+          // No hay producto seleccionado ni se está creando uno nuevo
+          stepErrors.productId = 'Selecciona un producto o marca "Crear nuevo producto"';
         }
       }
 
