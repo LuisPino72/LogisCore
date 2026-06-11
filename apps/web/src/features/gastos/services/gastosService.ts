@@ -48,7 +48,7 @@ export const gastosService = {
       let collection = db.expenses
         .where('tenantId')
         .equals(tenantId)
-        .filter((e) => !e.deletedAt && !e.parentExpenseId);
+        .filter((e) => !e.deletedAt && !e.parentExpenseId && !e.isRecurring);
 
       if (options?.status && options.status !== 'all') {
         collection = collection.filter((e) => e.status === options.status);
