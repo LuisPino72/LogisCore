@@ -42,21 +42,33 @@ import { useExchangeRateStore } from './features/exchange/stores/exchangeRateSto
 import { NotificationBell } from './common/components/NotificationBell';
 import { useSystemNotifications } from './features/system/hooks/useSystemNotifications';
 
-const DashboardPage = lazy(() => import('./features/dashboard').then((m) => ({ default: m.DashboardPage })));
-const InventoryPage = lazy(() => import('./features/inventory').then((m) => ({ default: m.InventoryPage })));
+const DashboardPage = lazy(() =>
+  import('./features/dashboard').then((m) => ({ default: m.DashboardPage })),
+);
+const InventoryPage = lazy(() =>
+  import('./features/inventory').then((m) => ({ default: m.InventoryPage })),
+);
 const PosPage = lazy(() => import('./features/pos').then((m) => ({ default: m.PosPage })));
-const PurchasePage = lazy(() => import('./features/purchases').then((m) => ({ default: m.PurchasePage })));
-const ReportsPage = lazy(() => import('./features/reports').then((m) => ({ default: m.ReportsPage })));
+const PurchasePage = lazy(() =>
+  import('./features/purchases').then((m) => ({ default: m.PurchasePage })),
+);
+const ReportsPage = lazy(() =>
+  import('./features/reports').then((m) => ({ default: m.ReportsPage })),
+);
 const GastosPage = lazy(() => import('./features/gastos').then((m) => ({ default: m.GastosPage })));
-const ProductionPage = lazy(() => import('./features/production').then((m) => ({ default: m.ProductionPage })));
-const CustomersPage = lazy(() => import('./features/customers').then((m) => ({ default: m.CustomersPage })));
+const ProductionPage = lazy(() =>
+  import('./features/production').then((m) => ({ default: m.ProductionPage })),
+);
+const CustomersPage = lazy(() =>
+  import('./features/customers').then((m) => ({ default: m.CustomersPage })),
+);
 
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
-  { id: 'production', label: 'Producción', icon: <ChefHat size={20} /> },
-  { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
   { id: 'pos', label: 'POS', icon: <ShoppingCart size={20} /> },
+  { id: 'purchases', label: 'Compras', icon: <Truck size={20} /> },
+  { id: 'production', label: 'Producción', icon: <ChefHat size={20} /> },
   { id: 'gastos', label: 'Gastos', icon: <Receipt size={20} /> },
   { id: 'customers', label: 'Clientes', icon: <Users size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
@@ -90,7 +102,12 @@ function ErrorScreen({ message }: { message: string }) {
     <div className="min-h-screen bg-surface p-8 flex flex-col items-center justify-center gap-4">
       <Card className="max-w-md w-full">
         <p className="text-danger text-sm">{message}</p>
-        <Button variant="primary" fullWidth className="mt-4" onClick={() => window.location.reload()}>
+        <Button
+          variant="primary"
+          fullWidth
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
           Reintentar
         </Button>
       </Card>
@@ -168,18 +185,33 @@ function DashboardLayout() {
   const location = useLocation();
   const activeModule = useSyncModuleFromRoute();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarExpanded, setSidebarExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
+  );
 
   const isAdmin = session?.role === 'admin';
   const isAdminViewingTenant = isAdmin && selectedTenantSlug !== null;
   const role = session?.role ?? null;
 
-  const knownModulePaths = ['/dashboard', '/inventory', '/production', '/gastos', '/purchases', '/pos', '/customers', '/reports'];
+  const knownModulePaths = [
+    '/dashboard',
+    '/inventory',
+    '/production',
+    '/gastos',
+    '/purchases',
+    '/pos',
+    '/customers',
+    '/reports',
+  ];
   const isKnownModulePath = knownModulePaths.some(
-    (p) => location.pathname === p || location.pathname.startsWith(p + '/')
+    (p) => location.pathname === p || location.pathname.startsWith(p + '/'),
   );
 
-  const effectiveTenantId = useTenantResolution({ session, selectedTenantSlug, isAdminViewingTenant });
+  const effectiveTenantId = useTenantResolution({
+    session,
+    selectedTenantSlug,
+    isAdminViewingTenant,
+  });
 
   useSystemNotifications(effectiveTenantId, role);
 
@@ -187,10 +219,13 @@ function DashboardLayout() {
     document.documentElement.dataset.sidebarExpanded = String(sidebarExpanded);
   }, [sidebarExpanded]);
 
-  const handleNavigate = useCallback((moduleId: string) => {
-    const route = MODULE_ROUTE_MAP[moduleId] ?? '/dashboard';
-    navigate(route);
-  }, [navigate]);
+  const handleNavigate = useCallback(
+    (moduleId: string) => {
+      const route = MODULE_ROUTE_MAP[moduleId] ?? '/dashboard';
+      navigate(route);
+    },
+    [navigate],
+  );
 
   const handleLogout = useCallback(async () => {
     const result = await authService.signOut();
@@ -204,124 +239,143 @@ function DashboardLayout() {
   }
 
   // BACKLOG-106 [AUTH-002]: Filtrar sidebar por permisos del rol (lectura síncrona).
-  const sidebarModules = role === 'employee'
-    ? ALL_MODULES.filter((m) => hasPermission(session, m.id))
-    : ALL_MODULES;
+  const sidebarModules =
+    role === 'employee' ? ALL_MODULES.filter((m) => hasPermission(session, m.id)) : ALL_MODULES;
 
   return (
     <>
       <AppShell
         topBar={
-    <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-full overflow-hidden">
-      {isAdminViewingTenant && (
-        <Button variant="ghost" size="sm" onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)} className="active:scale-95 transition-transform shrink-0">
-          <ArrowLeft size={18} />
-          <span className="hidden sm:inline">Volver al Panel</span>
-        </Button>
-      )}
-      <div className="flex items-center gap-2 bg-primary/10 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer active:scale-95 shrink-0" onClick={() => handleNavigate('dashboard')}>
-        <Store size={20} className="text-primary shrink-0" />
-        <span className="font-title font-semibold text-sm text-primary">Sasa</span>
-      </div>
-      <div className="flex-1 min-w-0" />
-      {role && <Badge variant="success" className="hidden! sm:inline-flex! active:scale-95 cursor-pointer transition-transform">{role === 'owner' ? 'Dueño' : role === 'employee' ? 'Empleado' : role}</Badge>}
-      {effectiveTenantId && <RateBadgeMobile />}
-        </div>
-      }
-      sidebar={
-        <Sidebar
-          isOpen={sidebarOpen}
-          expanded={sidebarExpanded}
-          onToggleExpanded={(v: boolean) => setSidebarExpanded(v)}
-          onClose={() => setSidebarOpen(false)}
-          modules={sidebarModules}
-          activeModule={activeModule}
-          onNavigate={handleNavigate}
-          userEmail={session?.email ?? ''}
-          onLogout={handleLogout}
-          footerSlot={
-            effectiveTenantId ? (
-              <ExchangeRateWidget tenantId={effectiveTenantId} role={role ?? null} />
-            ) : undefined
-          }
-        />
-      }
-      sidebarOpen={sidebarOpen}
-      sidebarExpanded={sidebarExpanded}
-    >
-
-      <ErrorBoundary moduleName="Dashboard">
-        {activeModule === 'dashboard' && (
-          <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />
-            </Suspense>
+          <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-full overflow-hidden">
+            {isAdminViewingTenant && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}
+                className="active:scale-95 transition-transform shrink-0"
+              >
+                <ArrowLeft size={18} />
+                <span className="hidden sm:inline">Volver al Panel</span>
+              </Button>
+            )}
+            <div
+              className="flex items-center gap-2 bg-primary/10 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer active:scale-95 shrink-0"
+              onClick={() => handleNavigate('dashboard')}
+            >
+              <Store size={20} className="text-primary shrink-0" />
+              <span className="font-title font-semibold text-sm text-primary">Sasa</span>
+            </div>
+            <div className="flex-1 min-w-0" />
+            {role && (
+              <Badge
+                variant="success"
+                className="hidden! sm:inline-flex! active:scale-95 cursor-pointer transition-transform"
+              >
+                {role === 'owner' ? 'Dueño' : role === 'employee' ? 'Empleado' : role}
+              </Badge>
+            )}
+            {effectiveTenantId && <RateBadgeMobile />}
           </div>
-        )}
-        {activeModule === 'inventory' && (
-          <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <InventoryPage tenantId={effectiveTenantId} />
-            </Suspense>
-          </div>
-        )}
-        {activeModule === 'production' && (
-          <div className="animate-fade-in">
-            <ErrorBoundary moduleName="Producción">
+        }
+        sidebar={
+          <Sidebar
+            isOpen={sidebarOpen}
+            expanded={sidebarExpanded}
+            onToggleExpanded={(v: boolean) => setSidebarExpanded(v)}
+            onClose={() => setSidebarOpen(false)}
+            modules={sidebarModules}
+            activeModule={activeModule}
+            onNavigate={handleNavigate}
+            userEmail={session?.email ?? ''}
+            onLogout={handleLogout}
+            footerSlot={
+              effectiveTenantId ? (
+                <ExchangeRateWidget tenantId={effectiveTenantId} role={role ?? null} />
+              ) : undefined
+            }
+          />
+        }
+        sidebarOpen={sidebarOpen}
+        sidebarExpanded={sidebarExpanded}
+      >
+        <ErrorBoundary moduleName="Dashboard">
+          {activeModule === 'dashboard' && (
+            <div className="animate-fade-in">
               <Suspense fallback={<ModuleSkeleton />}>
-                <ProductionPage tenantId={effectiveTenantId} />
+                <DashboardPage tenantId={effectiveTenantId} userEmail={session?.email} />
               </Suspense>
-            </ErrorBoundary>
-          </div>
-        )}
-        {activeModule === 'gastos' && (
-          <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <GastosPage tenantId={effectiveTenantId} />
-            </Suspense>
-          </div>
-        )}
-        {activeModule === 'purchases' && (
-          <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <PurchasePage tenantId={effectiveTenantId} />
-            </Suspense>
-          </div>
-        )}
-        {activeModule === 'pos' && (
-          <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <PosPage tenantId={effectiveTenantId} />
-            </Suspense>
-          </div>
-        )}
-        {activeModule === 'customers' && (
-          <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <CustomersPage tenantId={effectiveTenantId} />
-            </Suspense>
-          </div>
-        )}
-        {activeModule === 'reports' && (
-          <div className="animate-fade-in">
-            <Suspense fallback={<ModuleSkeleton />}>
-              <ReportsPage tenantId={effectiveTenantId} />
-            </Suspense>
-          </div>
-        )}
-      </ErrorBoundary>
-    </AppShell>
+            </div>
+          )}
+          {activeModule === 'inventory' && (
+            <div className="animate-fade-in">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <InventoryPage tenantId={effectiveTenantId} />
+              </Suspense>
+            </div>
+          )}
+          {activeModule === 'production' && (
+            <div className="animate-fade-in">
+              <ErrorBoundary moduleName="Producción">
+                <Suspense fallback={<ModuleSkeleton />}>
+                  <ProductionPage tenantId={effectiveTenantId} />
+                </Suspense>
+              </ErrorBoundary>
+            </div>
+          )}
+          {activeModule === 'gastos' && (
+            <div className="animate-fade-in">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <GastosPage tenantId={effectiveTenantId} />
+              </Suspense>
+            </div>
+          )}
+          {activeModule === 'purchases' && (
+            <div className="animate-fade-in">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <PurchasePage tenantId={effectiveTenantId} />
+              </Suspense>
+            </div>
+          )}
+          {activeModule === 'pos' && (
+            <div className="animate-fade-in">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <PosPage tenantId={effectiveTenantId} />
+              </Suspense>
+            </div>
+          )}
+          {activeModule === 'customers' && (
+            <div className="animate-fade-in">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <CustomersPage tenantId={effectiveTenantId} />
+              </Suspense>
+            </div>
+          )}
+          {activeModule === 'reports' && (
+            <div className="animate-fade-in">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <ReportsPage tenantId={effectiveTenantId} />
+              </Suspense>
+            </div>
+          )}
+        </ErrorBoundary>
+      </AppShell>
 
-    {role && role !== 'employee' && (
-      <div className="fixed top-2 right-2 sm:top-3 sm:right-3 z-50">
-        <NotificationBell />
-      </div>
-    )}
+      {role && role !== 'employee' && (
+        <div className="fixed top-2 right-2 sm:top-3 sm:right-3 z-50">
+          <NotificationBell />
+        </div>
+      )}
     </>
   );
 }
 
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: UserRole[] }) {
+function ProtectedRoute({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  allowedRoles?: UserRole[];
+}) {
   const { isAuthenticated, isLoading } = useAuth();
   const session = useAuthStore((s) => s.session);
   const selectedTenantSlug = useAuthStore((s) => s.selectedTenantSlug);
@@ -349,7 +403,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   // BACKLOG-106 [AUTH-002]: Fix bug — employee iba a /inventory (no en su sidebar). Ahora va a /pos.
-  if (role !== 'admin') return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
+  if (role !== 'admin')
+    return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
 
   return <>{children}</>;
 }
@@ -359,7 +414,12 @@ function AuthRedirect() {
   const role = useAuthStore((s) => s.session?.role);
 
   if (isAuthenticated) {
-    return <Navigate to={role === 'admin' ? '/admin' : role === 'employee' ? '/pos' : '/dashboard'} replace />;
+    return (
+      <Navigate
+        to={role === 'admin' ? '/admin' : role === 'employee' ? '/pos' : '/dashboard'}
+        replace
+      />
+    );
   }
 
   return <LoginPage />;

@@ -207,20 +207,13 @@ export function useRecipeForm() {
         if (!form.name.trim()) stepErrors.name = 'Nombre requerido';
         if (form.name.trim().length > 25) stepErrors.name = 'Máximo 25 caracteres';
 
-        const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL;
-        const hasSelectedProduct = form.productId && form.productId !== NEW_PRODUCT_SENTINEL;
-        
-        if (isNewProduct) {
-          if (!form.newProductName.trim()) stepErrors.newProductName = 'Nombre del producto requerido';
-          if (form.newProductName.length > 25) stepErrors.newProductName = 'Máximo 25 caracteres';
-          if (!form.newProductSku.trim()) stepErrors.newProductSku = 'SKU del producto requerido';
-          if (form.newProductSku.length > 18) stepErrors.newProductSku = 'Máximo 18 caracteres';
-          if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
-            stepErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
-          }
-        } else if (!hasSelectedProduct) {
-          // No hay producto seleccionado ni se está creando uno nuevo
-          stepErrors.productId = 'Selecciona un producto o marca "Crear nuevo producto"';
+        // Siempre se crea producto nuevo desde la receta - validar campos obligatorios
+        if (!form.newProductName.trim()) stepErrors.newProductName = 'Nombre del producto requerido';
+        if (form.newProductName.length > 25) stepErrors.newProductName = 'Máximo 25 caracteres';
+        if (!form.newProductSku.trim()) stepErrors.newProductSku = 'SKU del producto requerido';
+        if (form.newProductSku.length > 18) stepErrors.newProductSku = 'Máximo 18 caracteres';
+        if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
+          stepErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
         }
       }
 
@@ -333,7 +326,7 @@ export function useRecipeForm() {
 
   const getAvailableIngredients = useCallback(() => {
     return products.filter((p) =>
-      !p.deletedAt && (p.productType === 'materia_prima' || p.productType === 'both')
+      !p.deletedAt && (p.productType === 'materia_prima' || p.productType === 'producto_terminado' || p.productType === 'both')
     );
   }, [products]);
 
@@ -368,8 +361,7 @@ export function useRecipeForm() {
 
   const toInput = useCallback(async (): Promise<CreateRecipeInput | null> => {
     if (!(await validate())) return null;
-    // PRODUCTION-003 [Paso-2]: si el usuario eligió "Crear nuevo producto", no enviar productId
-    const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
+    // Siempre se crea producto nuevo desde la receta
     const input: CreateRecipeInput = {
       name: form.name.trim(),
       mode: form.mode,
@@ -382,16 +374,12 @@ export function useRecipeForm() {
         quantity: line.quantity,
         unit: line.unit,
       })),
+      newProductName: form.newProductName.trim(),
+      newProductSku: form.newProductSku.trim(),
+      newProductPriceUsd: form.newProductPriceUsd,
+      newProductCategoryId: form.newProductCategoryId || undefined,
+      newProductIsTaxable: form.newProductIsTaxable,
     };
-    if (isNewProduct) {
-      input.newProductName = form.newProductName.trim();
-      input.newProductSku = form.newProductSku.trim();
-      input.newProductPriceUsd = form.newProductPriceUsd;
-      if (form.newProductCategoryId) input.newProductCategoryId = form.newProductCategoryId;
-      input.newProductIsTaxable = form.newProductIsTaxable;
-    } else {
-      input.productId = form.productId;
-    }
     return input;
   }, [form, validate]);
 
