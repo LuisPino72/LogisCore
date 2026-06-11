@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { EventBus } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useProductionStore } from '../stores/productionStore';
+import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 
 export function useProduction(tenantId: string | null) {
   const recipes = useProductionStore((s) => s.recipes);
@@ -11,6 +12,7 @@ export function useProduction(tenantId: string | null) {
   const setActiveTab = useProductionStore((s) => s.setActiveTab);
   const fetchRecipes = useProductionStore((s) => s.fetchRecipes);
   const fetchOrders = useProductionStore((s) => s.fetchOrders);
+  const fetchProducts = useInventoryStore((s) => s.fetchProducts);
   // PLAN-115 (CODE-MIN-7): exponer cancelOrder para UI de historial
   const cancelOrder = useProductionStore((s) => s.cancelOrder);
   const session = useAuthStore((s) => s.session);
@@ -21,6 +23,7 @@ export function useProduction(tenantId: string | null) {
     await Promise.all([
       fetchRecipes(tenantId, undefined, silent),
       fetchOrders(tenantId, undefined, silent),
+      fetchProducts(tenantId, undefined, silent),
     ]);
   }, [tenantId]);
 
