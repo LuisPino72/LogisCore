@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { validateCycles } from '../services/productionService';
+import { getDb } from '@/services/dexie/db';
 
 interface RecipeLineInput {
   productId: string;
@@ -12,6 +13,42 @@ interface RecipeLineInput {
 
 // PRODUCTION-003 [Paso-2]: constante para identificar "crear nuevo producto"
 const NEW_PRODUCT_SENTINEL = '__NEW_PRODUCT__';
+
+// Mapeo de compatibilidad: unidad base del ingrediente → unidades permitidas en receta
+const UNIT_COMPATIBILITY: Record<string, string[]> = {
+  kg: ['g', 'kg'],
+  gr: ['g', 'kg'],
+  lt: ['ml', 'lt'],
+  m: ['m', 'cm'],
+  unidad: ['unidad'],
+};
+
+// Límites máximos de cantidad por unidad de receta
+const MAX_QUANTITY_PER_UNIT: Record<string, number> = {
+  g: 1_000_000,
+  kg: 1_000_000,
+  ml: 1_000_000,
+  lt: 1_000_000,
+  m: 1_000_000,
+  cm: 1_000_000,
+  unidad: 10_000,
+};
+
+// Helper: obtener unidades compatibles para una unidad base de inventario
+function getCompatibleUnits(baseUnit: string): string[] {
+  return UNIT_COMPATIBILITY[baseUnit] ?? ['unidad'];
+}
+
+// Helper: verificar si una unidad de receta es compatible con la unidad base del ingrediente
+function isUnitCompatible(recipeUnit: string, baseUnit: string): boolean {
+  const compat = getCompatibleUnits(baseUnit);
+  return compat.includes(recipeUnit);
+}
+
+// Helper: obtener límite máximo para una unidad de receta
+function getMaxQuantityForUnit(recipeUnit: string): number {
+  return MAX_QUANTITY_PER_UNIT[recipeUnit] ?? 99_999;
+}
 
 interface RecipeFormState {
   name: string;
@@ -191,11 +228,53 @@ export function useRecipeForm() {
           }
         }
 
-        form.lines.forEach((line, i) => {
-          if (!line.productId) stepErrors[`line_${i}_product`] = 'Selecciona un ingrediente';
-          if (line.quantity <= 0) stepErrors[`line_${i}_quantity`] = 'Cantidad debe ser mayor a 0';
-          if (line.quantity > 99999) stepErrors[`line_${i}_quantity`] = 'Cantidad máxima: 99,999';
-        });
+        const db = getDb();
+        for (let i = 0; i < form.lines.length; i++) {
+          const line = form.lines[i];
+          if (!line.productId) {
+            stepErrors[`line_${i}_product`] = 'Selecciona un ingrediente';
+            continue;
+          }
+
+          const ingredient = await db.products.get(line.productId);
+          if (!ingredient || ingredient.deletedAt) {
+            stepErrors[`line_${i}_product`] = 'Ingrediente no encontrado';
+            continue;
+          }
+
+          // Validar sub-receta activa
+          if (ingredient.productType === 'producto_terminado') {
+            const subRecipe = await db.recipes
+              .where('productId')
+              .equals(ingredient.id)
+              .filter((r) => !r.deletedAt && r.isActive)
+              .first();
+            if (!subRecipe) {
+              stepErrors[`line_${i}_product`] = 'Este producto terminado no tiene receta activa';
+            }
+          }
+
+          // Validar compatibilidad de unidades
+          if (line.unit && ingredient.unit) {
+            if (!isUnitCompatible(line.unit, ingredient.unit)) {
+              const compat = getCompatibleUnits(ingredient.unit).join(', ');
+              stepErrors[`line_${i}_unit`] = `Unidad incompatible. Para ${ingredient.unit} use: ${compat}`;
+            }
+          }
+
+          // Validar límites de cantidad por unidad
+          if (line.quantity > 0) {
+            const maxQty = getMaxQuantityForUnit(line.unit);
+            if (line.quantity > maxQty) {
+              stepErrors[`line_${i}_quantity`] = `Cantidad máxima para ${line.unit}: ${maxQty.toLocaleString()}`;
+            }
+          }
+
+          // Validar cantidad > 0
+          if (line.quantity <= 0) {
+            stepErrors[`line_${i}_quantity`] = 'Cantidad debe ser mayor a 0';
+          }
+        }
       }
 
       if (step === 2) {
@@ -214,6 +293,21 @@ export function useRecipeForm() {
         if (form.newProductSku.length > 18) stepErrors.newProductSku = 'Máximo 18 caracteres';
         if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
           stepErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
+        }
+
+        // Validaciones async: SKU único y nombre de receta único
+        const db = getDb();
+        if (form.newProductSku.trim()) {
+          const existingSku = await db.products.where('sku').equals(form.newProductSku.trim().toUpperCase()).first();
+          if (existingSku) {
+            stepErrors.newProductSku = 'Este SKU ya existe';
+          }
+        }
+        if (form.name.trim()) {
+          const existingRecipe = await db.recipes.where('name').equalsIgnoreCase(form.name.trim()).first();
+          if (existingRecipe) {
+            stepErrors.name = 'Ya existe una receta con este nombre';
+          }
         }
       }
 
@@ -237,17 +331,78 @@ export function useRecipeForm() {
           }
         }
 
-        form.lines.forEach((line, i) => {
-          if (!line.productId) stepErrors[`line_${i}_product`] = 'Selecciona un ingrediente';
-          if (line.quantity <= 0) stepErrors[`line_${i}_quantity`] = 'Cantidad debe ser mayor a 0';
-          if (line.quantity > 99999) stepErrors[`line_${i}_quantity`] = 'Cantidad máxima: 99,999';
-        });
+        const db = getDb();
+        for (let i = 0; i < form.lines.length; i++) {
+          const line = form.lines[i];
+          if (!line.productId) {
+            stepErrors[`line_${i}_product`] = 'Selecciona un ingrediente';
+            continue;
+          }
+
+          const ingredient = await db.products.get(line.productId);
+          if (!ingredient || ingredient.deletedAt) {
+            stepErrors[`line_${i}_product`] = 'Ingrediente no encontrado';
+            continue;
+          }
+
+          // Validar sub-receta activa
+          if (ingredient.productType === 'producto_terminado') {
+            const subRecipe = await db.recipes
+              .where('productId')
+              .equals(ingredient.id)
+              .filter((r) => !r.deletedAt && r.isActive)
+              .first();
+            if (!subRecipe) {
+              stepErrors[`line_${i}_product`] = 'Este producto terminado no tiene receta activa';
+            }
+          }
+
+          // Validar compatibilidad de unidades
+          if (line.unit && ingredient.unit) {
+            if (!isUnitCompatible(line.unit, ingredient.unit)) {
+              const compat = getCompatibleUnits(ingredient.unit).join(', ');
+              stepErrors[`line_${i}_unit`] = `Unidad incompatible. Para ${ingredient.unit} use: ${compat}`;
+            }
+          }
+
+          // Validar límites de cantidad por unidad
+          if (line.quantity > 0) {
+            const maxQty = getMaxQuantityForUnit(line.unit);
+            if (line.quantity > maxQty) {
+              stepErrors[`line_${i}_quantity`] = `Cantidad máxima para ${line.unit}: ${maxQty.toLocaleString()}`;
+            }
+          }
+
+          // Validar cantidad > 0
+          if (line.quantity <= 0) {
+            stepErrors[`line_${i}_quantity`] = 'Cantidad debe ser mayor a 0';
+          }
+
+          // Warning: stock insuficiente (solo materia_prima y both, no producto_terminado ni assembly)
+          // producto_terminado se produce bajo demanda (sub-receta o batch)
+          // assembly es modo de receta, no tipo de producto
+          const isSubRecipe = ingredient.productType === 'producto_terminado';
+          if (!isSubRecipe && ingredient.stock !== undefined) {
+            const wasteMultiplier = 1 + (form.wastePct / 100);
+            const needed = Math.ceil(line.quantity * wasteMultiplier);
+            if (ingredient.stock < needed) {
+              // Warning no bloqueante - se muestra en warnings useMemo
+            }
+          }
+        }
       }
 
       if (step === 3) {
         if (form.yieldQuantity <= 0) stepErrors.yieldQuantity = 'La cantidad producida debe ser mayor a 0';
         if (!form.yieldUnit) stepErrors.yieldUnit = 'Selecciona una unidad';
         if (form.wastePct < 0 || form.wastePct > 100) stepErrors.wastePct = 'La merma debe ser entre 0 y 100%';
+
+        // Validar compatibilidad yieldUnit con el tipo de producto nuevo
+        if (form.yieldUnit && form.newProductName.trim()) {
+          // Determinar el tipo de producto basado en yieldUnit
+          // const isWeighted = form.yieldUnit === 'kg' || form.yieldUnit === 'g' || form.yieldUnit === 'lt' || form.yieldUnit === 'ml';
+          // No hay validación estricta aquí, solo warning en el UI
+        }
       }
     }
 
@@ -318,11 +473,22 @@ export function useRecipeForm() {
         if (ingredient && (!ingredient.costPrice || ingredient.costPrice <= 0)) {
           w.push({ field: `line_${i}_cost`, message: `"${ingredient.name}" no tiene costo registrado. El costo de producción será impreciso.`, type: 'warning' });
         }
+        // Warning: stock insuficiente (solo materia_prima y both, no producto_terminado ni assembly)
+        if (ingredient && ingredient.stock !== undefined) {
+          const isSubRecipe = ingredient.productType === 'producto_terminado';
+          if (!isSubRecipe) {
+            const wasteMultiplier = 1 + (form.wastePct / 100);
+            const needed = Math.ceil(line.quantity * wasteMultiplier);
+            if (ingredient.stock < needed) {
+              w.push({ field: `line_${i}_stock`, message: `Stock bajo de "${ingredient.name}": ${ingredient.stock} disponible, se necesitan ${needed} (con merma ${form.wastePct}%)`, type: 'warning' });
+            }
+          }
+        }
       }
     });
 
     return w;
-  }, [form.productId, form.mode, form.yieldQuantity, form.lines, products]);
+  }, [form.productId, form.mode, form.yieldQuantity, form.lines, products, form.wastePct]);
 
   const getAvailableIngredients = useCallback(() => {
     return products.filter((p) =>
