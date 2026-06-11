@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from '../helpers';
 
 export const EXPENSE_CATEGORIES = [
   'LUZ', 'AGUA', 'GAS', 'INTERNET',
@@ -30,9 +31,9 @@ export const GastoSchema = z.object({
   nextDueDate: z.string().optional(),
   parentExpenseId: z.string().optional(),
   status: ExpenseStatusSchema,
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
 });
 
 export type Gasto = z.infer<typeof GastoSchema>;

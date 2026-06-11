@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from '../helpers';
 
 /** Exchange Rate Spec - EXCH-001..004 */
 
@@ -10,7 +11,7 @@ export const ExchangeRateSchema = z.object({
   id: z.string().uuid(),
   rate: z.number().positive().max(999999.9999).describe('Tasa BCV en Bs por USD'),
   source: z.enum(['api', 'manual', 'fallback']),
-  fetchedAt: z.string().datetime(),
+  fetchedAt: isoDateTime,
   createdBy: z.string().uuid().optional(),
 });
 

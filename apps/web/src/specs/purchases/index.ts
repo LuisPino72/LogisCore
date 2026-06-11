@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from '../helpers';
 
 // Schemas Zod — la fuente de verdad en runtime. schema.json es solo referencial.
 /** Purchases Spec - PURCH-001..005 */
@@ -9,8 +10,8 @@ export const SupplierSchema = z.object({
   // AUDIT-CRUD-012: rif opcional con regex Regla #8 (V/E/J/G/P + 9 dígitos)
   rif: z.string().regex(/^[VJEGP]\d{9}$/i, 'Cédula inválida. Formato: V/E/J/G/P + 9 dígitos.').optional(),
   phone: z.string().max(14).optional(),
-  createdAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
 });
 
 export type Supplier = z.infer<typeof SupplierSchema>;
@@ -34,8 +35,8 @@ export const PurchaseOrderItemSchema = z.object({
   costUsdPerUnit: z.number().positive().max(99999.99),
   receivedQuantity: z.number().min(0).default(0),
   totalUsd: z.number().positive(),
-  createdAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
 });
 
 export type PurchaseOrderItem = z.infer<typeof PurchaseOrderItemSchema>;
@@ -57,9 +58,9 @@ export const PurchaseOrderSchema = z.object({
   totalUsd: z.number().nonnegative(),
   notes: z.string().max(50).optional(),
   createdBy: z.string().uuid(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
 });
 
 export type PurchaseOrder = z.infer<typeof PurchaseOrderSchema>;

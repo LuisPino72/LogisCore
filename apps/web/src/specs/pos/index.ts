@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from '../helpers';
 
 /** POS Spec - POS-001..011 */
 
@@ -41,9 +42,9 @@ export const SaleSchema = z.object({
   totalBs: z.number().positive(),
   exchangeRate: z.number().positive(),
   status: z.enum(['completed', 'voided']),
-  voidedAt: z.string().datetime().optional(),
-  createdAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  voidedAt: isoDateTime.optional(),
+  createdAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
   discountType: z.enum(['percentage', 'fixed']).optional(),
   discountValue: z.number().min(0).optional(),
   discountBs: z.number().min(0).optional(),
@@ -75,7 +76,7 @@ export const SaleItemSchema = z.object({
   presentationId: z.string().uuid().optional(),
   presentationName: z.string().optional(),
   unitMultiplier: z.number().positive().default(1),
-  createdAt: z.string().datetime(),
+  createdAt: isoDateTime,
   // AUDIT-012: FIFO restore (track original lot consumption for void)
   consumedLots: z.array(z.object({ lotId: z.string(), quantity: z.number().positive() })).optional(),
 });
@@ -87,11 +88,11 @@ export const CashRegisterSchema = z.object({
   tenantId: z.string(),
   isOpen: z.boolean(),
   openedBy: z.string().uuid().nullable(),
-  openedAt: z.string().datetime().nullable(),
+  openedAt: isoDateTime.nullable(),
   openingBalanceBs: z.number().min(0).nullable(),
   openingRate: z.number().positive().nullable(),
   closedBy: z.string().uuid().nullable(),
-  closedAt: z.string().datetime().nullable(),
+  closedAt: isoDateTime.nullable(),
   closingBalanceBs: z.number().nullable(),
   closingRate: z.number().positive().nullable(),
   expectedClosingBs: z.number().nullable(),
@@ -99,9 +100,9 @@ export const CashRegisterSchema = z.object({
   totalSalesCount: z.number().int().min(0),
   totalSalesBs: z.number().min(0),
   totalIgtfBs: z.number().min(0),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().nullable().optional(), // POS-002 (M-1): acepta null | undefined para Dexie
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+  deletedAt: isoDateTime.nullable().optional(), // POS-002 (M-1): acepta null | undefined para Dexie
 });
 
 export type CashRegister = z.infer<typeof CashRegisterSchema>;

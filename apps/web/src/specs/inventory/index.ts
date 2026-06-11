@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from '../helpers';
 
 /** Inventory Spec - INV-001..006 */
 
@@ -29,7 +30,7 @@ export const ProductSchema = z.object({
   imageUrl: z.string().optional(),
   costPrice: z.number().min(0).optional(),
   productType: ProductTypeEnum.default('resale').optional(),
-  deletedAt: z.string().datetime().nullable().optional(),
+  deletedAt: isoDateTime.nullable().optional(),
   hasAssemblyRecipe: z.boolean().optional(),
 });
 
@@ -59,7 +60,7 @@ export const PresentationSchema = z.object({
   sortOrder: z.number().int().default(0),
   createdAt: z.string().nullable().optional(),
   updatedAt: z.string().nullable().optional(),
-  deletedAt: z.string().datetime().nullable().optional(),
+  deletedAt: isoDateTime.nullable().optional(),
 });
 
 export type Presentation = z.infer<typeof PresentationSchema>;

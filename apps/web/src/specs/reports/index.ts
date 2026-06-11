@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from '../helpers';
 
 /** Reports Spec - REPORT-001..007 */
 
@@ -29,7 +30,7 @@ export const TopProductSchema = z.object({
 export type TopProduct = z.infer<typeof TopProductSchema>;
 
 export const DailyProfitPointSchema = z.object({
-  date: z.string().datetime(),
+  date: isoDateTime,
   label: z.string(),
   salesBs: z.number().min(0),
   costBs: z.number().min(0),
@@ -41,8 +42,8 @@ export type DailyProfitPoint = z.infer<typeof DailyProfitPointSchema>;
 
 export const CashRegisterSummarySchema = z.object({
   registerId: z.string().uuid(),
-  openedAt: z.string().datetime(),
-  closedAt: z.string().datetime().optional(),
+  openedAt: isoDateTime,
+  closedAt: isoDateTime.optional(),
   openingBalanceBs: z.number().min(0),
   closingBalanceBs: z.number().optional(),
   expectedClosingBs: z.number().optional(),

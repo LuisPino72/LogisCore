@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from '../helpers';
 
 /** Production Spec - PROD-001..006 */
 
@@ -29,9 +30,9 @@ export const RecipeSchema = z.object({
   wastePct: z.number().min(0).max(100, 'La merma no puede ser mayor a 100%'),
   isActive: z.boolean(),
   notes: z.string().max(25).optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;
@@ -49,8 +50,8 @@ export const RecipeLineSchema = z.object({
   quantity: z.number().positive('La cantidad debe ser mayor a 0').max(1_000_000, 'La cantidad no puede ser mayor a 1,000,000'),
   unit: z.string().min(1),
   sortOrder: z.number().int(),
-  createdAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
 });
 
 export type RecipeLine = z.infer<typeof RecipeLineSchema>;
@@ -115,13 +116,13 @@ export const ProductionOrderSchema = z.object({
   quantityProduced: z.number().int().min(0),
   status: ProductionOrderStatusSchema,
   plannedDate: z.string().optional(),
-  startedAt: z.string().datetime().optional(),
-  completedAt: z.string().datetime().optional(),
+  startedAt: isoDateTime.optional(),
+  completedAt: isoDateTime.optional(),
   wasteNotes: z.string().optional(),
   createdBy: z.string().uuid(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  deletedAt: z.string().datetime().optional(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
 });
 
 export type ProductionOrder = z.infer<typeof ProductionOrderSchema>;
