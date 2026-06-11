@@ -59,8 +59,8 @@ export const ProductGrid = memo(function ProductGrid({
   const filteredCategories = useFuzzySearch(categories, categorySearch, { keys: ['name'] });
 
   let filtered = searchQuery
-    ? fuzzyResults.filter((p) => p.stock > 0)
-    : products.filter((p) => p.stock > 0);
+    ? fuzzyResults.filter((p) => p.stock > 0 || p.hasAssemblyRecipe)
+    : products.filter((p) => p.stock > 0 || p.hasAssemblyRecipe);
 
   if (selectedCategory) {
     filtered = filtered.filter((p) => p.categoryId === selectedCategory);

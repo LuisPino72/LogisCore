@@ -279,8 +279,8 @@ export const posService = {
   async getProductsForSale(tenantId: string): Promise<Result<Product[], AppError>> {
     try {
       const db = getDb();
-      const allRecipes = await db.recipes.toArray();
-      const assemblyProductIds = new Set(
+      let allRecipes = await db.recipes.toArray();
+      let assemblyProductIds = new Set(
         allRecipes
           .filter(r => !r.deletedAt && r.isActive && r.mode === 'assembly')
           .map(r => r.productId)
@@ -292,7 +292,6 @@ export const posService = {
           if (p.deletedAt || p.isSellable === false) return false;
           if (p.stock > 0) return true;
           if (assemblyProductIds.has(p.id)) return true;
-          // Fallback: cualquier receta activa → aparece en POS
           return allRecipes.some(r => r.productId === p.id && !r.deletedAt && r.isActive);
         })
         .toArray();
@@ -306,7 +305,6 @@ export const posService = {
           .select('*')
           .eq('tenant_id', uuid)
           .is('deleted_at', null)
-          .gt('stock', 0)
           .eq('is_sellable', true);
 
         if (data && !isDbClosing()) {
@@ -333,6 +331,45 @@ export const posService = {
           } catch {
             // DB cerrada durante shutdown, ignorar
           }
+
+          // También seedear recetas desde Supabase (importante para assembly products con stock=0)
+          try {
+            const { data: recipesData } = await supabase
+              .from('recipes')
+              .select('*')
+              .eq('tenant_id', uuid)
+              .is('deleted_at', null);
+            if (recipesData) {
+              for (const rec of recipesData) {
+                if (isDbClosing()) break;
+                const localRecipe = {
+                  id: rec.id as string,
+                  tenantId,
+                  name: rec.name as string,
+                  productId: rec.product_id as string,
+                  mode: rec.mode as 'batch' | 'assembly',
+                  yieldQuantity: rec.yield_quantity as number,
+                  yieldUnit: rec.yield_unit as string,
+                  wastePct: rec.waste_pct ?? 0,
+                  isActive: rec.is_active !== undefined ? !!rec.is_active : true,
+                  notes: rec.notes as string | undefined,
+                  createdAt: rec.created_at ?? new Date().toISOString(),
+                  updatedAt: rec.updated_at ?? new Date().toISOString(),
+                };
+                await db.recipes.put(localRecipe);
+              }
+              // Recargar recetas locales y reconstruir assemblyProductIds
+              allRecipes = await db.recipes.toArray();
+              assemblyProductIds = new Set(
+                allRecipes
+                  .filter(r => !r.deletedAt && r.isActive && r.mode === 'assembly')
+                  .map(r => r.productId)
+              );
+            }
+          } catch {
+            // DB cerrada durante shutdown, ignorar
+          }
+
           rows = await db.products
             .where({ tenantId })
             .filter((p) => {

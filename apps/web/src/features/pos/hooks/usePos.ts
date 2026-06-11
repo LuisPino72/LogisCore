@@ -99,8 +99,10 @@ export function usePos(tenantId: string | null) {
     subs.push(EventBus.on('INVENTORY.UPDATED', debouncedRefreshProducts));
     subs.push(EventBus.on('INVENTORY.CREATED', debouncedRefreshProducts));
     subs.push(EventBus.on('INVENTORY.DELETED', debouncedRefreshProducts));
+    subs.push(EventBus.on('INVENTORY.PRODUCT_CREATED', debouncedRefreshProducts));
     subs.push(EventBus.on('INVENTORY.ADJUSTMENT', debouncedRefreshProducts));
     subs.push(EventBus.on('PURCHASE.RECEIVED', debouncedRefreshProducts));
+    subs.push(EventBus.on('PRODUCTION.RECIPE_CREATED', debouncedRefreshProducts));
 
     subs.push(EventBus.on(SystemEvents.BOX_OPENED, debouncedRefresh));
     subs.push(EventBus.on(SystemEvents.BOX_CLOSED, debouncedRefresh));

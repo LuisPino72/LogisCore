@@ -334,7 +334,7 @@ export function useRecipeForm() {
 
   const getAvailableProducts = useCallback(() => {
     return products.filter((p) =>
-      !p.deletedAt && (p.productType === 'producto_terminado' || p.productType === 'both')
+      !p.deletedAt && (p.productType === 'producto_terminado' || p.productType === 'resale' || p.productType === 'both')
     );
   }, [products]);
 
