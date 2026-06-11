@@ -99,23 +99,12 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             quantity: l.quantity,
             unit: l.unit,
           }));
-          lines.forEach((line, i) => {
-            if (i === 0) {
-              updateLine(0, 'productId', line.productId);
-              updateLine(0, 'quantity', line.quantity);
-              updateLine(0, 'unit', line.unit);
-            } else {
-              addLine();
-              updateLine(i, 'productId', line.productId);
-              updateLine(i, 'quantity', line.quantity);
-              updateLine(i, 'unit', line.unit);
-            }
-          });
+          updateField('lines', lines);
         }
         setLoadingRecipe(false);
       });
     }
-  }, [recipe, getRecipeWithLines, updateField, addLine, updateLine]);
+  }, [recipe, getRecipeWithLines, updateField]);
 
   const availableIngredients = getAvailableIngredients();
 
