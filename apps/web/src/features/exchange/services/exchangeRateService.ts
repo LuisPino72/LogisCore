@@ -4,11 +4,15 @@ import { getDb, isDbReady } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ExchangeRateErrors } from '../../../specs/exchange-rate/errors';
+import { ExchangeRateInputSchema } from '../../../specs/exchange-rate/index';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import type { ExchangeRateResponse } from '../types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/fetch-bcv-rate`;
+
+const MANUAL_COOLDOWN_MS = 30_000; // 30 segundos entre cambios manuales
+let lastManualUpdateAt = 0;
 
 async function getAuthToken(): Promise<Result<string, AppError>> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -130,9 +134,23 @@ export const exchangeRateService = {
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
-    if (!rate || rate <= 0) {
-      return failure(new AppError(ExchangeRateErrors.EXCHANGE_RATE_INVALID, 'La tasa debe ser mayor a 0'));
+    // Rate limiting: 30 segundos entre cambios manuales
+    const now = Date.now();
+    if (now - lastManualUpdateAt < MANUAL_COOLDOWN_MS) {
+      const secondsLeft = Math.ceil((MANUAL_COOLDOWN_MS - (now - lastManualUpdateAt)) / 1000);
+      return failure(new AppError(ExchangeRateErrors.EXCHANGE_RATE_INVALID,
+        `Espera ${secondsLeft} segundos antes de cambiar la tasa manual`));
     }
+
+    // Validación con Zod schema (rango 10-200, 2 decimales)
+    const parsed = ExchangeRateInputSchema.safeParse({ rate });
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? 'Tasa inválida';
+      return failure(new AppError(ExchangeRateErrors.EXCHANGE_RATE_INVALID, msg));
+    }
+
+    const validatedRate = parsed.data.rate;
+    lastManualUpdateAt = now;
 
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
@@ -141,7 +159,7 @@ export const exchangeRateService = {
       .upsert(
         {
           tenant_id: tenantUuid,
-          rate,
+          rate: validatedRate,
           source: 'manual',
           fetched_at: new Date().toISOString(),
         },

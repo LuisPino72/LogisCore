@@ -18,7 +18,12 @@ export const ExchangeRateSchema = z.object({
 export type ExchangeRate = z.infer<typeof ExchangeRateSchema>;
 
 export const ExchangeRateInputSchema = z.object({
-  rate: z.number().positive('La tasa debe ser mayor a 0').max(999999.99),
+  rate: z
+    .number()
+    .min(10, 'La tasa debe ser al menos 10 Bs/USD')
+    .max(2000, 'La tasa no puede exceder 2000 Bs/USD')
+    .transform(v => Math.round(v * 100) / 100) // Fuerza 2 decimales
+    .describe('Tasa de cambio manual en Bs/USD (rango 10-2000)'),
 });
 
 export type ExchangeRateInput = z.infer<typeof ExchangeRateInputSchema>;
@@ -49,5 +54,5 @@ export function validateExchangeRateInput(input: unknown): ExchangeRateInput {
 }
 
 export function isValidRate(rate: unknown): rate is number {
-  return typeof rate === 'number' && rate > 0 && rate < 999999.99;
+  return typeof rate === 'number' && rate >= 10 && rate <= 2000;
 }

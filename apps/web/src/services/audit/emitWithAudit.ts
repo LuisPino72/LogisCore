@@ -1,8 +1,37 @@
 import type { Table } from 'dexie';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import type { OutboxEntry } from '@logiscore/core';
 import { logAuditEvent } from './auditService';
 import { outboxService } from '../outbox/outboxService';
+
+/** Campos requeridos por evento para validación de integridad */
+const REQUIRED_FIELDS: Partial<Record<string, string[]>> = {
+  [SystemEvents.SALE_COMPLETED]: ['saleId'],
+  [SystemEvents.BOX_OPENED]: ['registerId'],
+  [SystemEvents.BOX_CLOSED]: ['registerId'],
+  [SystemEvents.SYNC_REFRESH_TABLE]: ['table'],
+};
+
+/**
+ * Valida que los campos requeridos existan en el payload.
+ * Retorna null si es válido, o un string con el error.
+ */
+function validateEventPayload(eventName: string, payload: unknown): string | null {
+  const required = REQUIRED_FIELDS[eventName];
+  if (!required) return null; // Sin validación para este evento
+
+  if (!payload || typeof payload !== 'object') {
+    return `Payload inválido para evento ${eventName}`;
+  }
+
+  const obj = payload as Record<string, unknown>;
+  for (const field of required) {
+    if (obj[field] === undefined || obj[field] === null) {
+      return `Campo requerido "${field}" faltante en evento ${eventName}`;
+    }
+  }
+  return null;
+}
 
 type OutboxTxScope = { outbox: Table<OutboxEntry, number> };
 
@@ -15,6 +44,11 @@ const AUDIT_ALERT_COOLDOWN_MS = 60_000;
  *  Usar solo para eventos internos del engine (SYNC, CORE) que no son
  *  operaciones de escritura de negocio. */
 export function emitEngineEvent(eventName: string, payload: unknown = {}): void {
+  const validationError = validateEventPayload(eventName, payload);
+  if (validationError) {
+    console.error(`[EventBus] ${validationError}`);
+    return; // No emite eventos con payload inválido
+  }
   EventBus.emit(eventName, payload);
 }
 
@@ -66,6 +100,12 @@ export async function emitWithAudit(
   tx?: OutboxTxScope,
 ): Promise<void> {
   const { eventName, module, payload, context } = params;
+
+  const validationError = validateEventPayload(eventName, payload);
+  if (validationError) {
+    console.error(`[EventBus] ${validationError}`);
+    return; // No emite eventos con payload inválido
+  }
 
   if (tx) {
     await outboxService.enqueueInTransaction(tx, eventName, module, payload);

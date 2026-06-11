@@ -312,6 +312,21 @@ export const purchaseService = {
       return failure(new AppError('PURCHASE_FORBIDDEN_PRODUCT_TYPE', `No se pueden comprar productos terminados: ${forbiddenProducts.join(', ')}`));
     }
 
+    // Validar que presentationIds existan (solo items con presentationId)
+    const invalidPresentations: string[] = [];
+    for (const item of input.items) {
+      if (item.presentationId) {
+        const pres = await db.productPresentations.get(item.presentationId);
+        if (!pres || pres.deletedAt || pres.tenantId !== tenantId) {
+          invalidPresentations.push(item.presentationId.slice(0, 8));
+        }
+      }
+    }
+    if (invalidPresentations.length > 0) {
+      return failure(new AppError('PURCHASE_INVALID_PRESENTATIONS',
+        `Presentaciones no encontradas: ${invalidPresentations.join(', ')}`));
+    }
+
     const id = generateId();
     const now = new Date().toISOString();
 
@@ -400,6 +415,21 @@ export const purchaseService = {
     const productIds = input.items.map((i) => i.productId);
     if (new Set(productIds).size !== productIds.length) {
       return failure(new AppError('PURCHASE_DUPLICATE_PRODUCTS', 'No puede haber dos items del mismo producto en la orden.'));
+    }
+
+    // Validar que presentationIds existan (solo items con presentationId)
+    const invalidPresentations: string[] = [];
+    for (const item of input.items) {
+      if (item.presentationId) {
+        const pres = await db.productPresentations.get(item.presentationId);
+        if (!pres || pres.deletedAt || pres.tenantId !== tenantId) {
+          invalidPresentations.push(item.presentationId.slice(0, 8));
+        }
+      }
+    }
+    if (invalidPresentations.length > 0) {
+      return failure(new AppError('PURCHASE_INVALID_PRESENTATIONS',
+        `Presentaciones no encontradas: ${invalidPresentations.join(', ')}`));
     }
 
     // Preservar createdAt original de items existentes

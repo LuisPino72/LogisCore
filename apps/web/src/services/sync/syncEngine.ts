@@ -109,6 +109,19 @@ export class SyncEngine {
     const tenantUuid = await TenantTranslator.slugToUuid(item.tenantId);
     const remotePayload: Record<string, unknown> = { ...item.payload, tenant_id: tenantUuid };
 
+    // Defense-in-depth: validar campos requeridos antes de upsert
+    if (!remotePayload.tenant_id) {
+      throw new AppError('SYNC_PUSH_FAILED', 'Campo requerido "tenant_id" faltante', {
+        details: { table: item.table, recordId: item.recordId },
+      });
+    }
+    const idField = cfg.remoteIdField;
+    if (!remotePayload[idField]) {
+      throw new AppError('SYNC_PUSH_FAILED', `Campo requerido "${idField}" faltante`, {
+        details: { table: item.table, recordId: item.recordId },
+      });
+    }
+
     switch (item.operation) {
       case 'CREATE': {
         const { data: existing } = await supabase

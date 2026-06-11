@@ -253,6 +253,16 @@ export const customerService = {
         );
       }
 
+      // Verificar que no tenga deuda pendiente
+      if (customer.balance && customer.balance > 0) {
+        return failure(
+          new AppError(
+            CustomerErrors.CUSTOMER_HAS_BALANCE,
+            `No se puede eliminar: el cliente tiene una deuda pendiente de $${customer.balance.toFixed(2)} USD.`,
+          ),
+        );
+      }
+
       const deletedAt = new Date().toISOString();
       await db.transaction('rw', [db.customers, db.syncQueue, db.outbox], async () => {
         await db.customers.update(id, { deletedAt });

@@ -4,7 +4,6 @@ import { Button, Input, Modal, Spinner } from '../../../common/components';
 import { useExchangeRate } from '../hooks/useExchangeRate';
 import { formatBs } from '@/lib/formatBs';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
-import { useToastStore } from '../../../stores/toastStore';
 
 interface ExchangeRateWidgetProps {
   tenantId: string | null;
@@ -17,7 +16,6 @@ const STALE_CRITICAL_MS = 48 * 60 * 60 * 1000; // 48 horas
 export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role }) => {
   const { rate, source, fetchedAt, loading, isUpdating, error, updateFromBcv, setManual } =
     useExchangeRate(tenantId);
-  const { addToast } = useToastStore();
   const [showModal, setShowModal] = useState(false);
   const [manualRate, setManualRate] = useState('');
   const isOnline = useOnlineStatus();
@@ -33,18 +31,13 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
   const handleManualSubmit = async () => {
     setManualError('');
     const parsed = parseFloat(manualRate);
-    if (isNaN(parsed) || parsed <= 0) {
-      setManualError('Ingresa una tasa válida mayor a 0');
+    if (isNaN(parsed)) {
+      setManualError('Ingresa un valor numérico válido');
       return;
-    }
-    if (parsed < 10 || parsed > 200) {
-      if (!confirm('La tasa ingresada es inusual. ¿Estás seguro de que es correcta?')) {
-        return;
-      }
     }
     if (!tenantId) return;
     await setManual(tenantId, parsed);
-    addToast({ type: 'success', message: `Tasa actualizada a ${formatBs(parsed)} Bs`, duration: 3000 });
+    // El store maneja errores internamente vía error state
     setShowModal(false);
     setManualRate('');
   };
@@ -159,12 +152,13 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
             <Input
               type="number"
               step="0.01"
-              min="0"
-              placeholder="65.50"
+              min="10"
+              max="2000"
+              placeholder="100.00"
               value={manualRate}
               onChange={(e) => setManualRate(e.target.value)}
               error={manualError}
-              validation={{ required: true, min: 0.01, max: 9999 }}
+              validation={{ required: true, min: 10, max: 2000 }}
             />
           </div>
 

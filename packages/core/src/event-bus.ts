@@ -73,3 +73,22 @@ export const SystemEvents = {
   CUSTOMER_UPDATED: 'CUSTOMER.UPDATED',
   CUSTOMER_DELETED: 'CUSTOMER.DELETED',
 } as const;
+
+/** Mapa de tipos de payload por evento (compile-time safety) */
+export interface EventPayloadMap {
+  [SystemEvents.SALE_COMPLETED]: { saleId: string; totalBs?: number; [key: string]: unknown };
+  [SystemEvents.BOX_OPENED]: { registerId: string; [key: string]: unknown };
+  [SystemEvents.BOX_CLOSED]: { registerId: string; [key: string]: unknown };
+  [SystemEvents.INVENTORY_UPDATED]: Record<string, unknown>;
+  [SystemEvents.SYNC_REFRESH_TABLE]: { table: string; [key: string]: unknown };
+  [SystemEvents.PRODUCTION_COMPLETED]: Record<string, unknown>;
+  [SystemEvents.EXPENSES_CREATED]: Record<string, unknown>;
+  [SystemEvents.EXPENSES_UPDATED]: Record<string, unknown>;
+  [SystemEvents.EXPENSES_DELETED]: Record<string, unknown>;
+  [SystemEvents.CUSTOMER_CREATED]: Record<string, unknown>;
+  [SystemEvents.CUSTOMER_UPDATED]: Record<string, unknown>;
+  [SystemEvents.CUSTOMER_DELETED]: Record<string, unknown>;
+  [SystemEvents.EXCHANGE_RATE_UPDATED]: Record<string, unknown>;
+  [SystemEvents.EXCHANGE_RATE_STALE]: Record<string, unknown>;
+  [SystemEvents.EXCHANGE_RATE_FAILED]: Record<string, unknown>;
+}
