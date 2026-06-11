@@ -382,17 +382,15 @@ function GlobalHistoryView({
               const pct = topSpent > 0 ? Math.round((c.totalSpentUsd / topSpent) * 100) : 0;
               return (
                 <div key={c.customerId} className="px-3 py-2 rounded-lg border border-gray-100 bg-white">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="text-xs font-bold text-primary w-5 text-center shrink-0">
-                        {i + 1}
-                      </span>
-                      <span className="text-sm font-medium text-gray-900 truncate">{c.customerName}</span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-gray-900">{formatUsd(c.totalSpentUsd)}</p>
-                      <p className="text-[10px] text-text-secondary">{c.purchaseCount} compras · ticket {formatUsd(c.averageTicketUsd)}</p>
-                    </div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-bold text-primary w-5 text-center shrink-0">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900 min-w-0 flex-1 truncate">{c.customerName}</span>
+                  </div>
+                  <div className="flex items-center justify-between pl-7 mb-1">
+                    <p className="text-[10px] text-text-secondary">{c.purchaseCount} compras · ticket {formatUsd(c.averageTicketUsd)}</p>
+                    <p className="text-sm font-bold text-gray-900 shrink-0">{formatUsd(c.totalSpentUsd)}</p>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div

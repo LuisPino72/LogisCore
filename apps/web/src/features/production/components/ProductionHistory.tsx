@@ -100,8 +100,8 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
 
         return (
           <Card key={order.id} className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-              <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex-1 min-w-0 text-center sm:text-left">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <h4 className="font-semibold text-sm wrap-break-word">
                     {recipeMap.get(order.recipeId) || 'Receta eliminada'}
@@ -113,7 +113,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                     </span>
                   </Badge>
                 </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                <div className="flex flex-wrap justify-center sm:justify-start gap-x-3 gap-y-0.5 text-xs text-gray-500">
                   <span>{order.batchCount} lote(s)</span>
                   <span>·</span>
                   <span>{order.quantityTarget} unidades</span>

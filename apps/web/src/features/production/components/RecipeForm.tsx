@@ -266,53 +266,49 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   {form.lines.map((line, index) => {
                     const preview = previewLines[index];
                     return (
-                      <Card key={index} className="p-3">
-                        <div className="flex items-start gap-2">
-                          <div className="flex-1 space-y-2 min-w-0">
-                            <div>
-                              <SearchableSelect
-                                options={ingredientOptions}
-                                value={line.productId}
-                                onChange={(value) => updateLine(index, 'productId', value)}
-                                placeholder="Ingrediente"
-                              />
-                              {preview?.isSubRecipe && (
-                                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md wrap-break-word">
-                                  Sub-receta
-                                </span>
-                              )}
-                              {errors[`line_${index}_product`] && (
-                                <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_product`]}</p>
-                              )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <Input
-                                type="number"
-                                value={line.quantity}
-                                onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
-                                min={0.01}
-                                step={0.01}
-                                placeholder="Cantidad"
-                                error={errors[`line_${index}_quantity`]}
-                              />
-                              <select
-                                value={line.unit}
-                                onChange={(e) => updateLine(index, 'unit', e.target.value)}
-                                className="input w-full"
-                              >
-                                <option value="g">Gramos</option>
-                                <option value="ml">Mililitros</option>
-                                <option value="unidad">Unidad</option>
-                              </select>
-                            </div>
-                          </div>
+                      <Card key={index} className="p-2.5 space-y-4">
+                        <SearchableSelect
+                          options={ingredientOptions}
+                          value={line.productId}
+                          onChange={(value) => updateLine(index, 'productId', value)}
+                          placeholder="Ingrediente"
+                        />
+                        {preview?.isSubRecipe && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md wrap-break-word">
+                            Sub-receta
+                          </span>
+                        )}
+                        {errors[`line_${index}_product`] && (
+                          <p className="text-xs text-danger wrap-break-word">{errors[`line_${index}_product`]}</p>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            type="number"
+                            value={line.quantity}
+                            onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
+                            min={0.01}
+                            step={0.01}
+                            placeholder="Cantidad"
+                            error={errors[`line_${index}_quantity`]}
+                          />
+                          <select
+                            value={line.unit}
+                            onChange={(e) => updateLine(index, 'unit', e.target.value)}
+                            className="input w-full"
+                          >
+                            <option value="g">Gramos</option>
+                            <option value="ml">Mililitros</option>
+                            <option value="unidad">Unidad</option>
+                          </select>
+                        </div>
+                        <div className="flex justify-center pt-1">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => removeLine(index)}
-                            className="p-1.5 text-danger hover:text-danger shrink-0 min-h-[44px] min-w-[44px]"
+                            className="text-danger hover:text-danger p-2 min-h-[48px] min-w-[48px]"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={20} />
                           </Button>
                         </div>
                       </Card>
@@ -651,53 +647,49 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               {form.lines.map((line, index) => {
                 const preview = previewLines[index];
                 return (
-                  <Card key={index} className="p-3">
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 space-y-2 min-w-0">
-                        <div>
-                          <SearchableSelect
-                            options={ingredientOptions}
-                            value={line.productId}
-                            onChange={(value) => updateLine(index, 'productId', value)}
-                            placeholder="Ingrediente"
-                          />
-                          {preview?.isSubRecipe && (
-                            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md wrap-break-word">
-                              Sub-receta
-                            </span>
-                          )}
-                          {errors[`line_${index}_product`] && (
-                            <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_product`]}</p>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            type="number"
-                            value={line.quantity}
-                            onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
-                            min={0.01}
-                            step={0.01}
-                            placeholder="Cantidad"
-                            error={errors[`line_${index}_quantity`]}
-                          />
-                          <select
-                            value={line.unit}
-                            onChange={(e) => updateLine(index, 'unit', e.target.value)}
-                            className="input w-full"
-                          >
-                            <option value="g">Gramos</option>
-                            <option value="ml">Mililitros</option>
-                            <option value="unidad">Unidad</option>
-                          </select>
-                        </div>
-                      </div>
+                  <Card key={index} className="p-2.5 space-y-4">
+                    <SearchableSelect
+                      options={ingredientOptions}
+                      value={line.productId}
+                      onChange={(value) => updateLine(index, 'productId', value)}
+                      placeholder="Ingrediente"
+                    />
+                    {preview?.isSubRecipe && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md wrap-break-word">
+                        Sub-receta
+                      </span>
+                    )}
+                    {errors[`line_${index}_product`] && (
+                      <p className="text-xs text-danger wrap-break-word">{errors[`line_${index}_product`]}</p>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        value={line.quantity}
+                        onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
+                        min={0.01}
+                        step={0.01}
+                        placeholder="Cantidad"
+                        error={errors[`line_${index}_quantity`]}
+                      />
+                      <select
+                        value={line.unit}
+                        onChange={(e) => updateLine(index, 'unit', e.target.value)}
+                        className="input w-full"
+                      >
+                        <option value="g">Gramos</option>
+                        <option value="ml">Mililitros</option>
+                        <option value="unidad">Unidad</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-center pt-1">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeLine(index)}
-                        className="p-1.5 text-danger hover:text-danger shrink-0 min-h-[44px] min-w-[44px]"
+                        className="text-danger hover:text-danger p-2 min-h-[48px] min-w-[48px]"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={20} />
                       </Button>
                     </div>
                   </Card>
