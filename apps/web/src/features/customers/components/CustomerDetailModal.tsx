@@ -14,10 +14,11 @@ interface CustomerDetailModalProps {
   tenantId: string;
   onClose: () => void;
   onEdit?: (customer: Customer) => void;
+  onRefresh?: () => void;
   canEdit?: boolean;
 }
 
-export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, canEdit = false }: CustomerDetailModalProps) {
+export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, onRefresh, canEdit = false }: CustomerDetailModalProps) {
   const [page, setPage] = useState(1);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -237,6 +238,11 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
         tenantId={tenantId}
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
+        onPaymentSuccess={() => {
+          fetchStats(customer.id, tenantId);
+          fetchHistory({ customerId: customer.id, limit: HISTORY_PAGE_SIZE, offset: 0 }, tenantId);
+          onRefresh?.();
+        }}
       />
     </Modal>
   );

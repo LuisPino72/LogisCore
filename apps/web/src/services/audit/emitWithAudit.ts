@@ -81,12 +81,17 @@ export async function logAuditEventOnly(params: EmitAuditParams): Promise<void> 
     auditFailureCount = 0;
   } catch (err) {
     auditFailureCount++;
-    console.warn(`[logAuditEventOnly] Fallo en ${eventName} (${auditFailureCount}/${AUDIT_FAILURE_THRESHOLD}):`, err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack : undefined;
+    console.error(
+      `[logAuditEventOnly] Fallo en ${eventName} (${auditFailureCount}/${AUDIT_FAILURE_THRESHOLD}):`,
+      { message: errMsg, stack: errStack, payload, context: { tenantId: context.tenantId, userId: context.userId } }
+    );
 
     if (auditFailureCount >= AUDIT_FAILURE_THRESHOLD && Date.now() - lastFailureAlert > AUDIT_ALERT_COOLDOWN_MS) {
       lastFailureAlert = Date.now();
       auditFailureCount = 0;
-      EventBus.emit('AUDIT.FAILED', { module, reason: String(err), consecutiveFailures: AUDIT_FAILURE_THRESHOLD });
+      EventBus.emit('AUDIT.FAILED', { module, reason: errMsg, consecutiveFailures: AUDIT_FAILURE_THRESHOLD });
     }
   }
 }

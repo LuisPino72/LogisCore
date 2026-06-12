@@ -26,25 +26,30 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
 
   useEffect(() => {
     if (isOpen) {
-      setName(editCustomer?.name ?? '');
-      setCedula(editCustomer?.cedula ?? ''); // AUDIT-017
-      setPhone(editCustomer?.phone ?? '');
-      setAddress(editCustomer?.address ?? '');
+      setName(String(editCustomer?.name ?? ''));
+      setCedula(String(editCustomer?.cedula ?? '')); // AUDIT-017
+      setPhone(String(editCustomer?.phone ?? ''));
+      setAddress(String(editCustomer?.address ?? ''));
       setCreditLimit(editCustomer?.creditLimit ? String(editCustomer.creditLimit) : '');
-      setNotes(editCustomer?.notes ?? '');
+      setNotes(String(editCustomer?.notes ?? ''));
       setError('');
     }
   }, [isOpen, editCustomer]);
 
   const handleSubmit = async () => {
     const creditLimitNum = creditLimit ? Number(creditLimit) : 0;
+    const nameStr = String(name);
+    const cedulaStr = String(cedula);
+    const phoneStr = String(phone);
+    const addressStr = String(address);
+    const notesStr = String(notes);
     const payload = {
-      name: name.trim(),
-      cedula: cedula.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
-      phone: phone.trim() || undefined,
-      address: address.trim() || undefined,
+      name: nameStr.trim(),
+      cedula: cedulaStr.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
+      phone: phoneStr.trim() || undefined,
+      address: addressStr.trim() || undefined,
       creditLimit: creditLimitNum,
-      notes: notes.trim() || undefined,
+      notes: notesStr.trim() || undefined,
     };
     const parsed = CreateCustomerInputSchema.safeParse(payload);
     if (!parsed.success) {

@@ -14,6 +14,7 @@ interface PaymentModalProps {
   tenantId: string;
   isOpen: boolean;
   onClose: () => void;
+  onPaymentSuccess?: () => void;
 }
 
 const PAYMENT_ICONS: Record<PaymentMethod, typeof DollarSign> = {
@@ -24,7 +25,7 @@ const PAYMENT_ICONS: Record<PaymentMethod, typeof DollarSign> = {
   credito: CreditCard,
 };
 
-export function PaymentModal({ customer, tenantId, isOpen, onClose }: PaymentModalProps) {
+export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuccess }: PaymentModalProps) {
   const [amountUsd, setAmountUsd] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo_bs');
   const [reference, setReference] = useState('');
@@ -110,6 +111,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose }: PaymentMod
         type: 'success',
         message: `Pago de ${formatUsd(amount)} registrado. Saldo: ${formatUsd(result.data.newBalance)}`,
       });
+      onPaymentSuccess?.();
       onClose();
     } else {
       setError(result.error.message);

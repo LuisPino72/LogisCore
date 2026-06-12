@@ -73,6 +73,26 @@ function determineSeverity(eventName: string): string {
   return 'INFO';
 }
 
+function ensureStringValue(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') return value.toString();
+  if (typeof value === 'boolean') return value.toString();
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function sanitizeInsertPayload(payload: Record<string, unknown>): Record<string, string> {
+  const sanitized: Record<string, string> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    sanitized[key] = ensureStringValue(value);
+  }
+  return sanitized;
+}
+
 export async function logAuditEvent(payload: {
   eventName: string;
   module: string;
@@ -95,15 +115,17 @@ export async function logAuditEvent(payload: {
   if (payload.userId) insertPayload.user_id = payload.userId;
   if (payload.tenantUuid) insertPayload.tenant_id = payload.tenantUuid;
 
+  const safeInsertPayload = sanitizeInsertPayload(insertPayload);
+
   if (!navigator.onLine) {
-    return queueAuditLocally(insertPayload);
+    return queueAuditLocally(safeInsertPayload);
   }
 
-  const { error } = await supabase.from('audit_trail').insert(insertPayload);
+  const { error } = await supabase.from('audit_trail').insert(safeInsertPayload);
   if (error) {
     console.warn(`[auditService] Audit insert falló para ${payload.eventName}:`, error.message);
     if (error.message?.includes('network') || error.message?.includes('fetch')) {
-      return queueAuditLocally(insertPayload);
+      return queueAuditLocally(safeInsertPayload);
     }
   }
 }
@@ -138,14 +160,16 @@ export async function flushPendingAudits(): Promise<void> {
       .toArray();
 
     for (const entry of pending) {
-      const { error } = await supabase.from('audit_trail').insert({
+      const flushPayload = {
         event_name: entry.eventName,
         event_module: entry.module,
         severity: entry.severity,
         payload: entry.payload ? JSON.parse(entry.payload) : {},
         user_id: entry.userId || undefined,
         tenant_id: entry.tenantId || undefined,
-      });
+      };
+      const safeFlushPayload = sanitizeInsertPayload(flushPayload);
+      const { error } = await supabase.from('audit_trail').insert(safeFlushPayload);
 
       if (error) {
         await db.auditEntries.update(entry.id!, {

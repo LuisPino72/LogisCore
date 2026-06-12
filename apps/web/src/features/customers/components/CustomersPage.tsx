@@ -4,6 +4,7 @@ import { Button, Card, EmptyState, SearchInput, BottomNav, type BottomNavItem, M
 import { cn } from '../../../lib/utils';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import { useCustomers } from '../hooks/useCustomers';
+import { useCustomerStore } from '../stores/customerStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { CustomerList } from './CustomerList';
@@ -23,7 +24,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
   const {
     customers, loading, error,
     history, historyLoading,
-    createCustomer, updateCustomer, deleteCustomer, fetchHistory,
+    createCustomer, updateCustomer, deleteCustomer, fetchCustomers, fetchHistory,
     role, reset,
   } = useCustomers(tenantId);
   const { addToast } = useToastStore();
@@ -224,6 +225,13 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
         tenantId={tenantId}
         onClose={() => setViewCustomer(null)}
         onEdit={isOwner ? (c) => { setViewCustomer(null); setEditCustomer(c); setShowForm(true); } : undefined}
+        onRefresh={async () => {
+          await fetchCustomers(tenantId, true);
+          if (viewCustomer) {
+            const updated = useCustomerStore.getState().customers.find(c => c.id === viewCustomer.id);
+            if (updated) setViewCustomer(updated);
+          }
+        }}
         canEdit={isOwner}
       />
 

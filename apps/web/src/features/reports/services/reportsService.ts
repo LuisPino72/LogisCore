@@ -395,17 +395,6 @@ export const reportsService = {
         if (sale.discountBs && sale.exchangeRate > 0) {
           totalDiscountUsdAccum += preciseRound(sale.discountBs / sale.exchangeRate, 2);
         }
-        if (sale.isCreditSale) {
-          const creditUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
-          if (sale.creditCollected) {
-            collectedCreditUsd += creditUsd;
-          } else {
-            pendingCreditUsd += creditUsd;
-            if (sale.customerId) {
-              customerDebtMap.set(sale.customerId, (customerDebtMap.get(sale.customerId) ?? 0) + creditUsd);
-            }
-          }
-        }
         for (const item of items) {
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
           const costUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
@@ -452,8 +441,8 @@ export const reportsService = {
         }
       }
 
-      // Non-sellable expenses + Adjustment losses + Operating expenses (parallel, no dependency)
-      const [nsResult, adjResult, operatingExpenses] = await Promise.all([
+      // Non-sellable expenses + Adjustment losses + Operating expenses + Credit payments (parallel, no dependency)
+      const [nsResult, adjResult, operatingExpenses, creditPaymentsArr] = await Promise.all([
         this.getNonSellableExpenses(tenantId, start, end),
         this.getAdjustmentLossExpenses(tenantId, start, end),
         (async () => {
@@ -466,7 +455,40 @@ export const reportsService = {
             .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category !== 'COMPRA_INVENTARIO')
             .toArray();
         })(),
+        (async () => {
+          const db = getDb();
+          const startNorm = start.slice(0, 10);
+          const endNorm = end.slice(0, 10);
+          return db.creditPayments
+            .where({ tenantId })
+            .filter((cp) => cp.createdAt >= startNorm && cp.createdAt <= endNorm)
+            .toArray();
+        })(),
       ]);
+
+      // Adjust pending credit by subtracting payments made
+      const paidBySale = new Map<string, number>();
+      for (const cp of creditPaymentsArr) {
+        paidBySale.set(cp.saleId, (paidBySale.get(cp.saleId) ?? 0) + cp.amountUsd);
+      }
+
+      pendingCreditUsd = 0;
+      collectedCreditUsd = 0;
+      customerDebtMap.clear();
+      for (const { sale: s } of data) {
+        if (!s.isCreditSale) continue;
+        const creditUsd = s.exchangeRate > 0 ? s.totalBs / s.exchangeRate : 0;
+        const paid = paidBySale.get(s.id) ?? 0;
+        const remaining = preciseRound(Math.max(0, creditUsd - paid), 2);
+        if (remaining <= 0) {
+          collectedCreditUsd += creditUsd;
+        } else {
+          pendingCreditUsd += remaining;
+          if (s.customerId) {
+            customerDebtMap.set(s.customerId, (customerDebtMap.get(s.customerId) ?? 0) + remaining);
+          }
+        }
+      }
 
       const nonSellableExpensesUsd = nsResult.ok ? nsResult.data.totalUsd : 0;
       const nonSellableExpensesBs = nsResult.ok ? nsResult.data.totalBs : 0;
