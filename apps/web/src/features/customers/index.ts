@@ -3,6 +3,7 @@ export { CustomerList } from './components/CustomerList';
 export { CustomerForm } from './components/CustomerForm';
 export { CustomerDetailModal } from './components/CustomerDetailModal';
 export { CustomerPickerModal } from './components/CustomerPickerModal';
+export { PaymentModal } from './components/PaymentModal';
 export { useCustomers } from './hooks/useCustomers';
 export { useCustomerStore } from './stores/customerStore';
 export { customerService } from './services/customerService';

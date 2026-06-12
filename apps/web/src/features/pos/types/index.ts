@@ -43,4 +43,5 @@ export interface PosState {
   assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }>;
   selectedCustomerId: string | null;
   selectedCustomer: { id: string; name: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
+  isCreditSale: boolean;
 }

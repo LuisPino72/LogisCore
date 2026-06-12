@@ -458,6 +458,36 @@ export const posService = {
       }
     }
 
+    // Validaciones de crédito (solo si paymentMethod === 'credito')
+    const isCreditSale = input.paymentMethod === 'credito' && input.isCreditSale;
+    if (isCreditSale) {
+      if (!input.customerId) {
+        return failure(new AppError('CUSTOMER_REQUIRED_FOR_CREDIT', 'Debe asignar un cliente para venta a crédito.'));
+      }
+      const creditCustomer = await db.customers
+        .where({ id: input.customerId })
+        .filter((c) => c.tenantId === tenantId && !c.deletedAt)
+        .first();
+      if (!creditCustomer) {
+        return failure(new AppError('CUSTOMER_NOT_FOUND', 'Cliente no encontrado.'));
+      }
+      if (creditCustomer.creditLimit <= 0) {
+        return failure(new AppError('CUSTOMER_NO_CREDIT_LIMIT', 'Este cliente no tiene crédito configurado. Configure el límite de crédito en el perfil del cliente.'));
+      }
+      // Pre-validate credit limit (will be re-validated inside transaction for concurrency)
+      const pendingCreditTotal = await db.sales
+        .where({ tenantId })
+        .filter((s) => !s.deletedAt && s.status === 'completed' && s.isCreditSale === true && !s.creditCollected && s.customerId === input.customerId)
+        .toArray();
+      const currentDebt = pendingCreditTotal.reduce((sum, s) => sum + s.totalUsd, 0);
+      // We'll use the totals calculated below, but we need a rough estimate here for pre-validation
+      const roughTotalUsd = items.reduce((sum, i) => sum + i.totalPriceUsd, 0);
+      if (currentDebt + roughTotalUsd > creditCustomer.creditLimit) {
+        const available = Math.max(0, creditCustomer.creditLimit - currentDebt);
+        return failure(new AppError('CREDIT_LIMIT_EXCEEDED', `El cliente excede su límite de crédito ($${creditCustomer.creditLimit.toFixed(2)}). Debe $${currentDebt.toFixed(2)}. Disponible: $${available.toFixed(2)}.`));
+      }
+    }
+
     const totals = calculateSaleTotals(
       items.map((i) => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: i.isTaxable })),
       rawExchangeRate,
@@ -500,7 +530,8 @@ export const posService = {
     }
 
     try {
-      await db.transaction('rw', [
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const txTables: any[] = [
         db.sales,
         db.saleItems,
         db.inventoryMovements,
@@ -511,7 +542,27 @@ export const posService = {
         db.recipeLines,
         db.syncQueue,
         db.outbox,
-      ], async (tx) => {
+      ];
+      if (isCreditSale) txTables.push(db.customers);
+
+      await db.transaction('rw', txTables, async (tx) => {
+        // Re-validate credit limit inside transaction (concurrency defense)
+        if (isCreditSale && input.customerId) {
+          const txCustomer = await db.customers.get(input.customerId);
+          if (!txCustomer || txCustomer.deletedAt) {
+            throw new AppError('CUSTOMER_NOT_FOUND', 'Cliente no encontrado.');
+          }
+          const pendingSales = await db.sales
+            .where({ tenantId })
+            .filter((s) => !s.deletedAt && s.status === 'completed' && s.isCreditSale === true && !s.creditCollected && s.customerId === input.customerId)
+            .toArray();
+          const currentDebt = pendingSales.reduce((sum, s) => sum + s.totalUsd, 0);
+          if (currentDebt + totalUsd > txCustomer.creditLimit) {
+            const available = Math.max(0, txCustomer.creditLimit - currentDebt);
+            throw new AppError('CREDIT_LIMIT_EXCEEDED', `El cliente excede su límite de crédito ($${txCustomer.creditLimit.toFixed(2)}). Debe $${currentDebt.toFixed(2)}. Disponible: $${available.toFixed(2)}.`);
+          }
+        }
+
         await db.sales.add({
           id: saleId,
           tenantId,
@@ -534,6 +585,9 @@ export const posService = {
           igtfUsd,
           totalUsd,
           discountUsd: discountUsd > 0 ? discountUsd : undefined,
+          // Sistema de crédito
+          isCreditSale,
+          creditCollected: false,
         });
 
         const saleSnakePayload: Record<string, unknown> = {
@@ -559,6 +613,10 @@ export const posService = {
         if (discountBs > 0) saleSnakePayload.discount_bs = discountBs;
         if (discountUsd > 0) saleSnakePayload.discount_usd = discountUsd;
         if (input.customerId) saleSnakePayload.customer_id = input.customerId;
+        if (isCreditSale) {
+          saleSnakePayload.is_credit_sale = true;
+          saleSnakePayload.credit_collected = false;
+        }
         await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake(saleSnakePayload), tenantId);
 
         for (const cartItem of normalItems) {
@@ -770,29 +828,46 @@ export const posService = {
           } as unknown as Record<string, unknown>), tenantId);
         }
 
-        const updatedCashReg = {
-          ...cashReg,
-          totalSalesCount: cashReg.totalSalesCount + 1,
-          totalSalesBs: preciseRound(cashReg.totalSalesBs + totalBs, 2),
-          totalIgtfBs: preciseRound(cashReg.totalIgtfBs + igtfBs, 2),
-          updatedAt: now,
-        };
-        await db.cashRegisters.update(cashReg.id, {
-          totalSalesCount: updatedCashReg.totalSalesCount,
-          totalSalesBs: updatedCashReg.totalSalesBs,
-          totalIgtfBs: updatedCashReg.totalIgtfBs,
-          updatedAt: now,
-        });
+        // Skip cash register update for credit sales (money hasn't entered the register)
+        if (!isCreditSale) {
+          const updatedCashReg = {
+            ...cashReg,
+            totalSalesCount: cashReg.totalSalesCount + 1,
+            totalSalesBs: preciseRound(cashReg.totalSalesBs + totalBs, 2),
+            totalIgtfBs: preciseRound(cashReg.totalIgtfBs + igtfBs, 2),
+            updatedAt: now,
+          };
+          await db.cashRegisters.update(cashReg.id, {
+            totalSalesCount: updatedCashReg.totalSalesCount,
+            totalSalesBs: updatedCashReg.totalSalesBs,
+            totalIgtfBs: updatedCashReg.totalIgtfBs,
+            updatedAt: now,
+          });
 
-        await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
-          id: cashReg.id,
-          tenant_id: tenantUuid,
-          total_sales_count: updatedCashReg.totalSalesCount,
-          total_sales_bs: updatedCashReg.totalSalesBs,
-          total_igtf_bs: updatedCashReg.totalIgtfBs,
-          is_open: true,
-          updated_at: now,
-        } as unknown as Record<string, unknown>), tenantId);
+          await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
+            id: cashReg.id,
+            tenant_id: tenantUuid,
+            total_sales_count: updatedCashReg.totalSalesCount,
+            total_sales_bs: updatedCashReg.totalSalesBs,
+            total_igtf_bs: updatedCashReg.totalIgtfBs,
+            is_open: true,
+            updated_at: now,
+          } as unknown as Record<string, unknown>), tenantId);
+        }
+
+        // Update customer balance for credit sales
+        if (isCreditSale && input.customerId) {
+          const customer = await db.customers.get(input.customerId);
+          if (customer) {
+            const newBalance = preciseRound(customer.balance + totalUsd, 2);
+            await db.customers.update(input.customerId, { balance: newBalance, updatedAt: now });
+            await syncQueue.enqueue('customers', 'UPDATE', input.customerId, toSnake({
+              id: input.customerId,
+              balance: newBalance,
+              updated_at: now,
+            } as unknown as Record<string, unknown>), tenantId);
+          }
+        }
 
         // Encolar en outbox DENTRO de la transacción (Regla #17)
         await outboxService.enqueue('SALE.COMPLETED', MODULE_NAME, {
@@ -801,6 +876,7 @@ export const posService = {
           totalBs,
           paymentMethod,
           itemsCount: items.length,
+          isCreditSale,
           ...(discountBs > 0 && { discountBs, discountType, discountValue }),
         }, tx);
       });
@@ -837,6 +913,9 @@ export const posService = {
         igtfUsd,
         totalUsd,
         discountUsd: discountUsd > 0 ? discountUsd : undefined,
+        // Sistema de crédito
+        isCreditSale,
+        creditCollected: false,
       });
     } catch (err) {
       if (err instanceof AppError) return failure(err);
@@ -1100,6 +1179,10 @@ export const posService = {
           totalUsd: r.totalUsd,
           discountUsd: r.discountUsd,
           customerId: r.customerId ?? undefined,
+          // Sistema de crédito
+          isCreditSale: r.isCreditSale ?? false,
+          creditCollected: r.creditCollected ?? false,
+          collectedAt: r.collectedAt ?? undefined,
         })),
       });
     } catch (err) {
@@ -1182,6 +1265,13 @@ export const posService = {
       const now = new Date().toISOString();
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
+      // Credit sale void validation
+      if (sale.isCreditSale) {
+        if (sale.creditCollected) {
+          return failure(new AppError('CREDIT_SALE_PARTIALLY_COLLECTED', 'No se puede anular una venta a crédito que ya fue cobrada parcialmente. Contacte al administrador.'));
+        }
+      }
+
       // Buscar caja que estaba abierta al momento de la venta (no la que está abierta ahora)
       const saleTs = new Date(sale.createdAt).getTime();
       const allRegisters = await db.cashRegisters
@@ -1194,7 +1284,11 @@ export const posService = {
         return opened <= saleTs && (r.isOpen || closed >= saleTs);
       }) ?? allRegisters.find((r) => r.isOpen);
 
-      await db.transaction('rw', [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const txTables: any[] = [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.recipes, db.recipeLines, db.syncQueue, db.outbox];
+      if (sale.isCreditSale && sale.customerId) txTables.push(db.customers);
+
+      await db.transaction('rw', txTables, async (tx) => {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });
 
         for (const item of items) {
@@ -1399,6 +1493,7 @@ export const posService = {
               !s.deletedAt &&
               s.status === 'completed' &&
               !s.voidedAt &&
+              !s.isCreditSale && // Credit sales were never added to the register
               s.createdAt >= regOpened &&
               s.createdAt <= regClosed,
             )
@@ -1446,6 +1541,20 @@ export const posService = {
         await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
           id: saleId, tenant_id: tenantUuid, status: 'voided', voided_at: now,
         } as unknown as Record<string, unknown>), tenantId);
+
+        // Reduce customer balance for uncollected credit sales
+        if (sale.isCreditSale && sale.customerId && !sale.creditCollected) {
+          const customer = await db.customers.get(sale.customerId);
+          if (customer) {
+            const newBalance = preciseRound(Math.max(0, customer.balance - sale.totalUsd), 2);
+            await db.customers.update(sale.customerId, { balance: newBalance, updatedAt: now });
+            await syncQueue.enqueue('customers', 'UPDATE', sale.customerId, toSnake({
+              id: sale.customerId,
+              balance: newBalance,
+              updated_at: now,
+            } as unknown as Record<string, unknown>), tenantId);
+          }
+        }
       });
 
       await logAuditEventOnly({

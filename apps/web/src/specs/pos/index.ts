@@ -3,7 +3,7 @@ import { isoDateTime } from '../helpers';
 
 /** POS Spec - POS-001..011 */
 
-export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'efectivo_usd'] as const;
+export const PAYMENT_METHODS = ['efectivo_bs', 'pago_movil', 'tarjeta_bs', 'efectivo_usd', 'credito'] as const;
 export type PaymentMethod = typeof PAYMENT_METHODS[number];
 
 export const MAX_PARKED_CARTS = 10; // POS-002: shared between posService and posStore (m-21)
@@ -56,6 +56,10 @@ export const SaleSchema = z.object({
   igtfUsd: z.number().min(0),
   totalUsd: z.number().min(0),
   discountUsd: z.number().min(0).optional(),
+  // Sistema de crédito (fiado)
+  isCreditSale: z.boolean().default(false),
+  creditCollected: z.boolean().default(false),
+  collectedAt: isoDateTime.optional(),
 });
 
 export type Sale = z.infer<typeof SaleSchema>;
@@ -117,6 +121,7 @@ export const CreateSaleInputSchema = z.object({
   discountValue: z.number().min(0).optional(),
   customerId: z.string().uuid().optional(),
   allowOverride: z.boolean().optional(),
+  isCreditSale: z.boolean().optional().default(false),
 });
 
 export type CreateSaleInput = z.infer<typeof CreateSaleInputSchema>;
@@ -146,6 +151,7 @@ export const METADATA_PAGOS = {
   pago_movil: { label: 'P Móvil', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
   tarjeta_bs: { label: 'Tarjeta', moneda: 'Bs', requiereVuelto: false, aplicaIgtf: false },
   efectivo_usd: { label: 'Efectivo $', moneda: 'USD', requiereVuelto: true, aplicaIgtf: true },
+  credito: { label: 'A crédito', moneda: 'USD', requiereVuelto: false, aplicaIgtf: false },
 } as const;
 
 export { calculateSaleTotals } from './utils';

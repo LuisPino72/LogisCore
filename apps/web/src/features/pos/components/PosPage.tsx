@@ -45,6 +45,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     toggleFavorite, fetchSalesHistory, voidSale, getTodaySoldProducts,
     search, userId, role, exchangeRate,
     selectedCustomer, setSelectedCustomer,
+    isCreditSale, setIsCreditSale,
     getPresentations,
   } = usePos(tenantId);
 
@@ -469,6 +470,8 @@ export function PosPage({ tenantId }: PosPageProps) {
           onMobileToggle={toggleMobileCart}
           selectedCustomer={selectedCustomer}
           onSelectCustomer={() => setShowCustomerPicker(true)}
+          isCreditSale={isCreditSale}
+          onSetIsCreditSale={setIsCreditSale}
         />
       )}
 

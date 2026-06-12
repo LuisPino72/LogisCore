@@ -76,7 +76,16 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
       header: 'Método',
       render: (sale) => {
         const meta = METADATA_PAGOS[sale.paymentMethod as PaymentMethod];
-        return <Badge variant="info">{meta?.label ?? sale.paymentMethod}</Badge>;
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge variant="info">{meta?.label ?? sale.paymentMethod}</Badge>
+            {sale.isCreditSale && (
+              <Badge variant={sale.creditCollected ? 'success' : 'warning'}>
+                {sale.creditCollected ? 'Cobrado' : 'Fiado'}
+              </Badge>
+            )}
+          </div>
+        );
       },
     },
     {

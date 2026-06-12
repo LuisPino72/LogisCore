@@ -22,6 +22,8 @@ interface CartPanelProps {
   onMobileToggle: () => void;
   selectedCustomer?: { id: string; name: string; cedula?: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
   onSelectCustomer?: () => void;
+  isCreditSale: boolean;
+  onSetIsCreditSale: (isCredit: boolean) => void;
 }
 
 export const CartPanel = memo(function CartPanel({
@@ -40,6 +42,8 @@ export const CartPanel = memo(function CartPanel({
   onMobileToggle,
   selectedCustomer,
   onSelectCustomer,
+  isCreditSale,
+  onSetIsCreditSale,
 }: CartPanelProps) {
   const discount = usePosStore((s) => s.discount);
   const setDiscount = usePosStore((s) => s.setDiscount);
@@ -89,12 +93,14 @@ export const CartPanel = memo(function CartPanel({
               onClearDiscount={clearDiscount}
               selectedCustomer={selectedCustomer ?? null}
               onSelectCustomer={onSelectCustomer ?? (() => {})}
+              isCreditSale={isCreditSale}
+              onSetIsCreditSale={onSetIsCreditSale}
             />
           </div>
         )}
       </div>
     ),
-    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onRemoveFromCart, onUpdateQuantity, onPay, isOpen, loading, itemCount, discount, setDiscount, clearDiscount, selectedCustomer, onSelectCustomer],
+    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onRemoveFromCart, onUpdateQuantity, onPay, isOpen, loading, itemCount, discount, setDiscount, clearDiscount, selectedCustomer, onSelectCustomer, isCreditSale, onSetIsCreditSale],
   );
 
   return (

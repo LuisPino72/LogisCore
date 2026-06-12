@@ -1,5 +1,5 @@
 import { Card, Badge, Tooltip, EmptyState } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight, BarChart3, Receipt } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight, BarChart3, Receipt, Wallet } from 'lucide-react';
 import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
@@ -207,6 +207,20 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           subtitle="Impuesto al Valor Agregado"
           icon={<Receipt size={18} />}
           gradient="blue"
+        />
+        <KpiCard
+          label="Pendiente por cobrar"
+          value={<span className="text-xs sm:text-lg font-bold text-warning truncate">{formatUsd(data.pendingCreditUsd)}</span>}
+          subtitle={
+            <div className="flex items-center gap-1.5">
+              <span>{data.customersWithDebt} {data.customersWithDebt === 1 ? 'cliente' : 'clientes'}</span>
+              {data.collectedCreditUsd > 0 && (
+                <span className="text-success">· Cobrado {formatUsd(data.collectedCreditUsd)}</span>
+              )}
+            </div>
+          }
+          icon={<Wallet size={18} />}
+          gradient="amber"
         />
       </div>
 

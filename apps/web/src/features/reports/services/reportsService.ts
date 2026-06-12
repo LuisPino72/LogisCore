@@ -81,6 +81,9 @@ interface SaleWithItems {
     paymentMethod: string;
     createdAt: string;
     discountBs?: number;
+    isCreditSale?: boolean;
+    creditCollected?: boolean;
+    customerId?: string;
   };
   items: {
     productId: string;
@@ -139,6 +142,9 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
           paymentMethod: sale.paymentMethod,
           createdAt: sale.createdAt,
           discountBs: sale.discountBs,
+          isCreditSale: sale.isCreditSale,
+          creditCollected: sale.creditCollected,
+          customerId: sale.customerId,
         },
         items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
           productId: i.productId,
@@ -183,6 +189,9 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
             paymentMethod: sale.paymentMethod,
             createdAt: sale.createdAt,
             discountBs: sale.discountBs,
+            isCreditSale: sale.isCreditSale,
+            creditCollected: sale.creditCollected,
+            customerId: sale.customerId,
           },
           items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
             productId: i.product_id,
@@ -207,7 +216,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const { data: cloudSales, error: salesError } = await supabase
       .from('sales')
-      .select('id, total_bs, igtf_bs, iva_bs, exchange_rate, payment_method, created_at, discount_bs')
+      .select('id, total_bs, igtf_bs, iva_bs, exchange_rate, payment_method, created_at, discount_bs, is_credit_sale, credit_collected, customer_id')
       .eq('tenant_id', tenantUuid)
       .eq('status', 'completed')
       .is('deleted_at', null)
@@ -243,6 +252,9 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         paymentMethod: sale.payment_method || 'efectivo_bs',
         createdAt: sale.created_at,
         discountBs: sale.discount_bs ? Number(sale.discount_bs) : undefined,
+        isCreditSale: sale.is_credit_sale ?? false,
+        creditCollected: sale.credit_collected ?? false,
+        customerId: sale.customer_id,
       },
       items: (itemsBySaleId.get(sale.id) ?? []).map((i) => ({
         productId: i.product_id,
@@ -365,6 +377,9 @@ export const reportsService = {
       let totalDiscountBs = 0;
       let totalIvaBs = 0;
       let totalIvaUsd = 0;
+      let pendingCreditUsd = 0;
+      let collectedCreditUsd = 0;
+      const customerDebtMap = new Map<string, number>();
       const productProfitMap = new Map<string, { name: string; profit: number }>();
 
       let totalDiscountUsdAccum = 0;
@@ -379,6 +394,17 @@ export const reportsService = {
         totalSalesUsd += saleUsd;
         if (sale.discountBs && sale.exchangeRate > 0) {
           totalDiscountUsdAccum += preciseRound(sale.discountBs / sale.exchangeRate, 2);
+        }
+        if (sale.isCreditSale) {
+          const creditUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
+          if (sale.creditCollected) {
+            collectedCreditUsd += creditUsd;
+          } else {
+            pendingCreditUsd += creditUsd;
+            if (sale.customerId) {
+              customerDebtMap.set(sale.customerId, (customerDebtMap.get(sale.customerId) ?? 0) + creditUsd);
+            }
+          }
         }
         for (const item of items) {
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
@@ -513,6 +539,9 @@ export const reportsService = {
         totalDiscountUsd,
         totalIvaBs,
         totalIvaUsd,
+        pendingCreditUsd: preciseRound(pendingCreditUsd, 2),
+        collectedCreditUsd: preciseRound(collectedCreditUsd, 2),
+        customersWithDebt: customerDebtMap.size,
       });
     } catch (err) {
       console.error('[reportsService.getExecutiveSummary]', err);

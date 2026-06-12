@@ -44,6 +44,8 @@ export function usePos(tenantId: string | null) {
   const selectedCustomerId = usePosStore((s) => s.selectedCustomerId);
   const selectedCustomer = usePosStore((s) => s.selectedCustomer);
   const setSelectedCustomer = usePosStore((s) => s.setSelectedCustomer);
+  const isCreditSale = usePosStore((s) => s.isCreditSale);
+  const setIsCreditSale = usePosStore((s) => s.setIsCreditSale);
   const reset = usePosStore((s) => s.reset);
 
   const session = useAuthStore((s) => s.session);
@@ -150,6 +152,7 @@ export function usePos(tenantId: string | null) {
     favoriteProductIds, salesHistory, salesHistoryTotal, salesHistoryLoading,
     loading, error, searchQuery,
     selectedCustomerId, selectedCustomer, setSelectedCustomer: (c: Customer | null) => setSelectedCustomer(c),
+    isCreditSale, setIsCreditSale,
     addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     completeSale, openCashRegister, closeCashRegister,
     parkCart, loadParkedCart, deleteParkedCart,

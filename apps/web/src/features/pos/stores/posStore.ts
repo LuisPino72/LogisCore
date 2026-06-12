@@ -44,6 +44,8 @@ interface PosStore extends PosState {
   saleItemsLoading: boolean;
   fetchSaleItems: (tenantId: string, saleId: string) => Promise<void>;
   setSelectedCustomer: (customer: Customer | null) => void;
+  isCreditSale: boolean;
+  setIsCreditSale: (isCredit: boolean) => void;
   reset: () => void;
 }
 
@@ -67,6 +69,7 @@ const initialState: PosState = {
   assemblyRecipesMap: {},
   selectedCustomerId: null,
   selectedCustomer: null,
+  isCreditSale: false,
 };
 
 export const usePosStore = create<PosStore>()(
@@ -463,10 +466,13 @@ export const usePosStore = create<PosStore>()(
   setSelectedCustomer: (customer) => set({
     selectedCustomerId: customer?.id ?? null,
     selectedCustomer: customer,
+    isCreditSale: false, // Reset credit sale when changing customer
   }),
 
+  setIsCreditSale: (isCredit) => set({ isCreditSale: isCredit }),
+
   completeSale: async (tenantId, paymentMethod, userId) => {
-    const { cart, selectedCustomerId } = get();
+    const { cart, selectedCustomerId, isCreditSale } = get();
     if (cart.length === 0) {
       set({ error: 'No hay productos en el carrito.' });
       return failure(new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.'));
@@ -492,6 +498,7 @@ export const usePosStore = create<PosStore>()(
       exchangeRate,
       ...(discount && { discountType: discount.type, discountValue: discount.value }),
       ...(selectedCustomerId && { customerId: selectedCustomerId }),
+      isCreditSale: isCreditSale && paymentMethod === 'credito',
     };
 
     set({ loading: true, error: null });
@@ -508,6 +515,7 @@ export const usePosStore = create<PosStore>()(
         activeParkedCartId: null,
         selectedCustomerId: null,
         selectedCustomer: null,
+        isCreditSale: false,
       });
       if (activeId) {
         const remaining = get().parkedCarts.filter((p) => p.id !== activeId);

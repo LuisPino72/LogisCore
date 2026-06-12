@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Modal, Button, Badge, EmptyState, Spinner, Pagination, SaleDetailModal } from '../../../common/components';
-import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard } from 'lucide-react';
+import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, CreditCard } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useCustomerStore } from '../stores/customerStore';
+import { PaymentModal } from './PaymentModal';
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -19,6 +20,7 @@ interface CustomerDetailModalProps {
 export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, canEdit = false }: CustomerDetailModalProps) {
   const [page, setPage] = useState(1);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const history = useCustomerStore((s) => s.history);
   const historyTotal = useCustomerStore((s) => s.historyTotal);
   const historyLoading = useCustomerStore((s) => s.historyLoading);
@@ -105,6 +107,29 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
             </Badge>
           )}
         </div>
+
+        {/* Debt Section */}
+        {customer.balance > 0 && (
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard size={18} className="text-amber-600" />
+                <div>
+                  <p className="text-xs font-medium text-amber-800">Deuda pendiente</p>
+                  <p className="text-lg font-bold text-amber-900">{formatUsd(customer.balance)}</p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowPaymentModal(true)}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                Cobrar deuda
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div>
           <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
@@ -205,6 +230,13 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
         tenantId={tenantId}
         isOpen={!!selectedSaleId}
         onClose={() => setSelectedSaleId(null)}
+      />
+
+      <PaymentModal
+        customer={customer}
+        tenantId={tenantId}
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
       />
     </Modal>
   );

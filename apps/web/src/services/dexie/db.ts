@@ -113,6 +113,10 @@ export interface DexieSale {
   igtfUsd: number;
   totalUsd: number;
   discountUsd?: number;
+  // Sistema de crédito (fiado)
+  isCreditSale?: boolean;
+  creditCollected?: boolean;
+  collectedAt?: string;
 }
 
 export interface DexieSaleItem {
@@ -352,6 +356,20 @@ export interface DexieRolePermission {
   createdAt: string;
 }
 
+export interface DexieCreditPayment {
+  id: string;
+  tenantId: string;
+  customerId: string;
+  saleId: string;
+  amountUsd: number;
+  amountBs: number;
+  paymentMethod: PaymentMethod;
+  exchangeRate: number;
+  reference?: string;
+  createdAt: string;
+  deletedAt?: string;
+}
+
 export class LogisCoreDB extends Dexie {
   tenantRefs!: Table<DexieTenantRef, string>;
   syncQueue!: Table<SyncQueueItem, number>;
@@ -380,6 +398,7 @@ export class LogisCoreDB extends Dexie {
   recipeLines!: Table<DexieRecipeLine, string>;
   productionOrders!: Table<DexieProductionOrder, string>;
   rolePermissions!: Table<DexieRolePermission, string>;
+  creditPayments!: Table<DexieCreditPayment, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -444,6 +463,10 @@ export class LogisCoreDB extends Dexie {
       // soft-deleted viejos + reactivación. El index acelera el lookup, la tx
       // serializa races.
       customers: 'id, tenantId, name, cedula, [tenantId+deletedAt]',
+    });
+    // Sistema de crédito (fiado) — v22: nueva tabla creditPayments
+    this.version(22).stores({
+      creditPayments: 'id, tenantId, customerId, saleId, [tenantId+customerId], [tenantId+saleId]',
     });
   }
 }

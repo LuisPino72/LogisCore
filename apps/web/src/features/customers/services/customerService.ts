@@ -1,5 +1,5 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
-import { toSnake, generateId } from '@logiscore/shared';
+import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import type { DexieCustomer } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -23,6 +23,7 @@ import type {
 } from '../../../specs/customers';
 import { CustomerErrors } from '../../../specs/customers/errors';
 import { PaymentMethodSchema } from '../../../specs/pos';
+import type { PaymentMethod } from '../../../specs/pos';
 import type { Sale } from '../../pos/types';
 
 const MODULE_NAME = 'CUSTOMERS';
@@ -443,6 +444,9 @@ export const customerService = {
           igtfUsd: r.igtfUsd,
           totalUsd: r.totalUsd,
           discountUsd: r.discountUsd,
+          isCreditSale: r.isCreditSale ?? false,
+          creditCollected: r.creditCollected ?? false,
+          collectedAt: r.collectedAt ?? undefined,
         };
       });
 
@@ -609,6 +613,241 @@ export const customerService = {
       return failure(
         new AppError(CustomerErrors.CUSTOMER_FETCH_FAILED, 'Error al calcular estadísticas de adquisición.'),
       );
+    }
+  },
+
+  // ===== SISTEMA DE CRÉDITO (FIADO) =====
+
+  /**
+   * Registra un pago contra la deuda de un cliente.
+   * Puede ser pago total o parcial.
+   */
+  async collectDebt(
+    customerId: string,
+    saleId: string,
+    amountUsd: number,
+    paymentMethod: PaymentMethod,
+    tenantId: string,
+    exchangeRate: number,
+    reference?: string,
+  ): Promise<Result<{ paymentId: string; newBalance: number }, AppError>> {
+    try {
+      const db = getDb();
+      const now = new Date().toISOString();
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+
+      // Validaciones
+      if (amountUsd <= 0) {
+        return failure(new AppError('INVALID_AMOUNT', 'El monto del pago debe ser mayor a 0.'));
+      }
+
+      const customer = await db.customers
+        .where({ id: customerId })
+        .filter((c) => c.tenantId === tenantId && !c.deletedAt)
+        .first();
+      if (!customer) {
+        return failure(new AppError('CUSTOMER_NOT_FOUND', 'Cliente no encontrado.'));
+      }
+
+      if (customer.balance <= 0) {
+        return failure(new AppError('CUSTOMER_NO_DEBT', 'Este cliente no tiene deuda pendiente.'));
+      }
+
+      if (amountUsd > customer.balance) {
+        return failure(new AppError('AMOUNT_EXCEEDS_DEBT', `El monto ($${amountUsd.toFixed(2)}) excede la deuda pendiente ($${customer.balance.toFixed(2)}).`));
+      }
+
+      // Verificar que la venta existe y es fiada
+      const sale = await db.sales.get(saleId);
+      if (!sale || sale.isCreditSale !== true) {
+        return failure(new AppError('SALE_NOT_CREDIT', 'La venta especificada no es una venta a crédito.'));
+      }
+
+      if (sale.creditCollected) {
+        return failure(new AppError('SALE_ALREADY_COLLECTED', 'Esta venta ya fue cobrada completamente.'));
+      }
+
+      const paymentId = generateId();
+      const amountBs = preciseRound(amountUsd * exchangeRate, 2);
+      const newBalance = preciseRound(Math.max(0, customer.balance - amountUsd), 2);
+
+      // Determinar si es cobro total
+      const isFullPayment = newBalance <= 0.01; // Tolerancia de 1 céntimo
+
+      await db.transaction('rw', [db.creditPayments, db.customers, db.sales, db.syncQueue, db.outbox], async (tx) => {
+        // Crear registro de pago
+        await tx.creditPayments.add({
+          id: paymentId,
+          tenantId,
+          customerId,
+          saleId,
+          amountUsd: preciseRound(amountUsd, 2),
+          amountBs,
+          paymentMethod,
+          exchangeRate,
+          reference: reference?.trim() || undefined,
+          createdAt: now,
+        });
+
+        // Actualizar balance del cliente
+        await tx.customers.update(customerId, {
+          balance: isFullPayment ? 0 : newBalance,
+          updatedAt: now,
+        });
+
+        // Si es pago total, marcar la venta como cobrada
+        if (isFullPayment) {
+          await tx.sales.update(saleId, {
+            creditCollected: true,
+            collectedAt: now,
+          });
+        }
+
+        // Sync queue
+        await syncQueue.enqueue('credit_payments', 'CREATE', paymentId, toSnake({
+          id: paymentId,
+          tenant_id: tenantUuid,
+          customer_id: customerId,
+          sale_id: saleId,
+          amount_usd: preciseRound(amountUsd, 2),
+          amount_bs: amountBs,
+          payment_method: paymentMethod,
+          exchange_rate: exchangeRate,
+          reference: reference?.trim() || null,
+          created_at: now,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        await syncQueue.enqueue('customers', 'UPDATE', customerId, toSnake({
+          id: customerId,
+          balance: isFullPayment ? 0 : newBalance,
+          updated_at: now,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        if (isFullPayment) {
+          await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+            id: saleId,
+            credit_collected: true,
+            collected_at: now,
+          } as unknown as Record<string, unknown>), tenantId);
+        }
+
+        await outboxService.enqueue('DEBT.COLLECTED', MODULE_NAME, {
+          customerId,
+          saleId,
+          paymentId,
+          amountUsd: preciseRound(amountUsd, 2),
+          tenantSlug: tenantId,
+        }, tx);
+      });
+
+      await logAuditEventOnly({
+        eventName: 'DEBT.COLLECTED',
+        module: MODULE_NAME,
+        payload: { customerId, saleId, paymentId, amountUsd: preciseRound(amountUsd, 2) },
+        context: { tenantId, userId: useAuthStore.getState().session?.userId },
+      });
+
+      return success({ paymentId, newBalance: isFullPayment ? 0 : newBalance });
+    } catch (err) {
+      if (err instanceof AppError) return failure(err);
+      logger.error(MODULE_NAME, 'Error en collectDebt:', err);
+      return failure(new AppError('DEBT_COLLECT_ERROR', 'Error al registrar el cobro de deuda.'));
+    }
+  },
+
+  /**
+   * Obtiene las ventas fiadas pendientes de cobro de un cliente.
+   */
+  async getCustomerPendingCreditSales(
+    customerId: string,
+    tenantId: string,
+  ): Promise<Result<Array<Sale & { payments: Array<{ id: string; amountUsd: number; createdAt: string }> }>, AppError>> {
+    try {
+      const db = getDb();
+      const sales = await db.sales
+        .where({ tenantId, customerId })
+        .filter((s) => !s.deletedAt && s.status === 'completed' && s.isCreditSale === true && s.creditCollected === false)
+        .toArray();
+
+      const result = await Promise.all(sales.map(async (s) => {
+        const payments = await db.creditPayments
+          .where({ saleId: s.id })
+          .filter((p) => !p.deletedAt)
+          .toArray();
+
+        return {
+          id: s.id,
+          tenantId: s.tenantId,
+          userId: s.userId,
+          paymentMethod: s.paymentMethod as PaymentMethod,
+          subtotalBs: s.subtotalBs,
+          igtfBs: s.igtfBs,
+          ivaBs: s.ivaBs,
+          totalBs: s.totalBs,
+          exchangeRate: s.exchangeRate,
+          status: s.status as 'completed' | 'voided',
+          voidedAt: s.voidedAt,
+          createdAt: s.createdAt,
+          deletedAt: s.deletedAt,
+          discountType: s.discountType as 'percentage' | 'fixed' | undefined,
+          discountValue: s.discountValue,
+          discountBs: s.discountBs,
+          customerId: s.customerId,
+          subtotalUsd: s.subtotalUsd,
+          ivaUsd: s.ivaUsd,
+          igtfUsd: s.igtfUsd,
+          totalUsd: s.totalUsd,
+          discountUsd: s.discountUsd,
+          isCreditSale: true as const,
+          creditCollected: false as const,
+          collectedAt: undefined,
+          payments: payments.map((p) => ({
+            id: p.id,
+            amountUsd: p.amountUsd,
+            createdAt: p.createdAt,
+          })),
+        };
+      }));
+
+      return success(result);
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getCustomerPendingCreditSales:', err);
+      return failure(new AppError('CREDIT_SALES_FETCH_FAILED', 'Error al cargar ventas pendientes.'));
+    }
+  },
+
+  /**
+   * Obtiene todos los clientes con deuda pendiente.
+   */
+  async getCustomersWithDebt(
+    tenantId: string,
+  ): Promise<Result<Array<{ customerId: string; customerName: string; balance: number; creditLimit: number; pendingSalesCount: number }>, AppError>> {
+    try {
+      const db = getDb();
+      const customersWithDebt = await db.customers
+        .where({ tenantId })
+        .filter((c) => !c.deletedAt && c.balance > 0)
+        .toArray();
+
+      const result = await Promise.all(customersWithDebt.map(async (c) => {
+        const pendingSales = await db.sales
+          .where({ tenantId, customerId: c.id })
+          .filter((s) => !s.deletedAt && s.status === 'completed' && s.isCreditSale === true && s.creditCollected === false)
+          .count();
+
+        return {
+          customerId: c.id,
+          customerName: c.name,
+          balance: c.balance,
+          creditLimit: c.creditLimit,
+          pendingSalesCount: pendingSales,
+        };
+      }));
+
+      return success(result.sort((a, b) => b.balance - a.balance));
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getCustomersWithDebt:', err);
+      return failure(new AppError('DEBT_CUSTOMERS_FETCH_FAILED', 'Error al cargar clientes con deuda.'));
     }
   },
 };

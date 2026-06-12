@@ -43,6 +43,9 @@ export interface ExecutiveSummaryData {
   totalDiscountUsd: number;
   totalIvaBs: number;
   totalIvaUsd: number;
+  pendingCreditUsd: number;
+  collectedCreditUsd: number;
+  customersWithDebt: number;
 }
 
 export interface DailyProfitPoint {
