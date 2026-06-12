@@ -31,6 +31,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
   const [reference, setReference] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [inputKey, setInputKey] = useState(0);
   const exchangeRate = useExchangeRateStore((s) => s.rate) ?? 0;
   const { addToast } = useToastStore();
 
@@ -67,6 +68,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
 
   const handlePayAll = useCallback(() => {
     setAmountUsd(customer.balance.toFixed(2));
+    setInputKey((k) => k + 1);
   }, [customer.balance]);
 
   const handleConfirm = async () => {
@@ -197,6 +199,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             Monto a cobrar (USD)
           </label>
           <Input
+            key={inputKey}
             type="number"
             sanitize="number"
             placeholder="0.00"
