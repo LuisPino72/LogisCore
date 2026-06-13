@@ -32,6 +32,24 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   const debouncedStartDate = useDebounce(startDate, 400);
   const debouncedEndDate = useDebounce(endDate, 400);
 
+  // Auto-swap if start > end, and reject future dates
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (startDate && startDate > today) {
+      setStartDate(today);
+    }
+    if (endDate && endDate > today) {
+      setEndDate(today);
+    }
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (debouncedStartDate && debouncedEndDate && debouncedStartDate > debouncedEndDate) {
+      setStartDate(debouncedEndDate);
+      setEndDate(debouncedStartDate);
+    }
+  }, [debouncedStartDate, debouncedEndDate]);
+
   const fetchSalesHistory = usePosStore((s) => s.fetchSalesHistory);
 
   const handleSort = useCallback((key: string) => {

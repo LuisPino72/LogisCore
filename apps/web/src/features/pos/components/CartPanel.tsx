@@ -24,6 +24,7 @@ interface CartPanelProps {
   onSelectCustomer?: () => void;
   isCreditSale: boolean;
   onSetIsCreditSale: (isCredit: boolean) => void;
+  onClearCustomer?: () => void;
 }
 
 export const CartPanel = memo(function CartPanel({
@@ -42,6 +43,7 @@ export const CartPanel = memo(function CartPanel({
   onMobileToggle,
   selectedCustomer,
   onSelectCustomer,
+  onClearCustomer,
   isCreditSale,
   onSetIsCreditSale,
 }: CartPanelProps) {
@@ -93,6 +95,7 @@ export const CartPanel = memo(function CartPanel({
               onClearDiscount={clearDiscount}
               selectedCustomer={selectedCustomer ?? null}
               onSelectCustomer={onSelectCustomer ?? (() => {})}
+              onClearCustomer={onClearCustomer ?? (() => {})}
               isCreditSale={isCreditSale}
               onSetIsCreditSale={onSetIsCreditSale}
             />

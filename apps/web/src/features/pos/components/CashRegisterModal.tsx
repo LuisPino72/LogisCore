@@ -43,7 +43,7 @@ export function CashRegisterModal({
   const handleOpen = async () => {
     const parsed = parseFloat(balance);
     if (!parsed || parsed <= 0) {
-      setLocalError('Ingresa el monto inicial de la caja.');
+      setLocalError('Ingresa un monto inicial mayor a 0.');
       return;
     }
     setLocalError('');
@@ -57,7 +57,7 @@ export function CashRegisterModal({
   const handleClose = async () => {
     const parsed = parseFloat(declaredClosing);
     if (isNaN(parsed) || parsed < 0) {
-      setLocalError('Ingresa el monto final declarado.');
+      setLocalError('Ingresa el monto final declarado (debe ser 0 o mayor).');
       return;
     }
     setLocalError('');

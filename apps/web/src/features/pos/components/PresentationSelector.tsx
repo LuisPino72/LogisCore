@@ -50,6 +50,7 @@ export function PresentationSelector({
               key={pres.id}
               type="button"
               disabled={!hasStock}
+              title={!hasStock ? 'Sin stock disponible' : undefined}
               onClick={() => {
                 if (product) {
                   if (!pres.id) return;

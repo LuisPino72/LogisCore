@@ -141,7 +141,10 @@ export function PosPage({ tenantId }: PosPageProps) {
   }, [weightingProduct, weightingQty, addToCart, addToast, closeWeightModal]);
 
   const handlePay = useCallback(async () => {
-    if (!tenantId || !userId || !paymentMethod) return;
+    if (!tenantId || !userId || !paymentMethod) {
+      addToast({ type: 'warning', message: 'Faltan datos para procesar la venta. Verifica sesión y método de pago.', duration: 4000 });
+      return;
+    }
     setProcessing(true);
     try {
       const saleResult = await completeSale(tenantId, paymentMethod, userId);
@@ -231,7 +234,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const handleCashOpenSubmit = useCallback(
     async (balance: number) => {
-      if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Faltan datos.'));
+      if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Sesión incompleta. Recarga la página.'));
       const result = await openCashRegister(tenantId, balance, userId);
       if (!result.ok) {
         setCashError(result.error?.message ?? 'Error al abrir la caja.');
@@ -244,7 +247,7 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const handleCashCloseSubmit = useCallback(
     async (declared: number) => {
-      if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Faltan datos.'));
+      if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Sesión incompleta. Recarga la página.'));
       const result = await closeCashRegister(tenantId, declared, userId);
       if (!result.ok) {
         setCashError(result.error?.message ?? 'Error al cerrar la caja.');
@@ -471,6 +474,7 @@ export function PosPage({ tenantId }: PosPageProps) {
           onMobileToggle={toggleMobileCart}
           selectedCustomer={selectedCustomer}
           onSelectCustomer={() => setShowCustomerPicker(true)}
+          onClearCustomer={() => setSelectedCustomer(null)}
           isCreditSale={isCreditSale}
           onSetIsCreditSale={setIsCreditSale}
         />

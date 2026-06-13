@@ -21,6 +21,7 @@ interface CartSummaryProps {
   onClearDiscount: () => void;
   selectedCustomer: { id: string; name: string; cedula?: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
   onSelectCustomer: () => void;
+  onClearCustomer: () => void;
   isCreditSale: boolean;
   onSetIsCreditSale: (isCredit: boolean) => void;
 }
@@ -39,6 +40,7 @@ export function CartSummary({
   onClearDiscount,
   selectedCustomer,
   onSelectCustomer,
+  onClearCustomer,
   isCreditSale,
   onSetIsCreditSale,
 }: CartSummaryProps) {
@@ -177,6 +179,14 @@ export function CartSummary({
                 )}
               </div>
             )}
+            <button
+              type="button"
+              onClick={onClearCustomer}
+              className="p-1 rounded-md hover:bg-danger/10 transition-colors text-gray-400 hover:text-danger"
+              title="Quitar cliente"
+            >
+              <X size={12} />
+            </button>
             <button
               type="button"
               onClick={onSelectCustomer}
