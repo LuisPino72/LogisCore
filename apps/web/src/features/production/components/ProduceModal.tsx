@@ -178,6 +178,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
               min={1}
               max={1000}
               error={batchError || undefined}
+              validation={{ required: true, min: 1, max: 1000 }}
             />
 
             {/* Total Production — more prominent */}

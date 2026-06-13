@@ -280,15 +280,20 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                             placeholder="Cantidad"
                             error={errors[`line_${index}_quantity`]}
                           />
-                          <select
-                            value={line.unit}
-                            onChange={(e) => updateLine(index, 'unit', e.target.value)}
-                            className="input w-full"
-                          >
-                            <option value="g">Gramos</option>
-                            <option value="ml">Mililitros</option>
-                            <option value="unidad">Unidad</option>
-                          </select>
+                          <div>
+                            <select
+                              value={line.unit}
+                              onChange={(e) => updateLine(index, 'unit', e.target.value)}
+                              className={`input w-full ${errors[`line_${index}_unit`] ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
+                            >
+                              <option value="g">Gramos</option>
+                              <option value="ml">Mililitros</option>
+                              <option value="unidad">Unidad</option>
+                            </select>
+                            {errors[`line_${index}_unit`] && (
+                              <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_unit`]}</p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex justify-center pt-1">
                           <Button
@@ -386,6 +391,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 min={0}
                 max={100}
                 error={errors.wastePct}
+                validation={{ min: 0, max: 100 }}
               />
 
               <Input
@@ -521,6 +527,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   min={0.01}
                   step={0.01}
                   error={errors.newProductPriceUsd}
+                  validation={{ required: true, min: 0.01 }}
                 />
               </div>
               {categoryOptions.length > 0 && (
@@ -642,15 +649,20 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                         placeholder="Cantidad"
                         error={errors[`line_${index}_quantity`]}
                       />
-                      <select
-                        value={line.unit}
-                        onChange={(e) => updateLine(index, 'unit', e.target.value)}
-                        className="input w-full"
-                      >
-                        <option value="g">Gramos</option>
-                        <option value="ml">Mililitros</option>
-                        <option value="unidad">Unidad</option>
-                      </select>
+                      <div>
+                        <select
+                          value={line.unit}
+                          onChange={(e) => updateLine(index, 'unit', e.target.value)}
+                          className={`input w-full ${errors[`line_${index}_unit`] ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
+                        >
+                          <option value="g">Gramos</option>
+                          <option value="ml">Mililitros</option>
+                          <option value="unidad">Unidad</option>
+                        </select>
+                        {errors[`line_${index}_unit`] && (
+                          <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_unit`]}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex justify-center pt-1">
                       <Button
@@ -748,6 +760,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 min={0}
                 max={100}
                 error={errors.wastePct}
+                validation={{ min: 0, max: 100 }}
               />
               {form.mode === 'batch' ? (
                 <>
@@ -759,6 +772,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     min={1}
                     max={10000}
                     error={errors.yieldQuantity}
+                    validation={{ required: true, min: 1, max: 10000 }}
                   />
                 </>
               ) : null}
