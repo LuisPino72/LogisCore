@@ -86,6 +86,24 @@ export const adminService = {
 
   async hardDeleteTenant(id: string): Promise<Result<void, AppError>> {
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Audit BEFORE delete (tenant must exist for FK)
+    try {
+      await emitWithAudit({
+        eventName: 'ADMIN.TENANT.HARD_DELETE',
+        module: 'ADMIN',
+        payload: {
+          tenantId: id,
+          type: 'hard',
+        },
+        context: {
+          userId: user?.id ?? '',
+          tenantId: '',
+          tenantUuid: id,
+        },
+      });
+    } catch { /* audit best-effort */ }
+
     const { error } = await supabase.rpc('hard_delete_tenant', { p_tenant_id: id });
 
     if (error) {
@@ -103,22 +121,6 @@ export const adminService = {
         }
       } catch { /* non-critical */ }
     }
-
-    try {
-      await emitWithAudit({
-        eventName: 'ADMIN.TENANT.HARD_DELETE',
-        module: 'ADMIN',
-        payload: {
-          tenantId: id,
-          type: 'hard',
-        },
-        context: {
-          userId: user?.id ?? '',
-          tenantId: '',
-          tenantUuid: id,
-        },
-      });
-    } catch { /* audit best-effort */ }
 
     return success(undefined);
   },
