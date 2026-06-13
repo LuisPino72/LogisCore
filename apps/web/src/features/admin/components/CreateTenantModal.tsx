@@ -186,14 +186,14 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 placeholder="Nombre"
                 value={emp.name}
                 onChange={(e) => updateEmployeeRow(i, 'name', e.target.value)}
-                validation={{ required: true, maxLength: 25 }}
+                validation={{ maxLength: 25 }}
               />
               <Input
                 placeholder="Email"
                 type="email"
                 value={emp.email}
                 onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
-                validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
+                validation={{ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
               />
               <Input
                 placeholder="Contraseña"
@@ -201,7 +201,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 showPassword
                 value={emp.password}
                 onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
-                validation={{ required: true, minLength: 8, maxLength: 20 }}
+                validation={{ minLength: 8, maxLength: 20 }}
               />
             </div>
           ))}
