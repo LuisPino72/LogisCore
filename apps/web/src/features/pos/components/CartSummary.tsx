@@ -5,6 +5,7 @@ import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals } from '../../../specs/pos';
 import { IGTF_RATE } from '@logiscore/shared';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { useToastStore } from '../../../stores/toastStore';
 
 interface CartSummaryProps {
   items: CartItem[];
@@ -46,6 +47,7 @@ export function CartSummary({
   const [discountInput, setDiscountInput] = useState('');
   const [discountError, setDiscountError] = useState('');
   const [showCreditInfo, setShowCreditInfo] = useState(false);
+  const { addToast } = useToastStore();
 
   const totals = calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount);
   const { subtotalUsd, subtotalBs, igtfBs, ivaBs, discountBs, discountUsd, totalBs, totalUsd, ivaUsd } = totals;
@@ -82,6 +84,10 @@ export function CartSummary({
       onSetIsCreditSale(false);
       onPaymentMethodChange('efectivo_bs');
     } else {
+      if (!selectedCustomer) {
+        addToast({ type: 'warning', message: 'Selecciona un cliente primero' });
+        return;
+      }
       onSetIsCreditSale(true);
       onPaymentMethodChange('credito');
     }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Truck, Phone, Building2, FileText } from 'lucide-react';
 import { Button, Input, Modal, CedulaInput } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
+import { useToastStore } from '../../../stores/toastStore';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import type { CreateSupplierInput, Supplier } from '../../../specs/purchases';
 
@@ -18,6 +19,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const addToast = useToastStore((s) => s.addToast);
 
   useEffect(() => {
     if (isOpen) {
@@ -30,13 +32,15 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
 
   const handleSubmit = async () => {
     const payload = {
-      name: name.trim(),
-      rif: rif.trim() ? rif.trim().toUpperCase() : undefined,
-      phone: phone.trim() || undefined,
+      name: String(name).trim(),
+      rif: String(rif).trim() ? String(rif).trim().toUpperCase() : undefined,
+      phone: String(phone).trim() || undefined,
     };
     const parsed = CreateSupplierInputSchema.safeParse(payload);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || 'Revisa los datos ingresados');
+      const msg = parsed.error.issues[0]?.message || 'Revisa los datos ingresados';
+      setError(msg);
+      addToast({ type: 'error', message: msg, duration: 4000 });
       return;
     }
     setSubmitting(true);

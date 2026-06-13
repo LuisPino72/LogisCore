@@ -4,6 +4,7 @@ import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, Che
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import { hasCamera } from '../../../lib/camera';
+import { useToastStore } from '../../../stores/toastStore';
 import type { CreateProductInput, CreatePresentationInput } from '../types';
 
 function StepIndicator({ current, steps }: { current: number; steps: { id: string; label: string }[] }) {
@@ -73,6 +74,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const [imageError, setImageError] = useState('');
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const presentationsErrorRef = useRef<HTMLDivElement>(null);
+  const { addToast } = useToastStore();
 
   const isRawMaterialEdit = isEditing && (editProduct?.productType === 'materia_prima');
   const [creationType, setCreationType] = useState<'simple' | 'weighted' | 'variants' | 'raw_material' | null>(
@@ -848,7 +851,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         sanitize="number"
                         decimals={0}
                         placeholder="12"
-                        value={pres.unitMultiplier && pres.unitMultiplier > 1 ? pres.unitMultiplier.toString() : ''}
+                        value={pres.unitMultiplier != null && pres.unitMultiplier >= 1 ? pres.unitMultiplier.toString() : ''}
                         onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
                         validation={{ min: 1 }}
                         inputClassName="text-sm"
@@ -876,7 +879,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 Agregar variante
               </button>
               {errors.presentations && (
-                <p className="input-error-text mt-1">{errors.presentations}</p>
+                <div ref={presentationsErrorRef}>
+                  <p className="input-error-text mt-1">{errors.presentations}</p>
+                </div>
               )}
             </div>
 
@@ -1017,7 +1022,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         Agregar variante
       </button>
       {errors.presentations && (
-        <p className="input-error-text mt-1">{errors.presentations}</p>
+        <div ref={presentationsErrorRef}>
+          <p className="input-error-text mt-1">{errors.presentations}</p>
+        </div>
       )}
 
       <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
@@ -1073,6 +1080,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
       if (hasBasicError && currentStep === 2) {
         setCurrentStep(1);
+      }
+
+      if (errors.presentations) {
+        addToast({ type: 'warning', message: errors.presentations });
+        setTimeout(() => {
+          presentationsErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
       }
     }
   };

@@ -142,7 +142,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
             placeholder="0.00"
             value={amountUsd}
             onChange={(e) => setAmountUsd(e.target.value)}
-            validation={{ required: true, min: 0.01 }}
+            validation={{ required: true, min: 0.01, max: 99999 }}
           />
 
           {currentRate > 0 && (

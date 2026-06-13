@@ -757,6 +757,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     value={form.yieldQuantity}
                     onChange={(e) => updateField('yieldQuantity', Number(e.target.value))}
                     min={1}
+                    max={10000}
                     error={errors.yieldQuantity}
                   />
                 </>

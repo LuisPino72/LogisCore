@@ -230,7 +230,9 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
             const hasProduct = !!item.productId;
 
             return (
-              <div key={idx} className="rounded-lg border border-border bg-surface-alt p-3 space-y-2">
+              <div key={idx} className={`rounded-lg border bg-surface-alt p-3 space-y-2 transition-colors ${
+                !hasProduct ? 'border-danger/50 bg-danger/5' : 'border-border'
+              }`}>
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <SearchableSelect
@@ -250,6 +252,9 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                     </Button>
                   )}
                 </div>
+                {!hasProduct && (
+                  <p className="text-[11px] text-danger">Selecciona un producto para este item</p>
+                )}
 
                 {hasProduct && (
                   <div className="flex items-center gap-2">
