@@ -43,7 +43,11 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
 
   const handleCreate = async () => {
     setCreateError(null);
-    const parsed = CreateTenantWithUsersInputSchema.safeParse(createForm);
+    const filteredEmployees = createForm.employees.filter(
+      (emp) => emp.name.trim() || emp.email.trim() || emp.password.trim(),
+    );
+    const payload = { ...createForm, employees: filteredEmployees };
+    const parsed = CreateTenantWithUsersInputSchema.safeParse(payload);
     if (!parsed.success) {
       setCreateError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
       return;
