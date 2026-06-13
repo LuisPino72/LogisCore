@@ -111,16 +111,28 @@ export const adminService = {
     }
 
     // Clean up Storage images for this tenant (fire-and-forget, non-critical)
-    try { await supabase.rpc('hard_delete_tenant_storage', { p_tenant_id: id }); } catch {
-      // Fallback: delete via Storage API (admin has DELETE RLS on bucket)
-      try {
-        const { data: files } = await supabase.storage.from('Products').list(id);
-        if (files && files.length > 0) {
-          const paths = files.map((f) => `${id}/${f.name}`);
-          await supabase.storage.from('Products').remove(paths);
+    try {
+      const listRecursive = async (prefix: string): Promise<string[]> => {
+        const { data: items } = await supabase.storage.from('Products').list(prefix);
+        if (!items || items.length === 0) return [];
+        const paths: string[] = [];
+        for (const item of items) {
+          const fullPath = prefix ? `${prefix}/${item.name}` : item.name;
+          if (item.id === null) {
+            // Folder — recurse
+            const subPaths = await listRecursive(fullPath);
+            paths.push(...subPaths);
+          } else {
+            paths.push(fullPath);
+          }
         }
-      } catch { /* non-critical */ }
-    }
+        return paths;
+      };
+      const paths = await listRecursive(id);
+      if (paths.length > 0) {
+        await supabase.storage.from('Products').remove(paths);
+      }
+    } catch { /* non-critical */ }
 
     return success(undefined);
   },

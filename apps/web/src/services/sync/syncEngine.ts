@@ -3,7 +3,7 @@ import { emitEngineEvent } from '../audit/emitWithAudit';
 import { flushPendingAudits } from '../audit/auditService';
 import { supabase } from '../supabase/client';
 import { TenantTranslator } from '../tenantTranslator';
-import { getDb, isDbClosing } from '../dexie/db';
+import { getDb, isDbClosing, isDbReady } from '../dexie/db';
 import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
 import { networkAware } from '../network/networkAwareService';
@@ -342,7 +342,7 @@ export class SyncEngine {
 
     // Iniciar Supabase Realtime para push instantáneo (opcional - si falla, sync normal sigue)
     realtimeService.start(async (tableName, record) => {
-      if (isDbClosing()) return;
+      if (isDbClosing() || !isDbReady()) return;
       try {
         await this.upsertLocalRecord(tableName, record);
         const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
