@@ -4,10 +4,13 @@ import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Pl
 import { parseCsvFile, validateCsvRows, importProductsFromCsv, validateRow, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
 
 function downloadCsvTemplate() {
-  const headers = 'nombre,sku,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible';
-  const example1 = 'Arroz Premium,ARR001,2,1,100,10,víveres,si,kg,si,si';
-  const example2 = 'Aceite Vegetal,ACE002,3.75,2.10,50,5,víveres,si,lt,si,si';
-  const csvContent = `${headers}\n${example1}\n${example2}`;
+  const headers = 'nombre,sku,tipo,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible,pres_nombre,pres_precio,pres_multiplicador,pres_codigo_barras';
+  const example1 = 'Arroz Premium,ARR001,resale,2,1,100,10,víveres,si,kg,si,si,,,,';
+  const example2 = 'Aceite Vegetal,ACE002,resale,3.75,2.10,50,5,víveres,si,lt,si,si,,,,';
+  const example3 = 'Leche,LEC001,resale,2.50,1.80,100,10,Lácteos,no,unidad,si,si,250ml,2.50,1,7591234567890';
+  const example4 = 'Leche,LEC001,resale,,1.80,100,10,Lácteos,no,unidad,si,si,500ml,4.00,2,7591234567891';
+  const example5 = 'Harina,HAR001,materia_prima,,0.80,500,50,Básicos,si,kg,no,no,,,,';
+  const csvContent = `${headers}\n${example1}\n${example2}\n${example3}\n${example4}\n${example5}`;
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -30,6 +33,7 @@ type Step = 'upload' | 'preview' | 'editing' | 'importing' | 'result';
 const EMPTY_ROW: CsvRow = {
   nombre: '',
   sku: '',
+  tipo: '',
   precio: '',
   costo: '',
   stock: '',
@@ -39,6 +43,10 @@ const EMPTY_ROW: CsvRow = {
   unidad: '',
   iva: '',
   vendible: '',
+  pres_nombre: '',
+  pres_precio: '',
+  pres_multiplicador: '',
+  pres_codigo_barras: '',
 };
 
 export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }: CSVUploadModalProps) {
@@ -492,6 +500,166 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         error={getFieldError('stock_min')}
                         validation={{ min: 0, max: 999 }}
                         inputClassName="text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        label="Categoría"
+                        placeholder="Otros"
+                        value={row.categoria || ''}
+                        onChange={(e) => updateEditRow(i, 'categoria', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        error={getFieldError('categoria')}
+                        validation={{ maxLength: 25 }}
+                        inputClassName="text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Pesable</label>
+                      <select
+                        value={row.pesable || 'no'}
+                        onChange={(e) => {
+                          updateEditRow(i, 'pesable', e.target.value);
+                          if (e.target.value === 'si' && (row.unidad === 'unidad' || !row.unidad)) {
+                            updateEditRow(i, 'unidad', 'kg');
+                          } else if (e.target.value === 'no') {
+                            updateEditRow(i, 'unidad', 'unidad');
+                          }
+                          handleBlurValidate(i);
+                        }}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="no">No</option>
+                        <option value="si">Sí</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Unidad</label>
+                      <select
+                        value={row.unidad || (row.pesable === 'si' ? 'kg' : 'unidad')}
+                        onChange={(e) => {
+                          updateEditRow(i, 'unidad', e.target.value);
+                          const weightUnits = ['kg', 'gr', 'lt', 'm'];
+                          if (weightUnits.includes(e.target.value)) {
+                            updateEditRow(i, 'pesable', 'si');
+                          } else {
+                            updateEditRow(i, 'pesable', 'no');
+                          }
+                          handleBlurValidate(i);
+                        }}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="unidad">Unidad</option>
+                        <option value="kg">Kg</option>
+                        <option value="gr">Gramos</option>
+                        <option value="lt">Litros</option>
+                        <option value="m">Metros</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">IVA</label>
+                      <select
+                        value={row.iva || 'si'}
+                        onChange={(e) => { updateEditRow(i, 'iva', e.target.value); handleBlurValidate(i); }}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="si">Sí</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Vendible</label>
+                      <select
+                        value={row.vendible || 'si'}
+                        onChange={(e) => { updateEditRow(i, 'vendible', e.target.value); handleBlurValidate(i); }}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="si">Sí</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                      <select
+                        value={row.tipo || 'resale'}
+                        onChange={(e) => {
+                          updateEditRow(i, 'tipo', e.target.value);
+                          if (e.target.value === 'materia_prima') {
+                            updateEditRow(i, 'vendible', 'no');
+                            updateEditRow(i, 'iva', 'no');
+                          }
+                          handleBlurValidate(i);
+                        }}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="resale">Venta</option>
+                        <option value="materia_prima">Materia Prima</option>
+                      </select>
+                    </div>
+
+                    <div className="col-span-2 border-t border-gray-100 pt-2 mt-1">
+                      <p className="text-[10px] text-gray-400 mb-2 font-medium">PRESENTACIÓN (opcional)</p>
+                    </div>
+
+                    <div>
+                      <Input
+                        label="Nombre variante"
+                        placeholder="Ej: 250ml"
+                        value={row.pres_nombre || ''}
+                        onChange={(e) => updateEditRow(i, 'pres_nombre', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        error={getFieldError('pres_nombre')}
+                        validation={{ maxLength: 100 }}
+                        inputClassName="text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        label="Precio variante ($)"
+                        sanitize="currency"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={row.pres_precio || ''}
+                        onChange={(e) => updateEditRow(i, 'pres_precio', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        error={getFieldError('pres_precio')}
+                        validation={{ min: 0.01 }}
+                        inputClassName="text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        label="Multiplicador"
+                        sanitize="number"
+                        decimals={0}
+                        placeholder="1"
+                        value={row.pres_multiplicador || ''}
+                        onChange={(e) => updateEditRow(i, 'pres_multiplicador', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        error={getFieldError('pres_multiplicador')}
+                        validation={{ min: 1 }}
+                        inputClassName="text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        label="Barcode variante"
+                        placeholder="Ej: 7591234567890"
+                        value={row.pres_codigo_barras || ''}
+                        onChange={(e) => updateEditRow(i, 'pres_codigo_barras', e.target.value)}
+                        onBlur={() => handleBlurValidate(i)}
+                        error={getFieldError('pres_codigo_barras')}
+                        validation={{ maxLength: 50 }}
+                        inputClassName="text-xs font-mono"
                       />
                     </div>
                   </div>

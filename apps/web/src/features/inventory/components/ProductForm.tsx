@@ -612,10 +612,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               sanitize="number"
               decimals={0}
               placeholder="0"
-              value={formData.stockMin || ''}
-              onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
-              validation={{ min: 0, max: 999 }}
-            />
+                value={formData.stockMin || ''}
+                onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+                validation={{ min: 0, max: 999 }}
+                error={errors.stockMin}
+              />
           </div>
 
           <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
@@ -742,6 +743,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 value={formData.stockMin || ''}
                 onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
                 validation={{ min: 0, max: 999 }}
+                error={errors.stockMin}
               />
             </div>
 
@@ -794,12 +796,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 <label className="input-label">Stock mínimo (alerta)</label>
                 <Input
                   sanitize="number"
-                  decimals={0}
-                  placeholder="0"
-                  value={formData.stockMin || ''}
-                  onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
-                  validation={{ min: 0, max: 999 }}
-                />
+                   decimals={0}
+                   placeholder="0"
+                   value={formData.stockMin || ''}
+                   onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+                   validation={{ min: 0, max: 999 }}
+                   error={errors.stockMin}
+                 />
               </div>
             </div>
 
@@ -863,6 +866,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         placeholder="Ej: HP-001-A"
                         value={pres.barcode || ''}
                         onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
+                        validation={{ maxLength: 50 }}
+                        error={errors[`presentation_${index}_barcode`]}
                         inputClassName="text-sm"
                       />
                     </div>
@@ -927,10 +932,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             sanitize="number"
             decimals={0}
             placeholder="0"
-            value={formData.stockMin || ''}
-            onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
-            validation={{ min: 0, max: 999 }}
-          />
+             value={formData.stockMin || ''}
+             onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+             validation={{ min: 0, max: 999 }}
+             error={errors.stockMin}
+           />
         </div>
       </div>
 
@@ -1005,6 +1011,8 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="Ej: 123456789012"
                   value={pres.barcode || ''}
                   onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
+                  validation={{ maxLength: 50 }}
+                  error={errors[`presentation_${index}_barcode`]}
                   inputClassName="text-sm"
                 />
               </div>

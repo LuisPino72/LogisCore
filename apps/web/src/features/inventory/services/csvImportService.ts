@@ -10,6 +10,7 @@ const MAX_ROWS = 500;
 export interface CsvRow {
   nombre?: string;
   sku?: string;
+  tipo?: string;
   precio?: string;
   costo?: string;
   stock?: string;
@@ -19,13 +20,26 @@ export interface CsvRow {
   unidad?: string;
   iva?: string;
   vendible?: string;
+  pres_nombre?: string;
+  pres_precio?: string;
+  pres_multiplicador?: string;
+  pres_codigo_barras?: string;
   [key: string]: string | undefined;
+}
+
+export interface ParsedPresentation {
+  nombre: string;
+  precio: number;
+  multiplicador: number;
+  codigoBarras?: string;
+  rawIndex: number;
 }
 
 export interface ParsedProduct {
   rowNumber: number;
   nombre: string;
   sku: string;
+  tipo: 'resale' | 'materia_prima';
   precio: number;
   costo: number;
   stock: number;
@@ -33,6 +47,9 @@ export interface ParsedProduct {
   categoria: string;
   isWeighted: boolean;
   unit: string;
+  isTaxable: boolean;
+  isSellable: boolean;
+  presentations: ParsedPresentation[];
   raw: CsvRow;
 }
 
@@ -118,12 +135,24 @@ export function reconcileWeighted(isWeighted: boolean, unit: string): { isWeight
   return { isWeighted, unit };
 }
 
+function parseProductType(value: string | undefined): 'resale' | 'materia_prima' {
+  if (!value) return 'resale';
+  const v = value.trim().toLowerCase();
+  if (v === 'materia_prima' || v === 'materia' || v === 'prima' || v === 'raw' || v === 'raw_material') {
+    return 'materia_prima';
+  }
+  return 'resale';
+}
+
 export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
   const errors: ValidationError[] = [];
   const rawIsWeighted = parseBoolean(row.pesable);
   const rawUnit = parseUnit(row.unidad, rawIsWeighted);
   const reconciled = reconcileWeighted(rawIsWeighted, rawUnit);
   const isWeighted = reconciled.isWeighted;
+
+  const tipo = parseProductType(row.tipo);
+  const isMateriaPrima = tipo === 'materia_prima';
 
   if (!row.nombre || row.nombre.trim() === '') {
     errors.push({ field: 'nombre', message: 'El nombre es obligatorio' });
@@ -137,15 +166,33 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
     errors.push({ field: 'sku', message: 'Máximo 18 caracteres' });
   }
 
-  if (!row.precio || row.precio.trim() === '') {
-    errors.push({ field: 'precio', message: 'El precio es obligatorio' });
+  // Precio: requerido para resale, opcional para materia_prima
+  if (isMateriaPrima) {
+    if (row.precio && row.precio.trim() !== '') {
+      const precio = parseNumber(row.precio, 0);
+      if (precio <= 0) errors.push({ field: 'precio', message: 'El precio debe ser mayor a 0' });
+    }
   } else {
-    const precio = parseNumber(row.precio, 0);
-    if (precio <= 0) errors.push({ field: 'precio', message: 'El precio debe ser mayor a 0' });
-    else if (precio < 0.05) errors.push({ field: 'precio', message: 'El precio parece muy bajo (mínimo $0.05)' });
+    if (!row.precio || row.precio.trim() === '') {
+      errors.push({ field: 'precio', message: 'El precio es obligatorio' });
+    } else {
+      const precio = parseNumber(row.precio, 0);
+      if (precio <= 0) errors.push({ field: 'precio', message: 'El precio debe ser mayor a 0' });
+      else if (precio < 0.05) errors.push({ field: 'precio', message: 'El precio parece muy bajo (mínimo $0.05)' });
+    }
   }
 
-  if (row.costo && row.costo.trim() !== '') {
+  // Costo: requerido para materia_prima
+  if (isMateriaPrima) {
+    if (!row.costo || row.costo.trim() === '') {
+      errors.push({ field: 'costo', message: 'Materia prima requiere costo mayor a 0' });
+    } else {
+      const costo = parseNumber(row.costo, 0);
+      if (costo <= 0) {
+        errors.push({ field: 'costo', message: 'Materia prima requiere costo mayor a 0' });
+      }
+    }
+  } else if (row.costo && row.costo.trim() !== '') {
     const costo = parseNumber(row.costo, 0);
     if (costo < 0) errors.push({ field: 'costo', message: 'El costo no puede ser negativo' });
   }
@@ -171,7 +218,6 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
       if (decimals > 2) {
         errors.push({ field: 'stock_min', message: 'Stock mínimo acepta máximo 2 decimales en pesables' });
       }
-      // Verificar que el valor convertido a gramos/ml no sea 0
       const storageMin = Math.round(stockMin * 1000);
       if (stockMin > 0 && storageMin === 0) {
         errors.push({ field: 'stock_min', message: 'Stock mínimo demasiado bajo (se redondea a 0 en gramos/ml)' });
@@ -183,7 +229,62 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
     errors.push({ field: 'unidad', message: 'Si el producto no es pesable, la unidad debe ser "unidad"' });
   }
 
+  // Validar presentación si existe
+  if (row.pres_nombre && row.pres_nombre.trim() !== '') {
+    errors.push(...validatePresentationRow(row, _rowIndex));
+  }
+
   return errors;
+}
+
+function validatePresentationRow(row: CsvRow, _rowIndex: number): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!row.pres_nombre || row.pres_nombre.trim() === '') {
+    return errors;
+  }
+
+  if (row.pres_nombre.trim().length > 100) {
+    errors.push({ field: 'pres_nombre', message: 'Variante: máximo 100 caracteres' });
+  }
+
+  if (!row.pres_precio || row.pres_precio.trim() === '') {
+    errors.push({ field: 'pres_precio', message: `Variante "${row.pres_nombre}": precio requerido` });
+  } else {
+    const precio = parseNumber(row.pres_precio, 0);
+    if (precio <= 0) {
+      errors.push({ field: 'pres_precio', message: `Variante "${row.pres_nombre}": precio debe ser mayor a 0` });
+    }
+  }
+
+  if (row.pres_multiplicador && row.pres_multiplicador.trim() !== '') {
+    const mult = parseNumber(row.pres_multiplicador, 0);
+    if (mult <= 0) {
+      errors.push({ field: 'pres_multiplicador', message: `Variante "${row.pres_nombre}": multiplicador debe ser mayor a 0` });
+    }
+  }
+
+  if (row.pres_codigo_barras && row.pres_codigo_barras.trim().length > 50) {
+    errors.push({ field: 'pres_codigo_barras', message: `Variante "${row.pres_nombre}": código de barras máximo 50 caracteres` });
+  }
+
+  return errors;
+}
+
+function groupRowsBySku(rows: CsvRow[]): CsvRow[][] {
+  const groups = new Map<string, CsvRow[]>();
+  const groupOrder: string[] = [];
+
+  for (const row of rows) {
+    const sku = row.sku?.trim() ?? '';
+    if (!groups.has(sku)) {
+      groups.set(sku, []);
+      groupOrder.push(sku);
+    }
+    groups.get(sku)!.push(row);
+  }
+
+  return groupOrder.map(sku => groups.get(sku)!);
 }
 
 export async function parseCsvFile(file: File): Promise<Result<CsvRow[], AppError>> {
@@ -223,21 +324,26 @@ export async function validateCsvRows(rows: CsvRow[], tenantId: string): Promise
   const existingProducts = await db.products.where('tenantId').equals(tenantId).toArray();
   const existingSkus = new Set(existingProducts.filter((p) => !p.deletedAt).map((p) => p.sku));
 
+  const existingPres = await db.productPresentations.where('tenantId').equals(tenantId)
+    .filter(p => !p.deletedAt && !!p.barcode).toArray();
+  const existingBarcodes = new Set(existingPres.map(p => p.barcode));
+
   const results: ImportResult[] = [];
   const seenSkus = new Set<string>();
+  const skuGroups = groupRowsBySku(rows);
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const rowIndex = i + 1;
-    const errors = validateRow(row, rowIndex);
-    const sku = row.sku?.trim() ?? '';
+  for (const group of skuGroups) {
+    const firstRow = group[0];
+    const sku = firstRow.sku?.trim() ?? '';
+    const hasPresentations = group.some(r => r.pres_nombre?.trim());
 
+    // Verificar SKU duplicado contra DB
     if (sku && existingSkus.has(sku)) {
-      const existing = existingProducts.find((p) => p.sku === sku && !p.deletedAt);
+      const existing = existingProducts.find(p => p.sku === sku && !p.deletedAt);
       results.push({
-        rowIndex,
+        rowIndex: rows.indexOf(firstRow) + 1,
         sku,
-        nombre: row.nombre?.trim() ?? '',
+        nombre: firstRow.nombre?.trim() ?? '',
         status: 'duplicate',
         errors: [],
         existingProductId: existing?.id,
@@ -245,11 +351,12 @@ export async function validateCsvRows(rows: CsvRow[], tenantId: string): Promise
       continue;
     }
 
+    // Verificar SKU duplicado en archivo
     if (sku && seenSkus.has(sku)) {
       results.push({
-        rowIndex,
+        rowIndex: rows.indexOf(firstRow) + 1,
         sku,
-        nombre: row.nombre?.trim() ?? '',
+        nombre: firstRow.nombre?.trim() ?? '',
         status: 'duplicate',
         errors: [{ field: 'sku', message: 'SKU duplicado en el archivo' }],
       });
@@ -258,24 +365,88 @@ export async function validateCsvRows(rows: CsvRow[], tenantId: string): Promise
 
     if (sku) seenSkus.add(sku);
 
-    if (errors.length > 0) {
-      results.push({
-        rowIndex,
-        sku,
-        nombre: row.nombre?.trim() ?? '',
-        status: 'error',
-        errors,
-      });
-      continue;
-    }
+    if (hasPresentations) {
+      // Producto con presentaciones: validar como grupo
+      const allErrors: ValidationError[] = [];
 
-    results.push({
-      rowIndex,
-      sku,
-      nombre: row.nombre?.trim() ?? '',
-      status: 'valid',
-      errors: [],
-    });
+      // Validar primera fila (campos del producto padre)
+      allErrors.push(...validateRow(firstRow, rows.indexOf(firstRow) + 1));
+
+      // Validar cada presentación
+      const presNames = new Set<string>();
+      const presBarcodes = new Set<string>();
+
+      for (let j = 0; j < group.length; j++) {
+        const r = group[j];
+        if (!r.pres_nombre?.trim()) continue; // filas sin presentación se ignoran en grupo
+
+        const presErrors = validatePresentationRow(r, rows.indexOf(r) + 1);
+        allErrors.push(...presErrors);
+
+        const presName = r.pres_nombre.trim().toLowerCase();
+        if (presName) {
+          if (presNames.has(presName)) {
+            allErrors.push({ field: 'pres_nombre', message: `Variante duplicada: "${r.pres_nombre}"` });
+          }
+          presNames.add(presName);
+        }
+
+        const presBc = r.pres_codigo_barras?.trim().toLowerCase();
+        if (presBc) {
+          if (presBarcodes.has(presBc)) {
+            allErrors.push({ field: 'pres_codigo_barras', message: `Barcode duplicado en variantes: "${r.pres_codigo_barras}"` });
+          }
+          presBarcodes.add(presBc);
+
+          if (existingBarcodes.has(presBc)) {
+            allErrors.push({ field: 'pres_codigo_barras', message: `Barcode "${r.pres_codigo_barras}" ya existe en otro producto` });
+          }
+        }
+      }
+
+      if (presNames.size === 0) {
+        allErrors.push({ field: 'pres_nombre', message: 'Al menos una variante debe tener nombre' });
+      }
+
+      if (allErrors.length > 0) {
+        results.push({
+          rowIndex: rows.indexOf(firstRow) + 1,
+          sku,
+          nombre: firstRow.nombre?.trim() ?? '',
+          status: 'error',
+          errors: allErrors,
+        });
+      } else {
+        results.push({
+          rowIndex: rows.indexOf(firstRow) + 1,
+          sku,
+          nombre: firstRow.nombre?.trim() ?? '',
+          status: 'valid',
+          errors: [],
+        });
+      }
+    } else {
+      // Producto simple: validar cada fila individualmente
+      const errors = validateRow(firstRow, rows.indexOf(firstRow) + 1);
+
+      if (errors.length > 0) {
+        results.push({
+          rowIndex: rows.indexOf(firstRow) + 1,
+          sku,
+          nombre: firstRow.nombre?.trim() ?? '',
+          status: 'error',
+          errors,
+        });
+      } else {
+        results.push({
+          rowIndex: rows.indexOf(firstRow) + 1,
+          sku,
+          nombre: firstRow.nombre?.trim() ?? '',
+          status: 'valid',
+          errors: [],
+        });
+      }
+    }
   }
 
   return results;
@@ -304,8 +475,8 @@ export async function importProductsFromCsv(
 
   const validRows = rows.filter((_, i) => validatedResults[i]?.status === 'valid');
 
-  // Pre-resolver categorías de forma secuencial para evitar duplicados en chunks paralelos
-  const categoryResolveMap = new Map<string, string>(); // normalized -> categoryId
+  // Pre-resolver categorías
+  const categoryResolveMap = new Map<string, string>();
   for (const row of validRows) {
     const catName = row.categoria?.trim();
     if (!catName) continue;
@@ -339,15 +510,13 @@ export async function importProductsFromCsv(
   }
 
   // AUDIT-016: Transactional CSV import (all-or-nothing)
-  // Fase 2-phase: categorías ya pre-creadas (idempotentes) arriba. Aquí importamos
-  // productos dentro de UNA SOLA transacción Dexie. Si cualquier fila falla, rollback total.
-  // Las categorías creadas en fase 1 quedan (no se revierten — son idempotentes y reutilizables).
-  const importedRows: Array<{ sku: string; nombre: string }> = []; // AUDIT-016
-  let rollbackError: string | null = null; // AUDIT-016
+  const importedRows: Array<{ sku: string; nombre: string }> = [];
+  let rollbackError: string | null = null;
+
+  // Agrupar filas válidas por SKU
+  const skuGroups = groupRowsBySku(validRows);
 
   try {
-    // AUDIT-016: outer transaction abarca todas las tablas que inventoryService.createProduct toca
-    // (Dexie reúsa la outer como sub-transacción si el scope es compatible)
     await db.transaction('rw', [
       db.products,
       db.inventoryMovements,
@@ -355,22 +524,26 @@ export async function importProductsFromCsv(
       db.syncQueue,
       db.outbox,
     ], async () => {
-      for (const row of validRows) {
-        const nombre = row.nombre?.trim() ?? '';
-        const sku = row.sku?.trim() ?? '';
-        const precio = parseNumber(row.precio, 0);
-        const costo = parseNumber(row.costo, 0);
-        const stock = parseNumber(row.stock, 0);
-        const stockMin = row.stock_min?.trim() ? parseNumber(row.stock_min, 0) : Math.round(stock / 4);
-        const isWeighted = parseBoolean(row.pesable);
-        const unit = parseUnit(row.unidad, isWeighted);
+      for (const group of skuGroups) {
+        const firstRow = group[0];
+        const nombre = firstRow.nombre?.trim() ?? '';
+        const sku = firstRow.sku?.trim() ?? '';
+        const precio = parseNumber(firstRow.precio, 0);
+        const costo = parseNumber(firstRow.costo, 0);
+        const stock = parseNumber(firstRow.stock, 0);
+        const stockMin = firstRow.stock_min?.trim() ? parseNumber(firstRow.stock_min, 0) : Math.round(stock / 4);
+        const isWeighted = parseBoolean(firstRow.pesable);
+        const unit = parseUnit(firstRow.unidad, isWeighted);
         const reconciled = reconcileWeighted(isWeighted, unit);
         const finalIsWeighted = reconciled.isWeighted;
         const finalUnit = reconciled.unit;
 
+        const tipo = parseProductType(firstRow.tipo);
+        const isMateriaPrima = tipo === 'materia_prima';
+
         let categoryId = '';
-        if (row.categoria && row.categoria.trim() !== '') {
-          const normalized = normalizeText(row.categoria.trim());
+        if (firstRow.categoria && firstRow.categoria.trim() !== '') {
+          const normalized = normalizeText(firstRow.categoria.trim());
           categoryId = categoryResolveMap.get(normalized) ?? '';
         }
         if (!categoryId) {
@@ -378,35 +551,59 @@ export async function importProductsFromCsv(
           categoryId = defaultCat?.id ?? '';
         }
 
-        const input = {
+        // Materia prima: precio forzado a 0.01 si no se proporciona
+        const finalPriceUsd = isMateriaPrima && precio <= 0 ? 0.01 : precio;
+
+        const productInput = {
           name: nombre,
           sku,
-          priceUsd: precio,
+          priceUsd: finalPriceUsd,
           categoryId,
           isWeighted: finalIsWeighted,
-          isTaxable: parseBoolean(row.iva),
-          isSellable: row.vendible ? parseBoolean(row.vendible) : true,
+          isTaxable: parseBoolean(firstRow.iva),
+          isSellable: firstRow.vendible ? parseBoolean(firstRow.vendible) : !isMateriaPrima,
           unit: finalUnit as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
           stockInicial: stock,
           stockMin: stockMin || undefined,
           costPrice: costo || undefined,
+          productType: (isMateriaPrima ? 'materia_prima' : 'resale') as 'resale' | 'materia_prima',
         };
 
-        const result = await inventoryService.createProduct(tenantId, userId, input);
-        if (!result.ok) {
-          // AUDIT-016: cualquier falla aborta la transacción completa
-          throw new Error(`Fila ${sku || nombre}: ${result.error?.message ?? 'Error al crear producto'}`);
+        // Determinar si tiene presentaciones
+        const presentations = group
+          .filter(r => r.pres_nombre?.trim())
+          .map((r, i) => ({
+            name: r.pres_nombre!.trim(),
+            priceUsd: parseNumber(r.pres_precio, 0.01),
+            unitMultiplier: parseNumber(r.pres_multiplicador, 1),
+            barcode: r.pres_codigo_barras?.trim() || undefined,
+            sortOrder: i,
+            stockType: 'shared' as const,
+            stockInicial: 0,
+          }));
+
+        if (presentations.length > 0) {
+          const result = await inventoryService.createProductWithPresentations(
+            tenantId, userId, productInput, presentations
+          );
+          if (!result.ok) {
+            throw new Error(`Fila ${sku || nombre}: ${result.error?.message ?? 'Error al crear producto con presentaciones'}`);
+          }
+        } else {
+          const result = await inventoryService.createProduct(tenantId, userId, productInput);
+          if (!result.ok) {
+            throw new Error(`Fila ${sku || nombre}: ${result.error?.message ?? 'Error al crear producto'}`);
+          }
         }
+
         importedRows.push({ sku, nombre });
       }
     });
     summary.imported = importedRows.length;
   } catch (err) {
-    // AUDIT-016: Transacción revertida — ningún producto se importó
     rollbackError = (err as Error).message ?? 'Error desconocido';
     summary.imported = 0;
     summary.errors = validRows.length;
-    // Marcar todas las filas válidas como erróneas con mensaje de rollback
     for (const r of summary.results) {
       if (r.status === 'valid') {
         r.status = 'error';

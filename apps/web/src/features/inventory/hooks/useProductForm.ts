@@ -287,6 +287,15 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       }
     }
 
+    if (formData.stockMin !== undefined && formData.stockMin !== null) {
+      if (formData.stockMin < 0 || formData.stockMin > 999) {
+        const errs = { stockMin: 'El stock mínimo debe estar entre 0 y 999' };
+        setErrors(errs);
+        setIsSubmitting(false);
+        return { success: false, errors: errs };
+      }
+    }
+
     // Validación: materia prima requiere costo (solo en creación)
     if (!isEditing && options.creationType === 'raw_material' && (!formData.costPrice || formData.costPrice <= 0)) {
       const errs = { costPrice: 'El costo total de la compra es requerido para materia prima.' };
@@ -335,7 +344,23 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
 
       const barcodes = presentations.map((p) => p.barcode?.trim().toLowerCase()).filter(Boolean);
       if (new Set(barcodes).size !== barcodes.length) {
-        const errs = { presentations: 'No puede haber dos presentaciones con el mismo código de barras.' };
+        const errs: Record<string, string> = {};
+        const barcodeCounts = new Map<string, number[]>();
+        presentations.forEach((p, i) => {
+          const bc = p.barcode?.trim().toLowerCase();
+          if (bc) {
+            const indices = barcodeCounts.get(bc) || [];
+            indices.push(i);
+            barcodeCounts.set(bc, indices);
+          }
+        });
+        barcodeCounts.forEach((indices, barcode) => {
+          if (indices.length > 1) {
+            indices.forEach(i => {
+              errs[`presentation_${i}_barcode`] = `Barcode duplicado: "${barcode}"`;
+            });
+          }
+        });
         setErrors(errs);
         setIsSubmitting(false);
         return { success: false, errors: errs };
