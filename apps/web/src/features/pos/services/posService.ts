@@ -513,7 +513,7 @@ export const posService = {
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     // Identificar items assembly vs normales
-    const assemblyItems: Array<{ productId: string; quantity: number; productName?: string }> = [];
+    const assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string }> = [];
     const normalItems: typeof items = [];
 
     for (const item of items) {
@@ -523,7 +523,13 @@ export const posService = {
         .first();
 
       if (recipe) {
-        assemblyItems.push({ productId: item.productId, quantity: item.quantity, productName: item.name });
+        assemblyItems.push({
+          productId: item.productId,
+          quantity: item.quantity,
+          productName: item.name,
+          presentationId: item.presentationId,
+          presentationName: item.presentationName,
+        });
       } else {
         normalItems.push(item);
       }
@@ -805,6 +811,8 @@ export const posService = {
             costUsdPerUnit,
             isWeighted: false,
             unit: product.unit,
+            presentationId: assemblyItem.presentationId,
+            presentationName: assemblyItem.presentationName,
             unitMultiplier: 1,
             createdAt: now,
             consumedLots, // AUDIT-012: FIFO restore (ingredient lots consumed)
@@ -823,6 +831,8 @@ export const posService = {
             cost_usd_per_unit: costUsdPerUnit,
             is_weighted: false,
             unit: product.unit,
+            presentation_id: assemblyItem.presentationId ?? null,
+            presentation_name: assemblyItem.presentationName ?? null,
             consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null, // POS-002 (M-13) + AUDIT-017-DB / CRIT-DB-003
             created_at: now,
           } as unknown as Record<string, unknown>), tenantId);
@@ -1777,10 +1787,11 @@ export const posService = {
   async getTodaySoldProducts(
     tenantId: string,
     maxProducts = 10,
+    referenceDate?: Date,
   ): Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>> {
     try {
-      const todayStart = startOfDayVzla();
-      const todayEnd = endOfDayVzla();
+      const todayStart = startOfDayVzla(referenceDate);
+      const todayEnd = endOfDayVzla(referenceDate);
       const db = getDb();
 
       const sales = await db.sales
@@ -1799,15 +1810,16 @@ export const posService = {
       const productMap = new Map<string, { productId: string; productName: string; productSku: string; quantity: number }>();
 
       for (const item of allItems) {
+        const normalizedQty = item.quantity * (item.unitMultiplier || 1);
         const existing = productMap.get(item.productId);
         if (existing) {
-          existing.quantity += item.quantity;
+          existing.quantity += normalizedQty;
         } else {
           productMap.set(item.productId, {
             productId: item.productId,
             productName: item.productName,
             productSku: item.productSku,
-            quantity: item.quantity,
+            quantity: normalizedQty,
           });
         }
       }
@@ -1823,19 +1835,23 @@ export const posService = {
     }
   },
 
-  async getVerificationProducts(tenantId: string): Promise<Result<VerificationProduct[], AppError>> {
+  async getVerificationProducts(tenantId: string, referenceDate?: Date): Promise<Result<VerificationProduct[], AppError>> {
     try {
       const db = getDb();
-      const [soldResult, lowStockResult, zeroStockRows] = await Promise.all([
-        this.getTodaySoldProducts(tenantId, 10),
+      const [soldResult, lowStockResult, zeroStockRows, assemblyRecipes] = await Promise.all([
+        this.getTodaySoldProducts(tenantId, 10, referenceDate),
         (await import('../../inventory/services/inventoryService')).inventoryService.getLowStockProducts(tenantId),
-        db.products.where({ tenantId }).filter((p) => !p.deletedAt && p.stock === 0).toArray(),
+        db.products.where({ tenantId }).filter((p) => !p.deletedAt && p.stock === 0 && p.isSellable !== false).toArray(),
+        db.recipes.where({ tenantId }).filter((r) => !r.deletedAt && r.isActive && r.mode === 'assembly').toArray(),
       ]);
+
+      const assemblyIds = new Set(assemblyRecipes.map((r) => r.productId));
+      const filteredZeroStock = zeroStockRows.filter((p) => !assemblyIds.has(p.id));
 
       const productIds = new Set<string>();
       if (soldResult.ok) for (const p of soldResult.data) productIds.add(p.productId);
       if (lowStockResult.ok) for (const p of lowStockResult.data) productIds.add(p.id);
-      for (const p of zeroStockRows) productIds.add(p.id);
+      for (const p of filteredZeroStock) productIds.add(p.id);
 
       if (productIds.size === 0) return success([]);
 
@@ -1845,7 +1861,7 @@ export const posService = {
       const lowStockIds = new Set<string>();
       if (lowStockResult.ok) for (const p of lowStockResult.data) lowStockIds.add(p.id);
 
-      const zeroStockIds = new Set(zeroStockRows.map((p) => p.id));
+      const zeroStockIds = new Set(filteredZeroStock.map((p) => p.id));
 
       const products = await db.products
         .where({ tenantId })

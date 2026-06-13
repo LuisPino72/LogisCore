@@ -24,6 +24,7 @@ interface StockVerificationModalProps {
   onComplete: () => void;
   tenantId: string;
   userId: string;
+  referenceDate?: Date;
 }
 
 export function StockVerificationModal({
@@ -32,6 +33,7 @@ export function StockVerificationModal({
   onComplete,
   tenantId,
   userId,
+  referenceDate,
 }: StockVerificationModalProps) {
   const [items, setItems] = useState<VerificationItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +48,7 @@ export function StockVerificationModal({
     setError(null);
 
     try {
-      const result = await posService.getVerificationProducts(tenantId);
+      const result = await posService.getVerificationProducts(tenantId, referenceDate);
       if (result.ok) {
         const verified = result.data.map((item) => ({
           ...item,
@@ -61,7 +63,7 @@ export function StockVerificationModal({
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, referenceDate]);
 
   useEffect(() => {
     if (isOpen) loadProducts();

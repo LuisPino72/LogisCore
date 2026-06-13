@@ -39,7 +39,7 @@ interface PosStore extends PosState {
   openCashRegister: (tenantId: string, openingBalance: number, userId: string) => Promise<Result<CashRegister, AppError>>;
   closeCashRegister: (tenantId: string, declaredClosingBalance: number, userId: string) => Promise<Result<CashRegister, AppError>>;
   voidSale: (saleId: string, tenantId: string, userId: string) => Promise<Result<void, AppError>>;
-  getTodaySoldProducts: (tenantId: string, maxProducts?: number) => Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>>;
+  getTodaySoldProducts: (tenantId: string, maxProducts?: number, referenceDate?: Date) => Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>>;
   saleItems: SaleItem[];
   saleItemsLoading: boolean;
   fetchSaleItems: (tenantId: string, saleId: string) => Promise<void>;
@@ -569,8 +569,8 @@ export const usePosStore = create<PosStore>()(
     return result;
   },
 
-  getTodaySoldProducts: async (tenantId, maxProducts?) => {
-    return posService.getTodaySoldProducts(tenantId, maxProducts);
+  getTodaySoldProducts: async (tenantId, maxProducts?, referenceDate?) => {
+    return posService.getTodaySoldProducts(tenantId, maxProducts, referenceDate);
   },
 
   saleItems: [],

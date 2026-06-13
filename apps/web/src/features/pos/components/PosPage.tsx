@@ -78,6 +78,13 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
 
+  // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
 
@@ -166,6 +173,11 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs]);
 
+  const isFromPreviousDay = useMemo(() => {
+    if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
+    return !isSameDayVzla(new Date(cashRegister.openedAt), now);
+  }, [cashRegister?.isOpen, cashRegister?.openedAt, now]);
+
   const handleOpenCash = useCallback(async () => {
     setCashError(null);
     openCashModal('open');
@@ -176,9 +188,10 @@ export function PosPage({ tenantId }: PosPageProps) {
     setCashError(null);
     setVerifyLoading(true);
     openVerifyConfirm({ sold: 0, lowStock: 0 });
+    const referenceDate = isFromPreviousDay && cashRegister?.openedAt ? new Date(cashRegister.openedAt) : undefined;
     try {
       const [soldResult, lowStockResult] = await Promise.all([
-        getTodaySoldProducts(tenantId, 10),
+        getTodaySoldProducts(tenantId, 10, referenceDate),
         inventoryService.getLowStockProducts(tenantId),
       ]);
       const soldCount = soldResult.ok ? soldResult.data.length : 0;
@@ -196,7 +209,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     } finally {
       setVerifyLoading(false);
     }
-  }, [tenantId, getTodaySoldProducts, openVerifyConfirm, closeVerifyConfirm, openCashModal, setCashError, setVerifyLoading]);
+  }, [tenantId, getTodaySoldProducts, isFromPreviousDay, cashRegister?.openedAt, openVerifyConfirm, closeVerifyConfirm, openCashModal, setCashError, setVerifyLoading]);
 
   const handleVerifyYes = useCallback(() => {
     openVerifyModal();
@@ -305,10 +318,6 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [voidConfirmId, tenantId, userId, addToast, fetchSalesHistory]);
 
-  const isFromPreviousDay = useMemo(() => {
-    if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
-    return !isSameDayVzla(new Date(cashRegister.openedAt), new Date());
-  }, [cashRegister?.isOpen, cashRegister?.openedAt]);
 
   if (!tenantId) {
     return (
@@ -367,14 +376,6 @@ export function PosPage({ tenantId }: PosPageProps) {
         {error && !(cashError && showCashModal) && (
           <div className="px-3 pt-1">
             <Alert variant="warning">{error}</Alert>
-          </div>
-        )}
-
-        {isFromPreviousDay && (
-          <div className="px-3 pt-1">
-            <Alert variant="warning">
-              La caja quedó abierta desde el día anterior. Al abrir una nueva, la anterior se cerrará automáticamente (sin diferencias).
-            </Alert>
           </div>
         )}
 
@@ -516,6 +517,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         onComplete={handleVerifyComplete}
         tenantId={tenantId ?? ''}
         userId={userId ?? ''}
+        referenceDate={isFromPreviousDay && cashRegister?.openedAt ? new Date(cashRegister.openedAt) : undefined}
       />
 
       <Modal
@@ -536,7 +538,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               </div>
               <p className="text-sm text-gray-600 text-center">
                 Hay <strong>{verifyCounts.sold + verifyCounts.lowStock}</strong> producto{(verifyCounts.sold + verifyCounts.lowStock) > 1 ? 's' : ''} para verificar
-                {verifyCounts.sold > 0 && <> (<strong>{verifyCounts.sold}</strong> vendido{verifyCounts.sold > 1 ? 's' : ''} hoy</>}
+                {verifyCounts.sold > 0 && <> (<strong>{verifyCounts.sold}</strong> vendido{verifyCounts.sold > 1 ? 's' : ''} {isFromPreviousDay ? 'ayer' : 'hoy'}</>}
                 {verifyCounts.sold > 0 && verifyCounts.lowStock > 0 ? <>, </> : null}
                 {verifyCounts.lowStock > 0 ? <><strong>{verifyCounts.lowStock}</strong> con bajo stock</> : null}
                 {verifyCounts.sold > 0 ? <> )</> : null}.
