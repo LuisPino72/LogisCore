@@ -52,7 +52,7 @@ export function StockVerificationModal({
       if (result.ok) {
         const verified = result.data.map((item) => ({
           ...item,
-          physicalInput: item.logicalStock.toString(),
+          physicalInput: displayStock(item.logicalStock, item.unit),
         }));
         setItems(verified);
       } else {
