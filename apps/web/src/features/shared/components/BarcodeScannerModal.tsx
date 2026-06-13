@@ -19,6 +19,17 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const scanLockRef = useRef(false);
 
+  const stopCameraTracks = () => {
+    if (containerRef.current) {
+      containerRef.current.querySelectorAll('video').forEach((video) => {
+        const src = video.srcObject;
+        if (src && 'getTracks' in src) {
+          (src as MediaStream).getTracks().forEach((track) => track.stop());
+        }
+      });
+    }
+  };
+
   const startScanner = async (facingMode: 'environment' | 'user') => {
     if (!containerRef.current) return;
     setError(null);
@@ -44,7 +55,8 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
         () => {}, // no-op for scan failure
       );
       if (!mountedRef.current) {
-        scanner.clear();
+        stopCameraTracks();
+        scannerRef.current = null;
         return;
       }
       scannerRef.current = scanner;
@@ -62,22 +74,12 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
     }
   };
 
-  const stopScanner = async () => {
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-      } catch {
-        console.warn('[BarcodeScanner] stop error (non-fatal)');
-      }
-      scannerRef.current = null;
-    }
-    setScanning(false);
-  };
-
   const switchCamera = () => {
     const next = cameraFacing === 'environment' ? 'user' : 'environment';
     setCameraFacing(next);
-    stopScanner().then(() => startScanner(next));
+    stopCameraTracks();
+    scannerRef.current = null;
+    startScanner(next);
   };
 
   useEffect(() => {
@@ -95,14 +97,8 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
     }
     return () => {
       mountedRef.current = false;
-      if (scannerRef.current) {
-        try {
-          scannerRef.current.clear();
-        } catch {
-          console.warn('[BarcodeScanner] clear error (non-fatal)');
-        }
-        scannerRef.current = null;
-      }
+      stopCameraTracks();
+      scannerRef.current = null;
       setScanning(false);
     };
   }, [isOpen]);
