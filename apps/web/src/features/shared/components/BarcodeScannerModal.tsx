@@ -13,6 +13,7 @@ interface BarcodeScannerModalProps {
 export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerModalProps) {
   const scannerRef = useRef<Html5QrcodeType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
@@ -25,6 +26,9 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
     scanLockRef.current = false;
 
     const { Html5Qrcode } = await import('html5-qrcode');
+
+    if (!mountedRef.current) return;
+
     const scanner = new Html5Qrcode('barcode-reader');
 
     try {
@@ -39,8 +43,13 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
         },
         () => {}, // no-op for scan failure
       );
+      if (!mountedRef.current) {
+        scanner.clear();
+        return;
+      }
       scannerRef.current = scanner;
     } catch (err) {
+      if (!mountedRef.current) return;
       console.error('[BarcodeScanner] Error starting camera:', err);
       setError(
         err instanceof Error
@@ -72,8 +81,10 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
   };
 
   useEffect(() => {
+    mountedRef.current = true;
     if (isOpen) {
       hasCamera().then((available) => {
+        if (!mountedRef.current) return;
         if (available) {
           startScanner(cameraFacing);
         } else {
@@ -81,10 +92,19 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
           setScanning(false);
         }
       });
-    } else {
-      stopScanner();
     }
-    return () => { stopScanner(); };
+    return () => {
+      mountedRef.current = false;
+      if (scannerRef.current) {
+        try {
+          scannerRef.current.clear();
+        } catch {
+          console.warn('[BarcodeScanner] clear error (non-fatal)');
+        }
+        scannerRef.current = null;
+      }
+      setScanning(false);
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
