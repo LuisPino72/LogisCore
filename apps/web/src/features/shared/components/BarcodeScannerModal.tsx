@@ -121,9 +121,10 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
           <div
             ref={containerRef}
             id="barcode-reader"
-            className="w-full aspect-video bg-gray-900 flex items-center justify-center"
-          >
-            {error && (
+            className="w-full aspect-video bg-gray-900"
+          />
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-center p-4">
                 <CameraOff size={32} className="text-gray-400 mx-auto mb-2" />
                 <p className="text-xs text-gray-300">{error}</p>
@@ -131,14 +132,14 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
                   Reintentar
                 </Button>
               </div>
-            )}
-            {scanning && !error && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-3/4 h-0.5 bg-primary/80 animate-pulse rounded-full" />
-              </div>
-            )}
-          </div>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-3">
+            </div>
+          )}
+          {scanning && !error && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <div className="w-3/4 h-0.5 bg-primary/80 animate-pulse rounded-full" />
+            </div>
+          )}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-3 z-10">
             <button
               onClick={switchCamera}
               className="w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm"
