@@ -104,13 +104,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   } : undefined;
 
   const wrappedOnSubmit = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }): Promise<boolean> => {
-    console.log('[ProductForm.wrappedOnSubmit] data.imageUrl BEFORE:', JSON.stringify(data.imageUrl));
-    console.log('[ProductForm.wrappedOnSubmit] imageFile:', imageFile?.name ?? null, 'imagePreview:', imagePreview?.slice(0, 50) ?? null, 'editProduct?.imageUrl:', editProduct?.imageUrl?.slice(0, 50) ?? null);
     if (!imageFile && !imagePreview && editProduct?.imageUrl) {
       data.imageUrl = '';
-      console.log('[ProductForm.wrappedOnSubmit] IMAGE CLEARED (removed, no new file)');
     }
-    console.log('[ProductForm.wrappedOnSubmit] data.imageUrl AFTER:', JSON.stringify(data.imageUrl));
     const result = await onSubmit(data, imageFile);
     if (result && !imageFile) {
       setImageFile(null);
