@@ -18,6 +18,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
   const [rif, setRif] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const addToast = useToastStore((s) => s.addToast);
 
@@ -27,6 +28,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
       setRif(editSupplier?.rif ?? '');
       setPhone(editSupplier?.phone ?? '');
       setError('');
+      setFieldErrors({});
     }
   }, [isOpen, editSupplier]);
 
@@ -38,13 +40,19 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
     };
     const parsed = CreateSupplierInputSchema.safeParse(payload);
     if (!parsed.success) {
+      const newFieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const field = issue.path[0] as string;
+        newFieldErrors[field] = issue.message;
+      }
+      setFieldErrors(newFieldErrors);
       const msg = parsed.error.issues[0]?.message || 'Revisa los datos ingresados';
       setError(msg);
-      addToast({ type: 'error', message: msg, duration: 4000 });
       return;
     }
     setSubmitting(true);
     setError('');
+    setFieldErrors({});
     const ok = await onSubmit(payload);
     setSubmitting(false);
     if (ok) {
@@ -53,7 +61,9 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
       setPhone('');
       onClose();
     } else {
-      setError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.');
+      const errMsg = 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.';
+      setError(errMsg);
+      addToast({ type: 'error', message: errMsg, duration: 5000 });
     }
   };
 
@@ -94,7 +104,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           placeholder="Ej: Distribuidora XYZ"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          error={error && !name.trim() ? error : undefined}
+          error={fieldErrors.name}
           validation={{ required: 'Ingresa el nombre del proveedor', maxLength: 25 }}
           inputClassName="text-sm"
         />
@@ -104,6 +114,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           value={rif}
           onChange={setRif}
           hint="V/E/J/G/P + 9 dígitos. Ej: J123456789"
+          error={fieldErrors.rif}
           maxLength={9}
         />
 
@@ -113,6 +124,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           value={phone}
           sanitize="phone"
           onChange={(e) => setPhone(sanitizeValue(e.target.value, 'phone'))}
+          error={fieldErrors.phone}
           validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
           hint="Formato: 04121234567"
           inputClassName="text-sm"

@@ -290,9 +290,11 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
               <Button variant="ghost" onClick={() => setConfirmId(null)}>
                 Cancelar
               </Button>
-              <Button variant="primary" onClick={() => {
-                onConfirm(confirmId, tenantId);
-                setConfirmId(null);
+              <Button variant="primary" onClick={async () => {
+                const ok = await onConfirm(confirmId, tenantId);
+                if (ok) {
+                  setConfirmId(null);
+                }
               }}>
                 Confirmar
               </Button>

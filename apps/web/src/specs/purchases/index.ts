@@ -56,7 +56,7 @@ export const PurchaseOrderSchema = z.object({
   supplierId: z.string().uuid(),
   status: PurchaseOrderStatusSchema,
   totalUsd: z.number().nonnegative(),
-  notes: z.string().max(50).optional(),
+  notes: z.string().max(25).optional(),
   createdBy: z.string().uuid(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
@@ -72,7 +72,7 @@ export type PurchaseOrderWithItems = PurchaseOrder & {
 
 export const CreatePurchaseOrderInputSchema = z.object({
   supplierId: z.string().uuid('Selecciona un proveedor'),
-  notes: z.string().max(50).optional(),
+  notes: z.string().max(25).optional(),
   items: z.array(
     z.object({
       productId: z.string().uuid('Selecciona un producto'),
@@ -91,7 +91,7 @@ export const ReceivePurchaseOrderInputSchema = z.object({
   items: z.array(
     z.object({
       itemId: z.string().uuid(),
-      receivedQuantity: z.number().int().min(0),
+      receivedQuantity: z.number().min(0),
     })
   ).min(1),
 }).strict();

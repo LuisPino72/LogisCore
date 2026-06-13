@@ -60,6 +60,8 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
   };
 
   const receiveAll = () => {
+    const pendingItems = order.items.filter((i) => (i.quantity - i.receivedQuantity) > 0);
+    if (!window.confirm(`Marcar ${pendingItems.length} item(s) como recibido(s) completamente?`)) return;
     const next: Record<string, number> = {};
     for (const item of order.items) {
       const pending = item.quantity - item.receivedQuantity;
@@ -79,6 +81,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
 
     if (items.length === 0) {
       setError('Indica al menos una cantidad recibida');
+      submittedRef.current = false;
       return;
     }
 
@@ -87,6 +90,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
       const pending = item.quantity - item.receivedQuantity;
       if (qty > pending) {
         setError(`Cantidad recibida excede lo pendiente para ${item.productName || 'item'}`);
+        submittedRef.current = false;
         return;
       }
     }
@@ -97,6 +101,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
     setSubmitting(false);
     if (!ok) {
       setError('No se pudo registrar la recepción. Revisa tu conexión e intenta de nuevo.');
+      submittedRef.current = false;
     }
   };
 

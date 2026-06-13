@@ -142,15 +142,23 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
 
   const handleConfirmCancelOrder = async () => {
     if (!confirmCancelOrder || !tenantId) return;
-    await cancelOrder(confirmCancelOrder.id, tenantId);
-    addToast({ type: 'success', message: 'Orden cancelada.', duration: 3000 });
+    const ok = await cancelOrder(confirmCancelOrder.id, tenantId);
+    if (ok) {
+      addToast({ type: 'success', message: 'Orden cancelada.', duration: 3000 });
+    } else {
+      addToast({ type: 'error', message: storeError || 'No se pudo cancelar la orden.', duration: 5000 });
+    }
     setConfirmCancelOrder(null);
   };
 
   const handleConfirmDeleteOrder = async () => {
     if (!confirmDeleteOrder || !tenantId) return;
-    await softDeleteOrder(confirmDeleteOrder.id, tenantId);
-    addToast({ type: 'success', message: 'Orden eliminada.', duration: 3000 });
+    const ok = await softDeleteOrder(confirmDeleteOrder.id, tenantId);
+    if (ok) {
+      addToast({ type: 'success', message: 'Orden eliminada.', duration: 3000 });
+    } else {
+      addToast({ type: 'error', message: storeError || 'No se pudo eliminar la orden.', duration: 5000 });
+    }
     setConfirmDeleteOrder(null);
   };
 
@@ -290,9 +298,15 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               isOwner={isOwner}
               isOnline={isOnline}
               onConfirm={confirmOrder}
-              onReceive={(id, items) => {
-                if (!tenantId || !userId) return Promise.resolve(false);
-                return receiveOrder(id, { orderId: id, items }, tenantId, userId);
+              onReceive={async (id, items) => {
+                if (!tenantId || !userId) return false;
+                const ok = await receiveOrder(id, { orderId: id, items }, tenantId, userId);
+                if (ok) {
+                  addToast({ type: 'success', message: 'Mercancía recibida correctamente.', duration: 3000 });
+                } else {
+                  addToast({ type: 'error', message: storeError || 'Error al recibir la mercancía.', duration: 5000 });
+                }
+                return ok;
               }}
               onCancel={(id) => {
                 const order = orders.find((o) => o.id === id);

@@ -60,7 +60,9 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
   const [products, setProducts] = useState<Product[]>([]);
   const [presentationsByProduct, setPresentationsByProduct] = useState<Record<string, Presentation[]>>({});
   const [error, setError] = useState('');
+  const [allErrors, setAllErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState('');
 
   const isEditing = !!editOrder;
 
@@ -91,6 +93,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
         setItems([{ productId: '', quantity: 1, totalCostUsd: 0 }]);
       }
       setError('');
+      setAllErrors([]);
     }
   }, [isOpen, editOrder, tenantId, preSelectedProducts]);
 
@@ -124,6 +127,14 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
       next[index].presentationId = undefined;
       next[index].unitMultiplier = undefined;
       loadPresentations(presId);
+      // Check for duplicate product
+      const duplicateIdx = next.findIndex((item, i) => i !== index && item.productId === presId && presId);
+      if (duplicateIdx >= 0) {
+        const prod = products.find(p => p.id === presId);
+        setDuplicateWarning(`El producto "${prod?.name || presId}" ya está en la fila ${duplicateIdx + 1}`);
+      } else {
+        setDuplicateWarning('');
+      }
     }
     setItems(next);
   };
@@ -161,12 +172,15 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
 
     const parsed = CreatePurchaseOrderInputSchema.safeParse(payload);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || 'Revisa los datos ingresados');
+      const msgs = parsed.error.issues.map((i) => i.message);
+      setAllErrors(msgs);
+      setError(msgs[0] || 'Revisa los datos ingresados');
       return;
     }
 
     setSubmitting(true);
     setError('');
+    setAllErrors([]);
     const ok = await onSubmit(payload);
     setSubmitting(false);
 
@@ -320,9 +334,9 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       decimals={weighted ? 2 : 0}
                       step={weighted ? '0.01' : '1'}
                       placeholder={`Cantidad (${unit})`}
-                      value={item.quantity > 1 ? String(item.quantity) : ''}
+                      value={item.quantity > 0 ? String(item.quantity) : ''}
                       onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
-                      validation={{ required: true, min: 0, max: 99999 }}
+                      validation={{ required: true, min: 0.01, max: 99999 }}
                       inputClassName="text-sm"
                     />
                   </div>
@@ -333,7 +347,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       placeholder="Costo($)"
                       value={item.totalCostUsd || ''}
                       onChange={(e) => updateItem(idx, 'totalCostUsd', parseFloat(e.target.value) || 0)}
-                      validation={{ required: true, min: 0, max: 999999 }}
+                      validation={{ required: true, min: 0.01, max: 999999 }}
                       inputClassName="text-sm"
                     />
                   </div>
@@ -361,9 +375,27 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
         {/* Total */}
         <SectionDivider icon={<DollarSign size={14} className="text-primary" />} title="Total" />
 
-        {error && (
+        {allErrors.length > 0 && (
+          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
+            {allErrors.length === 1 ? (
+              allErrors[0]
+            ) : (
+              <ul className="list-disc list-inside space-y-0.5">
+                {allErrors.map((msg, i) => <li key={i}>{msg}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {error && allErrors.length === 0 && (
           <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
             {error}
+          </div>
+        )}
+
+        {duplicateWarning && (
+          <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+            {duplicateWarning}
           </div>
         )}
 

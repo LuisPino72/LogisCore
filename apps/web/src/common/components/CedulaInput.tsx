@@ -10,6 +10,7 @@ interface CedulaInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   hint?: string;
+  error?: string;
   required?: boolean;
   disabled?: boolean;
   className?: string;
@@ -30,6 +31,7 @@ export function CedulaInput({
   onChange,
   placeholder = '12345678',
   hint,
+  error,
   required = false,
   disabled = false,
   className,
@@ -71,7 +73,7 @@ export function CedulaInput({
       <div className="flex gap-2">
         <div className="relative w-20 shrink-0">
           <select
-            className="input h-full text-center font-medium text-sm appearance-none pr-7"
+            className={cn('input h-full text-center font-medium text-sm appearance-none pr-7', error && 'border-danger focus:border-danger focus:ring-danger')}
             value={prefix}
             onChange={handlePrefixChange}
             disabled={disabled}
@@ -89,7 +91,7 @@ export function CedulaInput({
         <input
           type="text"
           inputMode="numeric"
-          className="input flex-1 text-sm"
+          className={cn('input flex-1 text-sm', error && 'border-danger focus:border-danger focus:ring-danger')}
           placeholder={placeholder}
           value={digits}
           onChange={handleDigitsChange}
@@ -97,7 +99,8 @@ export function CedulaInput({
           maxLength={maxLength}
         />
       </div>
-      {hint && <span className="input-hint">{hint}</span>}
+      {hint && !error && <span className="input-hint">{hint}</span>}
+      {error && <span className="input-error">{error}</span>}
     </div>
   );
 }
