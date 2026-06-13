@@ -136,8 +136,10 @@ function RateBadgeMobile() {
   // Calcular estado para color y mensaje
   const isMissing = !rate;
   const ageMs = fetchedAt ? Date.now() - new Date(fetchedAt).getTime() : Infinity;
-  const isStale = ageMs > 24 * 60 * 60 * 1000;
-  const isCritical = ageMs > 48 * 60 * 60 * 1000;
+  const day = new Date().getDay();
+  const isWeekend = day === 0 || day === 6;
+  const isStale = !isWeekend && ageMs > 24 * 60 * 60 * 1000;
+  const isCritical = !isWeekend && ageMs > 48 * 60 * 60 * 1000;
 
   let colorClass = 'bg-success/10 border-success/20 text-success';
   let textClass = 'text-success/70';
@@ -172,7 +174,7 @@ function RateBadgeMobile() {
       title={title}
     >
       <DollarSign size={12} className="shrink-0" />
-      <span className={`text-[11px] font-medium whitespace-nowrap ${textClass}`}>Tasa Bs</span>
+      <span className={`text-[11px] font-medium whitespace-nowrap hidden min-[300px]:inline-flex ${textClass}`}>Tasa Bs</span>
       <span className="text-xs font-bold whitespace-nowrap">{displayValue}</span>
     </div>
   );

@@ -63,8 +63,10 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
   const getRateStatus = (): 'fresh' | 'stale' | 'critical' | 'missing' => {
     if (!rate || !fetchedAt) return 'missing';
     const ageMs = Date.now() - new Date(fetchedAt).getTime();
-    if (ageMs > STALE_CRITICAL_MS) return 'critical';
-    if (ageMs > STALE_THRESHOLD_MS) return 'stale';
+    const day = new Date().getDay();
+    const isWeekend = day === 0 || day === 6;
+    if (!isWeekend && ageMs > STALE_CRITICAL_MS) return 'critical';
+    if (!isWeekend && ageMs > STALE_THRESHOLD_MS) return 'stale';
     return 'fresh';
   };
 
