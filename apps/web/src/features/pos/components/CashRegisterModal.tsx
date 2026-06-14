@@ -39,6 +39,8 @@ export function CashRegisterModal({
   const [balance, setBalance] = useState('');
   const [declaredClosing, setDeclaredClosing] = useState('');
   const [localError, setLocalError] = useState('');
+  const [balanceTouched, setBalanceTouched] = useState(false);
+  const [declaredTouched, setDeclaredTouched] = useState(false);
 
   const handleOpen = async () => {
     const parsed = parseFloat(balance);
@@ -99,6 +101,8 @@ export function CashRegisterModal({
               sanitize="currency"
               value={balance}
               onChange={(e) => { setBalance(e.target.value); setLocalError(''); }}
+              onBlur={() => setBalanceTouched(true)}
+              error={balanceTouched && (!balance || parseFloat(balance) <= 0) ? 'Ingresa un monto inicial mayor a 0.' : undefined}
               validation={{ required: true, min: 0.01 }}
               placeholder="0.00"
             />
@@ -124,6 +128,8 @@ export function CashRegisterModal({
               sanitize="currency"
               value={declaredClosing}
               onChange={(e) => { setDeclaredClosing(e.target.value); setLocalError(''); }}
+              onBlur={() => setDeclaredTouched(true)}
+              error={declaredTouched && (isNaN(parseFloat(declaredClosing)) || parseFloat(declaredClosing) < 0) ? 'Ingresa el monto final declarado (debe ser 0 o mayor).' : undefined}
               validation={{ required: true, min: 0 }}
               placeholder="0.00"
             />

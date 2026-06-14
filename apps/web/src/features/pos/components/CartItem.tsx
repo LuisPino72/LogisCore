@@ -131,7 +131,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
                 value={displayQty}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                validation={{ min: 0.01, max: 99999 }}
+                validation={{ required: true, min: 0.01, max: 99999 }}
                 className="text-center py-1.5 text-sm font-semibold"
               />
             </div>

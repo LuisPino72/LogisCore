@@ -251,8 +251,10 @@ export function CartSummary({
               sanitize="number"
               placeholder={discountType === 'percentage' ? '0%' : '$0.00'}
               value={discountInput}
-              onChange={(e) => setDiscountInput(e.target.value)}
+              onChange={(e) => { setDiscountInput(e.target.value); setDiscountError(''); }}
               onKeyDown={(e) => { if (e.key === 'Enter') handleApplyDiscount(); }}
+              error={discountError || undefined}
+              validation={{ required: true, min: 0.01 }}
               className="flex-1"
               autoFocus
             />

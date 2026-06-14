@@ -247,7 +247,7 @@ export function StockVerificationModal({
                         decimals={item.isWeighted ? 2 : 0}
                         value={item.physicalInput}
                         onChange={(e) => handlePhysicalChange(item.productId, e.target.value)}
-                        validation={{ min: 0, max: 999999 }}
+                        validation={{ required: 'Ingresa el stock físico', min: 0, max: 999999 }}
                         inputClassName="text-sm"
                       />
                     </div>
