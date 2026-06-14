@@ -39,6 +39,7 @@ export function StockVerificationModal({
   const [loading, setLoading] = useState(false);
   const [adjusting, setAdjusting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showExcessiveConfirm, setShowExcessiveConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToastStore();
 
@@ -86,6 +87,15 @@ export function StockVerificationModal({
     if (isNaN(physical)) return 0;
     const logical = getLogicalDisplay(item);
     return parseFloat((physical - logical).toFixed(2));
+  };
+
+  const getExcessiveItems = (): VerificationItem[] => {
+    return items.filter((item) => {
+      const logical = getLogicalDisplay(item);
+      const physical = parseFloat(item.physicalInput);
+      if (isNaN(physical)) return false;
+      return (logical > 0 && physical > logical * 2) || (logical === 0 && physical > 10);
+    });
   };
 
   const pendingChanges = items.filter((item) => {
@@ -136,7 +146,37 @@ export function StockVerificationModal({
   };
 
   const footerContent = !loading && !error && items.length > 0 ? (
-    showConfirm ? (
+    showExcessiveConfirm ? (() => {
+      const excessiveItems = getExcessiveItems();
+      return (
+        <div className="w-full space-y-3">
+          <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 space-y-2">
+            <p className="text-xs font-medium text-warning text-center">
+              Stock físico mayor al esperado
+            </p>
+            <ul className="text-xs text-gray-600 text-left max-h-20 overflow-y-auto space-y-0.5">
+              {excessiveItems.map((item) => {
+                const logical = getLogicalDisplay(item);
+                const physical = parseFloat(item.physicalInput);
+                const pct = logical > 0 ? Math.round(((physical - logical) / logical) * 100) : 0;
+                return (
+                  <li key={item.productId} className="flex justify-between">
+                    <span className="truncate">{item.productName}</span>
+                    <span className="shrink-0 ml-2 font-mono">Registrado: {logical} &rarr; Físico: {physical}{logical > 0 ? ` (+${pct}%)` : ''}</span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-xs text-gray-500 text-center">¿Estás seguro de confirmar esta diferencia?</p>
+          </div>
+          <div className="flex gap-2 justify-center">
+            <Button variant="ghost" size="sm" onClick={() => setShowExcessiveConfirm(false)}>Corregir</Button>
+            <Button variant="primary" size="sm" onClick={() => { setShowExcessiveConfirm(false); setShowConfirm(true); }}>Confirmar exceso</Button>
+          </div>
+        </div>
+      );
+    })()
+    : showConfirm ? (
       (() => {
         const zeroedItems = items.filter((item) => {
           const logical = getLogicalDisplay(item);
@@ -178,7 +218,13 @@ export function StockVerificationModal({
     ) : (
       <div className="flex gap-2 justify-end w-full">
         <Button variant="ghost" size="sm" onClick={onComplete}>Saltar</Button>
-        <Button variant="primary" size="sm" onClick={() => setShowConfirm(true)} disabled={pendingChanges === 0}>
+        <Button variant="primary" size="sm" onClick={() => {
+          if (getExcessiveItems().length > 0) {
+            setShowExcessiveConfirm(true);
+          } else {
+            setShowConfirm(true);
+          }
+        }} disabled={pendingChanges === 0}>
           {pendingChanges > 0 ? `Ajustar todo (${pendingChanges})` : 'Sin cambios'}
         </Button>
       </div>
