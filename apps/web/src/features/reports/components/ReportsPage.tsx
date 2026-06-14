@@ -475,7 +475,11 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               value={filters.startDate ? filters.startDate.slice(0, 10) : ''}
               onChange={(e) => {
                 const v = e.target.value;
-                setFilters((f) => ({ ...f, startDate: v ? `${v}T00:00:00` : undefined }))
+                const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date());
+                const clamped = v > today ? today : v;
+                const end = filters.endDate ? filters.endDate.slice(0, 10) : '';
+                const finalStart = clamped && end && clamped > end ? end : clamped;
+                setFilters((f) => ({ ...f, startDate: finalStart ? `${finalStart}T00:00:00` : undefined }));
               }}
             />
           </div>
@@ -485,7 +489,11 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               value={filters.endDate ? filters.endDate.slice(0, 10) : ''}
               onChange={(e) => {
                 const v = e.target.value;
-                setFilters((f) => ({ ...f, endDate: v ? `${v}T23:59:59` : undefined }))
+                const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date());
+                const clamped = v > today ? today : v;
+                const start = filters.startDate ? filters.startDate.slice(0, 10) : '';
+                const finalEnd = clamped && start && clamped < start ? start : clamped;
+                setFilters((f) => ({ ...f, endDate: finalEnd ? `${finalEnd}T23:59:59` : undefined }));
               }}
             />
           </div>

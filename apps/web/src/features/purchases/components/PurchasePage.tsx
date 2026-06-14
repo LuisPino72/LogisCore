@@ -273,7 +273,11 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               <div className="w-full sm:w-48">
                 <DatePicker
                   value={tabState.dateFilter}
-                  onChange={(e) => saveTabState(activeTab, { dateFilter: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date());
+                    saveTabState(activeTab, { dateFilter: v > today ? today : v });
+                  }}
                   formatHint="dd/mm/aaaa"
                 />
               </div>
