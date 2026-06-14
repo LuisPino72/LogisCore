@@ -109,6 +109,13 @@ export function PosPage({ tenantId }: PosPageProps) {
     });
   }, [tenantId]);
 
+  useEffect(() => {
+    if (completedSale) {
+      const timer = setTimeout(() => setCompletedSale(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [completedSale, setCompletedSale]);
+
   const navigate = useNavigate();
   const handleReorder = useCallback((product: Product) => {
     navigate(buildReorderUrl(product.id));
@@ -294,6 +301,9 @@ export function PosPage({ tenantId }: PosPageProps) {
         if (result.data.isWeighted) {
           addToast({ type: 'info', message: `${result.data.name} es pesable. Agrégalo manualmente.`, duration: 3000 });
           return;
+        }
+        if (navigator.vibrate) {
+          navigator.vibrate(100);
         }
         const presentation = await inventoryService.getPresentationByBarcode(code, tenantId);
         if (presentation?.id) {

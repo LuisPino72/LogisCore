@@ -48,7 +48,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
           e.stopPropagation();
           onToggleFavorite(product.id);
         }}
-        className="absolute top-1.5 right-1.5 z-20 min-w-11 min-h-11 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-white active:bg-white transition-colors shadow-sm"
+        className="absolute top-1 right-1 z-20 min-w-9 min-h-9 sm:min-w-11 sm:min-h-11 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-white active:bg-white transition-colors shadow-sm"
         aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
       >
         <Star
@@ -58,7 +58,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
         />
       </button>
 
-      <div style={{ aspectRatio: '4/3' }} className="relative bg-surface-alt overflow-hidden">
+      <div className="relative bg-surface-alt overflow-hidden aspect-square sm:aspect-4/3">
         <ImageWithFallback
           productId={product.id}
           imageUrl={product.imageUrl}
