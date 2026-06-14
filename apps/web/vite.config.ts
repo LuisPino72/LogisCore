@@ -23,6 +23,12 @@ export default defineConfig({
         icons: [
           {
             src: '/Sasa.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/Sasa.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
@@ -31,7 +37,7 @@ export default defineConfig({
             src: '/Sasa con fondo.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'maskable',
           },
         ],
       },
