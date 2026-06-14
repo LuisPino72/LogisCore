@@ -10,7 +10,7 @@ export function toNumber(val: unknown): number {
 
 function sanitizeNulls(raw: Record<string, unknown>): Record<string, unknown> {
   const out = { ...raw };
-  if (out.sku == null) out.sku = '';
+  if (out.sku == null || (typeof out.sku === 'string' && out.sku.trim() === '')) out.sku = 'SIN-SKU';
   if (out.categoryId == null) delete out.categoryId;
   if (out.stockMin == null) delete out.stockMin;
   if (out.imageUrl == null || (typeof out.imageUrl === 'number' && isNaN(out.imageUrl))) delete out.imageUrl;
