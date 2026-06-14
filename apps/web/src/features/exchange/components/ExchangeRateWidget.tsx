@@ -119,7 +119,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               size="sm"
               onClick={handleUpdate}
               disabled={isUpdating || !tenantId || !isOnline}
-              className="min-h-9 px-2 w-full active:scale-95 transition-transform"
+              className="min-h-9 px-2 w-full active:scale-[0.98] transition-transform"
             >
               {isUpdating ? <Spinner size="sm" /> : <RefreshCw size={14} />}
               {rateStatus === 'missing' ? 'Cargar tasa AHORA' : 'Actualizar'}
@@ -129,7 +129,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
               size="sm"
               onClick={() => setShowModal(true)}
               disabled={isUpdating || !tenantId}
-              className="min-h-9 px-2 w-full active:scale-95 transition-transform"
+              className="min-h-9 px-2 w-full active:scale-[0.98] transition-transform"
             >
               <Settings size={14} />
               Manual

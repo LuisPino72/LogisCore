@@ -250,7 +250,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
                   type="button"
                   onClick={(e) => handleStatusFilter(opt.value, e.currentTarget)}
                   className={cn(
-                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-95',
+                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-[0.98]',
                     tabState.statusFilter === opt.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'

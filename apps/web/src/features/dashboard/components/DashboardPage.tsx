@@ -1,11 +1,13 @@
 import { type FC, useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { PwaInstallBanner } from './PwaInstallBanner';
 import { EmptyState, Card, Badge } from '../../../common/components';
-import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
+import { formatUsd } from '../../../lib/formatBs';
 
 interface DashboardPageProps {
   tenantId?: string | null;
@@ -25,6 +27,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   const role = session?.role;
   const tenantId = propTenantId ?? session?.tenantId ?? null;
   const email = userEmail ?? session?.email ?? 'Usuario';
+  const navigate = useNavigate();
 
   if (role === 'employee') {
     return (
@@ -50,6 +53,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     topProductsLoading,
     lowStockProducts,
     lowStockLoading,
+    todayEarnings,
+    todayEarningsLoading,
     fetchTopProducts,
   } = useDashboard(tenantId);
 
@@ -73,6 +78,46 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
       />
 
       <PwaInstallBanner />
+
+      <div className="dashboard-card-entrance" style={{ animationDelay: '0.1s' }}>
+        <Card>
+          <div className="p-4 sm:p-5">
+            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
+              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+                <DollarSign size={16} className="text-success" />
+              </div>
+              <h3 className="text-sm font-title font-bold text-gray-900">Ganancias de hoy</h3>
+            </div>
+            {todayEarningsLoading ? (
+              <div className="space-y-3">
+                <div className="skeleton h-8 w-32 rounded" />
+              </div>
+            ) : todayEarnings != null && todayEarnings > 0 ? (
+              <button
+                type="button"
+                onClick={() => navigate('/reports')}
+                className="text-left w-full group"
+              >
+                <p className="text-2xl sm:text-3xl font-title font-bold text-success group-hover:text-success/80 transition-colors">
+                  {formatUsd(todayEarnings)}
+                </p>
+                <p className="text-xs text-text-secondary mt-1">Ver reportes →</p>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/reports')}
+                className="text-left w-full group"
+              >
+                <p className="text-lg font-title font-bold text-gray-400 group-hover:text-gray-500 transition-colors">
+                  Sin ventas hoy
+                </p>
+                <p className="text-xs text-text-secondary mt-1">Ver reportes →</p>
+              </button>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {dashboardError && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-warning/8 border border-warning/20 text-sm text-warning animate-slide-down">
@@ -191,9 +236,19 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                     <div key={p.id} className={`low-stock-card ${isZero ? 'low-stock-card--danger' : 'low-stock-card--warning'}`}>
                       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-2">
                         <span className="text-sm font-medium text-gray-800 wrap-break-word min-w-0 flex-1" title={p.name}>{p.name}</span>
-                        <Badge variant={isZero ? 'danger' : 'warning'} className="shrink-0">
-                          {displayStock(p.stock, p.unit)} {p.unit}
-                        </Badge>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant={isZero ? 'danger' : 'warning'}>
+                            {displayStock(p.stock, p.unit)} {p.unit}
+                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => navigate('/purchases')}
+                            className="text-xs font-medium text-primary hover:text-primary-dark transition-colors"
+                            title="Crear orden de compra"
+                          >
+                            <ShoppingCart size={14} />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">

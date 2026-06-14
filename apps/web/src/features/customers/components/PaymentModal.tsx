@@ -232,7 +232,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
                   key={m}
                   type="button"
                   onClick={() => setPaymentMethod(m)}
-                  className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.97] ${
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
                     selected
                       ? 'bg-amber-600 text-white border-amber-600 shadow-sm ring-1 ring-amber-600/30'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-700'

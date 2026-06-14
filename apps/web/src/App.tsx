@@ -255,14 +255,14 @@ function DashboardLayout() {
                 variant="ghost"
                 size="sm"
                 onClick={() => EventBus.emit(SystemEvents.ADMIN_EXIT_TENANT)}
-                className="active:scale-95 transition-transform shrink-0"
+                className="active:scale-[0.98] transition-transform shrink-0"
               >
                 <ArrowLeft size={18} />
                 <span className="hidden sm:inline">Volver al Panel</span>
               </Button>
             )}
             <div
-              className="flex items-center gap-2 bg-primary/10 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer active:scale-95 shrink-0"
+              className="flex items-center gap-2 bg-primary/10 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer active:scale-[0.98] shrink-0"
               onClick={() => handleNavigate('dashboard')}
             >
               <Store size={20} className="text-primary shrink-0" />
@@ -272,7 +272,7 @@ function DashboardLayout() {
             {role && (
               <Badge
                 variant="success"
-                className="hidden! sm:inline-flex! active:scale-95 cursor-pointer transition-transform"
+                className="hidden! sm:inline-flex! active:scale-[0.98] cursor-pointer transition-transform"
               >
                 {role === 'owner' ? 'Dueño' : role === 'employee' ? 'Empleado' : role}
               </Badge>

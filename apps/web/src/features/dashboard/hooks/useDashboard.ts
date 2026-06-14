@@ -10,6 +10,8 @@ export function useDashboard(tenantId: string | null) {
   const topProductsLoading = useDashboardStore((s) => s.topProductsLoading);
   const lowStockProducts = useDashboardStore((s) => s.lowStockProducts);
   const lowStockLoading = useDashboardStore((s) => s.lowStockLoading);
+  const todayEarnings = useDashboardStore((s) => s.todayEarnings);
+  const todayEarningsLoading = useDashboardStore((s) => s.todayEarningsLoading);
   const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
   const fetchTopProducts = useDashboardStore((s) => s.fetchTopProducts);
   const fetchLowStock = useDashboardStore((s) => s.fetchLowStock);
@@ -66,6 +68,8 @@ export function useDashboard(tenantId: string | null) {
     topProductsLoading,
     lowStockProducts,
     lowStockLoading,
+    todayEarnings,
+    todayEarningsLoading,
     fetchTopProducts,
     fetchLowStock,
   };

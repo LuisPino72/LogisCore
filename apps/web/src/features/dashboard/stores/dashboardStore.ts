@@ -9,6 +9,8 @@ export interface DashboardStore extends DashboardState {
   topProductsLoading: boolean;
   lowStockProducts: Product[];
   lowStockLoading: boolean;
+  todayEarnings: number | null;
+  todayEarningsLoading: boolean;
   fetchDashboard: (tenantId: string) => Promise<void>;
   fetchTopProducts: (tenantId: string) => Promise<void>;
   fetchLowStock: (tenantId: string) => Promise<void>;
@@ -30,6 +32,8 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   topProductsLoading: false,
   lowStockProducts: [],
   lowStockLoading: false,
+  todayEarnings: null,
+  todayEarningsLoading: false,
 
   fetchDashboard: async (tenantId: string) => {
     const now = Date.now();
@@ -40,7 +44,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     lastFetchAt = now;
     lastFetchTenant = tenantId;
 
-    set({ error: null });
+    set({ error: null, todayEarningsLoading: true });
 
     const [tenantResult, subResult, empResult, earningsResult] = await Promise.all([
       dashboardService.getTenantInfo(tenantId),
@@ -52,6 +56,8 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     set({
       tenantInfo: tenantResult.ok ? tenantResult.data : null,
       subscription: subResult.ok ? subResult.data : null,
+      todayEarnings: earningsResult.ok ? earningsResult.data : null,
+      todayEarningsLoading: false,
       error: !navigator.onLine ? null
         : [!tenantResult.ok && 'Información del negocio',
            !subResult.ok && 'Suscripción',
@@ -82,6 +88,6 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   reset: () => {
     lastFetchAt = 0;
     lastFetchTenant = null;
-    set({ ...initialState, topProducts: [], topProductsLoading: false, lowStockProducts: [], lowStockLoading: false });
+    set({ ...initialState, topProducts: [], topProductsLoading: false, lowStockProducts: [], lowStockLoading: false, todayEarnings: null, todayEarningsLoading: false });
   },
 }));

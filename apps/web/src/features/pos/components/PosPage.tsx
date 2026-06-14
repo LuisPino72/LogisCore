@@ -349,7 +349,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               <button
                 type="button"
                 onClick={() => switchToSell()}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95 ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-[0.98] ${
                   activeTab === 'sell'
                     ? 'bg-white text-primary shadow-sm'
                     : 'text-text-secondary hover:text-gray-700'
@@ -363,7 +363,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               <button
                 type="button"
                 onClick={() => { switchToHistory(); if (tenantId) fetchSalesHistory(tenantId); }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95 ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-[0.98] ${
                   activeTab === 'history'
                     ? 'bg-white text-primary shadow-sm'
                     : 'text-text-secondary hover:text-gray-700'

@@ -224,7 +224,7 @@ export function CartSummary({
             <button
               type="button"
               onClick={() => setDiscountType('percentage')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
                 discountType === 'percentage'
                   ? 'bg-primary text-white shadow-sm'
                   : 'bg-white text-gray-600 border border-border hover:border-primary/30'
@@ -236,7 +236,7 @@ export function CartSummary({
             <button
               type="button"
               onClick={() => setDiscountType('fixed')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
                 discountType === 'fixed'
                   ? 'bg-primary text-white shadow-sm'
                   : 'bg-white text-gray-600 border border-border hover:border-primary/30'
@@ -278,7 +278,7 @@ export function CartSummary({
               key={m}
               type="button"
               onClick={() => { onPaymentMethodChange(m); onSetIsCreditSale(false); }}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.97] ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
                 selected
                   ? 'bg-primary text-white border-primary shadow-sm ring-1 ring-primary/30'
                   : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
@@ -295,7 +295,7 @@ export function CartSummary({
           type="button"
           onClick={handleCreditToggle}
           disabled={creditExceeds}
-          className={`w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.97] ${
+          className={`w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
             isCreditSale
               ? 'bg-amber-500 text-white border-amber-500 shadow-sm ring-1 ring-amber-500/30'
               : creditExceeds

@@ -396,7 +396,7 @@ function GlobalHistoryView({
           <p className="text-xs text-text-secondary">Total (Dólares)</p>
           <p className="text-lg font-bold text-accent">{formatUsd(totalSpentUsd)}</p>
         </div>
-        <div className="rounded-xl border border-info/20 bg-linear-to-br from-info/5 to-info/10 p-3 hidden sm:block">
+        <div className="rounded-xl border border-info/20 bg-linear-to-br from-info/5 to-info/10 p-3">
           <p className="text-xs text-text-secondary">Clientes únicos</p>
           <p className="text-lg font-bold text-info">{uniqueCustomers}</p>
         </div>

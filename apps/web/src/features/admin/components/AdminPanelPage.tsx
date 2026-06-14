@@ -149,7 +149,7 @@ export function AdminPanelPage() {
           <button
             key={tab.id}
             type="button"
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors active:scale-95 ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors active:scale-[0.98] ${
               activeSheet === tab.id
                 ? 'border-primary text-primary'
                 : 'border-transparent text-text-secondary hover:text-gray-700'

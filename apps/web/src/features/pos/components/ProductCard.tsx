@@ -40,7 +40,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
       tabIndex={isOutOfStock ? -1 : 0}
       aria-label={isOutOfStock ? `${product.name} sin stock` : `Agregar ${product.name} al carrito`}
       bodyClassName="p-0"
-      className={`relative flex flex-col gap-0 overflow-hidden transition-all duration-200 ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.97] cursor-pointer hover:shadow-md hover:-translate-y-0.5'}`}
+      className={`relative flex flex-col gap-0 overflow-hidden transition-all duration-200 ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.98] cursor-pointer hover:shadow-md hover:-translate-y-0.5'}`}
     >
       <button
         type="button"
