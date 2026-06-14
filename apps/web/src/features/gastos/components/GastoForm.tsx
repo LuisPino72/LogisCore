@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Button, Input, Modal, Select, Textarea, Toggle, SearchableSelect } from '@/common/components';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
+import { useToastStore } from '../../../stores/toastStore';
 import { CreateGastoInputSchema } from '../../../specs/gastos';
 import { UI_EXPENSE_CATEGORIES, type ExpenseCategory, type CreateGastoInput } from '../types';
 import { formatBs } from '@/lib/formatBs';
@@ -14,13 +15,14 @@ interface GastoFormProps {
 
 export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
   const rate = useExchangeRateStore((s) => s.rate);
+  const addToast = useToastStore((s) => s.addToast);
   const [category, setCategory] = useState('');
   const [amountUsd, setAmountUsd] = useState('');
   const [description, setDescription] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<'monthly' | 'yearly'>('monthly');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [confirmClose, setConfirmClose] = useState(false);
 
   const parsedAmount = parseFloat(amountUsd);
@@ -38,7 +40,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
       setDescription('');
       setIsRecurring(false);
       setRecurrenceType('monthly');
-      setError('');
+      setFieldErrors({});
       setConfirmClose(false);
     }
   }, [isOpen]);
@@ -68,8 +70,14 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
   };
 
   const handleSubmit = async () => {
+    const newErrors: Record<string, string> = {};
+
     if (!category) {
-      setError('Selecciona una categoría');
+      newErrors.category = 'Selecciona una categoría';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
       return;
     }
 
@@ -88,20 +96,26 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
 
     const parsed = CreateGastoInputSchema.safeParse(payload);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || 'Revisa los datos ingresados');
+      const zodErrors: Record<string, string> = {};
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string;
+        zodErrors[field] = issue.message;
+      });
+      setFieldErrors(zodErrors);
       return;
     }
 
     setSubmitting(true);
-    setError('');
+    setFieldErrors({});
     const ok = await onSubmit(payload);
     setSubmitting(false);
 
     if (ok) {
+      addToast({ type: 'success', message: 'Gasto creado correctamente', duration: 3000 });
       setConfirmClose(false);
       onClose();
     } else {
-      setError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.');
+      setFieldErrors({ form: 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.' });
     }
   };
 
@@ -122,16 +136,21 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
       >
         <div className="space-y-4">
           <div className="input-wrapper">
-            <label className="input-label">Categoría</label>
+            <label className="input-label">
+              Categoría <span className="text-danger">*</span>
+            </label>
             <div className="max-w-xs">
               <SearchableSelect
                 value={category}
-                onChange={setCategory}
+                onChange={(val) => { setCategory(val); setFieldErrors((prev) => { const next = { ...prev }; delete next.category; return next; }); }}
                 placeholder="Seleccionar categoría"
                 searchPlaceholder="Buscar categoría..."
                 options={UI_EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
               />
             </div>
+            {fieldErrors.category && (
+              <p className="text-xs text-danger mt-1">{fieldErrors.category}</p>
+            )}
           </div>
 
           <Input
@@ -139,9 +158,11 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
             type="number"
             step="0.01"
             min="0"
+            sanitize="number"
             placeholder="0.00"
             value={amountUsd}
-            onChange={(e) => setAmountUsd(e.target.value)}
+            onChange={(e) => { setAmountUsd(e.target.value); setFieldErrors((prev) => { const next = { ...prev }; delete next.amountUsd; return next; }); }}
+            error={fieldErrors.amountUsd}
             validation={{ required: true, min: 0.01, max: 99999 }}
           />
 
@@ -191,9 +212,9 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
             </div>
           )}
 
-          {error && (
+          {fieldErrors.form && (
             <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
-              {error}
+              {fieldErrors.form}
             </div>
           )}
         </div>

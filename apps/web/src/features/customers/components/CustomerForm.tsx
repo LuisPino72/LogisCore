@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, Phone, MapPin, CreditCard, FileText, IdCard } from 'lucide-react';
 import { Button, Input, Modal, CedulaInput } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
+import { useToastStore } from '../../../stores/toastStore';
 import {
   CreateCustomerInputSchema,
 } from '../../../specs/customers';
@@ -15,26 +16,31 @@ interface CustomerFormProps {
 }
 
 export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: CustomerFormProps) {
+  const addToast = useToastStore((s) => s.addToast);
   const [name, setName] = useState('');
-  const [cedula, setCedula] = useState(''); // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+  const [cedula, setCedula] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
   const [notes, setNotes] = useState('');
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setName(String(editCustomer?.name ?? ''));
-      setCedula(String(editCustomer?.cedula ?? '')); // AUDIT-017
+      setCedula(String(editCustomer?.cedula ?? ''));
       setPhone(String(editCustomer?.phone ?? ''));
       setAddress(String(editCustomer?.address ?? ''));
       setCreditLimit(editCustomer?.creditLimit ? String(editCustomer.creditLimit) : '');
       setNotes(String(editCustomer?.notes ?? ''));
-      setError('');
+      setFieldErrors({});
     }
   }, [isOpen, editCustomer]);
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
+  };
 
   const handleSubmit = async () => {
     const creditLimitNum = creditLimit ? Number(creditLimit) : 0;
@@ -45,7 +51,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
     const notesStr = String(notes);
     const payload = {
       name: nameStr.trim(),
-      cedula: cedulaStr.trim().toUpperCase() || undefined, // AUDIT-017: normalizar a mayúsculas
+      cedula: cedulaStr.trim().toUpperCase() || undefined,
       phone: phoneStr.trim() || undefined,
       address: addressStr.trim() || undefined,
       creditLimit: creditLimitNum,
@@ -53,23 +59,29 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
     };
     const parsed = CreateCustomerInputSchema.safeParse(payload);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Revisa los datos ingresados');
+      const zodErrors: Record<string, string> = {};
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string;
+        zodErrors[field] = issue.message;
+      });
+      setFieldErrors(zodErrors);
       return;
     }
     setSubmitting(true);
-    setError('');
+    setFieldErrors({});
     const ok = await onSubmit(parsed.data as CreateCustomerInput);
     setSubmitting(false);
     if (ok) {
+      addToast({ type: 'success', message: editCustomer ? 'Cliente actualizado correctamente' : 'Cliente creado correctamente', duration: 3000 });
       setName('');
-      setCedula(''); // AUDIT-017
+      setCedula('');
       setPhone('');
       setAddress('');
       setCreditLimit('');
       setNotes('');
       onClose();
     } else {
-      setError('No se pudo guardar. Revisa tu conexión e intenta de nuevo.');
+      setFieldErrors({ form: 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.' });
     }
   };
 
@@ -108,8 +120,8 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           label={<span className="flex items-center gap-2"><Users size={14} className="text-text-muted" /> Nombre del cliente</span>}
           placeholder="Ej: Juan Pérez"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          error={error && !name.trim() ? error : undefined}
+          onChange={(e) => { setName(e.target.value); clearFieldError('name'); }}
+          error={fieldErrors.name}
           validation={{ required: 'Ingresa el nombre del cliente', maxLength: 25 }}
           inputClassName="text-sm"
         />
@@ -117,7 +129,8 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
         <CedulaInput
           label={<span className="flex items-center gap-2"><IdCard size={14} className="text-text-muted" /> Cédula / RIF <span className="text-text-muted font-normal">(opcional)</span></span>}
           value={cedula}
-          onChange={setCedula}
+          onChange={(val) => { setCedula(val); clearFieldError('cedula'); }}
+          error={fieldErrors.cedula}
           hint="V/E/J/G/P + 6 a 8 dígitos. Facilita búsqueda."
         />
 
@@ -126,7 +139,8 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           placeholder="Ej: 0412-1234567"
           value={phone}
           sanitize="phone"
-          onChange={(e) => setPhone(sanitizeValue(e.target.value, 'phone'))}
+          onChange={(e) => { setPhone(sanitizeValue(e.target.value, 'phone')); clearFieldError('phone'); }}
+          error={fieldErrors.phone}
           validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
           hint="Formato: 04121234567"
           inputClassName="text-sm"
@@ -152,8 +166,9 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           placeholder="Ej: 100"
           value={creditLimit}
           sanitize="currency"
-          onChange={(e) => setCreditLimit(sanitizeValue(e.target.value, 'currency'))}
-          validation={{ min: 0, maxLength: 10 }}
+          onChange={(e) => { setCreditLimit(sanitizeValue(e.target.value, 'currency')); clearFieldError('creditLimit'); }}
+          error={fieldErrors.creditLimit}
+          validation={{ min: 0, max: 9999.99, maxLength: 10 }}
           hint="Monto máximo de crédito que puede deber este cliente"
           inputClassName="text-sm"
         />
@@ -173,9 +188,9 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           <p className="text-xs text-gray-500 mt-1">{notes.length}/30 caracteres</p>
         </div>
 
-        {error && name.trim() && (
+        {fieldErrors.form && (
           <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
-            {error}
+            {fieldErrors.form}
           </div>
         )}
       </div>

@@ -346,10 +346,34 @@ function GlobalHistoryView({
           />
         </div>
         <div className="w-full sm:w-44">
-          <DatePicker value={startDate} onChange={(e) => setStartDate(e.target.value)} formatHint="desde" />
+          <DatePicker
+            value={startDate}
+            onChange={(e) => {
+              const v = e.target.value;
+              setStartDate(v);
+              if (v && endDate && v > endDate) setEndDate(v);
+              if (v) {
+                const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date());
+                if (v > today) setStartDate(today);
+              }
+            }}
+            formatHint="desde"
+          />
         </div>
         <div className="w-full sm:w-44">
-          <DatePicker value={endDate} onChange={(e) => setEndDate(e.target.value)} formatHint="hasta" />
+          <DatePicker
+            value={endDate}
+            onChange={(e) => {
+              const v = e.target.value;
+              setEndDate(v);
+              if (v && startDate && v < startDate) setStartDate(v);
+              if (v) {
+                const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date());
+                if (v > today) setEndDate(today);
+              }
+            }}
+            formatHint="hasta"
+          />
         </div>
         {(startDate || endDate || searchQuery) && (
           <Button

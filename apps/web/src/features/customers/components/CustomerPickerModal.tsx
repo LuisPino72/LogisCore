@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Modal, SearchInput, Button, EmptyState, Spinner, CedulaInput } from '../../../common/components';
+import { Modal, SearchInput, Button, EmptyState, Spinner, CedulaInput, Input } from '../../../common/components';
 import { User, UserPlus, X } from 'lucide-react';
 import { useCustomerStore } from '../stores/customerStore';
 import { useCustomers } from '../hooks/useCustomers';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
+import { sanitizeValue } from '../../../lib/validation';
 import type { CreateCustomerInput, Customer } from '../../../specs/customers';
 import { CreateCustomerInputSchema } from '../../../specs/customers';
 import { useToastStore } from '../../../stores/toastStore';
@@ -25,8 +26,8 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [newCedula, setNewCedula] = useState(''); // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
-  const [createError, setCreateError] = useState('');
+  const [newCedula, setNewCedula] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (isOpen && customers.length === 0) {
@@ -34,7 +35,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
     }
   }, [isOpen, customers.length, fetchCustomers, tenantId]);
 
-  const fuzzyCustomers = useFuzzySearch(customers, searchQuery, { keys: ['name', 'phone', 'cedula'] }); // AUDIT-017: Cédula field V/E/J/P + 6-8 digits (búsqueda)
+  const fuzzyCustomers = useFuzzySearch(customers, searchQuery, { keys: ['name', 'phone', 'cedula'] });
 
   const handleSelect = (customer: Customer | null) => {
     onSelect(customer);
@@ -42,21 +43,30 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
     setShowCreateForm(false);
     setNewName('');
     setNewPhone('');
-    setNewCedula(''); // AUDIT-017
-    setCreateError('');
+    setNewCedula('');
+    setFieldErrors({});
     onClose();
   };
 
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
+  };
+
   const handleCreate = async () => {
-    setCreateError('');
+    setFieldErrors({});
     const payload = {
       name: newName.trim(),
       phone: newPhone.trim() || undefined,
-      cedula: newCedula.trim().toUpperCase() || undefined, // AUDIT-017
+      cedula: newCedula.trim().toUpperCase() || undefined,
     };
     const parsed = CreateCustomerInputSchema.safeParse(payload);
     if (!parsed.success) {
-      setCreateError(parsed.error.issues[0]?.message ?? 'Datos inválidos');
+      const zodErrors: Record<string, string> = {};
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string;
+        zodErrors[field] = issue.message;
+      });
+      setFieldErrors(zodErrors);
       return;
     }
     setCreating(true);
@@ -67,7 +77,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
           id: newId,
           name: parsed.data.name,
           phone: parsed.data.phone,
-          cedula: parsed.data.cedula, // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
+          cedula: parsed.data.cedula,
           address: undefined,
           creditLimit: 0,
           balance: 0,
@@ -78,10 +88,10 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
         addToast({ type: 'success', message: 'Cliente creado.', duration: 2000 });
         handleSelect(newCustomer);
       } else {
-        setCreateError('No se pudo crear el cliente. Intenta de nuevo.');
+        setFieldErrors({ form: 'No se pudo crear el cliente. Intenta de nuevo.' });
       }
     } catch {
-      setCreateError('Error de red. Verifica tu conexión.');
+      setFieldErrors({ form: 'Error de red. Verifica tu conexión.' });
     } finally {
       setCreating(false);
     }
@@ -90,7 +100,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
   return (
     <Modal
       isOpen={isOpen}
-      onClose={() => { onClose(); setShowCreateForm(false); setCreateError(''); }}
+      onClose={() => { onClose(); setShowCreateForm(false); setFieldErrors({}); }}
       title="Asignar cliente"
       size="md"
     >
@@ -184,42 +194,39 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
             ← Volver a la lista
           </button>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Nombre <span className="text-danger">*</span></label>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value.slice(0, 25))}
-              placeholder="Ej: Juan Pérez"
-              className="input"
-              maxLength={25}
-              autoFocus
-            />
-            <p className="text-xs text-gray-500 mt-1">{newName.length}/25</p>
-          </div>
+          <Input
+            label={<span>Nombre <span className="text-danger">*</span></span>}
+            value={newName}
+            onChange={(e) => { setNewName(e.target.value); clearFieldError('name'); }}
+            error={fieldErrors.name}
+            placeholder="Ej: Juan Pérez"
+            validation={{ required: 'Ingresa el nombre del cliente', maxLength: 25 }}
+            inputClassName="text-sm"
+          />
 
           <CedulaInput
             label="Cédula / RIF (opcional)"
             value={newCedula}
-            onChange={setNewCedula}
+            onChange={(val) => { setNewCedula(val); clearFieldError('cedula'); }}
+            error={fieldErrors.cedula}
             hint="V/E/J/G/P + 6-8 dígitos"
           />
 
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Teléfono (opcional)</label>
-            <input
-              type="tel"
-              value={newPhone}
-              onChange={(e) => setNewPhone(e.target.value.slice(0, 14))}
-              placeholder="04121234567"
-              className="input"
-              maxLength={14}
-            />
-          </div>
+          <Input
+            label="Teléfono (opcional)"
+            value={newPhone}
+            sanitize="phone"
+            onChange={(e) => { setNewPhone(sanitizeValue(e.target.value, 'phone')); clearFieldError('phone'); }}
+            error={fieldErrors.phone}
+            placeholder="04121234567"
+            validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
+            hint="Formato: 04121234567"
+            inputClassName="text-sm"
+          />
 
-          {createError && (
+          {fieldErrors.form && (
             <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
-              {createError}
+              {fieldErrors.form}
             </div>
           )}
 

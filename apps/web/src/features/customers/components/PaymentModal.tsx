@@ -205,6 +205,8 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             placeholder="0.00"
             value={amountUsd}
             onChange={(e) => { setAmountUsd(e.target.value); setError(''); }}
+            error={error && (!amountUsd || parseFloat(amountUsd) <= 0) ? error : undefined}
+            validation={{ required: true, min: 0.01, max: customer.balance }}
             className="text-lg font-bold"
             autoFocus
           />
@@ -253,6 +255,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             placeholder="Nro. transferencia, referencia..."
             value={reference}
             onChange={(e) => setReference(e.target.value)}
+            validation={{ maxLength: 50 }}
           />
         </div>
 
