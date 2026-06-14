@@ -2,6 +2,7 @@ import { type FC, useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
+import { PwaInstallBanner } from './PwaInstallBanner';
 import { EmptyState, Card, Badge } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
@@ -70,6 +71,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
         tenantName={tenantInfo?.name ?? null}
         subscription={subscription}
       />
+
+      <PwaInstallBanner />
 
       {dashboardError && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-warning/8 border border-warning/20 text-sm text-warning animate-slide-down">
