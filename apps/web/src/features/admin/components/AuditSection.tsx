@@ -2,9 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Shield, Clock } from 'lucide-react';
 import {
   Badge,
+  Button,
   Card,
   DataTable,
+  Input,
+  Modal,
   Pagination,
+  SearchInput,
   SearchableSelect,
   Select,
   Spinner,
@@ -73,7 +77,7 @@ function formatDate(iso: string): string {
 
 function severityBadge(severity: string) {
   switch (severity) {
-    case 'WARNING':
+    case 'WARN':
       return <Badge variant="warning">WARNING</Badge>;
     default:
       return <Badge variant="info">INFO</Badge>;
@@ -100,6 +104,10 @@ export function AuditSection() {
   const [dateRange, setDateRange] = useState<DateRange>('week');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [tenantFilter, setTenantFilter] = useState('');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null);
   const [tenants, setTenants] = useState<Array<{ id: string; name: string }>>([]);
   const [userEmailMap, setUserEmailMap] = useState<Map<string, string>>(new Map());
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
@@ -172,7 +180,7 @@ export function AuditSection() {
   useEffect(() => {
     setAuditPage(1);
     setOutboxPage(1);
-  }, [dateRange, moduleFilter, tenantFilter]);
+  }, [dateRange, moduleFilter, tenantFilter, severityFilter, userFilter, searchQuery]);
 
   const tenantOptions = useMemo(() => [
     { value: '', label: 'Todos los tenants' },
@@ -185,9 +193,43 @@ export function AuditSection() {
     return map;
   }, [tenants]);
 
-  const auditTotalPages = Math.max(1, Math.ceil(auditEntries.length / PAGE_SIZE));
+  const filteredAuditEntries = useMemo(() => {
+    let filtered = auditEntries;
+
+    if (searchQuery.trim()) {
+      const search = searchQuery.toLowerCase();
+      filtered = filtered.filter((e) => {
+        const payloadStr = e.payload ? JSON.stringify(e.payload).toLowerCase() : '';
+        return (
+          e.eventName.toLowerCase().includes(search) ||
+          e.eventModule.toLowerCase().includes(search) ||
+          e.userId?.toLowerCase().includes(search) ||
+          payloadStr.includes(search)
+        );
+      });
+    }
+
+    if (severityFilter !== 'all') {
+      filtered = filtered.filter((e) => e.severity === severityFilter);
+    }
+
+    if (userFilter.trim()) {
+      const search = userFilter.toLowerCase();
+      filtered = filtered.filter((e) => {
+        const email = (e.payload as Record<string, unknown>)?.email as string | undefined;
+        return (
+          e.userId?.toLowerCase().includes(search) ||
+          email?.toLowerCase().includes(search)
+        );
+      });
+    }
+
+    return filtered;
+  }, [auditEntries, searchQuery, severityFilter, userFilter]);
+
+  const auditTotalPages = Math.max(1, Math.ceil(filteredAuditEntries.length / PAGE_SIZE));
   const outboxTotalPages = Math.max(1, Math.ceil(outboxEntries.length / PAGE_SIZE));
-  const paginatedAudit = auditEntries.slice((auditPage - 1) * PAGE_SIZE, auditPage * PAGE_SIZE);
+  const paginatedAudit = filteredAuditEntries.slice((auditPage - 1) * PAGE_SIZE, auditPage * PAGE_SIZE);
   const paginatedOutbox = outboxEntries.slice((outboxPage - 1) * PAGE_SIZE, outboxPage * PAGE_SIZE);
 
   const subTabs: Tab[] = useMemo(() => [
@@ -287,7 +329,7 @@ export function AuditSection() {
     },
   ], []);
 
-  const activeCount = subTab === 'audit' ? auditEntries.length : outboxEntries.length;
+  const activeCount = subTab === 'audit' ? filteredAuditEntries.length : outboxEntries.length;
   const activeCountLabel =
     subTab === 'audit'
       ? `${activeCount} evento${activeCount !== 1 ? 's' : ''} de auditoría`
@@ -315,6 +357,14 @@ export function AuditSection() {
         <Tabs tabs={subTabs} activeKey={subTab} onChange={(k) => setSubTab(k as SubTab)} className="mb-4" />
 
         <div className="flex flex-wrap items-center gap-2 mb-4 @md:flex-nowrap @md:flex-row">
+          {subTab === 'audit' && (
+            <SearchInput
+              placeholder="Buscar eventos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 min-w-40"
+            />
+          )}
           <Select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as DateRange)}
@@ -334,13 +384,30 @@ export function AuditSection() {
             ))}
           </Select>
           {subTab === 'audit' && (
-            <SearchableSelect
-              value={tenantFilter}
-              onChange={setTenantFilter}
-              options={tenantOptions}
-              placeholder="Todos los tenants"
-              className="flex-1 min-w-40"
-            />
+            <>
+              <Select
+                value={severityFilter}
+                onChange={(e) => setSeverityFilter(e.target.value)}
+                className="w-36"
+              >
+                <option value="all">Todas las severidades</option>
+                <option value="INFO">INFO</option>
+                <option value="WARN">WARNING</option>
+              </Select>
+              <Input
+                placeholder="Buscar por usuario..."
+                value={userFilter}
+                onChange={(e) => setUserFilter(e.target.value)}
+                className="flex-1 min-w-40"
+              />
+              <SearchableSelect
+                value={tenantFilter}
+                onChange={setTenantFilter}
+                options={tenantOptions}
+                placeholder="Todos los tenants"
+                className="flex-1 min-w-40"
+              />
+            </>
           )}
         </div>
       </div>
@@ -357,6 +424,8 @@ export function AuditSection() {
               data={paginatedAudit}
               emptyMessage="No hay eventos de auditoría para los filtros seleccionados."
               keyExtractor={(e) => String(e.id)}
+              onRowClick={setSelectedEntry}
+              rowClassName={() => 'cursor-pointer hover:bg-gray-50'}
               renderCardOnMobile
             />
             {auditTotalPages > 1 && (
@@ -378,6 +447,61 @@ export function AuditSection() {
           </>
         )}
       </div>
+
+      <Modal
+        isOpen={!!selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        title="Detalle del Evento"
+      >
+        {selectedEntry && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-medium">{selectedEntry.eventName}</span>
+              {severityBadge(selectedEntry.severity)}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-gray-500">Fecha:</span>
+                <p className="font-mono">{formatDate(selectedEntry.createdAt)}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Módulo:</span>
+                <p><Badge variant="neutral">{selectedEntry.eventModule}</Badge></p>
+              </div>
+              <div>
+                <span className="text-gray-500">Usuario:</span>
+                <p className="truncate" title={selectedEntry.userId || ''}>
+                  {(selectedEntry.payload as Record<string, unknown>)?.email as string || selectedEntry.userId?.slice(0, 8) || '-'}
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-500">Tenant:</span>
+                <p className="truncate" title={selectedEntry.tenantId || ''}>
+                  {tenantNameMap.get(selectedEntry.tenantId || '') || selectedEntry.tenantId?.slice(0, 8) || '-'}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-gray-500 text-sm">Payload:</span>
+              {selectedEntry.payload ? (
+                <pre className="bg-gray-50 p-4 rounded-lg overflow-auto max-h-96 text-xs font-mono whitespace-pre-wrap mt-2">
+                  {JSON.stringify(selectedEntry.payload, null, 2)}
+                </pre>
+              ) : (
+                <p className="text-gray-400 text-sm mt-1">Sin datos adicionales</p>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setSelectedEntry(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </Card>
   );
 }

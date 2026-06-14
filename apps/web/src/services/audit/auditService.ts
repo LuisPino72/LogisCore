@@ -69,7 +69,7 @@ export function sanitizePayload(payload: Record<string, unknown> = {}): Record<s
 }
 
 function determineSeverity(eventName: string): string {
-  if (['SALE.VOIDED', 'INVOICE.VOIDED'].includes(eventName)) return 'WARNING';
+  if (['SALE.VOIDED', 'INVOICE.VOIDED'].includes(eventName)) return 'WARN';
   return 'INFO';
 }
 
