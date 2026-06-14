@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
-import { validateCycles } from '../services/productionService';
+import { validateCycles, computeRecipeCostFromLines } from '../services/productionService';
 import { getDb } from '@/services/dexie/db';
 
 interface RecipeLineInput {
@@ -490,6 +490,12 @@ export function useRecipeForm() {
     return w;
   }, [form.productId, form.mode, form.yieldQuantity, form.lines, products, form.wastePct]);
 
+  const estimatedCost = useMemo(() => {
+    const yieldQty = form.mode === 'batch' ? form.yieldQuantity : 1;
+    const productMap = new Map(products.map(p => [p.id, { costPrice: p.costPrice ?? 0, isWeighted: p.isWeighted, unit: p.unit }]));
+    return computeRecipeCostFromLines(form.lines, productMap, form.wastePct, yieldQty);
+  }, [form.lines, form.wastePct, form.yieldQuantity, form.mode, products]);
+
   const getAvailableIngredients = useCallback(() => {
     return products.filter((p) =>
       !p.deletedAt && (p.productType === 'materia_prima' || p.productType === 'producto_terminado' || p.productType === 'both')
@@ -553,6 +559,7 @@ export function useRecipeForm() {
     form,
     errors,
     warnings,
+    estimatedCost,
     ingredientAvailability,
     isCheckingAvailability,
     currentStep,

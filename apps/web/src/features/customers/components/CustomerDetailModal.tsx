@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Modal, Button, Badge, EmptyState, Spinner, Pagination, SaleDetailModal } from '../../../common/components';
-import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, CreditCard } from 'lucide-react';
+import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, CreditCard, Calendar } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useCustomerStore } from '../stores/customerStore';
+import { formatTimeAgo } from '../../../lib/utils';
 import { PaymentModal } from './PaymentModal';
 
 const HISTORY_PAGE_SIZE = 20;
@@ -78,6 +79,18 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold text-gray-900 wrap-break-word">{customer.name}</h3>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Badge variant="neutral" className="text-xs">
+                <Calendar className="h-3 w-3 mr-1 inline" />
+                Miembro desde {new Date(customer.createdAt).toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })}
+              </Badge>
+              {stats?.lastPurchaseAt && (
+                <Badge variant="info" className="text-xs">
+                  <ShoppingBag className="h-3 w-3 mr-1 inline" />
+                  Última compra: {formatTimeAgo(stats.lastPurchaseAt)}
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-col gap-1 mt-1.5">
               {customer.cedula && ( // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
                 <p className="text-xs text-text-secondary flex items-center gap-1.5 font-mono">

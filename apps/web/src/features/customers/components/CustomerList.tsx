@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Users, Phone, MapPin, Pencil, Trash2, CreditCard, History, IdCard } from 'lucide-react';
+import { Users, Phone, MapPin, Pencil, Trash2, CreditCard, History, IdCard, Clock } from 'lucide-react';
 import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/components';
 import type { Customer } from '../../../specs/customers';
-import { getInitials } from '../../../lib/utils';
+import { getInitials, formatTimeAgo, formatPhone } from '../../../lib/utils';
+import { useCustomerStore } from '../stores/customerStore';
 
 const PAGE_SIZE = 20;
 
@@ -18,6 +19,7 @@ interface CustomerListProps {
 export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, onViewHistory }: CustomerListProps) {
   const [page, setPage] = useState(1);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const stats = useCustomerStore((s) => s.stats);
 
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
@@ -84,9 +86,13 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                 {c.phone && (
                   <p className="text-xs text-text-secondary flex items-center gap-1">
                     <Phone size={12} className="shrink-0" />
-                    <span className="wrap-break-word">{c.phone}</span>
+                    <span className="wrap-break-word">{formatPhone(c.phone || '')}</span>
                   </p>
                 )}
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Última compra: {formatTimeAgo(stats?.lastPurchaseAt ?? null)}</span>
+                </div>
                 {c.address && (
                   <p className="text-xs text-text-secondary flex items-center gap-1">
                     <MapPin size={12} className="shrink-0" />

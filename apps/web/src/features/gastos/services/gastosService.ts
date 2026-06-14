@@ -378,6 +378,50 @@ export const gastosService = {
     }
   },
 
+  async markMultipleAsPaid(
+    tenantId: string,
+    ids: string[],
+    currentRate: number,
+  ): Promise<Result<void, AppError>> {
+    requireRole('owner', 'admin');
+    const networkCheck = requireNetwork();
+    if (!networkCheck.ok) return failure(networkCheck.error);
+
+    try {
+      const db = getDb();
+      const now = new Date().toISOString();
+
+      await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        for (const id of ids) {
+          const existing = await db.expenses.get(id);
+          if (!existing || existing.deletedAt || existing.tenantId !== tenantId || existing.status !== 'pending') continue;
+
+          const amountBs = preciseRound(existing.amountUsd * currentRate, 2);
+          await db.expenses.update(id, {
+            status: 'paid',
+            exchangeRate: currentRate,
+            amountBs,
+            updatedAt: now,
+          });
+          await syncQueue.enqueue('expenses', 'UPDATE', id, { id, status: 'paid', exchange_rate: currentRate, amount_bs: amountBs, updated_at: now }, tenantId);
+          await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: ['status', 'exchangeRate'] });
+        }
+      });
+
+      await logAuditEventOnly({
+        eventName: 'EXPENSES.BATCH_PAID',
+        module: 'gastos',
+        payload: { ids, count: ids.length, rate: currentRate },
+        context: { userId: undefined, tenantId },
+      });
+
+      return success(undefined);
+    } catch (err) {
+      console.error('[gastosService.markMultipleAsPaid]', err);
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_UPDATE_FAILED.code, 'Error al marcar gastos como pagados.'));
+    }
+  },
+
   async cancelOccurrence(tenantId: string, templateId: string, occurrenceDate: string): Promise<Result<void, AppError>> {
     // AUDIT-CRUD-009: requireNetwork para consistencia
     const networkCheck = requireNetwork();

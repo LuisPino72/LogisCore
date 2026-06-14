@@ -3,6 +3,7 @@ import { Receipt, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Modal } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
 import { formatDate } from '../../../lib/formatDate';
+import { useGastosStore } from '../stores/gastosStore';
 import type { Gasto } from '../types';
 import { getExpenseCategoryLabel } from '../types';
 
@@ -23,11 +24,15 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warni
 export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }: GastoListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
   const [confirmPayTarget, setConfirmPayTarget] = useState<{ id: string; category: string; amountUsd: number } | null>(null);
+  const { selectedIds, toggleSelect, selectAll } = useGastosStore();
 
   const sorted = useMemo(
     () => [...gastos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [gastos]
   );
+
+  const pendingIds = useMemo(() => sorted.filter((g) => g.status === 'pending').map((g) => g.id), [sorted]);
+  const allPendingSelected = pendingIds.length > 0 && pendingIds.every((id) => selectedIds.includes(id));
 
   if (loading && gastos.length === 0) {
     return (
@@ -56,6 +61,14 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-text-secondary uppercase tracking-wider">
+              <th className="py-3 px-3 font-semibold w-10">
+                <input
+                  type="checkbox"
+                  checked={allPendingSelected}
+                  onChange={() => allPendingSelected ? selectAll([]) : selectAll(pendingIds)}
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+              </th>
               <th className="py-3 px-3 font-semibold">Categoría</th>
               <th className="py-3 px-3 font-semibold text-right">Monto $</th>
               <th className="py-3 px-3 font-semibold">Fecha</th>
@@ -73,6 +86,16 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
                   idx % 2 === 0 ? 'bg-white' : 'bg-surface-alt/30'
                 }`}
               >
+                <td className="py-3 px-3">
+                  {gasto.status === 'pending' && (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(gasto.id)}
+                      onChange={() => toggleSelect(gasto.id)}
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                  )}
+                </td>
                 <td className="py-3 px-3 font-medium text-gray-800">{getExpenseCategoryLabel(gasto.category)}</td>
                 <td className="py-3 px-3 text-right font-bold text-primary text-base">{formatUsd(gasto.amountUsd)}</td>
                 <td className="py-3 px-3 text-text-secondary whitespace-nowrap">{formatDate(gasto.date)}</td>
@@ -131,6 +154,8 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
             isOwner={isOwner}
             onDelete={setDeleteTarget}
             onPay={setConfirmPayTarget}
+            isSelected={selectedIds.includes(gasto.id)}
+            onToggleSelect={toggleSelect}
           />
         ))}
       </div>
@@ -190,11 +215,15 @@ function MobileCard({
   isOwner,
   onDelete,
   onPay,
+  isSelected,
+  onToggleSelect,
 }: {
   gasto: Gasto;
   isOwner: boolean;
   onDelete: (t: { id: string; category: string }) => void;
   onPay: (t: { id: string; category: string; amountUsd: number }) => void;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
 }) {
   const status = STATUS_CONFIG[gasto.status] ?? STATUS_CONFIG.pending;
   const isPending = gasto.status === 'pending';
@@ -202,7 +231,15 @@ function MobileCard({
   return (
     <Card className="overflow-hidden">
       {/* Monto destacado */}
-      <div className="text-center pt-5 pb-3 px-4">
+      <div className="text-center pt-5 pb-3 px-4 relative">
+        {isPending && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(gasto.id)}
+            className="absolute top-3 right-3 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+        )}
         <p className="text-2xl font-bold text-primary leading-none tracking-tight">
           {formatUsd(gasto.amountUsd)}
         </p>

@@ -4,6 +4,7 @@ import { Button, Card, Modal, Input, SearchableSelect, Spinner } from '../../../
 import { useRecipeForm } from '../hooks/useRecipeForm';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { formatUsd } from '@/lib/formatBs';
 import type { Recipe } from '../types';
 
 interface RecipeFormProps {
@@ -67,7 +68,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const isEdit = !!recipe;
 
   const {
-    form, errors, warnings,
+    form, errors, warnings, estimatedCost,
     currentStep, totalSteps,
     updateField, addLine, updateLine, removeLine,
     nextStep, prevStep,
@@ -417,6 +418,18 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     <div className="flex justify-between">
                       <span>Merma:</span>
                       <span className="font-medium text-warning">{form.wastePct}%</span>
+                    </div>
+                  )}
+                  {estimatedCost.totalCost > 0 && (
+                    <div className="flex justify-between">
+                      <span>Costo estimado:</span>
+                      <span className="font-medium text-gray-800">{formatUsd(estimatedCost.totalCost)}</span>
+                    </div>
+                  )}
+                  {form.mode === 'batch' && estimatedCost.costPerUnit > 0 && (
+                    <div className="flex justify-between">
+                      <span>Costo/unidad:</span>
+                      <span className="font-semibold text-primary">{formatUsd(estimatedCost.costPerUnit)}</span>
                     </div>
                   )}
                 </div>
@@ -844,6 +857,18 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   <div className="flex justify-between">
                     <span>Merma:</span>
                     <span className="font-medium text-warning">{form.wastePct}%</span>
+                  </div>
+                )}
+                {estimatedCost.totalCost > 0 && (
+                  <div className="flex justify-between">
+                    <span>Costo estimado:</span>
+                    <span className="font-medium text-gray-800">{formatUsd(estimatedCost.totalCost)}</span>
+                  </div>
+                )}
+                {form.mode === 'batch' && estimatedCost.costPerUnit > 0 && (
+                  <div className="flex justify-between">
+                    <span>Costo/unidad:</span>
+                    <span className="font-semibold text-primary">{formatUsd(estimatedCost.costPerUnit)}</span>
                   </div>
                 )}
               </div>

@@ -1,15 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus, Receipt, RotateCcw, DollarSign } from 'lucide-react';
 import { Button, Card, BottomNav, ModuleOnboarding, type BottomNavItem } from '@/common/components';
 import { useFuzzySearch } from '@/lib/useFuzzySearch';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
+import { gastosService } from '../services/gastosService';
+import { useToastStore } from '../../../stores/toastStore';
 import { useGastos } from '../hooks/useGastos';
 import { useRecurringGastos } from '../hooks/useRecurringGastos';
 import { useGastosStore } from '../stores/gastosStore';
 import { GastoForm } from './GastoForm';
 import { GastoList } from './GastoList';
 import { GastoFilters } from './GastoFilters';
+import { GastosSummary } from './GastosSummary';
 import type { CreateGastoInput } from '../types';
 
 interface GastosPageProps {
@@ -19,9 +23,11 @@ interface GastosPageProps {
 export function GastosPage({ tenantId }: GastosPageProps) {
   const { gastos, loading, filters, setFilters, createGasto, updateGasto, removeGasto } = useGastos(tenantId);
   const { recurringTemplates } = useRecurringGastos(tenantId);
-  const { showForm, setShowForm } = useGastosStore();
+  const { showForm, setShowForm, selectedIds, clearSelection } = useGastosStore();
   const isOnline = useOnlineStatus();
   const role = useAuthStore((s) => s.session?.role);
+  const currentRate = useExchangeRateStore((s) => s.rate);
+  const { addToast } = useToastStore();
 
   const [activeTab, setActiveTab] = useState<'gastos' | 'recurrentes'>('gastos');
 
@@ -65,6 +71,18 @@ export function GastosPage({ tenantId }: GastosPageProps) {
   const handleOpenNew = () => {
     setShowForm(true);
   };
+
+  const handleBatchPay = useCallback(async () => {
+    if (!tenantId || selectedIds.length === 0 || !currentRate) return;
+    const result = await gastosService.markMultipleAsPaid(tenantId, selectedIds, currentRate);
+    if (result.ok) {
+      addToast({ type: 'success', message: `${selectedIds.length} gasto(s) marcado(s) como pagado(s)` });
+      clearSelection();
+      window.location.reload();
+    } else {
+      addToast({ type: 'error', message: result.error.message });
+    }
+  }, [tenantId, selectedIds, currentRate, addToast, clearSelection]);
 
   const bottomNavItems: BottomNavItem[] = useMemo(() => [
     {
@@ -136,6 +154,8 @@ export function GastosPage({ tenantId }: GastosPageProps) {
         </button>
       </div>
 
+      <GastosSummary gastos={filteredGastos} />
+
       <Card>
         <div className="p-4 space-y-4">
           <GastoFilters filters={filters} onChange={setFilters} />
@@ -181,6 +201,18 @@ export function GastosPage({ tenantId }: GastosPageProps) {
       ]}
       onComplete={() => {}}
     />
+
+    {selectedIds.length > 0 && (
+      <div className="fixed bottom-20 left-0 right-0 bg-white border-t shadow-lg p-4 z-50">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          <span className="text-sm text-gray-600">{selectedIds.length} seleccionados</span>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={clearSelection}>Cancelar</Button>
+            <Button onClick={handleBatchPay}>Marcar como pagados</Button>
+          </div>
+        </div>
+      </div>
+    )}
   </>
-  );
+);
 }

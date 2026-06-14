@@ -61,6 +61,35 @@ import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder, DexieProduct }
 
 const PRODUCTION_MODULE = 'PRODUCTION';
 
+/**
+ * Calcula el costo estimado de producción desde las líneas del formulario (puro, sin DB).
+ * Usado para preview en tiempo real en RecipeForm.
+ */
+export function computeRecipeCostFromLines(
+  lines: Array<{ productId: string; quantity: number; unit: string }>,
+  products: Map<string, { costPrice: number; isWeighted: boolean; unit: string }>,
+  wastePct: number,
+  yieldQuantity: number,
+): { totalCost: number; costPerUnit: number } {
+  const wasteMultiplier = 1 + (wastePct / 100);
+  let totalCost = 0;
+
+  for (const line of lines) {
+    const product = products.get(line.productId);
+    if (!product) continue;
+    const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
+    const costPerStorageUnit = product.isWeighted
+      ? product.costPrice / 1000
+      : product.costPrice;
+    totalCost += neededInStorage * costPerStorageUnit;
+  }
+
+  return {
+    totalCost: preciseRound(totalCost, 2),
+    costPerUnit: yieldQuantity > 0 ? preciseRound(totalCost / yieldQuantity, 4) : 0,
+  };
+}
+
 // PRODUCTION-001: Límite máximo de profundidad de recursión para sub-recetas
 const MAX_RECIPE_DEPTH = 5;
 

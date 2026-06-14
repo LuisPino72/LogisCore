@@ -9,6 +9,7 @@ interface GastosState {
   selectedGasto: Gasto | null;
   showForm: boolean;
   editingGasto: Gasto | null;
+  selectedIds: string[];
   setGastos: (gastos: Gasto[]) => void;
   setRecurringTemplates: (templates: Gasto[]) => void;
   setLoading: (loading: boolean) => void;
@@ -16,6 +17,9 @@ interface GastosState {
   setSelectedGasto: (gasto: Gasto | null) => void;
   setShowForm: (show: boolean) => void;
   setEditingGasto: (gasto: Gasto | null) => void;
+  toggleSelect: (id: string) => void;
+  selectAll: (ids: string[]) => void;
+  clearSelection: () => void;
 }
 
 export const useGastosStore = create<GastosState>((set) => ({
@@ -32,6 +36,7 @@ export const useGastosStore = create<GastosState>((set) => ({
   selectedGasto: null,
   showForm: false,
   editingGasto: null,
+  selectedIds: [],
   setGastos: (gastos) => set({ gastos }),
   setRecurringTemplates: (templates) => set({ recurringTemplates: templates }),
   setLoading: (loading) => set({ loading }),
@@ -39,4 +44,11 @@ export const useGastosStore = create<GastosState>((set) => ({
   setSelectedGasto: (gasto) => set({ selectedGasto: gasto }),
   setShowForm: (show) => set({ showForm: show }),
   setEditingGasto: (gasto) => set({ editingGasto: gasto }),
+  toggleSelect: (id) => set((s) => ({
+    selectedIds: s.selectedIds.includes(id)
+      ? s.selectedIds.filter((i) => i !== id)
+      : [...s.selectedIds, id],
+  })),
+  selectAll: (ids) => set({ selectedIds: ids }),
+  clearSelection: () => set({ selectedIds: [] }),
 }));

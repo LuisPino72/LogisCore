@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, Phone, CreditCard, IdCard } from 'lucide-react';
 import { Button, Input, Modal, CedulaInput, Textarea } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
+import { formatPhone, unformatPhone } from '../../../lib/utils';
 import { useToastStore } from '../../../stores/toastStore';
 import {
   CreateCustomerInputSchema,
@@ -137,12 +138,15 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
         <Input
           label={<span className="flex items-center gap-2"><Phone size={14} className="text-text-muted" /> Teléfono <span className="text-text-muted font-normal">(opcional)</span></span>}
           placeholder="Ej: 0412-1234567"
-          value={phone}
-          sanitize="phone"
-          onChange={(e) => { setPhone(sanitizeValue(e.target.value, 'phone')); clearFieldError('phone'); }}
+          value={formatPhone(phone)}
+          onChange={(e) => {
+            const formatted = formatPhone(e.target.value);
+            setPhone(unformatPhone(formatted));
+            clearFieldError('phone');
+          }}
           error={fieldErrors.phone}
           validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
-          hint="Formato: 04121234567"
+          hint="Formato: 0412-1234567"
           inputClassName="text-sm"
         />
 
