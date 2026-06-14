@@ -22,6 +22,7 @@ import {
   ErrorBoundary,
   type SidebarModule,
 } from './common/components';
+import { OfflineBanner } from './common/components/OfflineBanner';
 import {
   ShoppingCart,
   Package,
@@ -514,6 +515,7 @@ const App = () => {
     <BrowserRouter>
       <AppRoutes />
       <ToastContainer />
+      <OfflineBanner />
     </BrowserRouter>
   );
 };

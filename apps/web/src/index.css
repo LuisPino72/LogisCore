@@ -188,7 +188,7 @@
 }
 
 /* ───────────────────── TOAST ───────────────────── */
-.toast-container { @apply fixed top-4 right-4 z-100 flex flex-col gap-2 max-w-sm; }
+.toast-container { @apply fixed right-4 z-100 flex flex-col gap-2 max-w-sm; top: max(1rem, env(safe-area-inset-top, 0px)); }
 .toast { @apply flex items-start gap-2.5 px-4 py-3 rounded-lg shadow-xl animate-slide-down backdrop-blur-md border; }
 .toast-success { @apply bg-green-50/90 border-green-200 text-green-800; }
 .toast-error { @apply bg-red-50/90 border-red-200 text-red-800; }
@@ -352,11 +352,11 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
 
 /* ───────────────────── FLUID DESIGN TOKENS ───────────────────── */
 :root {
-  --text-fluid-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
-  --text-fluid-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
-  --text-fluid-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
-  --text-fluid-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
-  --text-fluid-xl: clamp(1.25rem, 1rem + 1.25vw, 1.5rem);
+  --text-fluid-xs: clamp(0.8125rem, 0.78rem + 0.2vw, 0.875rem);
+  --text-fluid-sm: clamp(0.875rem, 0.84rem + 0.3vw, 1rem);
+  --text-fluid-base: clamp(1rem, 0.92rem + 0.4vw, 1.125rem);
+  --text-fluid-lg: clamp(1.125rem, 1.05rem + 0.5vw, 1.25rem);
+  --text-fluid-xl: clamp(1.25rem, 1.1rem + 1vw, 1.5rem);
   --text-fluid-2xl: clamp(1.5rem, 1.25rem + 1.25vw, 2rem);
 }
 
@@ -499,4 +499,14 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
 }
 .animate-check-pop {
   animation: checkPop 0.4s ease-out;
+}
+
+/* ───────────────────── PWA STANDALONE ───────────────────── */
+@media (display-mode: standalone) {
+  .app-topbar {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

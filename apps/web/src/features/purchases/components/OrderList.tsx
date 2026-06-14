@@ -7,6 +7,17 @@ import { formatUsd } from '@/lib/formatBs';
 import { formatDate } from '../../../lib/formatDate';
 import { getInitials } from '../../../lib/utils';
 
+function getStatusBorderColor(status: PurchaseOrderStatus): string {
+  switch (status) {
+    case 'received': return 'border-l-success';
+    case 'cancelled': return 'border-l-danger';
+    case 'confirmed': return 'border-l-info';
+    case 'partially_received': return 'border-l-warning';
+    case 'draft': return 'border-l-gray-300';
+    default: return 'border-l-gray-200';
+  }
+}
+
 interface OrderListProps {
   orders: PurchaseOrderWithItems[];
   loading: boolean;
@@ -47,7 +58,7 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Orden #${order.id.slice(0, 8).toUpperCase()}`}>
-      <div className="space-y-4">
+      <div className={`space-y-4 border-l-3 ${getStatusBorderColor(order.status)}`}>
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <span className="text-xs font-bold text-primary">{getInitials(order.supplierName || 'SP')}</span>
@@ -170,7 +181,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
         return (
           <div
             key={order.id}
-            className="rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md"
+            className={`rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md border-l-3 ${getStatusBorderColor(order.status)}`}
           >
             <div className="p-3 space-y-3">
               {/* Header: icon + info + actions */}
