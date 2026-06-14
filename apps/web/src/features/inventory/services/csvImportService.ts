@@ -135,13 +135,23 @@ export function reconcileWeighted(isWeighted: boolean, unit: string): { isWeight
   return { isWeighted, unit };
 }
 
+const VALID_PRODUCT_TYPES = ['resale', 'materia_prima', 'materia', 'prima', 'raw', 'raw_material'];
+
 function parseProductType(value: string | undefined): 'resale' | 'materia_prima' {
   if (!value) return 'resale';
   const v = value.trim().toLowerCase();
   if (v === 'materia_prima' || v === 'materia' || v === 'prima' || v === 'raw' || v === 'raw_material') {
     return 'materia_prima';
   }
+  if (v !== 'resale' && v !== '') {
+    return 'resale';
+  }
   return 'resale';
+}
+
+function isValidProductType(value: string | undefined): boolean {
+  if (!value || value.trim() === '') return true;
+  return VALID_PRODUCT_TYPES.includes(value.trim().toLowerCase());
 }
 
 export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
@@ -225,6 +235,10 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
     }
   }
 
+  if (row.tipo && row.tipo.trim() !== '' && !isValidProductType(row.tipo)) {
+    errors.push({ field: 'tipo', message: `Tipo "${row.tipo}" no es válido. Usa: resale o materia_prima` });
+  }
+
   if (row.pesable && row.pesable.trim() === 'no' && rawUnit !== 'unidad' && row.unidad) {
     errors.push({ field: 'unidad', message: 'Si el producto no es pesable, la unidad debe ser "unidad"' });
   }
@@ -302,7 +316,9 @@ export async function parseCsvFile(file: File): Promise<Result<CsvRow[], AppErro
       skipBOM: true,
       complete: (results: Papa.ParseResult<CsvRow>) => {
         if (results.errors.length > 0) {
-          resolve(failure(new AppErrorClass('CSV_PARSE_ERROR', `Error al leer el archivo: ${results.errors[0].message}`)));
+          const errorMsgs = results.errors.slice(0, 5).map((e) => `Línea ${e.row ?? '?'}: ${e.message}`).join('; ');
+          const suffix = results.errors.length > 5 ? ` (y ${results.errors.length - 5} más)` : '';
+          resolve(failure(new AppErrorClass('CSV_PARSE_ERROR', `Errores al leer el archivo: ${errorMsgs}${suffix}`)));
           return;
         }
         const data = results.data as CsvRow[];
@@ -462,18 +478,25 @@ export async function importProductsFromCsv(
   const categoryMap = new Map(existingCategories.filter((c) => !c.deletedAt).map((c) => [normalizeText(c.name), c]));
   const categoriesCreated: string[] = [];
 
-  const validatedResults = await validateCsvRows(rows, tenantId);
+  // Las filas ya vienen pre-filtradas como válidas del caller (handleImport).
+  // No re-validamos aquí para evitar desync si la DB cambia entre preview e import.
   const summary: ImportSummary = {
     total: rows.length,
-    valid: validatedResults.filter((r) => r.status === 'valid').length,
-    errors: validatedResults.filter((r) => r.status === 'error').length,
-    duplicates: validatedResults.filter((r) => r.status === 'duplicate').length,
+    valid: rows.length,
+    errors: 0,
+    duplicates: 0,
     imported: 0,
-    results: validatedResults,
+    results: rows.map((r, i) => ({
+      rowIndex: i + 1,
+      sku: r.sku?.trim() ?? '',
+      nombre: r.nombre?.trim() ?? '',
+      status: 'valid' as const,
+      errors: [],
+    })),
     categoriesCreated,
   };
 
-  const validRows = rows.filter((_, i) => validatedResults[i]?.status === 'valid');
+  const validRows = rows;
 
   // Pre-resolver categorías
   const categoryResolveMap = new Map<string, string>();
@@ -560,7 +583,7 @@ export async function importProductsFromCsv(
           priceUsd: finalPriceUsd,
           categoryId,
           isWeighted: finalIsWeighted,
-          isTaxable: parseBoolean(firstRow.iva),
+          isTaxable: firstRow.iva?.trim() ? parseBoolean(firstRow.iva) : true,
           isSellable: firstRow.vendible ? parseBoolean(firstRow.vendible) : !isMateriaPrima,
           unit: finalUnit as 'kg' | 'gr' | 'lt' | 'm' | 'unidad',
           stockInicial: stock,

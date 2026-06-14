@@ -5,12 +5,14 @@ import { parseCsvFile, validateCsvRows, importProductsFromCsv, validateRow, type
 
 function downloadCsvTemplate() {
   const headers = 'nombre,sku,tipo,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible,pres_nombre,pres_precio,pres_multiplicador,pres_codigo_barras';
+  const docs = '# tipo: resale (venta) o materia_prima | pesable: si/no | unidad: kg/gr/lt/m/unidad | iva: si/no | vendible: si/no';
+  const docs2 = '# stock_min se calcula automaticamente como stock/4 si se deja vacio';
   const example1 = 'Arroz Premium,ARR001,resale,2,1,100,10,víveres,si,kg,si,si,,,,';
   const example2 = 'Aceite Vegetal,ACE002,resale,3.75,2.10,50,5,víveres,si,lt,si,si,,,,';
   const example3 = 'Leche,LEC001,resale,2.50,1.80,100,10,Lácteos,no,unidad,si,si,250ml,2.50,1,7591234567890';
   const example4 = 'Leche,LEC001,resale,,1.80,100,10,Lácteos,no,unidad,si,si,500ml,4.00,2,7591234567891';
   const example5 = 'Harina,HAR001,materia_prima,,0.80,500,50,Básicos,si,kg,no,no,,,,';
-  const csvContent = `${headers}\n${example1}\n${example2}\n${example3}\n${example4}\n${example5}`;
+  const csvContent = `${headers}\n${docs}\n${docs2}\n${example1}\n${example2}\n${example3}\n${example4}\n${example5}`;
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -60,6 +62,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editingRows, setEditingRows] = useState<CsvRow[]>([]);
+  const [editingOriginalIndices, setEditingOriginalIndices] = useState<Map<number, number>>(new Map());
   const [editingErrors, setEditingErrors] = useState<Record<number, ValidationError[]>>({});
 
   const reset = useCallback(() => {
@@ -71,6 +74,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
     setError(null);
     setFileName('');
     setEditingRows([]);
+    setEditingOriginalIndices(new Map());
     setEditingErrors({});
   }, []);
 
@@ -116,8 +120,10 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
 
     setStep('importing');
     setLoading(true);
+    setImportProgress({ done: 0, total: validRows.length });
 
     const importSummary = await importProductsFromCsv(validRows, tenantId, userId);
+    setImportProgress({ done: validRows.length, total: validRows.length });
     setSummary(importSummary);
     setLoading(false);
     setStep('result');
@@ -130,7 +136,10 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
       if (r.status === 'error') errorIndices.push(i);
     });
     const rows = errorIndices.map((i) => ({ ...parsedRows[i] }));
+    const indexMap = new Map<number, number>();
+    errorIndices.forEach((origIdx, editingIdx) => { indexMap.set(editingIdx, origIdx); });
     setEditingRows(rows);
+    setEditingOriginalIndices(indexMap);
     setEditingErrors({});
     setStep('editing');
   }, [parsedRows, results]);
@@ -166,6 +175,14 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
 
   const deleteEditRow = useCallback((index: number) => {
     setEditingRows((prev) => prev.filter((_, i) => i !== index));
+    setEditingOriginalIndices((prev) => {
+      const next = new Map<number, number>();
+      prev.forEach((origIdx, editIdx) => {
+        if (editIdx < index) next.set(editIdx, origIdx);
+        else if (editIdx > index) next.set(editIdx - 1, origIdx);
+      });
+      return next;
+    });
     setEditingErrors((prev) => {
       const next = { ...prev };
       delete next[index];
@@ -217,6 +234,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
     const validationResults = await validateCsvRows(newParsedRows, tenantId);
     setResults(validationResults);
     setEditingRows([]);
+    setEditingOriginalIndices(new Map());
     setEditingErrors({});
     setStep('preview');
   }, [editingRows, parsedRows, results, tenantId, validateEditingRow]);
@@ -225,6 +243,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
   const errorCount = results.filter((r) => r.status === 'error').length;
   const duplicateCount = results.filter((r) => r.status === 'duplicate').length;
   const previewRows = parsedRows.slice(0, 5);
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Importar productos CSV" size="lg">
@@ -405,7 +424,9 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
               return (
                 <div key={i} className="border border-gray-200 rounded-xl p-3 sm:p-4 space-y-3 bg-white">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-600">Fila {i + 1}</span>
+                    <span className="text-xs font-medium text-gray-600">
+                      Fila {editingOriginalIndices.get(i) !== undefined ? editingOriginalIndices.get(i)! + 1 : i + 1}
+                    </span>
                     <button
                       type="button"
                       onClick={() => deleteEditRow(i)}
@@ -688,7 +709,19 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
         <div className="flex flex-col items-center gap-4 py-8">
           <Loader2 size={32} className="text-primary animate-spin" />
           <p className="text-sm text-gray-600">Importando productos...</p>
-          <p className="text-xs text-gray-600">Esto puede tomar unos segundos</p>
+          <div className="w-full max-w-xs">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Progreso</span>
+              <span>{importProgress.done} / {importProgress.total}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{ width: `${importProgress.total > 0 ? (importProgress.done / importProgress.total) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400">Esto puede tomar unos segundos</p>
         </div>
       )}
 
