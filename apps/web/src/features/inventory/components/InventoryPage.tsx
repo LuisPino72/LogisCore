@@ -50,10 +50,113 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
   const [showCsvImport, setShowCsvImport] = useState(false);
+  const [showBulkAdjustment, setShowBulkAdjustment] = useState(false);
+  const [bulkProductIds, setBulkProductIds] = useState<string[]>([]);
+  const [bulkAdjMode, setBulkAdjMode] = useState<'sumar' | 'restar'>('sumar');
+  const [bulkAdjQuantity, setBulkAdjQuantity] = useState('');
+  const [bulkAdjReasonType, setBulkAdjReasonType] = useState<string>('inventario_inicial');
+  const [bulkAdjSubmitting, setBulkAdjSubmitting] = useState(false);
+  const [bulkAdjError, setBulkAdjError] = useState('');
 
   const handleAdjustStock = async (productId: string, quantity: number, reasonType: AdjustmentReason, costTotal?: number) => {
     if (!tenantId || !userId) return false;
     return adjustStock({ productId, quantity, reasonType, costTotal, userId, tenantId });
+  };
+
+  const handleBulkAdjust = (productIds: string[]) => {
+    setBulkProductIds(productIds);
+    setBulkAdjMode('sumar');
+    setBulkAdjQuantity('');
+    setBulkAdjReasonType('inventario_inicial');
+    setBulkAdjError('');
+    setShowBulkAdjustment(true);
+  };
+
+  const handleBulkSubmit = async () => {
+    if (!bulkAdjMode) {
+      setBulkAdjError('Selecciona si quieres sumar o restar stock');
+      return;
+    }
+
+    const rawQty = parseFloat(bulkAdjQuantity);
+    if (isNaN(rawQty) || rawQty <= 0) {
+      setBulkAdjError('Ingresa una cantidad válida mayor a 0');
+      return;
+    }
+
+    if (!bulkAdjReasonType) {
+      setBulkAdjError('Selecciona un motivo para el ajuste');
+      return;
+    }
+
+    if (rawQty > 999999) {
+      setBulkAdjError('La cantidad no puede ser mayor a 999,999');
+      return;
+    }
+
+    const bulkProducts = bulkProductIds
+      .map(id => products.find(p => p.id === id))
+      .filter(Boolean) as Product[];
+
+    if (bulkProducts.length === 0) {
+      setBulkAdjError('No se encontraron los productos seleccionados');
+      return;
+    }
+
+    for (const product of bulkProducts) {
+      if (!product.isWeighted && rawQty !== Math.floor(rawQty)) {
+        setBulkAdjError(`"${product.name}" es por unidad — solo acepta números enteros`);
+        return;
+      }
+      if (product.isWeighted && !/^\d+\.?\d{0,2}$/.test(bulkAdjQuantity)) {
+        setBulkAdjError(`"${product.name}" es pesable — acepta máximo 2 decimales`);
+        return;
+      }
+    }
+
+    if (bulkAdjMode === 'restar') {
+      const exceedsProducts: string[] = [];
+      for (const product of bulkProducts) {
+        const maxStock = product.unit === 'kg' || product.unit === 'lt'
+          ? (product.stock / 1000) : product.stock;
+        if (rawQty > maxStock) {
+          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : 'unidades';
+          exceedsProducts.push(`"${product.name}" (max: ${maxStock} ${unitLabel})`);
+        }
+      }
+      if (exceedsProducts.length > 0) {
+        if (exceedsProducts.length === bulkProducts.length) {
+          setBulkAdjError(`Ningún producto tiene suficiente stock para restar ${rawQty}`);
+        } else if (exceedsProducts.length === 1) {
+          setBulkAdjError(`${exceedsProducts[0]} no tiene suficiente stock`);
+        } else {
+          setBulkAdjError(`${exceedsProducts.length} productos no tienen suficiente stock. Reduce la cantidad o quítalos de la selección.`);
+        }
+        return;
+      }
+    }
+
+    setBulkAdjSubmitting(true);
+    setBulkAdjError('');
+    let successCount = 0;
+    let failCount = 0;
+    for (const product of bulkProducts) {
+      const qty = bulkAdjMode === 'restar' ? -rawQty : rawQty;
+      const ok = await handleAdjustStock(product.id, qty, bulkAdjReasonType as AdjustmentReason);
+      if (ok) successCount++;
+      else failCount++;
+    }
+    setBulkAdjSubmitting(false);
+    if (successCount > 0) {
+      const msg = failCount > 0
+        ? `${successCount} ajustado${successCount !== 1 ? 's' : ''}, ${failCount} fallido${failCount !== 1 ? 's' : ''}`
+        : `${successCount} producto${successCount !== 1 ? 's' : ''} ajustado${successCount !== 1 ? 's' : ''}`;
+      addToast({ type: failCount > 0 ? 'warning' : 'success', message: msg, duration: 4000 });
+      setShowBulkAdjustment(false);
+      setBulkProductIds([]);
+    } else {
+      setBulkAdjError('Error al ajustar stock de todos los productos. Verifica tu conexión.');
+    }
   };
 
   const {
@@ -196,8 +299,21 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           Cargando productos...
         </div>
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton h-16 rounded-xl" />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="skeleton w-16 h-16 rounded-lg shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-4 w-3/4 rounded" />
+                  <div className="skeleton h-3 w-1/2 rounded" />
+                  <div className="flex gap-2 mt-1">
+                    <div className="skeleton h-5 w-16 rounded-full" />
+                    <div className="skeleton h-5 w-12 rounded-full" />
+                  </div>
+                </div>
+                <div className="skeleton w-8 h-8 rounded-full shrink-0" />
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -310,6 +426,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               }}
               onViewLots={(id) => setSelectedProductLotsId(id)}
               onRefresh={refresh}
+              onBulkAdjust={handleBulkAdjust}
             />
           </div>
         )}
@@ -319,6 +436,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             <div className="p-4">
               <CategoryManager
                 categories={categories}
+                products={products}
                 isOwner={isOwner}
                 onCreate={async (name) => {
                   if (!tenantId) return false;
@@ -539,6 +657,154 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                   </p>
                 </div>
               )}
+            </div>
+          </Modal>
+        );
+      })()}
+
+      {showBulkAdjustment && (() => {
+        const bulkProducts = bulkProductIds
+          .map(id => products.find(p => p.id === id))
+          .filter(Boolean) as Product[];
+
+        const rawQty = parseFloat(bulkAdjQuantity);
+        const hasValidQty = !isNaN(rawQty) && rawQty > 0;
+
+        const hasWeighted = bulkProducts.some(p => p.isWeighted);
+        const hasUnit = bulkProducts.some(p => !p.isWeighted);
+        const hasMixedUnits = hasWeighted && hasUnit;
+
+        const REASON_OPTIONS: { value: AdjustmentReason; label: string }[] = [
+          { value: 'inventario_inicial', label: 'Error de ingreso inicial' },
+          { value: 'perdida', label: 'Pérdida' },
+          { value: 'robo', label: 'Robo' },
+          { value: 'vencido', label: 'Vencido' },
+          { value: 'consumo_interno', label: 'Consumo interno' },
+          { value: 'otros', label: 'Otros' },
+        ];
+
+        return (
+          <Modal
+            isOpen={showBulkAdjustment}
+            onClose={() => { setShowBulkAdjustment(false); setBulkProductIds([]); }}
+            title="Ajuste masivo de stock"
+            footer={
+              <div className="flex gap-3 w-full">
+                <Button variant="ghost" fullWidth onClick={() => { setShowBulkAdjustment(false); setBulkProductIds([]); }}>Cancelar</Button>
+                <Button variant="primary" fullWidth onClick={handleBulkSubmit} disabled={bulkAdjSubmitting || !isOnline}>
+                  {bulkAdjSubmitting ? 'Ajustando...' : 'Ajustar stock'}
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              {hasMixedUnits && (
+                <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
+                  <p className="text-xs text-warning-dark">
+                    Hay productos pesables (Kg/Lt) y por unidad en la selección. La cantidad se aplicará tal cual a cada producto.
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-gray-50 rounded-xl p-3 max-h-48 overflow-y-auto">
+                <p className="text-xs font-medium text-gray-500 mb-2">
+                  {bulkProducts.length} producto{bulkProducts.length !== 1 ? 's' : ''} seleccionado{bulkProducts.length !== 1 ? 's' : ''}
+                </p>
+                <div className="space-y-1.5">
+                  {bulkProducts.map(p => {
+                    const displayStock = p.unit === 'kg' || p.unit === 'lt'
+                      ? (p.stock / 1000).toFixed(2)
+                      : p.stock.toString();
+                    const unitLabel = p.unit === 'kg' ? 'Kg' : p.unit === 'lt' ? 'Lt' : 'un';
+                    const currentQty = hasValidQty ? rawQty : 0;
+                    const newStock = bulkAdjMode === 'restar'
+                      ? p.stock - (p.unit === 'kg' || p.unit === 'lt' ? currentQty * 1000 : currentQty)
+                      : p.stock + (p.unit === 'kg' || p.unit === 'lt' ? currentQty * 1000 : currentQty);
+                    const newDisplay = p.unit === 'kg' || p.unit === 'lt'
+                      ? (newStock / 1000).toFixed(2)
+                      : Math.round(newStock).toString();
+                    const wouldGoNegative = bulkAdjMode === 'restar' && newStock < 0;
+
+                    return (
+                      <div key={p.id} className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
+                        <span className="text-gray-700 truncate min-w-0 flex-1 mr-2">{p.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-xs text-gray-500">{displayStock} {unitLabel}</span>
+                          {hasValidQty && (
+                            <>
+                              <span className="text-[10px] text-gray-400">→</span>
+                              <span className={`text-xs font-medium ${wouldGoNegative ? 'text-danger' : 'text-primary'}`}>
+                                {newDisplay} {unitLabel}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="input-label">Tipo de ajuste</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setBulkAdjMode('sumar'); setBulkAdjQuantity(''); setBulkAdjError(''); }}
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      bulkAdjMode === 'sumar'
+                        ? 'bg-success text-white shadow-sm'
+                        : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
+                    }`}
+                  >
+                    <Plus size={16} />
+                    Sumar stock
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setBulkAdjMode('restar'); setBulkAdjQuantity(''); setBulkAdjError(''); setBulkAdjReasonType('perdida'); }}
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      bulkAdjMode === 'restar'
+                        ? 'bg-danger text-white shadow-sm'
+                        : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
+                    }`}
+                  >
+                    <Minus size={16} />
+                    Restar stock
+                  </button>
+                </div>
+              </div>
+
+              <div className="input-wrapper">
+                <label className="input-label">Cantidad {bulkAdjMode === 'sumar' ? 'a sumar' : 'a restar'}</label>
+                <Input
+                  sanitize="number"
+                  decimals={2}
+                  inputMode="decimal"
+                  placeholder="Ej: 10"
+                  value={bulkAdjQuantity}
+                  onChange={(e) => { setBulkAdjQuantity(e.target.value); setBulkAdjError(''); }}
+                  validation={{ required: true, min: 0.01 }}
+                  error={bulkAdjError}
+                  inputClassName="text-sm"
+                />
+                {hasMixedUnits && hasValidQty && (
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Para pesables: {rawQty} Kg/Lt = {rawQty * 1000} unidades internas
+                  </p>
+                )}
+              </div>
+
+              <div className="input-wrapper">
+                <label className="input-label">Motivo</label>
+                <SearchableSelect
+                  value={bulkAdjReasonType}
+                  onChange={(v) => { setBulkAdjReasonType(v); setBulkAdjError(''); }}
+                  options={REASON_OPTIONS}
+                  hideSearch
+                />
+              </div>
             </div>
           </Modal>
         );

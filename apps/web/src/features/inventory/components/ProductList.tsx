@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, MoreVertical } from 'lucide-react';
+import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, MoreVertical, Settings, ClipboardCheck } from 'lucide-react';
 import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect, Modal } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
@@ -26,6 +26,7 @@ interface ProductListProps {
   onAdjust: (id: string) => void;
   onViewLots: (productId: string) => void;
   onRefresh: () => void;
+  onBulkAdjust?: (productIds: string[]) => void;
 }
 
 function getStockLabel(isWeighted: boolean, unit: string): string {
@@ -78,7 +79,7 @@ function applyProductTypeFilter(product: { isWeighted: boolean; id: string; prod
   }
 }
 
-export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots }: ProductListProps) {
+export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onBulkAdjust }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
@@ -89,6 +90,8 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
   const [variantModalProductId, setVariantModalProductId] = useState<string | null>(null);
   const [variantModalData, setVariantModalData] = useState<{ name: string; priceUsd: number }[]>([]);
   const [variantModalLoading, setVariantModalLoading] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
 
   const openVariantModal = async (productId: string) => {
     setVariantModalProductId(productId);
@@ -318,37 +321,66 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         className: 'text-right',
         render: (product) => (
           <div className="flex items-center justify-end gap-0.5">
-            <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
-              <Edit3 size={15} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
-              <Trash2 size={15} className="text-danger" />
-            </Button>
-            <Dropdown
-              align="right"
-              trigger={
-                <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
-                  <MoreVertical size={15} className="text-gray-600" />
+            {bulkMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedForBulk(prev => {
+                    const next = new Set(prev);
+                    if (next.has(product.id)) next.delete(product.id);
+                    else next.add(product.id);
+                    return next;
+                  });
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
+              >
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                  selectedForBulk.has(product.id)
+                    ? 'bg-primary border-primary'
+                    : 'border-gray-300 bg-white'
+                }`}>
+                  {selectedForBulk.has(product.id) && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  )}
                 </div>
-              }
-              items={
-                isOnline
-                  ? [
-                    { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                    { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
-                  ]
-                  : [
-                    { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                  ]
-              }
-            />
+              </button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
+                  <Edit3 size={15} />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
+                  <Trash2 size={15} className="text-danger" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5" title="Ajustar stock" disabled={!isOnline}>
+                  <Settings size={15} className="text-primary" />
+                </Button>
+                <Dropdown
+                  align="right"
+                  trigger={
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                      <MoreVertical size={15} className="text-gray-600" />
+                    </div>
+                  }
+                  items={
+                    isOnline
+                      ? [
+                        { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                      ]
+                      : [
+                        { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                      ]
+                  }
+                />
+              </>
+            )}
           </div>
         ),
       });
     }
 
     return cols;
-  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewLots]);
+  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewLots, bulkMode, selectedForBulk]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (
@@ -427,6 +459,42 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         </div>
       </div>
 
+      {isOwner && (
+        <div className="flex items-center gap-2">
+          {bulkMode ? (
+            <>
+              <button
+                type="button"
+                onClick={() => { setBulkMode(false); setSelectedForBulk(new Set()); }}
+                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-100 transition-all"
+              >
+                Salir del conteo
+              </button>
+              <span className="text-xs text-text-secondary">{selectedForBulk.size} seleccionado{selectedForBulk.size !== 1 ? 's' : ''}</span>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={selectedForBulk.size === 0 || !isOnline}
+                onClick={() => onBulkAdjust?.(Array.from(selectedForBulk))}
+                className="ml-auto"
+              >
+                <ClipboardCheck size={14} />
+                Ajustar seleccionados
+              </Button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setBulkMode(true)}
+              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border border-primary text-primary hover:bg-primary/5 transition-all flex items-center gap-1.5"
+            >
+              <ClipboardCheck size={13} />
+              Modo conteo
+            </button>
+          )}
+        </div>
+      )}
+
       {filteredByStock.length > 0 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-text-secondary">{filteredByStock.length} producto{filteredByStock.length !== 1 ? 's' : ''}</p>
@@ -443,6 +511,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
         rowClassName={(p: Product) => {
+          if (bulkMode && selectedForBulk.has(p.id)) return 'bg-primary/5 border-primary/20';
           return p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= getDisplayStockMin(p)! ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
         }}
         emptyMessage="No encontramos productos. Intenta con otro nombre o limpia los filtros."
@@ -497,30 +566,59 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                 </div>
                 {isOwner && (
                   <div className="mt-2 flex items-center justify-center gap-0.5">
-                    <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
-                      <Edit3 size={15} />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
-                      <Trash2 size={15} className="text-danger" />
-                    </Button>
-                    <Dropdown
-                      align="right"
-                      trigger={
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
-                          <MoreVertical size={15} className="text-gray-600" />
+                    {bulkMode ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedForBulk(prev => {
+                            const next = new Set(prev);
+                            if (next.has(product.id)) next.delete(product.id);
+                            else next.add(product.id);
+                            return next;
+                          });
+                        }}
+                        className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
+                      >
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                          selectedForBulk.has(product.id)
+                            ? 'bg-primary border-primary'
+                            : 'border-gray-300 bg-white'
+                        }`}>
+                          {selectedForBulk.has(product.id) && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          )}
                         </div>
-                      }
-                      items={
-                        isOnline
-                          ? [
-                            { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                            { label: 'Ajustar', icon: <Plus size={15} />, onClick: () => onAdjust(product.id) },
-                          ]
-                          : [
-                            { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                          ]
-                      }
-                    />
+                      </button>
+                    ) : (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
+                          <Edit3 size={15} />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
+                          <Trash2 size={15} className="text-danger" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5" title="Ajustar stock" disabled={!isOnline}>
+                          <Settings size={15} className="text-primary" />
+                        </Button>
+                        <Dropdown
+                          align="right"
+                          trigger={
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                              <MoreVertical size={15} className="text-gray-600" />
+                            </div>
+                          }
+                          items={
+                            isOnline
+                              ? [
+                                { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                              ]
+                              : [
+                                { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+                              ]
+                          }
+                        />
+                      </>
+                    )}
                   </div>
                 )}
               </div>

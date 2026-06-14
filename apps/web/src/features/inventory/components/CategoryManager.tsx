@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { ListTree, Trash2, Edit3 } from 'lucide-react';
 import { Button, SearchInput, Input, Modal, EmptyState, Pagination } from '../../../common/components';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
-import type { Category } from '../types';
+import type { Category, Product } from '../types';
 
 const PAGE_SIZE = 10;
 
 interface CategoryManagerProps {
   categories: Category[];
+  products: Product[];
   isOwner: boolean;
   onCreate: (name: string) => Promise<boolean>;
   onUpdate: (id: string, name: string) => Promise<boolean>;
@@ -16,7 +17,7 @@ interface CategoryManagerProps {
   onClose?: () => void;
 }
 
-export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onRequestDelete, isOpen, onClose }: CategoryManagerProps) {
+export function CategoryManager({ categories, products, isOwner, onCreate, onUpdate, onRequestDelete, isOpen, onClose }: CategoryManagerProps) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -104,6 +105,12 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
         onClear={() => setSearch('')}
       />
 
+      <div className="flex items-center gap-3 text-xs text-text-secondary px-1">
+        <span>{categories.length} categoría{categories.length !== 1 ? 's' : ''}</span>
+        <span className="text-gray-300">·</span>
+        <span>{products.length} producto{products.length !== 1 ? 's' : ''}</span>
+      </div>
+
       {paginated.length === 0 ? (
         <EmptyState
           icon={<ListTree size={32} />}
@@ -119,6 +126,9 @@ export function CategoryManager({ categories, isOwner, onCreate, onUpdate, onReq
                 <ListTree size={16} className="text-primary" />
               </div>
               <span className="text-sm font-medium text-gray-900 wrap-break-word w-full text-center sm:text-left sm:flex-1 sm:min-w-0">{cat.name}</span>
+              <span className="text-[10px] font-medium text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded-full">
+                {products.filter(p => p.categoryId === cat.id).length} productos
+              </span>
               {isOwner && (
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-8 min-h-8" title="Editar">
