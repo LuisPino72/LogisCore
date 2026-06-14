@@ -125,7 +125,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           sanitize="phone"
           onChange={(e) => setPhone(sanitizeValue(e.target.value, 'phone'))}
           error={fieldErrors.phone}
-          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
+          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 14 }}
           hint="Formato: 04121234567"
           inputClassName="text-sm"
         />

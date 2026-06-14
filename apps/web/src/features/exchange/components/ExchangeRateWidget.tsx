@@ -35,6 +35,10 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
       setManualError('Ingresa un valor numérico válido');
       return;
     }
+    if (parsed < 10 || parsed > 2000) {
+      setManualError('El valor debe estar entre 10 y 2000');
+      return;
+    }
     if (!tenantId) return;
     await setManual(tenantId, parsed);
     // El store maneja errores internamente vía error state

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const CreateTenantInputSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(25),
   rif: z.string().regex(/^[VJEGP]\d{9}$/, 'RIF inválido formato J123456789'),
-  direccion: z.string().max(50).optional().default(''),
+  direccion: z.string().max(25).optional().default(''),
   telefono: z.string().regex(/^(\+58|0)\d{10}$/, 'Teléfono inválido').optional().default(''),
 }).strict();
 
@@ -54,7 +54,7 @@ export type CreateTenantWithUsersInput = z.infer<typeof CreateTenantWithUsersInp
 export const UpdateTenantSchema = z.object({
   name: z.string().min(1).max(25).optional(),
   rif: z.string().regex(/^[VJEGP]\d{9}$/).optional(),
-  direccion: z.string().max(50).optional(),
+  direccion: z.string().max(25).optional(),
   telefono: z.string().regex(/^(\+58|0)\d{10}$/).optional(),
 }).strict();
 

@@ -76,6 +76,7 @@ export function EmployeeForm({ onSubmit, isSubmitting = false, externalError }: 
           maxLength={20}
           required
           autoComplete="new-password"
+          hint="Mín. 8 caracteres: mayúscula, minúscula, número y símbolo"
         />
         <button
           type="button"

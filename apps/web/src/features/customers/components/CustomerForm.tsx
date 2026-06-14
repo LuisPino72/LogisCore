@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Users, Phone, MapPin, CreditCard, FileText, IdCard } from 'lucide-react';
-import { Button, Input, Modal, CedulaInput } from '../../../common/components';
+import { Users, Phone, CreditCard, IdCard } from 'lucide-react';
+import { Button, Input, Modal, CedulaInput, Textarea } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
 import { useToastStore } from '../../../stores/toastStore';
 import {
@@ -146,20 +146,15 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           inputClassName="text-sm"
         />
 
-        <div>
-          <label className="flex items-center gap-2 text-xs font-medium text-gray-700 mb-1.5">
-            <MapPin size={14} className="text-text-muted" /> Dirección <span className="text-text-muted font-normal">(opcional)</span>
-          </label>
-          <textarea
-            value={address}
-            onChange={(e) => setAddress(e.target.value.slice(0, 30))}
-            placeholder="Ej: Calle 123, Caracas"
-            className="textarea w-full"
-            rows={2}
-            maxLength={30}
-          />
-          <p className="text-xs text-gray-500 mt-1">{address.length}/30 caracteres</p>
-        </div>
+        <Textarea
+          label="Dirección (opcional)"
+          value={address}
+          onChange={(e) => { setAddress(e.target.value); clearFieldError('address'); }}
+          placeholder="Ej: Calle 123, Caracas"
+          rows={2}
+          validation={{ maxLength: 30 }}
+          error={fieldErrors.address}
+        />
 
         <Input
           label={<span className="flex items-center gap-2"><CreditCard size={14} className="text-text-muted" /> Límite de crédito <span className="text-text-muted font-normal">(USD, opcional)</span></span>}
@@ -173,20 +168,15 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           inputClassName="text-sm"
         />
 
-        <div>
-          <label className="flex items-center gap-2 text-xs font-medium text-gray-700 mb-1.5">
-            <FileText size={14} className="text-text-muted" /> Notas <span className="text-text-muted font-normal">(opcional)</span>
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value.slice(0, 30))}
-            placeholder="Ej: Prefiere empanadas los viernes"
-            className="textarea w-full"
-            rows={2}
-            maxLength={30}
-          />
-          <p className="text-xs text-gray-500 mt-1">{notes.length}/30 caracteres</p>
-        </div>
+        <Textarea
+          label="Notas (opcional)"
+          value={notes}
+          onChange={(e) => { setNotes(e.target.value); clearFieldError('notes'); }}
+          placeholder="Ej: Prefiere empanadas los viernes"
+          rows={2}
+          validation={{ maxLength: 30 }}
+          error={fieldErrors.notes}
+        />
 
         {fieldErrors.form && (
           <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">

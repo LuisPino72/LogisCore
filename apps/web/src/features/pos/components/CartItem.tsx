@@ -132,6 +132,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
                 onChange={handleChange}
                 onBlur={handleBlur}
                 validation={{ required: true, min: 0.01, max: 99999 }}
+                hint={item.isWeighted ? 'Máx. 99999' : 'Máx. 99999'}
                 className="text-center py-1.5 text-sm font-semibold"
               />
             </div>

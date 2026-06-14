@@ -275,9 +275,9 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                             type="number"
                             value={line.quantity}
                             onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
-                            min={0.01}
                             step={0.01}
                             placeholder="Cantidad"
+                            validation={{ required: true, min: 0.01, max: 99999 }}
                             error={errors[`line_${index}_quantity`]}
                           />
                           <div>

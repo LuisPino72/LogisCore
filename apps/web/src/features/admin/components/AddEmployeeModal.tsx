@@ -86,6 +86,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           value={employee.password}
           onChange={(e) => setEmployee((p) => ({ ...p, password: e.target.value }))}
           validation={{ required: true, minLength: 8, maxLength: 20 }}
+          hint="Mín. 8 caracteres: mayúscula, minúscula, número y símbolo"
         />
         {error && <p className="text-danger text-sm">{error}</p>}
         <div className="flex gap-2">

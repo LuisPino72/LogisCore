@@ -122,6 +122,7 @@ export function LoginPage() {
             value={email}
             onChange={(e) => { setEmail(e.target.value); clearLoginError(); }}
             error={fieldErrors.email}
+            validation={{ required: 'Ingresa tu email', maxLength: 30 }}
             autoComplete="email"
             autoFocus
             inputClassName="input-glow"
@@ -134,6 +135,7 @@ export function LoginPage() {
             value={password}
             onChange={(e) => { setPassword(e.target.value); clearLoginError(); }}
             error={fieldErrors.password}
+            validation={{ required: 'Ingresa tu contraseña', minLength: 8, maxLength: 100 }}
             iconRight={
               <button
                 type="button"
