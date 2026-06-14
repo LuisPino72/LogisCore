@@ -1,18 +1,16 @@
 import { useState, useRef, useCallback } from 'react';
 import { Button, Modal, Badge, Input } from '../../../common/components';
-import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Plus, Trash2, ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { parseCsvFile, validateCsvRows, importProductsFromCsv, validateRow, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
 
 function downloadCsvTemplate() {
   const headers = 'nombre,sku,tipo,precio,costo,stock,stock_min,categoria,pesable,unidad,iva,vendible,pres_nombre,pres_precio,pres_multiplicador,pres_codigo_barras';
-  const docs = '# tipo: resale (venta) o materia_prima | pesable: si/no | unidad: kg/gr/lt/m/unidad | iva: si/no | vendible: si/no';
-  const docs2 = '# stock_min se calcula automaticamente como stock/4 si se deja vacio';
-  const example1 = 'Arroz Premium,ARR001,resale,2,1,100,10,víveres,si,kg,si,si,,,,';
+  const example1 = 'Arroz Premium,ARR001,resale,2.00,1.00,100,10,víveres,si,kg,si,si,,,,';
   const example2 = 'Aceite Vegetal,ACE002,resale,3.75,2.10,50,5,víveres,si,lt,si,si,,,,';
   const example3 = 'Leche,LEC001,resale,2.50,1.80,100,10,Lácteos,no,unidad,si,si,250ml,2.50,1,7591234567890';
-  const example4 = 'Leche,LEC001,resale,,1.80,100,10,Lácteos,no,unidad,si,si,500ml,4.00,2,7591234567891';
+  const example4 = 'Leche,LEC001,resale,2.50,1.80,100,10,Lácteos,no,unidad,si,si,500ml,4.00,2,7591234567891';
   const example5 = 'Harina,HAR001,materia_prima,,0.80,500,50,Básicos,si,kg,no,no,,,,';
-  const csvContent = `${headers}\n${docs}\n${docs2}\n${example1}\n${example2}\n${example3}\n${example4}\n${example5}`;
+  const csvContent = `${headers}\n${example1}\n${example2}\n${example3}\n${example4}\n${example5}`;
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -60,6 +58,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showColumnGuide, setShowColumnGuide] = useState(false);
 
   const [editingRows, setEditingRows] = useState<CsvRow[]>([]);
   const [editingOriginalIndices, setEditingOriginalIndices] = useState<Map<number, number>>(new Map());
@@ -281,14 +280,120 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
             </div>
           )}
 
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-gray-50 rounded-lg p-3 space-y-3">
+            <div className="flex items-center justify-between">
               <Button variant="ghost" size="sm" onClick={downloadCsvTemplate}>
                 <Download size={16} />
                 Descargar plantilla
               </Button>
+              <button
+                type="button"
+                onClick={() => setShowColumnGuide(!showColumnGuide)}
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <Info size={14} />
+                {showColumnGuide ? 'Ocultar guía' : 'Ver guía de columnas'}
+                {showColumnGuide ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
             </div>
-            <p className="text-[14px] text-gray-600 mt-1">Campos requeridos: nombre, sku, precio, costo, stock, stock_min, iva, vendible</p>
+
+            {showColumnGuide && (
+              <div className="border-t border-gray-200 pt-3 space-y-3">
+                <p className="text-xs font-medium text-gray-700">Guía rápida de columnas:</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-1 px-2 text-gray-500 font-medium">Columna</th>
+                        <th className="text-left py-1 px-2 text-gray-500 font-medium">Requerido</th>
+                        <th className="text-left py-1 px-2 text-gray-500 font-medium">Formato</th>
+                        <th className="text-left py-1 px-2 text-gray-500 font-medium">Ejemplo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-600">
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">nombre</td>
+                        <td className="py-1 px-2"><span className="text-danger">*</span> Sí</td>
+                        <td className="py-1 px-2">Máx. 25 caracteres</td>
+                        <td className="py-1 px-2 font-mono">Arroz Premium</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">sku</td>
+                        <td className="py-1 px-2"><span className="text-danger">*</span> Sí</td>
+                        <td className="py-1 px-2">Máx. 18, único</td>
+                        <td className="py-1 px-2 font-mono">ARR001</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">tipo</td>
+                        <td className="py-1 px-2"><span className="text-danger">*</span> Sí</td>
+                        <td className="py-1 px-2">resale o materia_prima</td>
+                        <td className="py-1 px-2 font-mono">resale</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">precio</td>
+                        <td className="py-1 px-2"><span className="text-danger">*</span> Sí*</td>
+                        <td className="py-1 px-2">Número, mín. $0.05</td>
+                        <td className="py-1 px-2 font-mono">2.50</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">costo</td>
+                        <td className="py-1 px-2">Sí**</td>
+                        <td className="py-1 px-2">Número, no negativo</td>
+                        <td className="py-1 px-2 font-mono">1.80</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">stock</td>
+                        <td className="py-1 px-2"><span className="text-danger">*</span> Sí</td>
+                        <td className="py-1 px-2">Número, no negativo</td>
+                        <td className="py-1 px-2 font-mono">100</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">stock_min</td>
+                        <td className="py-1 px-2">No</td>
+                        <td className="py-1 px-2">Si vacío → stock/4</td>
+                        <td className="py-1 px-2 font-mono">10</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">categoria</td>
+                        <td className="py-1 px-2">No</td>
+                        <td className="py-1 px-2">Se crea si no existe</td>
+                        <td className="py-1 px-2 font-mono">víveres</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">pesable</td>
+                        <td className="py-1 px-2">No</td>
+                        <td className="py-1 px-2">si / no (default: no)</td>
+                        <td className="py-1 px-2 font-mono">si</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">unidad</td>
+                        <td className="py-1 px-2">No</td>
+                        <td className="py-1 px-2">kg, gr, lt, m, unidad</td>
+                        <td className="py-1 px-2 font-mono">kg</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">iva</td>
+                        <td className="py-1 px-2">No</td>
+                        <td className="py-1 px-2">si / no (default: si)</td>
+                        <td className="py-1 px-2 font-mono">si</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="py-1 px-2 font-mono font-medium">vendible</td>
+                        <td className="py-1 px-2">No</td>
+                        <td className="py-1 px-2">si / no (default: si)</td>
+                        <td className="py-1 px-2 font-mono">si</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 px-2 font-mono font-medium" colSpan={4}>
+                          <span className="text-gray-400">+ 4 columnas de presentación (pres_nombre, pres_precio, pres_multiplicador, pres_codigo_barras)</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[10px] text-gray-400">* precio es requerido para tipo "resale" | ** costo es requerido para tipo "materia_prima"</p>
+              </div>
+            )}
           </div>
 
           <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
@@ -349,11 +454,16 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-gray-500 font-medium">Fila</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">#</th>
                     <th className="text-left py-2 px-2 text-gray-500 font-medium">Nombre</th>
                     <th className="text-left py-2 px-2 text-gray-500 font-medium">SKU</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">Tipo</th>
                     <th className="text-right py-2 px-2 text-gray-500 font-medium">Precio</th>
                     <th className="text-right py-2 px-2 text-gray-500 font-medium">Stock</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">Categoría</th>
+                    <th className="text-center py-2 px-2 text-gray-500 font-medium">Pesable</th>
+                    <th className="text-center py-2 px-2 text-gray-500 font-medium">Unidad</th>
+                    <th className="text-center py-2 px-2 text-gray-500 font-medium">IVA</th>
                     <th className="text-center py-2 px-2 text-gray-500 font-medium">Estado</th>
                   </tr>
                 </thead>
@@ -365,8 +475,17 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         <td className="py-2 px-2 text-gray-400">{i + 1}</td>
                         <td className="py-2 px-2">{row.nombre || '-'}</td>
                         <td className="py-2 px-2 font-mono">{row.sku || '-'}</td>
+                        <td className="py-2 px-2">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${row.tipo === 'materia_prima' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {row.tipo === 'materia_prima' ? 'Materia Prima' : 'Venta'}
+                          </span>
+                        </td>
                         <td className="py-2 px-2 text-right">{row.precio || '-'}</td>
                         <td className="py-2 px-2 text-right">{row.stock || '-'}</td>
+                        <td className="py-2 px-2">{row.categoria || <span className="text-gray-400">Otros</span>}</td>
+                        <td className="py-2 px-2 text-center">{row.pesable === 'si' ? '⚖️' : '📦'}</td>
+                        <td className="py-2 px-2 text-center font-mono text-[10px]">{row.unidad || 'unidad'}</td>
+                        <td className="py-2 px-2 text-center">{row.iva === 'no' ? 'No' : 'Sí'}</td>
                         <td className="py-2 px-2 text-center">
                           {result?.status === 'valid' && <CheckCircle2 size={14} className="text-success mx-auto" />}
                           {result?.status === 'error' && <AlertTriangle size={14} className="text-danger mx-auto" />}
