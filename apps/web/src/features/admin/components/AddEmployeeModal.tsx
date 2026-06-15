@@ -71,6 +71,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           value={employee.name}
           onChange={(e) => setEmployee((p) => ({ ...p, name: e.target.value }))}
           validation={{ required: true, maxLength: 25 }}
+          autoComplete="name"
         />
         <Input
           placeholder="Email"
@@ -78,6 +79,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           value={employee.email}
           onChange={(e) => setEmployee((p) => ({ ...p, email: e.target.value }))}
           validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
+          autoComplete="email"
         />
         <Input
           placeholder="Contraseña"
@@ -87,6 +89,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           onChange={(e) => setEmployee((p) => ({ ...p, password: e.target.value }))}
           validation={{ required: true, minLength: 8, maxLength: 14 }}
           hint="Mín. 8 caracteres: mayúscula, minúscula, número y símbolo"
+          autoComplete="new-password"
         />
         {error && <p className="text-danger text-sm">{error}</p>}
         <div className="flex gap-2">

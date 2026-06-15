@@ -77,6 +77,7 @@ export function SubscriptionSection({ subscriptions, onRenew }: SubscriptionSect
           <Button
             variant={canRenew ? 'primary' : 'ghost'}
             size="sm"
+            className="min-h-11"
             disabled={!canRenew}
             onClick={() => setRenewTarget(s)}
           >

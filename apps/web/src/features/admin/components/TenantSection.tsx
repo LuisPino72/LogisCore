@@ -166,12 +166,12 @@ export function TenantSection({
       render: (t) => (
         <div className="flex flex-row flex-wrap gap-1 items-center">
           <Tooltip content="Ir al local" position="top">
-            <Button variant="ghost" size="sm" onClick={() => handleNavigateTenant(t.slug)}>
+            <Button variant="ghost" size="sm" className="min-h-11" onClick={() => handleNavigateTenant(t.slug)}>
               <Eye size={16} />
             </Button>
           </Tooltip>
           <Tooltip content="Editar local" position="top">
-            <Button variant="ghost" size="sm" onClick={() => setEditTarget(t)}>
+            <Button variant="ghost" size="sm" className="min-h-11" onClick={() => setEditTarget(t)}>
               <Edit2 size={16} />
               <span className="hidden sm:inline">Editar</span>
             </Button>
@@ -180,7 +180,7 @@ export function TenantSection({
             align="left"
             trigger={
               <Tooltip content="Más opciones" position="left">
-                <MoreVertical size={18} className="text-gray-500 cursor-pointer" />
+                <MoreVertical size={18} className="text-gray-500 cursor-pointer p-2 min-w-11 min-h-11" />
               </Tooltip>
             }
             items={[

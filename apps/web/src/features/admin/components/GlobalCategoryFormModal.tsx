@@ -58,6 +58,7 @@ export function GlobalCategoryFormModal({ isOpen, onClose, categoryId, initialNa
           }}
           error={error ?? undefined}
           validation={{ required: true, maxLength: 25 }}
+          autoComplete="off"
         />
         {error && <p className="text-danger text-sm">{error}</p>}
         <div className="flex gap-2">

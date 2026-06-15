@@ -68,6 +68,7 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
           value={editForm.name}
           onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
           validation={{ required: true, maxLength: 25 }}
+          autoComplete="organization"
         />
         <Input
           placeholder="RIF (J123456789)"
@@ -75,18 +76,22 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
           sanitize="rif"
           onChange={(e) => setEditForm((p) => ({ ...p, rif: sanitizeValue(e.target.value, 'rif') }))}
           validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 12 }}
+          autoComplete="off"
         />
         <Input
           placeholder="Teléfono (0412-1234567)"
           value={formatPhone(editForm.telefono)}
           onChange={(e) => { const formatted = formatPhone(e.target.value); setEditForm((p) => ({ ...p, telefono: unformatPhone(formatted) })); }}
           validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
+          inputMode="tel"
+          autoComplete="tel"
         />
         <Input
           placeholder="Dirección"
           value={editForm.direccion}
           onChange={(e) => setEditForm((p) => ({ ...p, direccion: e.target.value }))}
           validation={{ maxLength: 25 }}
+          autoComplete="street-address"
         />
         <div className="border-t border-gray-100 pt-3">
           <Button variant="secondary" fullWidth onClick={onAddEmployeeClick}>

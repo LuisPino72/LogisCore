@@ -73,6 +73,7 @@ export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, userI
           onChange={(e) => setNewPassword(e.target.value)}
           validation={{ required: true, minLength: 8, maxLength: 14 }}
           hint="Mín. 8 caracteres: mayúscula, minúscula, número y símbolo"
+          autoComplete="new-password"
         />
       </div>
     </Modal>

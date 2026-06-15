@@ -55,11 +55,11 @@ export function GlobalCategorySection({
       header: 'Acciones',
       render: (c: GlobalCategory) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
+          <Button variant="ghost" size="sm" className="min-h-11" onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
             <Edit2 size={16} />
             <span className="hidden sm:inline">Editar</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)}>
+          <Button variant="ghost" size="sm" className="min-h-11" onClick={() => setDeleteTarget(c)}>
             <Trash2 size={16} className="text-gray-400 hover:text-danger" />
           </Button>
         </div>
@@ -108,11 +108,11 @@ export function GlobalCategorySection({
                     <p className="text-xs text-text-secondary">{new Date(c.createdAt).toLocaleDateString('es-ES')}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" fullWidth onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
+                    <Button variant="ghost" size="sm" className="min-h-11" fullWidth onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
                       <span className="hidden sm:inline">Editar</span>
                       <span className="sm:hidden">✎</span>
                     </Button>
-                    <Button variant="ghost" size="sm" fullWidth onClick={() => setDeleteTarget(c)}>
+                    <Button variant="ghost" size="sm" className="min-h-11" fullWidth onClick={() => setDeleteTarget(c)}>
                       <Trash2 size={16} className="text-gray-400" />
                     </Button>
                   </div>

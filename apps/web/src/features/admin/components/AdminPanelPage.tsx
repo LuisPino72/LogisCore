@@ -79,25 +79,25 @@ export function AdminPanelPage() {
     switch (activeSheet) {
       case 'tenants':
         return (
-          <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
+          <Button variant="primary" size="sm" className="min-h-11" onClick={() => setShowCreateModal(true)}>
             <Plus size={16} />
             <span className="hidden sm:inline">Nuevo Local</span>
           </Button>
         );
       case 'users':
         return (
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={handleBackToTenants}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" className="min-h-11" onClick={handleBackToTenants}>
               <ArrowLeft size={18} />
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setShowAddEmployeeModal(true)}>
+            <Button variant="primary" size="sm" className="min-h-11" onClick={() => setShowAddEmployeeModal(true)}>
               <Plus size={16} /> Empleado
             </Button>
           </div>
         );
       case 'global-categories':
         return (
-          <Button variant="primary" size="sm" onClick={() => setShowCreateGlobalCatModal(true)}>
+          <Button variant="primary" size="sm" className="min-h-11" onClick={() => setShowCreateGlobalCatModal(true)}>
             <Plus size={16} />
             <span className="hidden sm:inline">Nueva Categoría</span>
           </Button>
@@ -131,7 +131,7 @@ export function AdminPanelPage() {
   return (
     <AppShell
       topBar={
-        <div className="flex items-center gap-3 px-2">
+        <div className="flex items-center gap-3 px-2 flex-wrap">
           <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
             <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
               <Store size={16} className="text-primary" />
@@ -162,7 +162,7 @@ export function AdminPanelPage() {
         ))}
       </div>
 
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6">
+      <div className="p-4 sm:p-6 pb-20 sm:pb-6 max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {activeSheet === 'tenants' && (
           <TenantSection
             tenants={tenants}

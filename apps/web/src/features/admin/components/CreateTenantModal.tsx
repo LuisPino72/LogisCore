@@ -107,6 +107,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             value={createForm.tenant.name}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, name: e.target.value } }))}
             validation={{ required: true, maxLength: 25 }}
+            autoComplete="organization"
           />
           <Input
             placeholder="RIF (J123456789)"
@@ -114,18 +115,22 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             sanitize="rif"
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, rif: sanitizeValue(e.target.value, 'rif') } }))}
             validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 12 }}
+            autoComplete="off"
           />
           <Input
             placeholder="Teléfono (0412-1234567)"
             value={formatPhone(createForm.tenant.telefono)}
             onChange={(e) => { const formatted = formatPhone(e.target.value); setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: unformatPhone(formatted) } })); }}
             validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
+            inputMode="tel"
+            autoComplete="tel"
           />
           <Input
             placeholder="Dirección"
             value={createForm.tenant.direccion}
             onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, direccion: e.target.value } }))}
             validation={{ maxLength: 25 }}
+            autoComplete="street-address"
           />
         </div>
 
@@ -142,6 +147,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             value={createForm.owner.name}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, name: e.target.value } }))}
             validation={{ required: true, maxLength: 25 }}
+            autoComplete="name"
           />
           <Input
             placeholder="Email del propietario"
@@ -149,6 +155,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             value={createForm.owner.email}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, email: e.target.value } }))}
             validation={{ required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
+            autoComplete="email"
           />
           <Input
             placeholder="Contraseña"
@@ -157,6 +164,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             value={createForm.owner.password}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, password: e.target.value } }))}
             validation={{ required: true, minLength: 8, maxLength: 20 }}
+            autoComplete="new-password"
           />
         </div>
 
@@ -172,6 +180,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             <Button
               variant="ghost"
               size="sm"
+              className="min-h-11"
               onClick={addEmployeeRow}
               disabled={createForm.employees.length >= 3}
             >
@@ -182,7 +191,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             <div key={i} className="rounded-lg bg-surface-alt border border-border p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-text-secondary">Empleado #{i + 1}</span>
-                <Button variant="danger" size="sm" onClick={() => removeEmployeeRow(i)}>
+                <Button variant="danger" size="sm" className="min-h-11" onClick={() => removeEmployeeRow(i)}>
                   <Trash2 size={14} />
                 </Button>
               </div>
@@ -191,6 +200,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 value={emp.name}
                 onChange={(e) => updateEmployeeRow(i, 'name', e.target.value)}
                 validation={{ maxLength: 25 }}
+                autoComplete="name"
               />
               <Input
                 placeholder="Email"
@@ -198,6 +208,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 value={emp.email}
                 onChange={(e) => updateEmployeeRow(i, 'email', e.target.value)}
                 validation={{ pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, maxLength: 30 }}
+                autoComplete="email"
               />
               <Input
                 placeholder="Contraseña"
@@ -206,6 +217,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
                 value={emp.password}
                 onChange={(e) => updateEmployeeRow(i, 'password', e.target.value)}
                 validation={{ minLength: 8, maxLength: 20 }}
+                autoComplete="new-password"
               />
             </div>
           ))}

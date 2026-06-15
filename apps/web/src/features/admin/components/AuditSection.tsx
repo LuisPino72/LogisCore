@@ -460,7 +460,7 @@ export function AuditSection() {
               {severityBadge(selectedEntry.severity)}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-gray-500">Fecha:</span>
                 <p className="font-mono">{formatDate(selectedEntry.createdAt)}</p>
