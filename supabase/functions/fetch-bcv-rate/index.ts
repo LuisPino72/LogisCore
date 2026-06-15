@@ -168,8 +168,9 @@ serve(async (req: Request) => {
         .single();
 
       if (error) {
+        console.error('[fetch-bcv-rate] dbError:', error.message);
         return new Response(
-          JSON.stringify({ code: 'DB_UPSERT_ERROR', message: error.message }),
+          JSON.stringify({ code: 'DB_UPSERT_ERROR', message: 'Error al guardar la tasa de cambio' }),
           { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
         );
       }
@@ -186,8 +187,9 @@ serve(async (req: Request) => {
       { status: 400, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
+    console.error('[fetch-bcv-rate] unexpected:', err);
     return new Response(
-      JSON.stringify({ code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Error desconocido' }),
+      JSON.stringify({ code: 'INTERNAL_ERROR', message: 'Error interno del servidor' }),
       { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }

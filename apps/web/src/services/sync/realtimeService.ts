@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client';
 import { emitEngineEvent } from '../audit/emitWithAudit';
 import { isDbClosing } from '../dexie/db';
+import { useAuthStore } from '../../features/auth/stores/authStore';
 import { logger } from '../../lib/logger';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
@@ -123,14 +124,18 @@ class RealtimeService {
     if (!REALTIME_TABLES.includes(table as RealtimeTable)) return;
 
     try {
+      const currentTenantUuid = useAuthStore.getState().session?.tenantId ?? null;
+
       if (payload.eventType === 'DELETE') {
         const oldRecord = payload.old as Record<string, unknown>;
         if (oldRecord && oldRecord.id) {
+          if (currentTenantUuid && oldRecord.tenant_id && oldRecord.tenant_id !== currentTenantUuid) return;
           await this.onRecord(table, { ...oldRecord, deletedAt: new Date().toISOString() });
         }
       } else {
         const record = payload.new as Record<string, unknown>;
         if (record) {
+          if (currentTenantUuid && record.tenant_id && record.tenant_id !== currentTenantUuid) return;
           await this.onRecord(table, record);
         }
       }

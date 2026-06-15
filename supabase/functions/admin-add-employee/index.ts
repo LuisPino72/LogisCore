@@ -96,9 +96,13 @@ async function addUsersToTenant(
   }
 
   const createdUsers: Array<{ id: string; email: string; name: string }> = [];
+  const failedUsers: Array<{ email: string; reason: string }> = [];
   for (const user of users) {
     const passwordError = validatePassword(user.password);
-    if (passwordError) continue;
+    if (passwordError) {
+      failedUsers.push({ email: user.email, reason: 'password_invalid' });
+      continue;
+    }
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: user.email,
@@ -107,7 +111,10 @@ async function addUsersToTenant(
       email_confirm: true,
     });
 
-    if (authError) continue;
+    if (authError) {
+      failedUsers.push({ email: user.email, reason: 'auth_error' });
+      continue;
+    }
 
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -115,6 +122,7 @@ async function addUsersToTenant(
 
     if (roleError) {
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      failedUsers.push({ email: user.email, reason: 'role_error' });
       continue;
     }
 
@@ -122,7 +130,7 @@ async function addUsersToTenant(
   }
 
   return new Response(
-    JSON.stringify({ employees: createdUsers }),
+    JSON.stringify({ employees: createdUsers, failedEmployees: failedUsers.length > 0 ? failedUsers : undefined }),
     { status: 200, headers: { ...headers, 'Content-Type': 'application/json' } },
   );
 }

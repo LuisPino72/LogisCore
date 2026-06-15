@@ -441,7 +441,7 @@ export const purchaseService = {
 
     const productMap = new Map<string, string>();
     for (const item of input.items) {
-      const product = await db.products.get(item.productId);
+      const product = await db.products.where({ id: item.productId, tenantId }).first();
       productMap.set(item.productId, product?.name ?? item.productId.slice(0, 8));
     }
 
@@ -626,7 +626,7 @@ export const purchaseService = {
       const item = itemMap.get(rec.itemId);
       if (!item) continue;
       if (rec.receivedQuantity > 0) {
-        const product = await db.products.get(item.productId);
+        const product = await db.products.where({ id: item.productId, tenantId }).first();
         if (!product || product.deletedAt) {
           deletedProducts.push(item.productName ?? item.productId.slice(0, 8));
         }
@@ -672,7 +672,7 @@ export const purchaseService = {
 
           if (rec.receivedQuantity > 0) {
             // P4: Re-leer product dentro de la transacción para WAC preciso
-            const product = await db.products.get(item.productId);
+            const product = await db.products.where({ id: item.productId, tenantId }).first();
             if (!product) continue;
 
             const storageQty = product.isWeighted

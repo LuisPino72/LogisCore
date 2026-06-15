@@ -658,7 +658,8 @@ export const customerService = {
       }
 
       // Verificar que la venta existe y es fiada
-      const sale = await db.sales.get(saleId);
+      const session = useAuthStore.getState().session;
+      const sale = await db.sales.where({ id: saleId, tenantId: session?.tenantId }).first();
       if (!sale || sale.isCreditSale !== true) {
         return failure(new AppError('SALE_NOT_CREDIT', 'La venta especificada no es una venta a crédito.'));
       }

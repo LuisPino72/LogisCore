@@ -25,6 +25,7 @@ import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrder
 import { logger } from '../../../lib/logger';
 import { calculateConsumptionCost } from './costCalculator';
 import { requireRole } from '../../auth/services/roleGuard';
+import { useAuthStore } from '../../auth/stores/authStore';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
 
 /**
@@ -132,9 +133,10 @@ export async function expandRecipe(
     .toArray();
 
   const result: ExpandedRecipeLine[] = [];
+  const session = useAuthStore.getState().session;
 
   for (const line of lines) {
-    const product = await db.products.get(line.productId);
+    const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
     if (!product || product.deletedAt) {
       return failure(new AppError(
         ProductionErrors.SUB_RECIPE_NOT_FOUND,
@@ -363,7 +365,7 @@ export const productionService = {
 
     // Validate ingredients exist and have valid productType
     for (const line of input.lines) {
-      const ingredient = await db.products.get(line.productId);
+      const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
       if (!ingredient || ingredient.deletedAt) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado. Verifica los productos de la receta.'));
       }
@@ -550,7 +552,7 @@ export const productionService = {
       for (const line of input.lines) {
         const lineRaw = line as Record<string, unknown>;
         if (!lineRaw.id) {
-          const ingredient = await db.products.get(line.productId);
+          const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
           if (!ingredient || ingredient.deletedAt) {
             return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado. Verifica los productos de la receta.'));
           }
@@ -815,7 +817,8 @@ export const productionService = {
       for (const line of expandedLines) {
         // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
         // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
-        const product = await db.products.get(line.productId);
+        const session = useAuthStore.getState().session;
+        const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
         const neededInStorage = product
           ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
           : line.quantity * wasteMultiplier;
@@ -867,7 +870,8 @@ export const productionService = {
       const warningsSet = new Set<string>();
 
       for (const line of expandedLines) {
-        const product = await db.products.get(line.productId);
+        const session = useAuthStore.getState().session;
+        const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
         // BUGFIX-MATHCEIL-001 [Paso-2]: Usar recipeQtyToStorageBase para que calculateRecipeCost
         // reporte la misma cantidad en storage base units (g/ml) que createOrder consume.
         // product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
@@ -953,7 +957,7 @@ export const productionService = {
     for (const line of expandedLines) {
       // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
       // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
-      const product = await db.products.get(line.productId);
+      const product = await db.products.where({ id: line.productId, tenantId }).first();
       const neededInStorage = product
         ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
         : line.quantity * wasteMultiplier;
@@ -976,7 +980,7 @@ export const productionService = {
     for (const line of expandedLines) {
       // BUGFIX-MATHCEIL-001 [Paso-1]: Pasar cantidad en storage base units (g/ml) al helper FIFO.
       // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
-      const product = await db.products.get(line.productId);
+      const product = await db.products.where({ id: line.productId, tenantId }).first();
       const neededInStorage = product
         ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
         : line.quantity * wasteMultiplier;
@@ -998,7 +1002,7 @@ export const productionService = {
     for (const line of expandedLines) {
       // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
       // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
-      const freshProduct = await db.products.get(line.productId);
+      const freshProduct = await db.products.where({ id: line.productId, tenantId }).first();
       const neededInStorage = freshProduct
         ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, freshProduct.unit)
         : line.quantity * wasteMultiplier;
@@ -1050,7 +1054,7 @@ export const productionService = {
 
         // b. Consume ingredients (PRODUCTION-001-007: usa expandedLines para sub-recetas)
         for (const line of expandedLines) {
-          const product = await db.products.get(line.productId);
+          const product = await db.products.where({ id: line.productId, tenantId }).first();
           if (!product) throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado.');
 
           // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
@@ -1112,7 +1116,7 @@ export const productionService = {
         // Update finished product stock + WAC
         // PRODUCTION-003 [Paso-4]: Sincronizar product.costPrice con WAC tras producir.
         // Consistente con receiveOrder en Compras (purchaseService.ts:583-601).
-        const finishedProduct = await db.products.get(recipe.productId);
+        const finishedProduct = await db.products.where({ id: recipe.productId, tenantId }).first();
         if (finishedProduct) {
           const prevStock = finishedProduct.stock ?? 0;
           const prevCostPrice = finishedProduct.costPrice ?? 0;
@@ -1202,7 +1206,7 @@ export const productionService = {
           for (const line of lines) {
             // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
             // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
-            const product = await db.products.get(line.productId);
+            const product = await db.products.where({ id: line.productId, tenantId }).first();
             const neededInStorage = product
               ? recipeQtyToStorageBase(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
               : line.quantity * order.batchCount * wasteMultiplier;
@@ -1232,7 +1236,7 @@ export const productionService = {
           }
 
           // Revert finished product stock if it was produced
-          const finishedProduct = await db.products.get(order.productId);
+          const finishedProduct = await db.products.where({ id: order.productId, tenantId }).first();
           if (finishedProduct && order.quantityTarget > 0) {
             const previousStock = finishedProduct.stock;
             // DINERO-013 (M3): revertir solo el stock que aún existe (no las unidades ya vendidas).
@@ -1289,7 +1293,7 @@ export const productionService = {
             const newCostPrice = totalQty > 0
               ? preciseRound(totalCost / totalQty, 4)
               : 0;
-            const productForWac = await db.products.get(order.productId);
+            const productForWac = await db.products.where({ id: order.productId, tenantId }).first();
             if (productForWac && productForWac.costPrice !== newCostPrice) {
               await db.products.update(order.productId, { costPrice: newCostPrice });
               await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...productForWac, costPrice: newCostPrice } as unknown as Record<string, unknown>), tenantId);
@@ -1396,7 +1400,7 @@ export const productionService = {
     for (const line of expandedLines) {
       // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
       // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
-      const ingredient = await db.products.get(line.productId);
+      const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
 
       if (!ingredient) {
         return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado.`));
@@ -1572,7 +1576,7 @@ export const productionService = {
       let totalCost = 0;
 
       for (const line of lines) {
-        const product = await db.products.get(line.productId);
+        const product = await db.products.where({ id: line.productId, tenantId }).first();
         const productName = product?.name || 'Desconocido';
         const neededInStorage = product
           ? recipeQtyToStorageBase(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
@@ -1653,7 +1657,7 @@ export const productionService = {
 
       const result = [];
       for (const m of movements) {
-        const product = await db.products.get(m.productId);
+        const product = await db.products.where({ id: m.productId, tenantId }).first();
         result.push({
           id: m.id,
           productName: product?.name || 'Desconocido',

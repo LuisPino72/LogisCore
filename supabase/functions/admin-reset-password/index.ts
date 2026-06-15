@@ -71,8 +71,9 @@ serve(async (req: Request) => {
   );
 
   if (updateError) {
+    console.error('[admin-reset-password] updateError:', updateError.message);
     return new Response(
-      JSON.stringify({ code: 'ADMIN_RESET_PASS_FAILED', message: `Error al resetear contraseña: ${updateError.message}` }),
+      JSON.stringify({ code: 'ADMIN_RESET_PASS_FAILED', message: 'Error al resetear la contraseña' }),
       { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }

@@ -11,6 +11,7 @@ import { inventoryService } from '../../../features/inventory/services/inventory
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import { getDb } from '../../../services/dexie/db';
+import { useAuthStore } from '../../auth/stores/authStore';
 import type { CreateSaleInput } from '../../../specs/pos';
 import type { Customer } from '../../../specs/customers';
 import { MAX_PARKED_CARTS } from '../../../specs/pos';
@@ -79,7 +80,8 @@ async function validateAssemblyIngredients(
 ): Promise<string | null> {
   const wasteMultiplier = 1 + (recipeData.wastePct / 100);
   const db = getDb();
-  const ingredients = await Promise.all(recipeData.lines.map((line) => db.products.get(line.productId)));
+  const session = useAuthStore.getState().session;
+  const ingredients = await Promise.all(recipeData.lines.map((line) => db.products.where({ id: line.productId, tenantId: session?.tenantId }).first()));
   for (let i = 0; i < recipeData.lines.length; i++) {
     const line = recipeData.lines[i];
     const ingredient = ingredients[i];
@@ -461,7 +463,8 @@ export const usePosStore = create<PosStore>()(
         const db = getDb();
         for (const line of recipeData.lines) {
           const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
-          const ingredient = await db.products.get(line.productId);
+          const session = useAuthStore.getState().session;
+          const ingredient = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
           if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
             set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
             return;

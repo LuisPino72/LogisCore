@@ -8,6 +8,7 @@ import { ReportsFiltersSchema, ValidateTenantInputSchema, TopProductsLimitSchema
 import type { PaymentMethod } from '../../../specs/pos';
 import { logger } from '../../../lib/logger';
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { requireRole } from '../../auth/services/roleGuard';
 import type {
   ReportFilters,
@@ -1766,7 +1767,8 @@ export const reportsService = {
         if (!recipe) continue;
 
         // Get product name
-        const product = await db.products.get(recipe.productId);
+        const session = useAuthStore.getState().session;
+        const product = await db.products.where({ id: recipe.productId, tenantId: session?.tenantId }).first();
         const productName = product?.name || 'Desconocido';
 
         const existing = recipeStats.get(order.recipeId) || {

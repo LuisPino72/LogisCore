@@ -12,6 +12,7 @@
  */
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { getDb } from '../../../services/dexie/db';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { ProductionErrors } from '../../../specs/production/errors';
 
 export interface ConsumptionDetail {
@@ -49,7 +50,8 @@ export async function calculateConsumptionCost(
   const db = getDb();
 
   // 1. Validar que el producto exista (puede ser materia prima o sub-receta).
-  const product = await db.products.get(productId);
+  const session = useAuthStore.getState().session;
+  const product = await db.products.where({ id: productId, tenantId: session?.tenantId }).first();
   if (!product) {
     return failure(
       new AppError(ProductionErrors.INGREDIENT_NOT_FOUND, `Producto ${productId} no encontrado.`),

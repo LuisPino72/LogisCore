@@ -135,8 +135,9 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
     .single();
 
   if (tenantError) {
+    console.error('[admin-create-tenant] tenantError:', tenantError.message);
     return new Response(
-      JSON.stringify({ code: 'TENANT_CREATE_FAILED', message: `Error al crear tenant: ${tenantError.message}` }),
+      JSON.stringify({ code: 'TENANT_CREATE_FAILED', message: 'Error al crear el tenant' }),
       { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
@@ -152,8 +153,9 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
 
   if (ownerError) {
     await supabaseAdmin.from('tenants').update({ deleted_at: new Date().toISOString() }).eq('id', tenant.id);
+    console.error('[admin-create-tenant] ownerError:', ownerError.message);
     return new Response(
-      JSON.stringify({ code: 'AUTH_EMAIL_EXISTS', message: `Error al crear owner: ${ownerError.message}` }),
+      JSON.stringify({ code: 'AUTH_EMAIL_EXISTS', message: 'Error al crear el owner: email ya registrado o inválido' }),
       { status: 409, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
@@ -165,16 +167,21 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
   if (ownerRoleError) {
     await supabaseAdmin.auth.admin.deleteUser(ownerAuth.user.id);
     await supabaseAdmin.from('tenants').update({ deleted_at: new Date().toISOString() }).eq('id', tenant.id);
+    console.error('[admin-create-tenant] ownerRoleError:', ownerRoleError.message);
     return new Response(
-      JSON.stringify({ code: 'ROLE_CREATE_FAILED', message: `Error al asignar rol: ${ownerRoleError.message}` }),
+      JSON.stringify({ code: 'ROLE_CREATE_FAILED', message: 'Error al asignar rol al owner' }),
       { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } },
     );
   }
 
   const createdEmployees: Array<{ id: string; email: string; name: string }> = [];
+  const failedEmployees: Array<{ email: string; reason: string }> = [];
   for (const emp of employees) {
     const empPasswordError = validatePassword(emp.password);
-    if (empPasswordError) continue;
+    if (empPasswordError) {
+      failedEmployees.push({ email: emp.email, reason: 'password_invalid' });
+      continue;
+    }
 
     const { data: empAuth, error: empError } = await supabaseAdmin.auth.admin.createUser({
       email: emp.email,
@@ -183,7 +190,10 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
       email_confirm: true,
     });
 
-    if (empError) continue;
+    if (empError) {
+      failedEmployees.push({ email: emp.email, reason: 'auth_error' });
+      continue;
+    }
 
     const { error: empRoleError } = await supabaseAdmin
       .from('user_roles')
@@ -191,6 +201,7 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
 
     if (empRoleError) {
       await supabaseAdmin.auth.admin.deleteUser(empAuth.user.id);
+      failedEmployees.push({ email: emp.email, reason: 'role_error' });
       continue;
     }
 
@@ -208,6 +219,7 @@ async function createFullTenant(supabaseAdmin: ReturnType<typeof createClient>, 
       tenant,
       owner: { id: ownerAuth.user.id, email: ownerInput.email, name: ownerInput.name },
       employees: createdEmployees,
+      failedEmployees: failedEmployees.length > 0 ? failedEmployees : undefined,
     }),
     { status: 200, headers: { ...headers, 'Content-Type': 'application/json' } },
   );
@@ -251,9 +263,13 @@ async function addUsersToTenant(
   }
 
   const createdUsers: Array<{ id: string; email: string; name: string }> = [];
+  const failedUsers: Array<{ email: string; reason: string }> = [];
   for (const user of users) {
     const empPasswordError = validatePassword(user.password);
-    if (empPasswordError) continue;
+    if (empPasswordError) {
+      failedUsers.push({ email: user.email, reason: 'password_invalid' });
+      continue;
+    }
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: user.email,
@@ -262,7 +278,10 @@ async function addUsersToTenant(
       email_confirm: true,
     });
 
-    if (authError) continue;
+    if (authError) {
+      failedUsers.push({ email: user.email, reason: 'auth_error' });
+      continue;
+    }
 
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -270,6 +289,7 @@ async function addUsersToTenant(
 
     if (roleError) {
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      failedUsers.push({ email: user.email, reason: 'role_error' });
       continue;
     }
 
@@ -277,7 +297,7 @@ async function addUsersToTenant(
   }
 
   return new Response(
-    JSON.stringify({ employees: createdUsers }),
+    JSON.stringify({ employees: createdUsers, failedEmployees: failedUsers.length > 0 ? failedUsers : undefined }),
     { status: 200, headers: { ...headers, 'Content-Type': 'application/json' } },
   );
 }

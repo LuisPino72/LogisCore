@@ -3,6 +3,7 @@ import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { validateCycles, computeRecipeCostFromLines } from '../services/productionService';
 import { getDb } from '@/services/dexie/db';
+import { useAuthStore } from '../../auth/stores/authStore';
 
 interface RecipeLineInput {
   productId: string;
@@ -236,7 +237,8 @@ export function useRecipeForm() {
             continue;
           }
 
-          const ingredient = await db.products.get(line.productId);
+          const session = useAuthStore.getState().session;
+          const ingredient = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
           if (!ingredient || ingredient.deletedAt) {
             stepErrors[`line_${i}_product`] = 'Ingrediente no encontrado';
             continue;
@@ -339,7 +341,8 @@ export function useRecipeForm() {
             continue;
           }
 
-          const ingredient = await db.products.get(line.productId);
+          const session = useAuthStore.getState().session;
+          const ingredient = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
           if (!ingredient || ingredient.deletedAt) {
             stepErrors[`line_${i}_product`] = 'Ingrediente no encontrado';
             continue;

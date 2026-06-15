@@ -18,7 +18,8 @@ serve(async (req) => {
 
   const { data: authUsers, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
   if (usersError) {
-    return new Response(JSON.stringify({ code: 'USERS_FETCH_FAILED', message: usersError.message }), { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } });
+    console.error('[admin-list-users] usersError:', usersError.message);
+    return new Response(JSON.stringify({ code: 'USERS_FETCH_FAILED', message: 'Error al obtener usuarios' }), { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } });
   }
 
   const emailMap = new Map<string, string>();
@@ -35,7 +36,8 @@ serve(async (req) => {
     .order('created_at', { ascending: false });
 
   if (rolesError) {
-    return new Response(JSON.stringify({ code: 'ROLES_FETCH_FAILED', message: rolesError.message }), { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } });
+    console.error('[admin-list-users] rolesError:', rolesError.message);
+    return new Response(JSON.stringify({ code: 'ROLES_FETCH_FAILED', message: 'Error al obtener roles' }), { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } });
   }
 
   const result = (userRoles ?? []).map((ur: Record<string, unknown>) => {

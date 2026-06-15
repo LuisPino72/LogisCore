@@ -20,6 +20,7 @@ import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInp
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage } from '../../../features/inventory/types';
 import { requireRole } from '../../auth/services/roleGuard';
+import { useAuthStore } from '../../auth/stores/authStore';
 
 type VerificationProduct = {
   productId: string;
@@ -626,7 +627,7 @@ export const posService = {
         await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake(saleSnakePayload), tenantId);
 
         for (const cartItem of normalItems) {
-          const product = await db.products.get(cartItem.productId);
+          const product = await db.products.where({ id: cartItem.productId, tenantId }).first();
           if (!product || product.deletedAt) {
             throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
           }
@@ -698,7 +699,7 @@ export const posService = {
           }
 
           // Re-leer stock fresco para evitar race condition entre transacciones concurrentes
-          const freshProduct = await db.products.get(cartItem.productId);
+          const freshProduct = await db.products.where({ id: cartItem.productId, tenantId }).first();
           if (!freshProduct) {
             throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
           }
@@ -789,7 +790,7 @@ export const posService = {
           }
 
           const { consumedLots, totalIngredientCost } = result.data;
-          const product = await db.products.get(assemblyItem.productId);
+          const product = await db.products.where({ id: assemblyItem.productId, tenantId }).first();
           if (!product) {
             throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no encontrado.`);
           }
@@ -1271,7 +1272,8 @@ export const posService = {
 
     try {
       const db = getDb();
-      const sale = await db.sales.get(saleId);
+      const session = useAuthStore.getState().session;
+      const sale = await db.sales.where({ id: saleId, tenantId: session?.tenantId }).first();
       if (!sale || sale.status !== 'completed') {
         return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Venta no encontrada o ya anulada.'));
       }
@@ -1313,7 +1315,7 @@ export const posService = {
         await db.sales.update(saleId, { status: 'voided', voidedAt: now });
 
         for (const item of items) {
-          const product = await db.products.get(item.productId);
+          const product = await db.products.where({ id: item.productId, tenantId }).first();
           if (!product || product.deletedAt) continue;
 
           // Detectar si es producto assembly
@@ -1356,7 +1358,7 @@ export const posService = {
             }
 
             for (const line of recipeLines) {
-              const ingredient = await db.products.get(line.productId);
+              const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
               if (!ingredient) continue;
 
               const needed = Math.ceil(recipeQtyToStorageBase(line.quantity * item.quantity * wasteMultiplier, line.unit, ingredient.unit));

@@ -8,6 +8,7 @@ import { syncQueue } from './syncQueue';
 import { detectConflict, resolveConflict } from './conflictResolver';
 import { networkAware } from '../network/networkAwareService';
 import { realtimeService } from './realtimeService';
+import { useAuthStore } from '../../features/auth/stores/authStore';
 import { logger } from '../../lib/logger';
 import type {
   SyncQueueItem,
@@ -59,6 +60,11 @@ export class SyncEngine {
       localIdField: 'id',
       remoteIdField: 'id',
     };
+  }
+
+  private getCurrentTenantUuid(): string | null {
+    const session = useAuthStore.getState().session;
+    return session?.tenantId ?? null;
   }
 
   async push(batchSize = DEFAULT_BATCH_SIZE): Promise<Result<SyncBatchResult, AppError>> {
@@ -128,6 +134,7 @@ export class SyncEngine {
           .from(item.table)
           .select('*')
           .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField])
+          .eq('tenant_id', tenantUuid)
           .maybeSingle();
 
         if (existing && detectConflict(item.payload, existing)) {
@@ -139,6 +146,7 @@ export class SyncEngine {
             remotePayload: existing,
             strategy: cfg.conflictStrategy,
           });
+          resolved.tenant_id = tenantUuid;
            const { error } = await supabase.from(item.table).upsert(resolved);
            if (error) throw new AppError('SYNC_PUSH_FAILED', error.message, { details: { table: item.table, recordId: item.recordId } });
            result.conflicts++;
@@ -153,12 +161,14 @@ export class SyncEngine {
         const { error } = await supabase
           .from(item.table)
           .update(remotePayload)
-          .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField]);
+          .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField])
+          .eq('tenant_id', tenantUuid);
         if (error) {
           const { data: existing } = await supabase
             .from(item.table)
             .select('*')
             .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField])
+            .eq('tenant_id', tenantUuid)
             .maybeSingle();
           if (existing && detectConflict(item.payload, existing)) {
             const resolved = resolveConflict({
@@ -169,6 +179,7 @@ export class SyncEngine {
               remotePayload: existing,
               strategy: cfg.conflictStrategy,
             });
+            resolved.tenant_id = tenantUuid;
                const { error: upsertError } = await supabase.from(item.table).upsert(resolved);
                if (upsertError) throw new AppError('SYNC_PUSH_FAILED', upsertError.message, { details: { table: item.table, recordId: item.recordId } });
                result.conflicts++;
@@ -183,7 +194,8 @@ export class SyncEngine {
         const { error } = await supabase
           .from(item.table)
           .update({ deleted_at: new Date().toISOString() })
-          .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField]);
+          .eq(cfg.remoteIdField, remotePayload[cfg.remoteIdField])
+          .eq('tenant_id', tenantUuid);
         if (error) throw new AppError('SYNC_DELETE_FAILED', error.message);
         break;
       }
@@ -202,6 +214,12 @@ export class SyncEngine {
     const tablesToSync = PULL_TABLES.map((t) => t.name);
     let hasChanges = false;
 
+    const tenantUuid = this.getCurrentTenantUuid();
+    if (!tenantUuid) {
+      logger.error('Sync', 'Pull abortado: no hay tenant UUID en sesión');
+      return failure(new AppError('SYNC_PULL_FAILED', 'No hay tenant UUID disponible para pull'));
+    }
+
     for (const tableName of tablesToSync) {
       if (isDbClosing()) break;
 
@@ -217,6 +235,7 @@ export class SyncEngine {
         const query = supabase
           .from(tableName)
           .select('*')
+          .eq('tenant_id', tenantUuid)
           .or(`${timeCol}.gt.${since},deleted_at.gt.${since}`);
 
         const { data, error } = await query;
@@ -228,6 +247,7 @@ export class SyncEngine {
             const simpleQuery = supabase
               .from(tableName)
               .select('*')
+              .eq('tenant_id', tenantUuid)
               .gt(timeCol, since);
             const simpleResult = await simpleQuery;
             if (simpleResult.error) {
@@ -235,6 +255,7 @@ export class SyncEngine {
                 const fallbackQuery = supabase
                   .from(tableName)
                   .select('*')
+                  .eq('tenant_id', tenantUuid)
                   .gt('created_at', since);
                 const fbResult = await fallbackQuery;
                 if (fbResult.error) {
@@ -306,6 +327,12 @@ export class SyncEngine {
   private async upsertLocalRecord(tableName: string, record: Record<string, unknown>, pendingIds?: Set<string>): Promise<void> {
     if (isDbClosing()) return;
     const db = getDb();
+
+    const currentTenantUuid = this.getCurrentTenantUuid();
+    if (currentTenantUuid && record.tenant_id && record.tenant_id !== currentTenantUuid) {
+      logger.warn('Sync', `Descartando registro de otro tenant: ${tableName}/${record.id} (tenant_id: ${record.tenant_id})`);
+      return;
+    }
 
     // Skip overwrite if there are pending local changes for this record in the sync queue
     // (e.g., soft delete or nextDueDate update not yet pushed to Supabase)

@@ -466,7 +466,7 @@ export const inventoryService = {
 
     const db = getDb();
     try {
-      const existing = await db.products.get(id);
+      const existing = await db.products.where({ id, tenantId }).first();
       if (!existing) {
         return failure(new AppError(InventoryErrors.PRODUCT_NOT_FOUND, 'Producto no encontrado.'));
       }
@@ -616,10 +616,12 @@ export const inventoryService = {
 
       // If local is empty, try pulling from Supabase
       if (rows.length === 0 && !isDbClosing()) {
+        const tenantUuid = await TenantTranslator.slugToUuid(session.tenantId);
         const { data: remotePres, error } = await supabase
           .from('product_presentations')
           .select('*')
           .eq('product_id', productId)
+          .eq('tenant_id', tenantUuid)
           .is('deleted_at', null)
           .order('sort_order', { ascending: true });
 
@@ -823,7 +825,7 @@ export const inventoryService = {
 
     // Eliminar imágenes de storage (fire-and-forget, no bloquea la tx)
     Promise.resolve().then(async () => {
-      const p = await db.products.get(id);
+      const p = await db.products.where({ id, tenantId }).first();
       if (p?.imageUrl) await deleteStorageImage(p.imageUrl);
     });
 
@@ -1232,7 +1234,7 @@ export const inventoryService = {
         await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), input.tenantId);
 
         // Enqueue product update so stock syncs to Supabase
-        const updatedProduct = await db.products.get(input.productId);
+        const updatedProduct = await db.products.where({ id: input.productId, tenantId: input.tenantId }).first();
         if (updatedProduct) {
           await syncQueue.enqueue('products', 'UPDATE', input.productId, toSnake(updatedProduct as unknown as Record<string, unknown>), input.tenantId);
         }
@@ -1380,14 +1382,14 @@ export const inventoryService = {
 
     try {
       const db = getDb();
-      const oldProduct = await db.products.get(productId);
+      const oldProduct = await db.products.where({ id: productId, tenantId }).first();
       if (oldProduct?.imageUrl) {
         await imageCacheService.invalidate(oldProduct.imageUrl);
         await deleteStorageImage(oldProduct.imageUrl, token);
       }
       await db.transaction('rw', [db.products, db.syncQueue], async () => {
         await db.products.update(productId, { imageUrl: publicUrl });
-        const dbItem = await db.products.get(productId);
+        const dbItem = await db.products.where({ id: productId, tenantId }).first();
         if (dbItem) {
           await syncQueue.enqueue('products', 'UPDATE', productId, toSnake({ ...dbItem, image_url: publicUrl } as unknown as Record<string, unknown>), tenantId);
         }
@@ -1415,7 +1417,7 @@ export const inventoryService = {
       .filter((p) => !p.deletedAt && p.barcode === sku)
       .first();
     if (presentation) {
-      const parentProduct = await db.products.get(presentation.productId);
+      const parentProduct = await db.products.where({ id: presentation.productId, tenantId }).first();
       if (parentProduct && !parentProduct.deletedAt) {
         return success(toProduct(parentProduct as unknown as Record<string, unknown>));
       }
