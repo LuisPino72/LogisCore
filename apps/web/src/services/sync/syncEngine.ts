@@ -250,6 +250,7 @@ export class SyncEngine {
                     if (isDbClosing()) break;
                     await this.upsertLocalRecord(tableName, record, pendingIds);
                     result.pushed++;
+                    hasChanges = true;
                   }
                 }
               }

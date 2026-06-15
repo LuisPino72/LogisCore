@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
 import { WifiOff } from 'lucide-react';
+import { networkAware } from '../../services/network/networkAwareService';
 
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return networkAware.onChange((state) => {
+      setIsOffline(!state.online);
+    });
   }, []);
 
   if (!isOffline) return null;

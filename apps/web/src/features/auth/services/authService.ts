@@ -251,6 +251,12 @@ export const authService = {
       { name: 'sale_items', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
       { name: 'cash_registers', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
       { name: 'expenses', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'product_presentations', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'purchase_order_items', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'recipes', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'recipe_lines', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'production_orders', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'customers', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
     ];
     allTables.forEach((cfg) => syncEngine.registerTable(cfg));
     syncEngine.start();

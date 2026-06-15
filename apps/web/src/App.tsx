@@ -10,18 +10,16 @@ import { EventBus, SystemEvents } from '@logiscore/core';
 import { initDb, destroyDb } from './services/dexie/db';
 import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
 import { logger } from './lib/logger';
-import {
-  AppShell,
-  Badge,
-  Button,
-  Card,
-  Spinner,
-  ModuleSkeleton,
-  ToastContainer,
-  Sidebar,
-  ErrorBoundary,
-  type SidebarModule,
-} from './common/components';
+import { AppShell } from './common/components/AppShell';
+import { Badge } from './common/components/Badge';
+import { Button } from './common/components/Button';
+import { Card } from './common/components/Card';
+import { Spinner } from './common/components/Loading';
+import { ModuleSkeleton } from './common/components/ModuleSkeleton';
+import { ToastContainer } from './common/components/Toast';
+import { Sidebar } from './common/components/Sidebar';
+import { ErrorBoundary } from './common/components/ErrorBoundary';
+import type { SidebarModule } from './common/components/Sidebar';
 import { OfflineBanner } from './common/components/OfflineBanner';
 import {
   ShoppingCart,
@@ -37,8 +35,8 @@ import {
   Users,
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
-import { AdminPanelPage } from './features/admin/components/AdminPanelPage';
-import { ExchangeRateWidget } from './features/exchange/components/ExchangeRateWidget';
+const AdminPanelPage = lazy(() => import('./features/admin/components/AdminPanelPage').then((m) => ({ default: m.AdminPanelPage })));
+const ExchangeRateWidget = lazy(() => import('./features/exchange/components/ExchangeRateWidget').then((m) => ({ default: m.ExchangeRateWidget })));
 import { useExchangeRateStore } from './features/exchange/stores/exchangeRateStore';
 import { NotificationBell } from './common/components/NotificationBell';
 import { useSystemNotifications } from './features/system/hooks/useSystemNotifications';
@@ -292,11 +290,13 @@ function DashboardLayout() {
             onNavigate={handleNavigate}
             userEmail={session?.email ?? ''}
             onLogout={handleLogout}
-            footerSlot={
-              effectiveTenantId ? (
-                <ExchangeRateWidget tenantId={effectiveTenantId} role={role ?? null} />
-              ) : undefined
-            }
+              footerSlot={
+                effectiveTenantId ? (
+                  <Suspense fallback={null}>
+                    <ExchangeRateWidget tenantId={effectiveTenantId} role={role ?? null} />
+                  </Suspense>
+                ) : undefined
+              }
           />
         }
         sidebarOpen={sidebarOpen}
@@ -476,7 +476,9 @@ function AppRoutes() {
         element={
           <AdminRoute>
             <ErrorBoundary moduleName="Admin Panel">
-              <AdminPanelPage />
+              <Suspense fallback={<ModuleSkeleton />}>
+                <AdminPanelPage />
+              </Suspense>
             </ErrorBoundary>
           </AdminRoute>
         }

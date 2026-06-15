@@ -72,6 +72,25 @@ const initialState: PosState = {
   isCreditSale: false,
 };
 
+async function validateAssemblyIngredients(
+  recipeData: { lines: { productId: string; quantity: number }[]; wastePct: number },
+  product: { id: string; name: string },
+  quantity: number,
+): Promise<string | null> {
+  const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+  const db = getDb();
+  const ingredients = await Promise.all(recipeData.lines.map((line) => db.products.get(line.productId)));
+  for (let i = 0; i < recipeData.lines.length; i++) {
+    const line = recipeData.lines[i];
+    const ingredient = ingredients[i];
+    const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
+    if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
+      return `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`;
+    }
+  }
+  return null;
+}
+
 export const usePosStore = create<PosStore>()(
   persist(
     (set, get) => ({
@@ -81,23 +100,28 @@ export const usePosStore = create<PosStore>()(
 
   fetchProducts: async (tenantId, silent = false) => {
     if (!silent) set({ loading: true, error: null });
-    await get().restoreFavorites(tenantId); // POS-002 (M-16): restore from localStorage on login/tenant-switch
-    const result = await posService.getProductsForSale(tenantId);
+    const [, result] = await Promise.all([
+      get().restoreFavorites(tenantId),
+      posService.getProductsForSale(tenantId),
+    ]);
     if (result.ok) {
       const favResult = await posService.getFavorites(tenantId);
       const favIds = favResult.ok ? favResult.data : new Set<string>();
 
-      // Cargar recetas assembly y sus ingredientes para pre-validación
       const recipesMap: PosStore['assemblyRecipesMap'] = {};
       try {
         const db = getDb();
         const allRecipes = await db.recipes.toArray();
         const assemblyRecipes = allRecipes.filter(r => !r.deletedAt && r.isActive && r.mode === 'assembly');
-        for (const recipe of assemblyRecipes) {
+        const recipeLinePromises = assemblyRecipes.map(async (recipe) => {
           const lines = await db.recipeLines
             .where({ recipeId: recipe.id })
             .filter(l => !l.deletedAt)
             .toArray();
+          return { recipe, lines };
+        });
+        const recipeResults = await Promise.all(recipeLinePromises);
+        for (const { recipe, lines } of recipeResults) {
           recipesMap[recipe.productId] = {
             recipeId: recipe.id,
             wastePct: recipe.wastePct,
@@ -178,10 +202,16 @@ export const usePosStore = create<PosStore>()(
       if (!Array.isArray(productIds) || productIds.length === 0) return;
       const db = getDb();
       const now = new Date().toISOString();
-      for (const productId of productIds) {
-        const existing = await db.productFavorites.get([productId, tenantId]);
-        if (existing) continue;
-        await db.productFavorites.add({ productId, tenantId, createdAt: now });
+      const existing = await db.productFavorites
+        .where('[productId+tenantId]')
+        .anyOf(productIds.map((id) => [id, tenantId]))
+        .toArray();
+      const existingIds = new Set(existing.map((f) => f.productId));
+      const newFavorites = productIds
+        .filter((id) => !existingIds.has(id))
+        .map((id) => ({ productId: id, tenantId, createdAt: now }));
+      if (newFavorites.length > 0) {
+        await db.productFavorites.bulkAdd(newFavorites);
       }
     } catch (err) {
       console.warn('[posStore] restoreFavorites failed:', err);
@@ -268,15 +298,10 @@ export const usePosStore = create<PosStore>()(
       if (isAssembly) {
         const recipeData = get().assemblyRecipesMap[product.id];
         if (recipeData) {
-          const wasteMultiplier = 1 + (recipeData.wastePct / 100);
-          const db = getDb();
-          for (const line of recipeData.lines) {
-            const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
-            const ingredient = await db.products.get(line.productId);
-            if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
-              set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
-              return;
-            }
+          const error = await validateAssemblyIngredients(recipeData, product, quantity);
+          if (error) {
+            set({ error });
+            return;
           }
         }
       }
@@ -344,15 +369,10 @@ export const usePosStore = create<PosStore>()(
     if (isAssembly) {
       const recipeData = get().assemblyRecipesMap[product.id];
       if (recipeData) {
-        const wasteMultiplier = 1 + (recipeData.wastePct / 100);
-        const db = getDb();
-        for (const line of recipeData.lines) {
-          const needed = Math.ceil(line.quantity * totalRequested * wasteMultiplier);
-          const ingredient = await db.products.get(line.productId);
-          if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
-            set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
-            return;
-          }
+        const error = await validateAssemblyIngredients(recipeData, product, totalRequested);
+        if (error) {
+          set({ error });
+          return;
         }
       }
     }

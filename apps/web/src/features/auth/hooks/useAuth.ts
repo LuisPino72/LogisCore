@@ -9,7 +9,11 @@ export function useAuth(): {
   tenantSlug: string | null;
   role: string | null;
 } {
-  const { status, session, setLoading, setSession, clearSession } = useAuthStore();
+  const status = useAuthStore((s) => s.status);
+  const session = useAuthStore((s) => s.session);
+  const setLoading = useAuthStore((s) => s.setLoading);
+  const setSession = useAuthStore((s) => s.setSession);
+  const clearSession = useAuthStore((s) => s.clearSession);
   const bootstrappedRef = useRef(false);
 
   useEffect(() => {
