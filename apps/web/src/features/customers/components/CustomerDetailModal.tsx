@@ -165,7 +165,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
               </div>
               <div className="rounded-xl border border-accent/20 bg-linear-to-br from-accent/5 to-accent/10 p-3 text-center">
                 <TrendingUp size={16} className="text-accent mx-auto mb-1" />
-                <p className="text-xs text-text-secondary">Ticket prom.</p>
+                <p className="text-xs text-text-secondary">Ticket promedio</p>
                 <p className="text-base sm:text-lg font-bold text-accent">{formatUsd(stats.averageTicketUsd)}</p>
                 <p className="text-[10px] text-text-secondary">por compra</p>
               </div>

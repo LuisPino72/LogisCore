@@ -245,7 +245,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
               <div className="pt-1">
                 <p className="text-sm font-semibold text-gray-900">¿Eliminar cliente {confirmDelete.name}?</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  El cliente se ocultará. Si tiene ventas registradas, no se podrá eliminar.
+                  Se marcará como inactivo. Si tiene ventas registradas, permanecerá en el historial.
                 </p>
               </div>
             </div>

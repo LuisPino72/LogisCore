@@ -433,7 +433,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-700 uppercase tracking-wide hidden sm:block">Periodo</label>
+            <label className="text-xs font-medium text-gray-700 uppercase tracking-wide hidden sm:block">Período</label>
             <Select
               value={filters.timeRange}
               onChange={(e) => handleTimeRangeChange(e.target.value)}
@@ -594,7 +594,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         steps={[
           {
             title: 'Analiza tu Negocio',
-            description: 'Aquí ves cuánto vendiste, cuánto ganaste y qué productos se venden más. Selecciona un periodo para ver los datos.',
+            description: 'Aquí ves cuánto vendiste, cuánto ganaste y qué productos se venden más. Selecciona un período para ver los datos.',
             icon: <FileText size={24} className="text-white" />,
           },
           {

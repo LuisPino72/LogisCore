@@ -58,10 +58,10 @@ function mapSupabaseAuthError(error: { message: string; status?: number }): AppE
     return new AppError('AUTH_INVALID_CREDENTIALS', 'Credenciales inválidas. Verifica tu email y contraseña.');
   }
   if (msg.includes('email not confirmed')) {
-    return new AppError('AUTH_EMAIL_NOT_CONFIRMED', 'Credenciales inválidas. Verifica tu email y contraseña.');
+    return new AppError('AUTH_EMAIL_NOT_CONFIRMED', 'Tu email no ha sido confirmado. Revisa tu bandeja de entrada.');
   }
   if (msg.includes('user not found')) {
-    return new AppError('AUTH_USER_NOT_FOUND', 'Credenciales inválidas. Verifica tu email y contraseña.');
+    return new AppError('AUTH_USER_NOT_FOUND', 'No se encontró una cuenta con este email.');
   }
   if (msg.includes('rate limit') || msg.includes('too many requests')) {
     return new AppError('AUTH_RATE_LIMITED', 'Demasiados intentos. Espera un momento e intenta de nuevo.');

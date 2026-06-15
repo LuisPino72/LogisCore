@@ -23,7 +23,7 @@ export function requireRole(...allowedRoles: UserRole[]): void {
   if (!role || !allowedRoles.includes(role)) {
     throw new AppError(
       AuthErrors.AUTH_SCOPE_DENIED,
-      `Acción restringida. Roles permitidos: [${allowedRoles.join(', ')}].`,
+      'No tienes acceso a esta función.',
       { details: { code: 'AUTH_SCOPE_DENIED', currentRole: role ?? null, allowedRoles } },
     );
   }

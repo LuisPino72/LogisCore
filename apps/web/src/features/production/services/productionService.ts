@@ -692,7 +692,7 @@ export const productionService = {
       .filter((o) => !o.deletedAt && (o.status === 'confirmed' || o.status === 'in_progress'))
       .count();
     if (activeOrders > 0) {
-      return failure(new AppError(ProductionErrors.RECIPE_HAS_ORDERS, `No se puede eliminar: tiene ${activeOrders} orden(es) de producción activa(s).`));
+      return failure(new AppError(ProductionErrors.RECIPE_HAS_ORDERS, `No se puede eliminar: tiene ${activeOrders} orden${activeOrders !== 1 ? 'es' : ''} de producción activa${activeOrders !== 1 ? 's' : ''}.`));
     }
 
     const deletedAt = new Date().toISOString();

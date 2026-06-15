@@ -52,7 +52,7 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
           <span className="text-xs text-text-secondary font-medium">Total del mes</span>
         </div>
         <p className="text-lg sm:text-xl font-bold text-primary">{formatUsd(summary.total)}</p>
-        <p className="text-[10px] text-text-secondary mt-0.5">{gastos.length} gasto(s)</p>
+        <p className="text-[10px] text-text-secondary mt-0.5">{gastos.length} gasto{gastos.length !== 1 ? 's' : ''}</p>
       </Card>
 
       <Card className="p-3 sm:p-4">
@@ -82,7 +82,7 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
           <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
             <TrendingUp size={16} className="text-accent" />
           </div>
-          <span className="text-xs text-text-secondary font-medium">Categoría top</span>
+          <span className="text-xs text-text-secondary font-medium">Categoría principal</span>
         </div>
         <p className="text-sm font-bold text-gray-900 truncate">{summary.topCategory ? getExpenseCategoryLabel(summary.topCategory) : '—'}</p>
         <p className="text-[10px] text-text-secondary mt-0.5">{summary.topAmount > 0 ? formatUsd(summary.topAmount) : '—'}</p>

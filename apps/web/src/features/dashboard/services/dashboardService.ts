@@ -69,7 +69,7 @@ export const dashboardService = {
   async getTenantInfo(tenantId: string): Promise<Result<TenantInfoResponse | null, AppError>> {
     const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(DashboardErrors.TENANT_INFO_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(DashboardErrors.TENANT_INFO_FAILED, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const { data, error } = await supabase
       .from('tenants')
@@ -98,7 +98,7 @@ export const dashboardService = {
   async getSubscriptionInfo(tenantId: string): Promise<Result<SubscriptionResponse | null, AppError>> {
     const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(DashboardErrors.SUBSCRIPTION_INFO_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(DashboardErrors.SUBSCRIPTION_INFO_FAILED, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const { data, error } = await supabase
       .from('subscriptions')
@@ -134,7 +134,7 @@ export const dashboardService = {
   async getEmployeeCount(tenantId: string): Promise<Result<number, AppError>> {
     const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(DashboardErrors.EMPLOYEES_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(DashboardErrors.EMPLOYEES_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const { count, error } = await supabase
       .from('user_roles')
@@ -162,7 +162,7 @@ export const dashboardService = {
   async getLowStockProducts(tenantId: string): Promise<Result<Product[], AppError>> {
     const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     return inventoryService.getLowStockProducts(tenantId);
   },
@@ -170,7 +170,7 @@ export const dashboardService = {
   async getTopProducts(tenantId: string, limit = 5): Promise<Result<{ productId: string; name: string; totalQty: number; isWeighted: boolean }[], AppError>> {
     const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     if (!navigator.onLine) return success([]);
     try {
@@ -217,7 +217,7 @@ export const dashboardService = {
   async getTodayEarnings(tenantId: string): Promise<Result<number, AppError>> {
     const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     try {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);

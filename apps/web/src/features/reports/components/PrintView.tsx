@@ -187,7 +187,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
 
       <div className="print-header">
         <h1 className="print-title">Sasa ERP</h1>
-        <p className="print-subtitle">Reporte de Gesti&oacute;n &mdash; {reportDate}</p>
+        <p className="print-subtitle">Reporte de Gestión — {reportDate}</p>
       </div>
 
       {/* Resumen Ejecutivo */}
@@ -336,7 +336,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
             <table className="print-table">
               <thead>
                 <tr>
-                  <th>M&eacute;todo</th>
+                  <th>Método</th>
                   <th>Transacciones</th>
                   <th>Total Bs</th>
                   <th>Total $</th>
@@ -476,7 +476,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <thead>
                 <tr>
                   <th>Nombre</th>
-                  <th>C&eacute;dula</th>
+                  <th>Cédula</th>
                   <th>Compras</th>
                   <th>Total Gastado Bs</th>
                   <th>Total Gastado $</th>

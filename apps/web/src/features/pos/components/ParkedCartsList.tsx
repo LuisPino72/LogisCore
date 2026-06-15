@@ -45,7 +45,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
                 <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
                   <span className="font-medium text-gray-700">{formatUsd(totalUsd)}</span>
                   <span className="text-gray-300">·</span>
-                  <span>{totalItems} items</span>
+                  <span>{totalItems} artículos</span>
                   <span className="text-gray-300">·</span>
                   <span className="inline-flex items-center gap-0.5">
                     <Clock size={10} />

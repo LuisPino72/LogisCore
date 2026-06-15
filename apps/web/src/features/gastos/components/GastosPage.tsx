@@ -76,7 +76,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     if (!tenantId || selectedIds.length === 0 || !currentRate) return;
     const result = await gastosService.markMultipleAsPaid(tenantId, selectedIds, currentRate);
     if (result.ok) {
-      addToast({ type: 'success', message: `${selectedIds.length} gasto(s) marcado(s) como pagado(s)` });
+      addToast({ type: 'success', message: `${selectedIds.length} gasto${selectedIds.length !== 1 ? 's' : ''} marcado${selectedIds.length !== 1 ? 's' : ''} como pagado${selectedIds.length !== 1 ? 's' : ''}` });
       clearSelection();
       window.location.reload();
     } else {

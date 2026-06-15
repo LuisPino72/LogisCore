@@ -357,7 +357,7 @@ export const reportsService = {
   async getExecutiveSummary(tenantId: string, filters: ReportFilters): Promise<Result<ExecutiveSummaryData, AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -574,7 +574,7 @@ export const reportsService = {
   async getProfitOverTime(tenantId: string, filters: ReportFilters): Promise<Result<DailyProfitPoint[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -638,7 +638,7 @@ export const reportsService = {
   async getTopProducts(tenantId: string, filters: ReportFilters, limit = 10): Promise<Result<TopProductData[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -709,7 +709,7 @@ export const reportsService = {
   async getTopCategories(tenantId: string, filters: ReportFilters): Promise<Result<TopCategoryData[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -808,7 +808,7 @@ export const reportsService = {
   async getPaymentBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<PaymentBreakdownData[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -891,7 +891,7 @@ export const reportsService = {
   async getCashAnalysis(tenantId: string, filters: ReportFilters): Promise<Result<CashRegisterSummaryData[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -1087,7 +1087,7 @@ export const reportsService = {
   async getNonSellableExpenses(tenantId: string, start: string, end: string): Promise<Result<{ totalUsd: number; totalBs: number }, AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     try {
       const db = getDb();
@@ -1128,7 +1128,7 @@ export const reportsService = {
   async getAdjustmentLossExpenses(tenantId: string, start: string, end: string): Promise<Result<AdjustmentLossExpenses, AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     try {
       const db = getDb();
@@ -1222,7 +1222,7 @@ export const reportsService = {
   async getSalesDetail(tenantId: string, filters: ReportFilters): Promise<Result<SaleDetail[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -1267,7 +1267,7 @@ export const reportsService = {
   async getExpenseBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<ExpenseBreakdownItem[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -1370,7 +1370,7 @@ export const reportsService = {
   async getTicketDistribution(tenantId: string, filters: ReportFilters): Promise<Result<TicketDistributionItem[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -1465,7 +1465,7 @@ export const reportsService = {
   async getDiscountBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<DiscountBreakdownItem[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const filtersCheck = ReportsFiltersSchema.safeParse(filters);
     if (!filtersCheck.success) {
@@ -1500,7 +1500,7 @@ export const reportsService = {
   async getCustomersSummary(tenantId: string, filters: ReportFilters): Promise<Result<CustomersSummaryData, AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     try {
       const db = getDb();
@@ -1579,7 +1579,7 @@ export const reportsService = {
   async getCustomersRanking(tenantId: string, filters: ReportFilters): Promise<Result<CustomerRankingItem[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     try {
       const db = getDb();
@@ -1660,7 +1660,7 @@ export const reportsService = {
   async getProductionSummary(tenantId: string, filters: ReportFilters): Promise<Result<ProductionSummaryData, AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     try {
       const db = getDb();
@@ -1733,7 +1733,7 @@ export const reportsService = {
   async getRecipeProfitability(tenantId: string, filters: ReportFilters): Promise<Result<RecipeProfitabilityItem[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
-      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
     }
     try {
       const db = getDb();

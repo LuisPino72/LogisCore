@@ -411,7 +411,7 @@ export const adminService = {
   async renewSubscription(tenantId: string): Promise<Result<void, AppError>> {
     const parsed = RestoreTenantSchema.safeParse({ tenantId });
     if (!parsed.success) {
-      return failure(new AppError(AdminErrors.SUBSCRIPTION_RENEW_FAILED, parsed.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(AdminErrors.SUBSCRIPTION_RENEW_FAILED, parsed.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const { data: current } = await supabase
       .from('subscriptions')
@@ -451,7 +451,7 @@ export const adminService = {
   async restoreTenant(id: string): Promise<Result<void, AppError>> {
     const parsed = RestoreTenantSchema.safeParse({ tenantId: id });
     if (!parsed.success) {
-      return failure(new AppError(AdminErrors.ADMIN_RESTORE_FAILED, parsed.error.issues[0]?.message || 'Tenant inválido.'));
+      return failure(new AppError(AdminErrors.ADMIN_RESTORE_FAILED, parsed.error.issues[0]?.message || 'Negocio no válido.'));
     }
     const { error } = await supabase.rpc('restore_tenant_cascade', { p_tenant_id: id });
 

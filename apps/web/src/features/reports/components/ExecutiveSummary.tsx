@@ -235,7 +235,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
             <ShoppingCart size={14} className="sm:w-4.5 sm:h-4.5 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm text-gray-700">Producto m&aacute;s rentable</p>
+            <p className="text-xs sm:text-sm text-gray-700">Producto más rentable</p>
             <p className="text-xs sm:text-sm font-semibold text-gray-900 wrap-break-word">{data.topProductName}</p>
           </div>
           <Badge variant="info" className="shrink-0">

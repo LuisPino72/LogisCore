@@ -793,7 +793,7 @@ export const inventoryService = {
         .filter(o => !o.deletedAt && (o.status === 'draft' || o.status === 'confirmed' || o.status === 'partially_received'))
         .count();
       if (blockingOrders > 0) {
-        return failure(new AppError('PRODUCT_HAS_ACTIVE_ORDERS', `No se puede eliminar: el producto está en ${blockingOrders} orden(es) de compra activa(s).`));
+        return failure(new AppError('PRODUCT_HAS_ACTIVE_ORDERS', `No se puede eliminar: el producto está en ${blockingOrders} orden${blockingOrders !== 1 ? 'es' : ''} de compra activa${blockingOrders !== 1 ? 's' : ''}.`));
       }
     }
 

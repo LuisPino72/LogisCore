@@ -90,7 +90,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-gray-700 mb-2">
-        {orders.length} orden(es) registrada(s)
+        {orders.length} orden{orders.length !== 1 ? 'es' : ''} registrada{orders.length !== 1 ? 's' : ''}
       </h3>
 
       {paginatedOrders.map((order) => {

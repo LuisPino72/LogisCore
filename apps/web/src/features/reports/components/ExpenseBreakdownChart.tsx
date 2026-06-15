@@ -66,7 +66,7 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
   if (data.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-sm text-gray-600">A&uacute;n no hay gastos registrados para este per&iacute;odo.</p>
+        <p className="text-sm text-gray-600">Aún no hay gastos registrados para este período.</p>
       </Card>
     );
   }

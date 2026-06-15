@@ -4,7 +4,7 @@ import { CreditCard, DollarSign, Smartphone, Banknote } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
 import type { PaymentMethod } from '../../../specs/pos';
 import { PAYMENT_METHODS, METADATA_PAGOS } from '../../../specs/pos';
-import { formatUsd } from '@/lib/formatBs';
+import { formatUsd, formatBs } from '@/lib/formatBs';
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { customerService } from '../services/customerService';
 import { useToastStore } from '../../../stores/toastStore';
@@ -212,7 +212,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
           />
           {exchangeRate > 0 && amountUsd && (
             <p className="text-xs text-gray-500 mt-1">
-              ≈ {formatUsd(parseFloat(amountUsd) * exchangeRate)} Bs
+              ≈ {formatBs(parseFloat(amountUsd) * exchangeRate)}
             </p>
           )}
         </div>

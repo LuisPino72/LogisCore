@@ -275,7 +275,7 @@ export function AuditSection() {
     },
     {
       key: 'tenantId',
-      header: 'Tenant',
+      header: 'Negocio',
       render: (e) => {
         const name = e.tenantId ? tenantNameMap.get(e.tenantId) : null;
         return (
@@ -476,7 +476,7 @@ export function AuditSection() {
                 </p>
               </div>
               <div>
-                <span className="text-gray-500">Tenant:</span>
+                <span className="text-gray-500">Negocio:</span>
                 <p className="truncate" title={selectedEntry.tenantId || ''}>
                   {tenantNameMap.get(selectedEntry.tenantId || '') || selectedEntry.tenantId?.slice(0, 8) || '-'}
                 </p>

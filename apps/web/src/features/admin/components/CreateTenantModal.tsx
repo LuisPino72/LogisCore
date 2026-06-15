@@ -99,7 +99,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Building2 size={16} className="text-primary" />
             </div>
-            <p className="text-sm font-semibold text-gray-700">Datos del Tenant</p>
+            <p className="text-sm font-semibold text-gray-700">Datos del Negocio</p>
           </div>
           <Input
             placeholder="Nombre"
@@ -138,13 +138,13 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             <p className="text-sm font-semibold text-gray-700">Propietario (obligatorio)</p>
           </div>
           <Input
-            placeholder="Nombre del owner"
+            placeholder="Nombre del propietario"
             value={createForm.owner.name}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, name: e.target.value } }))}
             validation={{ required: true, maxLength: 25 }}
           />
           <Input
-            placeholder="Email del owner"
+            placeholder="Email del propietario"
             type="email"
             value={createForm.owner.email}
             onChange={(e) => setCreateForm((p) => ({ ...p, owner: { ...p.owner, email: e.target.value } }))}
@@ -220,7 +220,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             onClick={handleCreate}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creando...' : 'Crear Tenant'}
+            {isSubmitting ? 'Creando...' : 'Crear Negocio'}
           </Button>
           <Button variant="secondary" fullWidth onClick={handleClose}>
             Cancelar

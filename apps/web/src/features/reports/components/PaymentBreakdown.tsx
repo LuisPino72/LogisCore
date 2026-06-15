@@ -64,7 +64,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
 
   return (
     <Card className="p-4">
-      <h3 className="text-sm font-title font-bold text-gray-900 mb-4">M&eacute;todos de Pago</h3>
+      <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Métodos de Pago</h3>
       <div className="h-48 overflow-hidden" ref={containerRef}>
         {ready ? (
         <ResponsiveContainer width="100%" height="100%" key="chart-ready">

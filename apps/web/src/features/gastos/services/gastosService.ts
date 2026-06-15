@@ -226,7 +226,7 @@ export const gastosService = {
         if (liveInstances > 0) {
           return failure(new AppError(
             'GASTOS_RECURRING_HAS_INSTANCES',
-            `Este template tiene ${liveInstances} occurrences activas. Borra o cancela cada una antes de eliminar el template.`,
+            `Este gasto recurrente tiene ${liveInstances} ocurrencia(s) activa(s). Elimina o cancela cada una antes de eliminarlo.`,
           ));
         }
       }

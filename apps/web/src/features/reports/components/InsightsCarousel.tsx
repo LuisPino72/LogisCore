@@ -13,9 +13,9 @@ interface SlideView {
 
 const SLIDES: SlideView[] = [
   { id: 'top-cats', title: 'Top 5 Categorías', type: 'category', emptyMessage: 'Aún no hay categorías con ventas en este período.' },
-  { id: 'worst-cats', title: 'Peores 5 Categorías', type: 'category', emptyMessage: 'Todas las categorías dieron ganancia.' },
+  { id: 'worst-cats', title: '5 Peores Categorías', type: 'category', emptyMessage: 'Todas las categorías dieron ganancia.' },
   { id: 'top-prods', title: 'Top 5 Productos', type: 'product', emptyMessage: 'Aún no hay productos con ventas en este período.' },
-  { id: 'worst-prods', title: 'Peores 5 Productos', type: 'product', emptyMessage: 'Todos los productos dieron ganancia.' },
+  { id: 'worst-prods', title: '5 Peores Productos', type: 'product', emptyMessage: 'Todos los productos dieron ganancia.' },
   { id: 'by-volume', title: 'Top 5 por Volumen', type: 'volume', emptyMessage: 'Aún no hay ventas en este período.' },
 ];
 

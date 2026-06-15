@@ -212,7 +212,7 @@ export const purchaseService = {
         .count();
 
       if (ordersWithSupplier > 0) {
-        return failure(new AppError(PurchaseErrors.SUPPLIER_HAS_ORDERS, `No se puede eliminar: tiene ${ordersWithSupplier} orden(es) asociada(s).`));
+        return failure(new AppError(PurchaseErrors.SUPPLIER_HAS_ORDERS, `No se puede eliminar: tiene ${ordersWithSupplier} orden${ordersWithSupplier !== 1 ? 'es' : ''} asociada${ordersWithSupplier !== 1 ? 's' : ''}.`));
       }
 
       const deletedAt = new Date().toISOString();
