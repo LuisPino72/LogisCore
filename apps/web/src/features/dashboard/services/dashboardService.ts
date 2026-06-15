@@ -6,7 +6,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { getDb, isDbReady, type DexieTenantRef } from '../../../services/dexie/db';
 import { DashboardErrors } from '../../../specs/dashboard/errors';
 import { ValidateDashboardTenantSchema, TenantInfoSchema, SubscriptionInfoSchema } from '../../../specs/dashboard/index';
-import type { TenantInfoResponse, SubscriptionResponse } from '../types';
+import type { TenantInfoResponse, SubscriptionResponse, PendingTask } from '../types';
 import { startOfDayVzla, startOfNextDayVzla } from '../../../lib/date';
 import type { Product } from '../../../specs/inventory';
 import { inventoryService } from '../../inventory/services/inventoryService';
@@ -292,6 +292,70 @@ export const dashboardService = {
     } catch (err) {
       logger.error('Dashboard', 'Error en getTodayEarnings:', err);
       return failure(new AppError(DashboardErrors.DASHBOARD_TODAY_EARNINGS_FAILED, 'Error al calcular ganancias del día'));
+    }
+  },
+
+  async getPendingTasks(tenantId: string): Promise<Result<PendingTask[], AppError>> {
+    const tenantCheck = ValidateDashboardTenantSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
+    }
+    if (!isDbReady()) return success([]);
+    try {
+      const db = getDb();
+      const tasks: PendingTask[] = [];
+
+      const pendingExpenses = await db.expenses
+        .where({ tenantId })
+        .filter((e) => !e.deletedAt && e.status === 'pending')
+        .toArray();
+      for (const exp of pendingExpenses.slice(0, 5)) {
+        tasks.push({
+          id: exp.id,
+          type: 'expense',
+          title: exp.category,
+          subtitle: exp.description || `${exp.amountUsd.toFixed(2)} USD`,
+          amount: exp.amountUsd,
+          route: '/expenses',
+        });
+      }
+
+      const orders = await db.purchaseOrders
+        .where({ tenantId })
+        .filter((o) => !o.deletedAt && (o.status === 'confirmed' || o.status === 'partially_received'))
+        .toArray();
+      const supplierRows = await db.suppliers.where({ tenantId }).filter((s) => !s.deletedAt).toArray();
+      const supplierMap = new Map(supplierRows.map((s) => [s.id, s.name]));
+      for (const ord of orders.slice(0, 5)) {
+        tasks.push({
+          id: ord.id,
+          type: 'order',
+          title: `Orden #${ord.id.slice(0, 8)}`,
+          subtitle: supplierMap.get(ord.supplierId) || 'Proveedor',
+          amount: ord.totalUsd,
+          route: '/purchases',
+        });
+      }
+
+      const customers = await db.customers
+        .where({ tenantId })
+        .filter((c) => !c.deletedAt && c.balance > 0)
+        .toArray();
+      for (const cust of customers.slice(0, 5)) {
+        tasks.push({
+          id: cust.id,
+          type: 'credit',
+          title: cust.name,
+          subtitle: `Deuda: ${cust.balance.toFixed(2)} USD`,
+          amount: cust.balance,
+          route: '/customers',
+        });
+      }
+
+      return success(tasks);
+    } catch (err) {
+      logger.error('Dashboard', 'Error en getPendingTasks:', err);
+      return failure(new AppError(DashboardErrors.DASHBOARD_LOAD_FAILED, 'Error al cargar tareas pendientes'));
     }
   },
 };

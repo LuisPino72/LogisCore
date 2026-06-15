@@ -4,6 +4,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { PwaInstallBanner } from './PwaInstallBanner';
+import { PendingTasksWidget } from './PendingTasksWidget';
 import { EmptyState, Card, Badge } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
@@ -55,6 +56,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     lowStockLoading,
     todayEarnings,
     todayEarningsLoading,
+    pendingTasks,
+    pendingTasksLoading,
     fetchTopProducts,
   } = useDashboard(tenantId);
 
@@ -120,6 +123,16 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
             </div>
           </Card>
         </div>
+
+        {pendingTasks.length > 0 && (
+          <div className="dashboard-card-entrance dashboard-card--full" style={{ animationDelay: '0.12s' }}>
+            <Card>
+              <div className="p-4 sm:p-5">
+                <PendingTasksWidget tasks={pendingTasks} loading={pendingTasksLoading} />
+              </div>
+            </Card>
+          </div>
+        )}
 
         {dashboardError && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-warning/8 border border-warning/20 text-sm text-warning animate-slide-down dashboard-card--full">

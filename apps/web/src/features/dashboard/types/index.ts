@@ -17,6 +17,15 @@ export interface TopProduct {
   isWeighted: boolean;
 }
 
+export interface PendingTask {
+  id: string;
+  type: 'expense' | 'order' | 'credit';
+  title: string;
+  subtitle: string;
+  amount?: number;
+  route: string;
+}
+
 export interface DashboardState {
   tenantInfo: TenantInfoResponse | null;
   subscription: SubscriptionResponse | null;

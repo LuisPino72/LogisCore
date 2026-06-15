@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DashboardState, TopProduct, Product } from '../types';
+import type { DashboardState, TopProduct, Product, PendingTask } from '../types';
 import { dashboardService } from '../services/dashboardService';
 
 const FETCH_COOLDOWN_MS = 2000;
@@ -11,9 +11,12 @@ export interface DashboardStore extends DashboardState {
   lowStockLoading: boolean;
   todayEarnings: number | null;
   todayEarningsLoading: boolean;
+  pendingTasks: PendingTask[];
+  pendingTasksLoading: boolean;
   fetchDashboard: (tenantId: string) => Promise<void>;
   fetchTopProducts: (tenantId: string) => Promise<void>;
   fetchLowStock: (tenantId: string) => Promise<void>;
+  fetchPendingTasks: (tenantId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -34,6 +37,8 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   lowStockLoading: false,
   todayEarnings: null,
   todayEarningsLoading: false,
+  pendingTasks: [],
+  pendingTasksLoading: false,
 
   fetchDashboard: async (tenantId: string) => {
     const now = Date.now();
@@ -85,9 +90,18 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     });
   },
 
+  fetchPendingTasks: async (tenantId: string) => {
+    set({ pendingTasksLoading: true });
+    const result = await dashboardService.getPendingTasks(tenantId);
+    set({
+      pendingTasks: result.ok ? result.data : [],
+      pendingTasksLoading: false,
+    });
+  },
+
   reset: () => {
     lastFetchAt = 0;
     lastFetchTenant = null;
-    set({ ...initialState, topProducts: [], topProductsLoading: false, lowStockProducts: [], lowStockLoading: false, todayEarnings: null, todayEarningsLoading: false });
+    set({ ...initialState, topProducts: [], topProductsLoading: false, lowStockProducts: [], lowStockLoading: false, todayEarnings: null, todayEarningsLoading: false, pendingTasks: [], pendingTasksLoading: false });
   },
 }));

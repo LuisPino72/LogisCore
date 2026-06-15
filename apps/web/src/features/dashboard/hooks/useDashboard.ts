@@ -12,9 +12,12 @@ export function useDashboard(tenantId: string | null) {
   const lowStockLoading = useDashboardStore((s) => s.lowStockLoading);
   const todayEarnings = useDashboardStore((s) => s.todayEarnings);
   const todayEarningsLoading = useDashboardStore((s) => s.todayEarningsLoading);
+  const pendingTasks = useDashboardStore((s) => s.pendingTasks);
+  const pendingTasksLoading = useDashboardStore((s) => s.pendingTasksLoading);
   const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
   const fetchTopProducts = useDashboardStore((s) => s.fetchTopProducts);
   const fetchLowStock = useDashboardStore((s) => s.fetchLowStock);
+  const fetchPendingTasks = useDashboardStore((s) => s.fetchPendingTasks);
   const reset = useDashboardStore((s) => s.reset);
   const mountedRef = useRef(false);
 
@@ -22,12 +25,13 @@ export function useDashboard(tenantId: string | null) {
     mountedRef.current = true;
     if (tenantId) {
       fetchDashboard(tenantId);
+      fetchPendingTasks(tenantId);
     }
     return () => {
       mountedRef.current = false;
       reset();
     };
-  }, [tenantId, fetchDashboard, reset]);
+  }, [tenantId, fetchDashboard, fetchPendingTasks, reset]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -35,6 +39,7 @@ export function useDashboard(tenantId: string | null) {
       if (mountedRef.current) {
         fetchDashboard(tenantId);
         fetchLowStock(tenantId);
+        fetchPendingTasks(tenantId);
       }
     };
     const sub1 = EventBus.on(SystemEvents.SALE_COMPLETED, handler);
@@ -43,13 +48,14 @@ export function useDashboard(tenantId: string | null) {
       EventBus.off(sub1);
       EventBus.off(sub2);
     };
-  }, [tenantId, fetchDashboard, fetchLowStock]);
+  }, [tenantId, fetchDashboard, fetchLowStock, fetchPendingTasks]);
 
   useEffect(() => {
     if (!tenantId) return;
     const handler = () => {
       if (mountedRef.current) {
         fetchDashboard(tenantId);
+        fetchPendingTasks(tenantId);
       }
     };
     const subs = [
@@ -58,7 +64,20 @@ export function useDashboard(tenantId: string | null) {
       EventBus.on(SystemEvents.EXPENSES_DELETED, handler),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
-  }, [tenantId, fetchDashboard]);
+  }, [tenantId, fetchDashboard, fetchPendingTasks]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const handler = () => {
+      if (mountedRef.current) {
+        fetchPendingTasks(tenantId);
+      }
+    };
+    const subs = [
+      EventBus.on(SystemEvents.CUSTOMER_UPDATED, handler),
+    ];
+    return () => { subs.forEach((s) => EventBus.off(s)); };
+  }, [tenantId, fetchPendingTasks]);
 
   return {
     tenantInfo,
@@ -70,7 +89,10 @@ export function useDashboard(tenantId: string | null) {
     lowStockLoading,
     todayEarnings,
     todayEarningsLoading,
+    pendingTasks,
+    pendingTasksLoading,
     fetchTopProducts,
     fetchLowStock,
+    fetchPendingTasks,
   };
 }
