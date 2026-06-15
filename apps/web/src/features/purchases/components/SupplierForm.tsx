@@ -127,6 +127,8 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
           hint="Formato: 0412-1234567"
           inputClassName="text-sm"
+          inputMode="tel"
+          autoComplete="tel"
         />
 
         {error && name.trim() && (

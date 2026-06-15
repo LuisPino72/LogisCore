@@ -478,16 +478,17 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
            <div className="input-wrapper">
              <label className="input-label">Precio de venta en $</label>
-             <Input
-               sanitize="currency"
-               step="0.01"
-               placeholder="2.50"
-               value={formData.priceUsd != null && formData.priceUsd > 0 ? String(formData.priceUsd) : ''}
-               onChange={(e) => setField('priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-               error={errors.priceUsd}
-               validation={{ required: true, min: 0.05, max: 9999 }}
-               inputClassName="text-sm"
-             />
+              <Input
+                sanitize="currency"
+                step="0.01"
+                placeholder="2.50"
+                value={formData.priceUsd != null && formData.priceUsd > 0 ? String(formData.priceUsd) : ''}
+                onChange={(e) => setField('priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                error={errors.priceUsd}
+                validation={{ required: true, min: 0.05, max: 9999 }}
+                inputClassName="text-sm"
+                inputMode="decimal"
+              />
            </div>
            <div className="input-wrapper">
              <label className="input-label">
@@ -571,6 +572,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 error={errors.costPrice}
                 validation={{ required: true, min: 0.01, max: 9999.99 }}
                 inputClassName="text-sm"
+                inputMode="decimal"
               />
               <p className="text-[10px] text-gray-600 mt-0.5">
                 Se dividirá automáticamente entre el stock inicial para obtener el costo por unidad.
@@ -593,6 +595,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 error={errors.stockInicial}
                 validation={{ required: true, min: 0.01 }}
                 inputClassName="text-sm"
+                inputMode="decimal"
               />
               <p className="text-[10px] text-gray-600 mt-0.5">
                 {formData.unit === 'kg' && 'Cantidad inicial en kilogramos'}
@@ -688,6 +691,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   error={errors.priceUsd}
                   validation={{ required: true, min: 0.05, max: 9999 }}
                   inputClassName="text-sm"
+                  inputMode="decimal"
                 />
               </div>
 
@@ -701,6 +705,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   validation={{ min: 0, max: 9999.99 }}
                   inputClassName="text-sm"
+                  inputMode="decimal"
                 />
                 <p className="text-[10px] text-gray-600 mt-0.5">Costo total pagado por el lote de productos.</p>
               </div>
@@ -720,6 +725,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
                   error={errors.stockInicial}
                   validation={{ min: 0 }}
+                  inputMode="decimal"
                 />
                 <p className="text-[10px] text-gray-600 mt-0.5">
                   {formData.productType === 'pesable_kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
@@ -790,6 +796,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => setField('costPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   validation={{ min: 0, max: 9999.99 }}
                   inputClassName="text-sm"
+                  inputMode="decimal"
                 />
               </div>
               <div className="input-wrapper">
@@ -845,6 +852,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         onChange={(e) => updatePresentation(index, 'priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                         validation={{ min: 0.01 }}
                         inputClassName="text-sm"
+                        inputMode="decimal"
                       />
                     </div>
 
@@ -858,6 +866,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
                         validation={{ min: 1 }}
                         inputClassName="text-sm"
+                        inputMode="numeric"
                       />
                     </div>
                     <div>
@@ -983,6 +992,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => updatePresentation(index, 'priceUsd', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   validation={{ min: 0.01 }}
                   inputClassName="text-sm"
+                  inputMode="decimal"
                 />
               </div>
 
@@ -1000,6 +1010,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => updatePresentation(index, 'unitMultiplier', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
                   validation={{ min: 1 }}
                   inputClassName={`text-sm ${pres.id ? 'opacity-60' : ''}`}
+                  inputMode="numeric"
                 />
               </div>
 

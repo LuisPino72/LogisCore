@@ -76,6 +76,8 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(({
         className="search-input"
         value={displayValue}
         onChange={handleChange}
+        inputMode="search"
+        enterKeyHint="search"
         {...props}
       />
       {displayValue && (

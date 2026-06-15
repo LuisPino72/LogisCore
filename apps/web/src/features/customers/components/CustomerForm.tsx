@@ -125,6 +125,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           error={fieldErrors.name}
           validation={{ required: 'Ingresa el nombre del cliente', maxLength: 25 }}
           inputClassName="text-sm"
+          autoComplete="name"
         />
 
         <CedulaInput
@@ -148,6 +149,8 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
           hint="Formato: 0412-1234567"
           inputClassName="text-sm"
+          inputMode="tel"
+          autoComplete="tel"
         />
 
         <Textarea
@@ -158,6 +161,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           rows={2}
           validation={{ maxLength: 30 }}
           error={fieldErrors.address}
+          autoComplete="street-address"
         />
 
         <Input
@@ -170,6 +174,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           validation={{ min: 0, max: 9999.99, maxLength: 10 }}
           hint="Monto máximo de crédito que puede deber este cliente"
           inputClassName="text-sm"
+          inputMode="decimal"
         />
 
         <Textarea

@@ -1,5 +1,6 @@
 import { memo, useEffect, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
+import { useKeyboardLayout } from '../../hooks/useKeyboardLayout';
 
 interface AppShellProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ interface AppShellProps {
 }
 
 export const AppShell = memo(function AppShell({ children, topBar, bottomNav, sidebar, sidebarOpen = true, sidebarExpanded = false, className }: AppShellProps) {
+  const { contentStyle } = useKeyboardLayout();
   const collapsedWidth = '2.5rem';
   const sidebarWidth = sidebar && sidebarOpen ? collapsedWidth : '0px';
   const sidebarWidthMd = sidebar && sidebarOpen ? (sidebarExpanded ? '12rem' : collapsedWidth) : '0px';
@@ -36,7 +38,7 @@ export const AppShell = memo(function AppShell({ children, topBar, bottomNav, si
         <header className="app-topbar">
           {topBar}
         </header>
-        <main className={cn('app-shell-content', bottomNav && 'app-shell-content--with-bottom-nav')}>
+        <main className={cn('app-shell-content', bottomNav && 'app-shell-content--with-bottom-nav')} style={contentStyle}>
           {children}
         </main>
         {bottomNav && <footer>{bottomNav}</footer>}

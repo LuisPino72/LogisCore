@@ -451,6 +451,42 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   animation: cardEntrance 0.4s ease-out both;
 }
 
+/* Dashboard responsive grid with container queries */
+.dashboard-container {
+  container-type: inline-size;
+  container-name: dashboard;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+}
+
+@container dashboard (min-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dashboard-grid > .dashboard-card--full {
+    grid-column: 1 / -1;
+  }
+}
+
+@container dashboard (min-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Fluid typography for dashboard */
+.dashboard-title {
+  font-size: clamp(1.25rem, 1rem + 2vw, 2rem);
+}
+
+.dashboard-kpi-amount {
+  font-size: clamp(1.5rem, 1rem + 3vw, 2.5rem);
+}
+
 @keyframes progressFill {
   from { width: 0 !important; }
 }
