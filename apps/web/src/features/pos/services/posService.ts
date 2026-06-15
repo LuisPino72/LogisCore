@@ -1145,7 +1145,7 @@ export const posService = {
 
       if (total === 0) {
         const uuid = await TenantTranslator.slugToUuid(tenantId);
-        const { data } = await supabase
+        let query = supabase
           .from('sales')
           .select('*')
           .eq('tenant_id', uuid)
@@ -1153,6 +1153,17 @@ export const posService = {
           .eq('status', 'completed')
           .order('created_at', { ascending: false })
           .limit(50);
+
+        if (startDate) {
+          query = query.gte('created_at', startDate);
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          query = query.lte('created_at', end.toISOString());
+        }
+
+        const { data } = await query;
 
         if (data) {
           for (const raw of data) {

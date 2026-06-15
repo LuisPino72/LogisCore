@@ -4,7 +4,7 @@ import { User, UserPlus, X } from 'lucide-react';
 import { useCustomerStore } from '../stores/customerStore';
 import { useCustomers } from '../hooks/useCustomers';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
-import { sanitizeValue } from '../../../lib/validation';
+import { formatPhone, unformatPhone } from '../../../lib/utils';
 import type { CreateCustomerInput, Customer } from '../../../specs/customers';
 import { CreateCustomerInputSchema } from '../../../specs/customers';
 import { useToastStore } from '../../../stores/toastStore';
@@ -214,13 +214,12 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
 
           <Input
             label="Teléfono (opcional)"
-            value={newPhone}
-            sanitize="phone"
-            onChange={(e) => { setNewPhone(sanitizeValue(e.target.value, 'phone')); clearFieldError('phone'); }}
+            value={formatPhone(newPhone)}
+            onChange={(e) => { const formatted = formatPhone(e.target.value); setNewPhone(unformatPhone(formatted)); clearFieldError('phone'); }}
             error={fieldErrors.phone}
-            placeholder="04121234567"
+            placeholder="0412-1234567"
             validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
-            hint="Formato: 04121234567"
+            hint="Formato: 0412-1234567"
             inputClassName="text-sm"
           />
 

@@ -3,6 +3,7 @@ import { type Result, type AppError } from '@logiscore/core';
 import { UserPlus } from 'lucide-react';
 import { Modal, Input, Button } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
+import { formatPhone, unformatPhone } from '../../../lib/utils';
 import { UpdateTenantSchema, type Tenant } from '../types';
 
 interface EditForm {
@@ -76,11 +77,10 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
           validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 12 }}
         />
         <Input
-          placeholder="Teléfono (04121234567)"
-          value={editForm.telefono}
-          sanitize="phone"
-          onChange={(e) => setEditForm((p) => ({ ...p, telefono: sanitizeValue(e.target.value, 'phone') }))}
-          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
+          placeholder="Teléfono (0412-1234567)"
+          value={formatPhone(editForm.telefono)}
+          onChange={(e) => { const formatted = formatPhone(e.target.value); setEditForm((p) => ({ ...p, telefono: unformatPhone(formatted) })); }}
+          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
         />
         <Input
           placeholder="Dirección"

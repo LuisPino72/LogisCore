@@ -78,7 +78,14 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     if (result.ok) {
       addToast({ type: 'success', message: `${selectedIds.length} gasto${selectedIds.length !== 1 ? 's' : ''} marcado${selectedIds.length !== 1 ? 's' : ''} como pagado${selectedIds.length !== 1 ? 's' : ''}` });
       clearSelection();
-      window.location.reload();
+      const refreshResult = await gastosService.getAll(tenantId);
+      if (refreshResult.ok) {
+        useGastosStore.getState().setGastos(refreshResult.data);
+      }
+      const templatesResult = await gastosService.getRecurringTemplates(tenantId);
+      if (templatesResult.ok) {
+        useGastosStore.getState().setRecurringTemplates(templatesResult.data);
+      }
     } else {
       addToast({ type: 'error', message: result.error.message });
     }
@@ -203,10 +210,10 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     />
 
     {selectedIds.length > 0 && (
-      <div className="fixed bottom-20 left-0 right-0 bg-white border-t shadow-lg p-4 z-50">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
-          <span className="text-sm text-gray-600">{selectedIds.length} seleccionados</span>
-          <div className="flex gap-2">
+      <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0))] left-0 right-0 bg-white border-t shadow-lg px-4 py-3 z-50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 max-w-lg mx-auto">
+          <span className="text-sm text-gray-600 text-center sm:text-left">{selectedIds.length} seleccionados</span>
+          <div className="flex gap-2 justify-center sm:justify-end">
             <Button variant="outline" onClick={clearSelection}>Cancelar</Button>
             <Button onClick={handleBatchPay}>Marcar como pagados</Button>
           </div>

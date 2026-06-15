@@ -3,6 +3,7 @@ import { type Result, type AppError } from '@logiscore/core';
 import { Building2, Shield, UserPlus, Plus, Trash2 } from 'lucide-react';
 import { Modal, Input, Button } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
+import { formatPhone, unformatPhone } from '../../../lib/utils';
 import { CreateTenantWithUsersInputSchema } from '../types';
 import type { CreateTenantWithUsersInput, CreateTenantResponse } from '../types';
 
@@ -115,11 +116,10 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 12 }}
           />
           <Input
-            placeholder="Teléfono (04121234567)"
-            value={createForm.tenant.telefono}
-            sanitize="phone"
-            onChange={(e) => setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: sanitizeValue(e.target.value, 'phone') } }))}
-            validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 11 }}
+            placeholder="Teléfono (0412-1234567)"
+            value={formatPhone(createForm.tenant.telefono)}
+            onChange={(e) => { const formatted = formatPhone(e.target.value); setCreateForm((p) => ({ ...p, tenant: { ...p.tenant, telefono: unformatPhone(formatted) } })); }}
+            validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
           />
           <Input
             placeholder="Dirección"
