@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EventBus } from '@logiscore/core';
 import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2, Upload } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect, Checkbox } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useStockAlerts } from '../hooks/useStockAlerts';
@@ -16,7 +16,9 @@ import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
 import { CSVUploadModal } from './CSVUploadModal';
 import { useStockAdjustment } from '../hooks/useStockAdjustment';
+import { useBulkPriceUpdate } from '../hooks/useBulkPriceUpdate';
 import { logger } from '../../../lib/logger';
+import { formatUsd } from '../../../lib/formatBs';
 import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
 
 
@@ -168,6 +170,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     products,
     onAdjustStock: handleAdjustStock,
     onSuccess: () => addToast({ type: 'success', message: 'Stock ajustado correctamente', duration: 3000 }),
+  });
+
+  const bulkPrice = useBulkPriceUpdate({
+    products,
+    tenantId: tenantId || '',
+    onSuccess: () => refresh(),
   });
   
 
@@ -427,6 +435,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               onViewLots={(id) => setSelectedProductLotsId(id)}
               onRefresh={refresh}
               onBulkAdjust={handleBulkAdjust}
+              onBulkPriceUpdate={bulkPrice.openModal}
             />
           </div>
         )}
@@ -806,6 +815,112 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                   hideSearch
                 />
               </div>
+            </div>
+          </Modal>
+        );
+      })()}
+
+      {bulkPrice.showModal && (() => {
+        return (
+          <Modal
+            isOpen={bulkPrice.showModal}
+            onClose={bulkPrice.closeModal}
+            title="Actualizar precios"
+            footer={
+              <div className="flex gap-3 w-full">
+                <Button variant="ghost" fullWidth onClick={bulkPrice.closeModal} disabled={bulkPrice.submitting}>
+                  Cancelar
+                </Button>
+                <Button variant="primary" fullWidth onClick={bulkPrice.handleSubmit} disabled={bulkPrice.submitting || !isOnline}>
+                  {bulkPrice.submitting ? 'Actualizando...' : 'Aplicar precios'}
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-xl p-3 max-h-[30vh] overflow-y-auto">
+                <p className="text-xs font-medium text-gray-500 mb-2">{bulkPrice.selectedIds.length} producto(s) seleccionado(s)</p>
+                <div className="space-y-1.5">
+                  {products.filter((p) => bulkPrice.selectedIds.includes(p.id)).slice(0, 10).map((p) => (
+                    <div key={p.id} className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
+                      <span className="text-gray-700 truncate min-w-0 flex-1 mr-2">{p.name}</span>
+                      <span className="text-xs text-gray-500 shrink-0">{formatUsd(p.priceUsd)}</span>
+                    </div>
+                  ))}
+                  {bulkPrice.selectedIds.length > 10 && (
+                    <p className="text-xs text-gray-400 text-center pt-1">+{bulkPrice.selectedIds.length - 10} más</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="input-label">Tipo de ajuste</label>
+                <div className="flex gap-2">
+                  {([
+                    { key: 'percentage' as const, label: 'Porcentaje', icon: '%' },
+                    { key: 'fixed_amount' as const, label: 'Monto fijo', icon: '+' },
+                    { key: 'fixed_price' as const, label: 'Precio fijo', icon: '=' },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => { bulkPrice.setMode(opt.key); bulkPrice.setValue(''); }}
+                      className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium transition-all duration-200 min-h-[44px] ${
+                        bulkPrice.mode === opt.key
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
+                      }`}
+                    >
+                      <span className="block text-base font-bold mb-0.5">{opt.icon}</span>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="input-wrapper">
+                <label className="input-label">
+                  {bulkPrice.mode === 'percentage' ? 'Porcentaje de aumento' : bulkPrice.mode === 'fixed_amount' ? 'Monto a sumar' : 'Nuevo precio'}
+                </label>
+                <Input
+                  sanitize="currency"
+                  decimals={2}
+                  inputMode="decimal"
+                  placeholder={bulkPrice.mode === 'percentage' ? 'Ej: 10' : 'Ej: 0.50'}
+                  value={bulkPrice.value}
+                  onChange={(e) => { bulkPrice.setValue(e.target.value); }}
+                  validation={{ required: true, min: 0.01 }}
+                  error={bulkPrice.error}
+                  inputClassName="text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {bulkPrice.mode === 'percentage' && 'Ej: 10 aumenta $1.00 a $1.10'}
+                  {bulkPrice.mode === 'fixed_amount' && 'Ej: $0.50 suma $0.50 al precio actual'}
+                  {bulkPrice.mode === 'fixed_price' && 'Ej: $3.00 establece todos los precios en $3.00'}
+                </p>
+              </div>
+
+              <Checkbox
+                label="Actualizar también el costo de compra"
+                checked={bulkPrice.includeCost}
+                onChange={(e) => bulkPrice.setIncludeCost((e.target as HTMLInputElement).checked)}
+              />
+
+              {bulkPrice.preview.length > 0 && (
+                <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-medium text-primary">Vista previa</p>
+                  {bulkPrice.preview.map((p) => (
+                    <div key={p.productId} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700 truncate min-w-0 flex-1 mr-2">{p.name}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs text-gray-500">{formatUsd(p.currentPrice)}</span>
+                        <span className="text-xs text-gray-400">→</span>
+                        <span className="text-xs font-medium text-primary">{formatUsd(p.newPrice)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </Modal>
         );

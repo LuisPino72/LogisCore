@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, MoreVertical, Settings, ClipboardCheck } from 'lucide-react';
+import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, MoreVertical, Settings, ClipboardCheck, DollarSign } from 'lucide-react';
 import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect, Modal } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
@@ -27,6 +27,7 @@ interface ProductListProps {
   onViewLots: (productId: string) => void;
   onRefresh: () => void;
   onBulkAdjust?: (productIds: string[]) => void;
+  onBulkPriceUpdate?: (productIds: string[]) => void;
 }
 
 function getStockLabel(isWeighted: boolean, unit: string): string {
@@ -79,7 +80,7 @@ function applyProductTypeFilter(product: { isWeighted: boolean; id: string; prod
   }
 }
 
-export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onBulkAdjust }: ProductListProps) {
+export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onBulkAdjust, onBulkPriceUpdate }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
   const [stockFilter, setStockFilter] = useState<StockFilter>(initialTabState.stockFilter);
@@ -479,7 +480,16 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                 className="ml-auto"
               >
                 <ClipboardCheck size={14} />
-                Ajustar seleccionados
+                Ajustar stock
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={selectedForBulk.size === 0 || !isOnline}
+                onClick={() => onBulkPriceUpdate?.(Array.from(selectedForBulk))}
+              >
+                <DollarSign size={14} />
+                Precios
               </Button>
             </>
           ) : (
