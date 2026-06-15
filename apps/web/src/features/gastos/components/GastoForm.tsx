@@ -139,7 +139,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
             <label className="input-label">
               Categoría <span className="text-danger">*</span>
             </label>
-            <div className="max-w-xs">
+            <div className="max-w-full sm:max-w-xs">
               <SearchableSelect
                 value={category}
                 onChange={(val) => { setCategory(val); setFieldErrors((prev) => { const next = { ...prev }; delete next.category; return next; }); }}
@@ -156,6 +156,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
           <Input
             label="Monto ($)"
             type="number"
+            inputMode="decimal"
             step="0.01"
             min="0"
             sanitize="number"
@@ -191,10 +192,10 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
           />
 
           <div className="flex items-center justify-between pt-2">
-            <span className="text-sm font-medium text-gray-700">Gasto recurrente</span>
             <Toggle
               checked={isRecurring}
               onChange={(e) => setIsRecurring(e.target.checked)}
+              label="Gasto recurrente"
             />
           </div>
 
@@ -204,7 +205,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
                 label="Frecuencia"
                 value={recurrenceType}
                 onChange={(e) => setRecurrenceType(e.target.value as 'monthly' | 'yearly')}
-                className="max-w-xs"
+                className="max-w-full sm:max-w-xs"
               >
                 <option value="monthly">Mensual</option>
                 <option value="yearly">Anual</option>

@@ -15,6 +15,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
           value={filters.search ?? ''}
           onChange={(e) => onChange({ search: e.target.value })}
           onClear={() => onChange({ search: '' })}
+          aria-label="Buscar gasto"
         />
       </div>
       <div className="w-full sm:w-40">
@@ -28,6 +29,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
             ...EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat })),
           ]}
           hideSearch={EXPENSE_CATEGORIES.length <= 10}
+          aria-label="Categoría"
         />
       </div>
       <div className="w-full sm:w-40">
@@ -35,6 +37,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
           type="month"
           value={filters.month ?? ''}
           onChange={(e) => onChange({ month: e.target.value })}
+          aria-label="Mes"
         />
       </div>
       <div className="w-full sm:w-36">
@@ -48,6 +51,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
             { value: 'pending', label: 'Pendiente' },
           ]}
           hideSearch
+          aria-label="Estado"
         />
       </div>
     </div>

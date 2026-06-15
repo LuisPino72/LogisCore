@@ -36,7 +36,7 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
           <div>
             <p className="text-xs text-text-secondary font-medium">Gastos del mes</p>
             <p className="text-lg sm:text-xl font-bold text-primary leading-tight">{formatUsd(summary.total)}</p>
-            <p className="text-[11px] sm:text-xs text-text-secondary">{gastos.length} gasto{gastos.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-text-secondary">{gastos.length} gasto{gastos.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
 
@@ -44,14 +44,14 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
             <div>
-              <p className="text-[11px] sm:text-xs text-text-secondary">Pendientes</p>
+              <p className="text-xs text-text-secondary">Pendientes</p>
               <p className="text-sm sm:text-base font-semibold text-gray-900">{formatUsd(summary.pendingTotal)}<span className="text-text-secondary font-normal ml-1">· {summary.pendingCount}</span></p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-success shrink-0" />
             <div>
-              <p className="text-[11px] sm:text-xs text-text-secondary">Pagados</p>
+              <p className="text-xs text-text-secondary">Pagados</p>
               <p className="text-sm sm:text-base font-semibold text-gray-900">{formatUsd(summary.paidTotal)}<span className="text-text-secondary font-normal ml-1">· {summary.paidCount}</span></p>
             </div>
           </div>

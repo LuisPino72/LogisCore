@@ -121,7 +121,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
                       <button
                         type="button"
                         onClick={() => setConfirmPayTarget({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
-                        className="p-1.5 rounded-lg text-text-secondary hover:text-success hover:bg-success/5 transition-colors active:scale-90"
+                        className="p-2 rounded-lg text-text-secondary hover:text-success hover:bg-success/5 transition-colors active:scale-90"
                         title="Marcar pagado"
                       >
                         <CheckCircle size="16" />
@@ -131,7 +131,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
                       <button
                         type="button"
                         onClick={() => setDeleteTarget({ id: gasto.id, category: gasto.category })}
-                        className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors active:scale-90"
+                        className="p-2 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors active:scale-90"
                         title="Eliminar"
                       >
                         <Trash2 size="16" />
@@ -233,12 +233,14 @@ function MobileCard({
       {/* Monto destacado */}
       <div className="text-center pt-5 pb-3 px-4 relative">
         {isPending && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelect(gasto.id)}
-            className="absolute top-3 right-3 rounded border-gray-300 text-primary focus:ring-primary"
-          />
+          <label className="absolute top-2 right-2 w-11 h-11 flex items-center justify-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelect(gasto.id)}
+              className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+          </label>
         )}
         <p className="text-2xl font-bold text-primary leading-none tracking-tight">
           {formatUsd(gasto.amountUsd)}
@@ -288,7 +290,7 @@ function MobileCard({
           <button
             type="button"
             onClick={() => onPay({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold text-success bg-success/6 hover:bg-success/10 active:scale-[0.98] transition-all duration-150 relative overflow-hidden group"
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 min-h-11 text-xs font-semibold text-success bg-success/6 hover:bg-success/10 active:scale-[0.98] transition-all duration-150 relative overflow-hidden group"
           >
             <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             <CheckCircle size={15} className="relative z-10" />
@@ -299,14 +301,14 @@ function MobileCard({
           <button
             type="button"
             onClick={() => onDelete({ id: gasto.id, category: gasto.category })}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium text-text-secondary hover:text-danger hover:bg-danger/4 active:scale-[0.98] transition-all duration-150 border-l border-border"
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 min-h-11 text-xs font-medium text-text-secondary hover:text-danger hover:bg-danger/4 active:scale-[0.98] transition-all duration-150 border-l border-border"
           >
             <Trash2 size={14} />
             <span className="hidden min-[360px]:inline">Eliminar</span>
           </button>
         )}
         {gasto.status === 'paid' && (
-          <div className="flex-1 flex items-center justify-center py-3 text-xs text-text-muted">
+          <div className="flex-1 flex items-center justify-center py-3 min-h-11 text-xs text-text-muted">
             <span>Sin acciones</span>
           </div>
         )}
