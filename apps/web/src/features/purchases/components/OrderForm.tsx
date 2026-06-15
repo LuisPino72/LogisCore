@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Truck, Package, FileText, DollarSign } from 'lucide-react';
+import { Plus, X, Truck, Package, FileText, DollarSign, History } from 'lucide-react';
 import { Button, Input, Modal, SearchableSelect } from '../../../common/components';
 import { usePurchaseStore } from '../stores/purchaseStore';
 import type { Product, Presentation } from '../../inventory/types';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
 import { formatUsd } from '@/lib/formatBs';
 import { CreatePurchaseOrderInputSchema } from '../../../specs/purchases';
+import { PriceHistoryModal } from './PriceHistoryModal';
 
 interface OrderFormProps {
   isOpen: boolean;
@@ -63,6 +64,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
   const [allErrors, setAllErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState('');
+  const [priceHistoryTarget, setPriceHistoryTarget] = useState<{ supplierId: string; productId: string; productName: string } | null>(null);
 
   const isEditing = !!editOrder;
 
@@ -341,17 +343,36 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       inputClassName="text-sm"
                     />
                   </div>
-                  <div className="flex-1">
-                    <Input
-                      sanitize="currency"
-                      inputMode="decimal"
-                      step="0.01"
-                      placeholder="Costo($)"
-                      value={item.totalCostUsd || ''}
-                      onChange={(e) => updateItem(idx, 'totalCostUsd', parseFloat(e.target.value) || 0)}
-                      validation={{ required: true, min: 0.01, max: 999999 }}
-                      inputClassName="text-sm"
-                    />
+                  <div className="flex-1 flex items-end gap-1">
+                    <div className="flex-1">
+                      <Input
+                        sanitize="currency"
+                        inputMode="decimal"
+                        step="0.01"
+                        placeholder="Costo($)"
+                        value={item.totalCostUsd || ''}
+                        onChange={(e) => updateItem(idx, 'totalCostUsd', parseFloat(e.target.value) || 0)}
+                        validation={{ required: true, min: 0.01, max: 999999 }}
+                        inputClassName="text-sm"
+                      />
+                    </div>
+                    {supplierId && item.productId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const prod = products.find((p) => p.id === item.productId);
+                          setPriceHistoryTarget({
+                            supplierId,
+                            productId: item.productId,
+                            productName: prod?.name ?? item.productId,
+                          });
+                        }}
+                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-text-secondary hover:bg-gray-50 hover:text-primary transition-colors mb-0.5"
+                        title="Historial de precios"
+                      >
+                        <History size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -406,6 +427,17 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
           <span className="text-xl font-bold text-primary">{formatUsd(totalUsd)}</span>
         </div>
       </div>
+
+      {priceHistoryTarget && (
+        <PriceHistoryModal
+          supplierId={priceHistoryTarget.supplierId}
+          productId={priceHistoryTarget.productId}
+          productName={priceHistoryTarget.productName}
+          tenantId={tenantId}
+          isOpen={true}
+          onClose={() => setPriceHistoryTarget(null)}
+        />
+      )}
     </Modal>
   );
 }

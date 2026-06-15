@@ -945,4 +945,39 @@ export const purchaseService = {
       return failure(new AppError('ORDER_FETCH_ERROR', 'Error al obtener la orden.'));
     }
   },
+
+  async getPriceHistory(
+    supplierId: string,
+    productId: string,
+    tenantId: string,
+  ): Promise<Result<Array<{ date: string; quantity: number; costPerUnit: number; totalUsd: number; orderId: string }>, AppError>> {
+    try {
+      const db = getDb();
+      const orders = await db.purchaseOrders
+        .where({ tenantId })
+        .filter((o) => !o.deletedAt && o.supplierId === supplierId)
+        .toArray();
+      const orderIds = new Set(orders.map((o) => o.id));
+
+      const allItems = await db.purchaseOrderItems
+        .where({ tenantId })
+        .filter((item) => !item.deletedAt && item.productId === productId && orderIds.has(item.orderId))
+        .toArray();
+
+      const result = allItems
+        .map((item) => ({
+          date: item.createdAt,
+          quantity: item.quantity,
+          costPerUnit: item.costUsdPerUnit,
+          totalUsd: item.totalUsd,
+          orderId: item.orderId,
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      return success(result);
+    } catch (err) {
+      logger.error(PURCHASES_MODULE, 'Error en getPriceHistory:', err);
+      return failure(new AppError('PRICE_HISTORY_ERROR', 'Error al obtener historial de precios.'));
+    }
+  },
 };
