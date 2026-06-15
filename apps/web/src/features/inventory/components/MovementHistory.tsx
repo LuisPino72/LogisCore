@@ -113,7 +113,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
             <p className="text-sm font-semibold">
               {signedQty > 0 ? '+' : ''}{prod?.isWeighted ? displayStock(Math.abs(mov.quantity), prod.unit) : signedQty}{prod?.isWeighted ? ` ${prod.unit}` : ''}
             </p>
-            <span className="text-[10px] text-gray-600">
+            <span className="text-xs text-gray-600">
               {new Date(mov.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
@@ -162,7 +162,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2" ref={dropdownRef}>
+      <div className="space-y-2 relative" ref={dropdownRef}>
         <label className="input-label">Seleccionar producto</label>
         <SearchInput
           maxLength={20}
@@ -196,8 +196,8 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
         {selectedProductId && (
           <button
             type="button"
-            onClick={() => { setSelectedProductId(''); setMovements([]); }}
-            className="text-xs text-primary font-medium hover:underline"
+            onClick={() => { setSelectedProductId(''); setMovements([]); setProductSearch(''); }}
+            className="text-xs text-primary font-medium hover:underline min-h-11 py-2 px-3"
           >
             Limpiar selección
           </button>

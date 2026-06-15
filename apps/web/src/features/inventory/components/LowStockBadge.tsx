@@ -10,7 +10,7 @@ export function LowStockBadge({ count, onClick }: LowStockBadgeProps) {
 
   return (
     <div
-      className={`flex items-center gap-1 px-2 py-1 rounded-full bg-danger/10 text-danger text-xs font-semibold transition-all duration-300 hover:bg-danger/20 ${onClick ? 'cursor-pointer' : ''}`}
+      className={`flex items-center gap-1.5 px-3 py-2 min-h-11 rounded-full bg-danger/10 text-danger text-xs font-semibold transition-all duration-300 hover:bg-danger/20 ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}

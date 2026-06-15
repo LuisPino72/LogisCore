@@ -82,10 +82,10 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2 flex-wrap">
                 {isFirst && (
-                  <Badge variant="warning" className="text-[10px]">FIFO — Activo</Badge>
+                  <Badge variant="warning" className="text-xs">FIFO — Activo</Badge>
                 )}
                 {lot.productLabel && (
-                  <Badge variant="neutral" className="text-[10px]">{lot.productLabel}</Badge>
+                  <Badge variant="neutral" className="text-xs">{lot.productLabel}</Badge>
                 )}
               </div>
               <Badge variant={lot.remainingQuantity > 0 ? 'success' : 'neutral'}>
@@ -111,7 +111,7 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-gray-400 shrink-0" />
                 <div>

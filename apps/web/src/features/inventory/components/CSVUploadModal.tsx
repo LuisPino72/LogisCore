@@ -268,7 +268,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                   <p className="text-sm font-medium text-gray-700">Arrastra un archivo CSV aquí</p>
                   <p className="text-xs text-gray-500 mt-1">o haz clic para seleccionar</p>
                 </div>
-                <p className="text-[10px] text-gray-600">Máximo 500 productos por importación</p>
+                <p className="text-xs text-gray-600">Máximo 500 productos por importación</p>
               </div>
             )}
           </div>
@@ -391,7 +391,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[10px] text-gray-400">* precio es requerido para tipo "resale" | ** costo es requerido para tipo "materia_prima"</p>
+                <p className="text-xs text-gray-400">* precio es requerido para tipo "resale" | ** costo es requerido para tipo "materia_prima"</p>
               </div>
             )}
           </div>
@@ -433,7 +433,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                 </div>
               ))}
               {errorCount > 5 && (
-                <p className="text-[10px] text-gray-600">... y {errorCount - 5} errores más</p>
+                <p className="text-xs text-gray-600">... y {errorCount - 5} errores más</p>
               )}
             </div>
           )}
@@ -476,7 +476,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         <td className="py-2 px-2">{row.nombre || '-'}</td>
                         <td className="py-2 px-2 font-mono">{row.sku || '-'}</td>
                         <td className="py-2 px-2">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${row.tipo === 'materia_prima' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full ${row.tipo === 'materia_prima' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                             {row.tipo === 'materia_prima' ? 'Materia Prima' : 'Venta'}
                           </span>
                         </td>
@@ -484,12 +484,12 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         <td className="py-2 px-2 text-right">{row.stock || '-'}</td>
                         <td className="py-2 px-2">{row.categoria || <span className="text-gray-400">Otros</span>}</td>
                         <td className="py-2 px-2 text-center">{row.pesable === 'si' ? '⚖️' : '📦'}</td>
-                        <td className="py-2 px-2 text-center font-mono text-[10px]">{row.unidad || 'unidad'}</td>
+                        <td className="py-2 px-2 text-center font-mono text-xs">{row.unidad || 'unidad'}</td>
                         <td className="py-2 px-2 text-center">{row.iva === 'no' ? 'No' : 'Sí'}</td>
                         <td className="py-2 px-2 text-center">
                           {result?.status === 'valid' && <CheckCircle2 size={14} className="text-success mx-auto" />}
                           {result?.status === 'error' && <AlertTriangle size={14} className="text-danger mx-auto" />}
-                          {result?.status === 'duplicate' && <span className="text-yellow-600 text-[10px]">dup</span>}
+                          {result?.status === 'duplicate' && <span className="text-yellow-600 text-xs">dup</span>}
                         </td>
                       </tr>
                     );
@@ -497,7 +497,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                 </tbody>
               </table>
               {parsedRows.length > 5 && (
-                <p className="text-[10px] text-gray-600 text-center mt-2">Mostrando 5 de {parsedRows.length} filas</p>
+                <p className="text-xs text-gray-600 text-center mt-2">Mostrando 5 de {parsedRows.length} filas</p>
               )}
             </div>
           )}
@@ -549,7 +549,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                     <button
                       type="button"
                       onClick={() => deleteEditRow(i)}
-                      className="p-1 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors"
+                      className="min-w-11 min-h-11 p-2.5 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors flex items-center justify-center"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -594,6 +594,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         error={getFieldError('precio')}
                         validation={{ required: true, min: 0.05, max: 9999 }}
                         inputClassName="text-xs"
+                        inputMode="decimal"
                       />
                     </div>
 
@@ -609,6 +610,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         error={getFieldError('costo')}
                         validation={{ min: 0 }}
                         inputClassName="text-xs"
+                        inputMode="decimal"
                       />
                     </div>
 
@@ -625,6 +627,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         error={getFieldError('stock')}
                         validation={{ required: true, min: 0 }}
                         inputClassName="text-xs"
+                        inputMode="decimal"
                       />
                     </div>
 
@@ -640,6 +643,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         error={getFieldError('stock_min')}
                         validation={{ min: 0, max: 999 }}
                         inputClassName="text-xs"
+                        inputMode="numeric"
                       />
                     </div>
 
@@ -744,7 +748,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                     </div>
 
                     <div className="col-span-2 border-t border-gray-100 pt-2 mt-1">
-                      <p className="text-[10px] text-gray-400 mb-2 font-medium">PRESENTACIÓN (opcional)</p>
+                      <p className="text-xs text-gray-400 mb-2 font-medium">PRESENTACIÓN (opcional)</p>
                     </div>
 
                     <div>
@@ -856,15 +860,15 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="bg-success/10 rounded-lg p-3">
               <p className="text-lg font-bold text-success">{summary.imported}</p>
-              <p className="text-[10px] text-gray-500">Importados</p>
+              <p className="text-xs text-gray-500">Importados</p>
             </div>
             <div className="bg-warning/10 rounded-lg p-3">
               <p className="text-lg font-bold text-yellow-600">{summary.duplicates}</p>
-              <p className="text-[10px] text-gray-500">Duplicados</p>
+              <p className="text-xs text-gray-500">Duplicados</p>
             </div>
             <div className="bg-danger/10 rounded-lg p-3">
               <p className="text-lg font-bold text-danger">{summary.errors}</p>
-              <p className="text-[10px] text-gray-500">Errores</p>
+              <p className="text-xs text-gray-500">Errores</p>
             </div>
           </div>
 
@@ -873,7 +877,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
               <p className="text-xs font-medium text-gray-700 mb-1">Categorías creadas:</p>
               <div className="flex flex-wrap gap-1">
                 {summary.categoriesCreated.map((cat, i) => (
-                  <Badge key={i} variant="info" className="text-[10px]">{cat}</Badge>
+                  <Badge key={i} variant="info" className="text-xs">{cat}</Badge>
                 ))}
               </div>
             </div>

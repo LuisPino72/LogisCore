@@ -57,7 +57,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
               <span className={cn('relative flex items-center justify-center', NAV_ICON_CLASS)}>
                 {item.icon}
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-1.5 min-w-4 rounded-full bg-danger px-1 py-0.5 text-center text-[10px] leading-none font-bold text-white animate-pulse">
+                  <span className="absolute -top-1 -right-1.5 min-w-4 rounded-full bg-danger px-1 py-0.5 text-center text-[11px] leading-none font-bold text-white animate-pulse">
                     {item.badge}
                   </span>
                 )}
@@ -65,7 +65,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
               <span
                 className={cn(
                   'w-full truncate text-center leading-tight',
-                  compact ? 'max-w-13 text-[9px]' : 'max-w-16 text-[10px]',
+                  compact ? 'max-w-13 text-[10px]' : 'max-w-16 text-xs',
                   isActive ? 'font-semibold' : 'font-medium',
                 )}
               >

@@ -321,7 +321,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
+    <div className="p-3 sm:p-6 pb-24 sm:pb-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -545,7 +545,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                         {product.name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-medium text-primary">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-xs font-medium text-primary">
                           Stock: {displayStockValue} {unitLabel}
                         </span>
                       </div>
@@ -651,8 +651,9 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                     onChange={(e) => setAdjCostTotal(e.target.value)}
                     validation={{ min: 0, max: 999999 }}
                     inputClassName="text-sm"
+                    inputMode="decimal"
                   />
-                  <p className="text-[10px] text-gray-600 mt-0.5">
+                  <p className="text-xs text-gray-600 mt-0.5">
                     Costo total de las unidades que entran (para ajustes positivos).
                   </p>
                 </div>
@@ -707,7 +708,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 </div>
               )}
 
-              <div className="bg-gray-50 rounded-xl p-3 max-h-48 overflow-y-auto">
+              <div className="bg-gray-50 rounded-xl p-3 max-h-[40vh] overflow-y-auto">
                 <p className="text-xs font-medium text-gray-500 mb-2">
                   {bulkProducts.length} producto{bulkProducts.length !== 1 ? 's' : ''} seleccionado{bulkProducts.length !== 1 ? 's' : ''}
                 </p>
@@ -733,7 +734,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                           <span className="text-xs text-gray-500">{displayStock} {unitLabel}</span>
                           {hasValidQty && (
                             <>
-                              <span className="text-[10px] text-gray-400">→</span>
+                              <span className="text-xs text-gray-400">→</span>
                               <span className={`text-xs font-medium ${wouldGoNegative ? 'text-danger' : 'text-primary'}`}>
                                 {newDisplay} {unitLabel}
                               </span>
@@ -790,7 +791,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                   inputClassName="text-sm"
                 />
                 {hasMixedUnits && hasValidQty && (
-                  <p className="text-[10px] text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Para pesables: {rawQty} Kg/Lt = {rawQty * 1000} unidades internas
                   </p>
                 )}

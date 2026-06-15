@@ -126,15 +126,15 @@ export function CategoryManager({ categories, products, isOwner, onCreate, onUpd
                 <ListTree size={16} className="text-primary" />
               </div>
               <span className="text-sm font-medium text-gray-900 wrap-break-word w-full text-center sm:text-left sm:flex-1 sm:min-w-0">{cat.name}</span>
-              <span className="text-[10px] font-medium text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded-full">
                 {products.filter(p => p.categoryId === cat.id).length} productos
               </span>
               {isOwner && (
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-8 min-h-8" title="Editar">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-11 min-h-11" title="Editar">
                     <Edit3 size={14} />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-8 min-h-8" title="Eliminar">
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar">
                     <Trash2 size={14} className="text-danger" />
                   </Button>
                 </div>

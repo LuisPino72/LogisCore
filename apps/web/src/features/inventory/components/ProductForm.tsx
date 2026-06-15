@@ -23,7 +23,7 @@ function StepIndicator({ current, steps }: { current: number; steps: { id: strin
               {i < current ? <Check size={14} /> : i + 1}
             </div>
             <span
-              className={`text-[10px] mt-1.5 font-medium whitespace-nowrap transition-colors duration-200 hidden sm:block ${
+              className={`text-xs mt-1.5 font-medium whitespace-nowrap transition-colors duration-200 hidden sm:block ${
                 i === current
                   ? 'text-gray-800 font-semibold'
                   : i < current
@@ -378,9 +378,9 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             <button
               type="button"
               onClick={removeImage}
-              className="absolute top-0 right-0 w-5 h-5 bg-gray-900/60 text-white rounded-bl-lg flex items-center justify-center hover:bg-danger transition-colors"
+              className="absolute top-0 right-0 min-w-11 min-h-11 flex items-center justify-center bg-gray-900/60 text-white rounded-bl-lg hover:bg-danger transition-colors"
             >
-              <X size={12} />
+              <X size={14} />
             </button>
           </div>
         ) : (
@@ -403,7 +403,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           />
         </div>
       </div>
-      <p className="text-[10px] text-gray-600 -mt-2">JPG, PNG o WebP. Se comprime automáticamente.</p>
+      <p className="text-xs text-gray-600 -mt-2">JPG, PNG o WebP. Se comprime automáticamente.</p>
       {imageError && (
         <p className="text-[11px] text-danger -mt-1">{imageError}</p>
       )}
@@ -445,10 +445,10 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             validation={{ required: true, maxLength: 18 }}
             inputClassName="text-sm"
           />
-          <Button variant="outline" size="sm" onClick={generateSku} className="shrink-0 px-2 text-xs" title="Generar SKU automático">
+          <Button variant="outline" size="sm" onClick={generateSku} className="shrink-0 px-3 min-h-11 text-xs" title="Generar SKU automático">
             Auto
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowBarcodeScanner(true)} className="shrink-0 px-2" title="Escanear código de barras">
+          <Button variant="outline" size="sm" onClick={() => setShowBarcodeScanner(true)} className="shrink-0 px-3 min-h-11" title="Escanear código de barras">
             <Scan size={16} />
           </Button>
         </div>
@@ -462,19 +462,20 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                {editProduct?.unit === 'kg' && ' (Kg)'}
                {editProduct?.unit === 'lt' && ' (Lt)'}
              </label>
-             <Input
-               sanitize="number"
-               decimals={0}
-               placeholder="0"
-               value={formData.stockMin || ''}
-               onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
-               validation={{ min: 0, max: 999 }}
-             />
-           </div>
-         </div>
-       )}
+              <Input
+                sanitize="number"
+                decimals={0}
+                placeholder="0"
+                value={formData.stockMin || ''}
+                onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+                validation={{ min: 0, max: 999 }}
+                inputMode="numeric"
+              />
+            </div>
+          </div>
+        )}
 
-       {isEditing && !isRawMaterialEdit && (
+        {isEditing && !isRawMaterialEdit && (
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
            <div className="input-wrapper">
              <label className="input-label">Precio de venta en $</label>
@@ -496,14 +497,15 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
                {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
              </label>
-             <Input
-               sanitize="number"
-               decimals={0}
-               placeholder="0"
-               value={formData.stockMin || ''}
-               onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
-               validation={{ min: 0, max: 999 }}
-             />
+              <Input
+                sanitize="number"
+                decimals={0}
+                placeholder="0"
+                value={formData.stockMin || ''}
+                onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+                validation={{ min: 0, max: 999 }}
+                inputMode="numeric"
+              />
            </div>
          </div>
        )}
@@ -551,7 +553,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <option value="lt">Litros (Lt)</option>
               <option value="unidad">Unidad</option>
             </Select>
-            <p className="text-[10px] text-gray-600 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               {formData.unit === 'kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
               {formData.unit === 'lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
               {formData.unit === 'unidad' && 'Se guarda como unidades enteras'}
@@ -574,7 +576,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 inputClassName="text-sm"
                 inputMode="decimal"
               />
-              <p className="text-[10px] text-gray-600 mt-0.5">
+              <p className="text-xs text-gray-600 mt-0.5">
                 Se dividirá automáticamente entre el stock inicial para obtener el costo por unidad.
               </p>
             </div>
@@ -597,7 +599,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 inputClassName="text-sm"
                 inputMode="decimal"
               />
-              <p className="text-[10px] text-gray-600 mt-0.5">
+              <p className="text-xs text-gray-600 mt-0.5">
                 {formData.unit === 'kg' && 'Cantidad inicial en kilogramos'}
                 {formData.unit === 'lt' && 'Cantidad inicial en litros'}
                 {formData.unit === 'unidad' && 'Cantidad inicial en unidades'}
@@ -619,6 +621,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
                 validation={{ min: 0, max: 999 }}
                 error={errors.stockMin}
+                inputMode="numeric"
               />
           </div>
 
@@ -630,7 +633,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </svg>
             <div className="flex-1">
               <p className="text-xs font-medium text-amber-800">Materia prima para producción</p>
-              <p className="text-[10px] text-amber-600 mt-0.5">Este producto no aparece en el POS. Se usa como ingrediente en recetas de producción.</p>
+              <p className="text-xs text-amber-600 mt-0.5">Este producto no aparece en el POS. Se usa como ingrediente en recetas de producción.</p>
             </div>
           </div>
 
@@ -640,7 +643,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </svg>
             <div className="flex-1">
               <p className="text-xs font-medium text-blue-800">Características automáticas</p>
-              <ul className="text-[10px] text-blue-600 mt-0.5 space-y-0.5">
+              <ul className="text-xs text-blue-600 mt-0.5 space-y-0.5">
                 <li>• No disponible para venta (POS)</li>
                 <li>• Sin impuestos (IVA)</li>
                 <li>• Costo requerido para cálculos FIFO</li>
@@ -707,7 +710,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   inputClassName="text-sm"
                   inputMode="decimal"
                 />
-                <p className="text-[10px] text-gray-600 mt-0.5">Costo total pagado por el lote de productos.</p>
+                <p className="text-xs text-gray-600 mt-0.5">Costo total pagado por el lote de productos.</p>
               </div>
 
               <div className="input-wrapper">
@@ -727,7 +730,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   validation={{ min: 0 }}
                   inputMode="decimal"
                 />
-                <p className="text-[10px] text-gray-600 mt-0.5">
+                <p className="text-xs text-gray-600 mt-0.5">
                   {formData.productType === 'pesable_kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
                   {formData.productType === 'pesable_lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
                 </p>
@@ -750,6 +753,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
                 validation={{ min: 0, max: 999 }}
                 error={errors.stockMin}
+                inputMode="numeric"
               />
             </div>
 
@@ -784,6 +788,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   onChange={(e) => setField('stockInicial', parseFloat(e.target.value) || 0)}
                   error={errors.stockInicial}
                   validation={{ min: 0 }}
+                  inputMode="numeric"
                 />
               </div>
               <div className="input-wrapper">
@@ -809,6 +814,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                    onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
                    validation={{ min: 0, max: 999 }}
                    error={errors.stockMin}
+                   inputMode="numeric"
                  />
               </div>
             </div>
@@ -824,7 +830,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                     <button
                       type="button"
                       onClick={() => removePresentation(index)}
-                      className="p-1 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors"
+                      className="min-w-11 min-h-11 p-2.5 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors flex items-center justify-center"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -945,6 +951,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
              onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
              validation={{ min: 0, max: 999 }}
              error={errors.stockMin}
+             inputMode="numeric"
            />
         </div>
       </div>
@@ -964,7 +971,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <button
                 type="button"
                 onClick={() => removePresentation(index)}
-                className="p-1 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors"
+                className="min-w-11 min-h-11 p-2.5 rounded-lg hover:bg-danger/10 text-gray-400 hover:text-danger transition-colors flex items-center justify-center"
               >
                 <Trash2 size={14} />
               </button>

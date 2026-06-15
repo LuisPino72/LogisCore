@@ -218,33 +218,33 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               <span className="font-medium text-gray-900">{product.name}</span>
               {productIdsWithVariants.has(product.id) && (
                 <span
-                  className="hidden md:inline-flex text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                  className="hidden md:inline-flex text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
                   onClick={(e) => { e.stopPropagation(); openVariantModal(product.id); }}
                 >
                   Variantes
                 </span>
               )}
               {!product.isSellable && (
-                <span className="hidden md:inline-flex text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                <span className="hidden md:inline-flex text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   No vendible
                 </span>
               )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
-                <span className="hidden md:inline-flex text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                <span className="hidden md:inline-flex text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   Pesable
                 </span>
               )}
               {product.productType === 'materia_prima' && (
-                <span className="hidden md:inline-flex text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                <span className="hidden md:inline-flex text-xs font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   Materia prima
                 </span>
               )}
             </div>
-            <div className="text-[10px] text-text-secondary font-mono">{product.sku}</div>
+            <div className="text-xs text-text-secondary font-mono">{product.sku}</div>
               {productIdsWithVariants.has(product.id) && (
                 <div className="flex md:hidden mt-1">
                   <span
-                    className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
                     onClick={() => openVariantModal(product.id)}
                   >
                     Variantes
@@ -253,21 +253,21 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               )}
               {!product.isSellable && (
                 <div className="flex md:hidden mt-1">
-                  <span className="text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  <span className="text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     No vendible
                   </span>
                 </div>
               )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
                 <div className="flex md:hidden mt-1">
-                  <span className="text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  <span className="text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     Pesable
                   </span>
                 </div>
               )}
               {product.productType === 'materia_prima' && (
                 <div className="flex md:hidden mt-1">
-                  <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  <span className="text-xs font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                     Materia prima
                   </span>
                 </div>
@@ -332,7 +332,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                     return next;
                   });
                 }}
-                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
+                className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
               >
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
                   selectedForBulk.has(product.id)
@@ -346,19 +346,19 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               </button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
+                <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-11 min-h-11" title="Editar" disabled={!isOnline}>
                   <Edit3 size={15} />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
+                <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar" disabled={!isOnline}>
                   <Trash2 size={15} className="text-danger" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5" title="Ajustar stock" disabled={!isOnline}>
+                <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-11 min-h-11" title="Ajustar stock" disabled={!isOnline}>
                   <Settings size={15} className="text-primary" />
                 </Button>
                 <Dropdown
                   align="right"
                   trigger={
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                    <div className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
                       <MoreVertical size={15} className="text-gray-600" />
                     </div>
                   }
@@ -466,7 +466,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               <button
                 type="button"
                 onClick={() => { setBulkMode(false); setSelectedForBulk(new Set()); }}
-                className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-100 transition-all"
+                className="shrink-0 px-4 py-2.5 min-h-11 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-100 transition-all"
               >
                 Salir del conteo
               </button>
@@ -486,7 +486,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
             <button
               type="button"
               onClick={() => setBulkMode(true)}
-              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border border-primary text-primary hover:bg-primary/5 transition-all flex items-center gap-1.5"
+              className="shrink-0 px-4 py-2.5 min-h-11 rounded-full text-xs font-medium border border-primary text-primary hover:bg-primary/5 transition-all flex items-center gap-1.5"
             >
               <ClipboardCheck size={13} />
               Modo conteo
@@ -499,7 +499,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-text-secondary">{filteredByStock.length} producto{filteredByStock.length !== 1 ? 's' : ''}</p>
           {totalLowStock > 0 && (
-            <span className="text-[10px] font-medium text-danger bg-danger/10 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-medium text-danger bg-danger/10 px-2 py-0.5 rounded-full">
               {totalLowStock} con stock bajo
             </span>
           )}
@@ -535,19 +535,19 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               </div>
               {productIdsWithVariants.has(product.id) && (
                 <span
-                  className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                  className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
                   onClick={() => openVariantModal(product.id)}
                 >
                   Variantes
                 </span>
               )}
               {!product.isSellable && (
-                <span className="text-[10px] font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                <span className="text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   No vendible
                 </span>
               )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
-                <span className="text-[10px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                <span className="text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   Pesable
                 </span>
               )}
@@ -577,7 +577,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                             return next;
                           });
                         }}
-                        className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
+                        className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
                       >
                         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
                           selectedForBulk.has(product.id)
@@ -591,19 +591,19 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                       </button>
                     ) : (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5" title="Editar" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-11 min-h-11" title="Editar" disabled={!isOnline}>
                           <Edit3 size={15} />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5" title="Eliminar" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar" disabled={!isOnline}>
                           <Trash2 size={15} className="text-danger" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5" title="Ajustar stock" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-11 min-h-11" title="Ajustar stock" disabled={!isOnline}>
                           <Settings size={15} className="text-primary" />
                         </Button>
                         <Dropdown
                           align="right"
                           trigger={
-                            <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                            <div className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
                               <MoreVertical size={15} className="text-gray-600" />
                             </div>
                           }
