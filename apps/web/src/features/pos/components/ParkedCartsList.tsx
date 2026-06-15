@@ -27,7 +27,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
         <h4 className="text-sm font-semibold text-gray-700">Ventas en cola</h4>
         <Badge variant="info">{carts.length}/10</Badge>
       </div>
-      <div className="flex flex-col gap-2 max-h-32 md:max-h-48 overflow-y-auto">
+      <div className="flex flex-col gap-2 max-h-32 md:max-h-48 overflow-y-auto" style={{ scrollSnapType: 'y proximity' }}>
         {carts.map((cart) => {
           const totalItems = cart.cart.reduce((sum, item) => sum + item.quantity, 0);
           const totalUsd = cart.cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
@@ -36,6 +36,9 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
               key={cart.id}
               className="flex items-center gap-3 p-3 rounded-xl border border-border bg-white hover:bg-surface-alt transition-all cursor-pointer shadow-xs hover:shadow-sm"
               onClick={() => onLoad(cart)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLoad(cart); } }}
             >
               <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <ShoppingBag size={16} className="text-primary" />

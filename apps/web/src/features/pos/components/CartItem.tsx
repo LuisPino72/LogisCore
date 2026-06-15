@@ -87,7 +87,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         <div className="flex flex-col flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-800 wrap-break-word">{item.name}</p>
           {item.presentationName && (
-            <span className="text-[11px] text-text-muted">
+            <span className="text-xs text-text-muted">
               {item.presentationName}
               {item.unitMultiplier > 1 && (
                 <span className="ml-1 text-text-secondary font-medium">
@@ -99,7 +99,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         </div>
         <div className="text-right shrink-0">
           <p className="text-sm font-semibold text-gray-900">{formatUsd(item.totalPriceUsd)}</p>
-          {priceBs && <p className="text-[10px] text-text-muted">{priceBs}</p>}
+          {priceBs && <p className="text-xs text-text-muted">{priceBs}</p>}
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -157,7 +157,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
             variant="ghost"
             size="sm"
             onClick={() => onRemove(item.productId, item.presentationId)}
-            className="p-2 min-w-9 min-h-9 sm:min-w-11 sm:min-h-11 sm:ml-1 active:bg-danger/10"
+            className="p-2 min-w-11 min-h-11 sm:ml-1 active:bg-danger/10"
           >
             <Trash2 size={16} className="text-danger" />
           </Button>
@@ -174,7 +174,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
                 setLocalQty(null);
                 onUpdateQuantity(item.productId, preset);
               }}
-              className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
+              className={`px-2.5 py-1 min-h-11 text-xs font-medium rounded-lg border transition-colors ${
                 item.quantity === preset
                   ? 'bg-primary/10 border-primary/30 text-primary'
                   : 'bg-surface-alt border-border text-gray-600 hover:bg-gray-200'

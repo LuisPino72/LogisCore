@@ -38,6 +38,7 @@ export function ParkCartModal({ isOpen, onClose, onConfirm, loading }: ParkCartM
         <Input
           label="Nombre / Descripción"
           placeholder="Ej: Cliente con tarjeta olvidada"
+          autoComplete="off"
           value={name}
           onChange={(e) => {
             setError('');

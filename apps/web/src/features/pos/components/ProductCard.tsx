@@ -48,7 +48,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
           e.stopPropagation();
           onToggleFavorite(product.id);
         }}
-        className="absolute top-1 right-1 z-20 min-w-9 min-h-9 sm:min-w-11 sm:min-h-11 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-white active:bg-white transition-colors shadow-sm"
+        className="absolute top-1 right-1 z-20 min-w-11 min-h-11 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm hover:bg-white active:bg-white transition-colors shadow-sm"
         aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
       >
         <Star
@@ -99,7 +99,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
               e.stopPropagation();
               onReorder(product);
             }}
-            className="absolute bottom-1.5 left-1.5 px-2 py-1 rounded-md bg-accent text-white text-[10px] font-semibold leading-none z-20 shadow-sm hover:bg-accent/90 active:bg-accent/80 transition-colors min-h-11 min-w-11"
+            className="absolute bottom-1.5 left-1.5 px-2 py-1 rounded-md bg-accent text-white text-xs font-semibold leading-none z-20 shadow-sm hover:bg-accent/90 active:bg-accent/80 transition-colors min-h-11 min-w-11"
             aria-label={`Pedir ${product.name}`}
           >
             + Pedir

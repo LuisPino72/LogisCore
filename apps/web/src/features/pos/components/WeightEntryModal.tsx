@@ -67,7 +67,7 @@ export function WeightEntryModal({
               type="button"
               onClick={() => { setError(''); onQuantityChange(String(preset)); }}
               className={cn(
-                'min-w-[48px] min-h-[36px] px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                'min-w-[48px] min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                 parseFloat(quantity) === preset
                   ? 'bg-primary/10 text-primary border border-primary'
                   : 'bg-surface-alt text-gray-600 border border-border hover:bg-gray-100',

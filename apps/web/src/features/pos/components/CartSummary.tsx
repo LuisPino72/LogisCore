@@ -100,15 +100,15 @@ export function CartSummary({
 
   return (
     <div className="border-t border-border pt-3 space-y-2">
-      <div className="flex justify-between text-sm text-gray-600">
+      <div className="flex justify-between min-w-0 flex-wrap text-sm text-gray-600">
         <span>Subtotal</span>
-        <span>{formatUsd(subtotalUsd)} / {formatBs(subtotalBs)}</span>
+        <span className="min-w-0 text-right">{formatUsd(subtotalUsd)} / {formatBs(subtotalBs)}</span>
       </div>
 
       {paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && (
-        <div className="flex justify-between text-sm text-gray-600">
+        <div className="flex justify-between min-w-0 flex-wrap text-sm text-gray-600">
           <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
-          <span>{formatUsd(igtfUsd)} / {formatBs(igtfBs)}</span>
+          <span className="min-w-0 text-right">{formatUsd(igtfUsd)} / {formatBs(igtfBs)}</span>
         </div>
       )}
 
@@ -126,7 +126,7 @@ export function CartSummary({
             <button
               type="button"
               onClick={onClearDiscount}
-              className="ml-1 p-0.5 rounded hover:bg-danger/10 transition-colors"
+              className="ml-1 p-2 min-w-11 min-h-11 rounded hover:bg-danger/10 transition-colors flex items-center justify-center"
             >
               <X size={12} />
             </button>
@@ -135,9 +135,9 @@ export function CartSummary({
         </div>
       )}
 
-      <div className="flex justify-between text-base font-bold text-gray-900">
+      <div className="flex justify-between min-w-0 flex-wrap text-base font-bold text-gray-900">
         <span>Total</span>
-        <span>{formatUsd(totalUsd)} / {formatBs(totalBs)}</span>
+        <span className="min-w-0 text-right">{formatUsd(totalUsd)} / {formatBs(totalBs)}</span>
       </div>
 
       {selectedCustomer ? (
@@ -154,7 +154,7 @@ export function CartSummary({
                 <button
                   type="button"
                   onClick={() => setShowCreditInfo(!showCreditInfo)}
-                  className="p-1 rounded-md hover:bg-primary/10 transition-colors text-primary"
+                  className="p-2 min-w-11 min-h-11 rounded-md hover:bg-primary/10 transition-colors text-primary flex items-center justify-center"
                 >
                   <Info size={14} />
                 </button>
@@ -182,7 +182,7 @@ export function CartSummary({
             <button
               type="button"
               onClick={onClearCustomer}
-              className="p-1 rounded-md hover:bg-danger/10 transition-colors text-gray-400 hover:text-danger"
+              className="p-2 min-w-11 min-h-11 rounded-md hover:bg-danger/10 transition-colors text-gray-400 hover:text-danger flex items-center justify-center"
               title="Quitar cliente"
             >
               <X size={12} />
@@ -190,7 +190,7 @@ export function CartSummary({
             <button
               type="button"
               onClick={onSelectCustomer}
-              className="text-[10px] font-medium text-primary hover:text-primary-dark px-1.5 py-0.5 rounded-md hover:bg-primary/10 transition-colors"
+              className="min-h-11 min-w-11 text-xs font-medium text-primary hover:text-primary-dark px-2 py-1.5 rounded-md hover:bg-primary/10 transition-colors flex items-center justify-center"
             >
               Cambiar
             </button>
@@ -200,7 +200,7 @@ export function CartSummary({
         <button
           type="button"
           onClick={onSelectCustomer}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-text-secondary border border-border hover:border-primary/30 hover:text-primary transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-xl text-xs font-medium text-text-secondary border border-border hover:border-primary/30 hover:text-primary transition-colors"
         >
           <UserPlus size={14} />
           Asignar cliente
@@ -211,7 +211,7 @@ export function CartSummary({
         <button
           type="button"
           onClick={() => setShowDiscountInput(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-primary border border-primary/30 hover:bg-primary/5 transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-xl text-xs font-medium text-primary border border-primary/30 hover:bg-primary/5 transition-colors"
         >
           <Percent size={14} />
           Agregar descuento
@@ -224,7 +224,7 @@ export function CartSummary({
             <button
               type="button"
               onClick={() => setDiscountType('percentage')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
+              className={`flex-1 py-1.5 min-h-11 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
                 discountType === 'percentage'
                   ? 'bg-primary text-white shadow-sm'
                   : 'bg-white text-gray-600 border border-border hover:border-primary/30'
@@ -236,7 +236,7 @@ export function CartSummary({
             <button
               type="button"
               onClick={() => setDiscountType('fixed')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
+              className={`flex-1 py-1.5 min-h-11 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
                 discountType === 'fixed'
                   ? 'bg-primary text-white shadow-sm'
                   : 'bg-white text-gray-600 border border-border hover:border-primary/30'
@@ -249,6 +249,7 @@ export function CartSummary({
           <div className="flex gap-2">
             <Input
               sanitize="number"
+              inputMode="decimal"
               placeholder={discountType === 'percentage' ? '0%' : '$0.00'}
               value={discountInput}
               onChange={(e) => { setDiscountInput(e.target.value); setDiscountError(''); }}
@@ -306,7 +307,7 @@ export function CartSummary({
           <CreditCard size={14} />
           A crédito
           {isCreditSale && (
-            <span className="ml-1 text-[10px] opacity-80">
+            <span className="ml-1 text-xs opacity-80">
               ({formatUsd(totalUsd)})
             </span>
           )}

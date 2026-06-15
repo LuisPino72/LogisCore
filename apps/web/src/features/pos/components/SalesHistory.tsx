@@ -116,7 +116,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         return (
           <div className="text-right">
             <p className="text-sm font-bold">{formatBs(sale.totalBs)}</p>
-            <p className="text-[10px] text-gray-800">{formatUsd(totalUsd)}</p>
+            <p className="text-xs text-gray-800">{formatUsd(totalUsd)}</p>
           </div>
         );
       },
@@ -127,11 +127,11 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
       className: 'text-right',
       render: (sale) => (
         <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="sm" onClick={() => handleView(sale)} className="p-1.5" title="Ver detalle">
+          <Button variant="ghost" size="sm" onClick={() => handleView(sale)} className="p-2" title="Ver detalle">
             <Eye size={16} />
           </Button>
           {canVoid && (
-            <Button variant="ghost" size="sm" onClick={() => onVoid(sale.id)} className="p-1.5" title="Anular venta">
+            <Button variant="ghost" size="sm" onClick={() => onVoid(sale.id)} className="p-2" title="Anular venta">
               <Ban size={16} className="text-danger" />
             </Button>
           )}
@@ -155,7 +155,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             key={label}
             type="button"
             onClick={() => { const r = getRange(); setStartDate(r.start); setEndDate(r.end); }}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap bg-surface-alt text-gray-600 border border-border hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            className="px-3 py-2.5 min-h-11 rounded-lg text-xs font-medium whitespace-nowrap bg-surface-alt text-gray-600 border border-border hover:bg-gray-100 active:bg-gray-200 transition-colors"
           >
             {label}
           </button>
@@ -179,7 +179,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             formatHint="dd/mm/aaaa"
-            className="w-36"
+            className="w-full sm:w-36"
           />
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -188,7 +188,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             formatHint="dd/mm/aaaa"
-            className="w-36"
+            className="w-full sm:w-36"
           />
         </div>
         {(startDate || endDate) && (

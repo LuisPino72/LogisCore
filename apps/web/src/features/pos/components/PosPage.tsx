@@ -399,7 +399,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               <span className="text-xs text-warning font-medium truncate">
                 Stock bajo: {lowStockAlert.slice(0, 3).map((p) => p.name).join(', ')}{lowStockAlert.length > 3 ? ` +${lowStockAlert.length - 3}` : ''}
               </span>
-              <Badge variant="warning" className="ml-auto text-[10px] shrink-0">{lowStockAlert.length}</Badge>
+              <Badge variant="warning" className="ml-auto text-xs shrink-0">{lowStockAlert.length}</Badge>
             </div>
           </div>
         )}
@@ -623,7 +623,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center animate-check-pop">
               <CheckCircle2 size={32} className="text-success" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{formatUsd(completedSale.totalUsd)}</p>
+            <p className="text-[length:var(--text-fluid-2xl)] font-bold text-gray-900">{formatUsd(completedSale.totalUsd)}</p>
             <p className="text-sm text-text-secondary -mt-2">{formatBs(completedSale.totalBs)}</p>
             <Badge variant="success" className="text-xs">
               {METADATA_PAGOS[completedSale.paymentMethod]?.label ?? completedSale.paymentMethod}

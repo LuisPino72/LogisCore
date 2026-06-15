@@ -88,7 +88,7 @@ export const ProductGrid = memo(function ProductGrid({
             <button
               type="button"
               onClick={(e) => { onCategoryChange(null); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+              className={`shrink-0 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
                 selectedCategory === null
                   ? 'bg-primary text-white border-primary shadow-sm'
                   : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
@@ -101,7 +101,7 @@ export const ProductGrid = memo(function ProductGrid({
                 key={cat.id}
                 type="button"
                 onClick={(e) => { onCategoryChange(cat.id); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+                className={`shrink-0 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
                   selectedCategory === cat.id
                     ? 'bg-primary text-white border-primary shadow-sm'
                     : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
@@ -114,7 +114,7 @@ export const ProductGrid = memo(function ProductGrid({
               <button
                 type="button"
                 onClick={() => setShowAllCategories(true)}
-                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-border bg-white text-text-secondary hover:border-primary/30 hover:text-primary transition-all"
+                className="shrink-0 flex items-center gap-1 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border border-border bg-white text-text-secondary hover:border-primary/30 hover:text-primary transition-all"
               >
                 <ListTree size={12} />
                 +{categories.length - VISIBLE_CATEGORIES}

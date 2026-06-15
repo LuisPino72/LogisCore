@@ -162,7 +162,7 @@ export function StockVerificationModal({
                 return (
                   <li key={item.productId} className="flex justify-between">
                     <span className="truncate">{item.productName}</span>
-                    <span className="shrink-0 ml-2 font-mono">Registrado: {logical} &rarr; Físico: {physical}{logical > 0 ? ` (+${pct}%)` : ''}</span>
+                    <span className="ml-2 font-mono">Registrado: {logical} &rarr; Físico: {physical}{logical > 0 ? ` (+${pct}%)` : ''}</span>
                   </li>
                 );
               })}
@@ -281,16 +281,17 @@ export function StockVerificationModal({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                     <div>
-                      <label className="text-[10px] text-gray-600 font-medium uppercase tracking-wide">Stock registrado</label>
+                      <label className="text-xs text-gray-600 font-medium uppercase tracking-wide">Stock registrado</label>
                       <p className="text-sm font-mono font-semibold mt-0.5">{displayStock(item.logicalStock, item.unit)}</p>
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-600 font-medium uppercase tracking-wide">Stock físico</label>
+                      <label className="text-xs text-gray-600 font-medium uppercase tracking-wide">Stock físico</label>
                       <Input
                         sanitize="number"
                         decimals={item.isWeighted ? 2 : 0}
+                        inputMode="decimal"
                         value={item.physicalInput}
                         onChange={(e) => handlePhysicalChange(item.productId, e.target.value)}
                         validation={{ required: 'Ingresa el stock físico', min: 0, max: 999999 }}
@@ -298,7 +299,7 @@ export function StockVerificationModal({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-600 font-medium uppercase tracking-wide">Diferencia</label>
+                      <label className="text-xs text-gray-600 font-medium uppercase tracking-wide">Diferencia</label>
                       <p className={`text-sm font-mono font-semibold mt-0.5 ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : ''}`}>
                         {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                       </p>
