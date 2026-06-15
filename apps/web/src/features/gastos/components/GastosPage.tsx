@@ -161,7 +161,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
         </button>
       </div>
 
-      <GastosSummary gastos={filteredGastos} />
+      <GastosSummary gastos={gastos} />
 
       <Card>
         <div className="p-4 space-y-4">
