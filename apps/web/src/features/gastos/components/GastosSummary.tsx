@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 import { Card } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
 import type { Gasto } from '../types';
@@ -27,43 +27,36 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
   }, [gastos]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-      <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-2 sm:mb-3">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <DollarSign size={14} className="text-primary sm:hidden" />
-            <DollarSign size={16} className="text-primary hidden sm:block" />
+    <Card className="p-3 sm:p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <DollarSign size={16} className="text-primary" />
           </div>
-          <span className="text-[11px] sm:text-xs text-text-secondary font-medium leading-tight">Total del mes</span>
-        </div>
-        <p className="text-base sm:text-xl font-bold text-primary leading-tight">{formatUsd(summary.total)}</p>
-        <p className="text-[11px] sm:text-xs text-text-secondary mt-1">{gastos.length} gasto{gastos.length !== 1 ? 's' : ''}</p>
-      </Card>
-
-      <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-2 sm:mb-3">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-            <Clock size={14} className="text-warning sm:hidden" />
-            <Clock size={16} className="text-warning hidden sm:block" />
+          <div>
+            <p className="text-xs text-text-secondary font-medium">Gastos del mes</p>
+            <p className="text-lg sm:text-xl font-bold text-primary leading-tight">{formatUsd(summary.total)}</p>
+            <p className="text-[11px] sm:text-xs text-text-secondary">{gastos.length} gasto{gastos.length !== 1 ? 's' : ''}</p>
           </div>
-          <span className="text-[11px] sm:text-xs text-text-secondary font-medium leading-tight">Pendientes</span>
         </div>
-        <p className="text-base sm:text-xl font-bold text-warning leading-tight">{summary.pendingCount}</p>
-        <p className="text-[11px] sm:text-xs text-text-secondary mt-1">{formatUsd(summary.pendingTotal)}</p>
-      </Card>
 
-      <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-2 sm:mb-3">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-            <CheckCircle size={14} className="text-success sm:hidden" />
-            <CheckCircle size={16} className="text-success hidden sm:block" />
+        <div className="flex items-center gap-4 sm:gap-5 pl-10 sm:pl-0">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
+            <div>
+              <p className="text-[11px] sm:text-xs text-text-secondary">Pendientes</p>
+              <p className="text-sm sm:text-base font-semibold text-gray-900">{formatUsd(summary.pendingTotal)}<span className="text-text-secondary font-normal ml-1">· {summary.pendingCount}</span></p>
+            </div>
           </div>
-          <span className="text-[11px] sm:text-xs text-text-secondary font-medium leading-tight">Pagados</span>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-success shrink-0" />
+            <div>
+              <p className="text-[11px] sm:text-xs text-text-secondary">Pagados</p>
+              <p className="text-sm sm:text-base font-semibold text-gray-900">{formatUsd(summary.paidTotal)}<span className="text-text-secondary font-normal ml-1">· {summary.paidCount}</span></p>
+            </div>
+          </div>
         </div>
-        <p className="text-base sm:text-xl font-bold text-success leading-tight">{summary.paidCount}</p>
-        <p className="text-[11px] sm:text-xs text-text-secondary mt-1">{formatUsd(summary.paidTotal)}</p>
-      </Card>
-
-    </div>
+      </div>
+    </Card>
   );
 }
