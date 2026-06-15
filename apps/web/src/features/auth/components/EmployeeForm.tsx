@@ -81,7 +81,7 @@ export function EmployeeForm({ onSubmit, isSubmitting = false, externalError }: 
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="text-gray-400 hover:text-gray-600 transition-colors self-start"
+          className="text-gray-400 hover:text-gray-600 transition-colors self-start min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg"
           tabIndex={-1}
           aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
         >
