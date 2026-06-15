@@ -40,7 +40,7 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 sm:gap-5 pl-10 sm:pl-0">
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:pl-0">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
             <div>
