@@ -99,6 +99,7 @@ export function CashRegisterModal({
             <Input
               label="Monto inicial (Bs)"
               sanitize="currency"
+              inputMode="decimal"
               value={balance}
               onChange={(e) => { setBalance(e.target.value); setLocalError(''); }}
               onBlur={() => setBalanceTouched(true)}
@@ -126,6 +127,7 @@ export function CashRegisterModal({
             <Input
               label="Monto final declarado (Bolívares)"
               sanitize="currency"
+              inputMode="decimal"
               value={declaredClosing}
               onChange={(e) => { setDeclaredClosing(e.target.value); setLocalError(''); }}
               onBlur={() => setDeclaredTouched(true)}

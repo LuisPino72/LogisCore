@@ -267,7 +267,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding-left: var(--sidebar-width);
+  padding-left: 0;
   transition: padding-left 300ms ease;
 }
 .app-shell-content { @apply flex-1 pb-4 sm:pb-0 overflow-y-auto overflow-x-hidden min-h-0; }

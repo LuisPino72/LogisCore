@@ -58,7 +58,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
         />
       </button>
 
-      <div className="relative bg-surface-alt overflow-hidden aspect-square sm:aspect-4/3">
+      <div className="relative bg-surface-alt overflow-hidden aspect-4/3">
         <ImageWithFallback
           productId={product.id}
           imageUrl={product.imageUrl}

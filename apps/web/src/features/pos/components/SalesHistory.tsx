@@ -144,7 +144,34 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
 
   return (
     <div className="flex flex-col h-full p-3">
-      <div className="flex flex-col sm:flex-row gap-2 mb-3 shrink-0">
+      <div className="flex gap-1 sm:hidden mb-2 shrink-0 overflow-x-auto">
+        {[
+          { label: 'Hoy', getRange: () => { const d = new Date(); return { start: d.toISOString().split('T')[0], end: d.toISOString().split('T')[0] }; } },
+          { label: 'Ayer', getRange: () => { const d = new Date(); d.setDate(d.getDate() - 1); return { start: d.toISOString().split('T')[0], end: d.toISOString().split('T')[0] }; } },
+          { label: '7 días', getRange: () => { const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 7); return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }; } },
+          { label: '30 días', getRange: () => { const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 30); return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }; } },
+        ].map(({ label, getRange }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => { const r = getRange(); setStartDate(r.start); setEndDate(r.end); }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap bg-surface-alt text-gray-600 border border-border hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          >
+            {label}
+          </button>
+        ))}
+        {(startDate || endDate) && (
+          <button
+            type="button"
+            onClick={() => { setStartDate(''); setEndDate(''); }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap text-danger hover:bg-red-50 transition-colors"
+          >
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      <div className="hidden sm:flex gap-2 mb-3 shrink-0">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Calendar size={16} />
           <span>Desde:</span>

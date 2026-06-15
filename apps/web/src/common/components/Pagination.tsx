@@ -30,7 +30,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
               key={p}
               onClick={() => onPageChange(p)}
               className={cn(
-                'btn btn-sm min-w-[44px] inline-flex items-center justify-center',
+                'btn btn-sm min-w-[44px] inline-flex items-center justify-center sm:inline-flex',
                 p === page ? 'btn-primary' : 'btn-ghost',
               )}
             >
