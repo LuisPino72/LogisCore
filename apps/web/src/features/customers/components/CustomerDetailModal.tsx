@@ -137,7 +137,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
                 variant="primary"
                 size="sm"
                 onClick={() => setShowPaymentModal(true)}
-                className="bg-amber-600 hover:bg-amber-700"
+                className="bg-amber-600 hover:bg-amber-700 min-h-11"
               >
                 Cobrar deuda
               </Button>
@@ -150,24 +150,24 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
             Resumen de compras
           </h4>
           {stats ? (
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
               <div className="rounded-xl border border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 p-3 text-center">
                 <DollarSign size={16} className="text-primary mx-auto mb-1" />
                 <p className="text-xs text-text-secondary">Total gastado</p>
                 <p className="text-base sm:text-lg font-bold text-primary">{formatUsd(stats.totalSpentUsd)}</p>
-                <p className="text-[10px] text-text-secondary">{formatBs(stats.totalSpentBs)}</p>
+                <p className="text-xs text-text-secondary">{formatBs(stats.totalSpentBs)}</p>
               </div>
               <div className="rounded-xl border border-info/20 bg-linear-to-br from-info/5 to-info/10 p-3 text-center">
                 <ShoppingBag size={16} className="text-info mx-auto mb-1" />
                 <p className="text-xs text-text-secondary">Compras</p>
                 <p className="text-base sm:text-lg font-bold text-info">{stats.purchaseCount}</p>
-                <p className="text-[10px] text-text-secondary">transacciones</p>
+                <p className="text-xs text-text-secondary">transacciones</p>
               </div>
               <div className="rounded-xl border border-accent/20 bg-linear-to-br from-accent/5 to-accent/10 p-3 text-center">
                 <TrendingUp size={16} className="text-accent mx-auto mb-1" />
                 <p className="text-xs text-text-secondary">Ticket promedio</p>
                 <p className="text-base sm:text-lg font-bold text-accent">{formatUsd(stats.averageTicketUsd)}</p>
-                <p className="text-[10px] text-text-secondary">por compra</p>
+                <p className="text-xs text-text-secondary">por compra</p>
               </div>
             </div>
           ) : historyLoading ? (
@@ -213,7 +213,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
                           minute: '2-digit',
                         })}
                       </p>
-                      <p className="text-[10px] text-text-muted mt-0.5">
+                      <p className="text-xs text-text-muted mt-0.5">
                         {sale.paymentMethod === 'efectivo_bs' ? 'Efectivo Bs' :
                           sale.paymentMethod === 'efectivo_usd' ? 'Efectivo USD' :
                           sale.paymentMethod === 'pago_movil' ? 'Pago Móvil' : 'Tarjeta'}
@@ -221,7 +221,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-gray-900">{formatBs(sale.totalBs)}</p>
-                      <p className="text-[10px] text-text-secondary">
+                      <p className="text-xs text-text-secondary">
                         {/* PLAN-112 (C2): subtotalBs sin impuestos (DINERO-020) */}
                         {formatUsd(sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0)}
                       </p>

@@ -155,7 +155,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             <p className="text-sm font-medium text-gray-900">{customer.name}</p>
             <p className="text-xs text-gray-500">Deuda total: {formatUsd(customer.balance)}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={handlePayAll}>
+          <Button variant="ghost" size="sm" onClick={handlePayAll} className="min-h-11">
             Pagar todo
           </Button>
         </div>
@@ -182,7 +182,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
                     <p className="text-xs font-medium text-gray-900">
                       Venta #{sale.id.slice(0, 8)}
                     </p>
-                    <p className="text-[10px] text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {new Date(sale.createdAt).toLocaleDateString('es-VE')}
                     </p>
                   </div>
@@ -209,6 +209,8 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             validation={{ required: true, min: 0.01, max: customer.balance }}
             className="text-lg font-bold"
             autoFocus
+            inputMode="decimal"
+            autoComplete="off"
           />
           {exchangeRate > 0 && amountUsd && (
             <p className="text-xs text-gray-500 mt-1">
@@ -256,6 +258,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             validation={{ maxLength: 50 }}
+            autoComplete="off"
           />
         </div>
 

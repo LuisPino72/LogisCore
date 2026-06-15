@@ -118,7 +118,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
+    <div className="p-3 sm:p-6 pb-20 sm:pb-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -126,7 +126,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
           </div>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>Clientes</h1>
-            <p className="text-[11px] text-text-secondary hidden sm:block">Gestiona tus clientes y su historial de compras</p>
+            <p className="text-xs text-text-secondary hidden sm:block">Gestiona tus clientes y su historial de compras</p>
           </div>
         </div>
         {isOwner && activeTab === 'clientes' && (
@@ -136,6 +136,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
             onClick={() => { setEditCustomer(null); setShowForm(true); }}
             disabled={!isOnline}
             title={!isOnline ? 'Necesitas internet para crear un cliente' : undefined}
+            className="min-h-11"
           >
             <Plus size={16} />
             <span className="hidden sm:inline">Nuevo cliente</span>
@@ -380,7 +381,7 @@ function GlobalHistoryView({
             variant="ghost"
             size="sm"
             onClick={() => { setStartDate(''); setEndDate(''); setSearchQuery(''); }}
-            className="text-xs"
+            className="text-xs min-h-11"
           >
             Limpiar
           </Button>
@@ -421,7 +422,7 @@ function GlobalHistoryView({
                     <span className="text-sm font-medium text-gray-900 min-w-0 flex-1 truncate">{c.customerName}</span>
                   </div>
                   <div className="flex items-center justify-between pl-7 mb-1">
-                    <p className="text-[10px] text-text-secondary">{c.purchaseCount} compras · ticket {formatUsd(c.averageTicketUsd)}</p>
+                    <p className="text-xs text-text-secondary">{c.purchaseCount} compras · ticket {formatUsd(c.averageTicketUsd)}</p>
                     <p className="text-sm font-bold text-gray-900 shrink-0">{formatUsd(c.totalSpentUsd)}</p>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -469,7 +470,7 @@ function GlobalHistoryView({
                     <p className="text-sm font-bold text-gray-900 shrink-0">{formatBs(sale.totalBs)}</p>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <p className="text-[10px] text-text-secondary">
+                    <p className="text-xs text-text-secondary">
                       {new Date(sale.createdAt).toLocaleString('es-VE', {
                         day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
                       })}
@@ -478,7 +479,7 @@ function GlobalHistoryView({
                         sale.paymentMethod === 'efectivo_usd' ? 'Efectivo USD' :
                         sale.paymentMethod === 'pago_movil' ? 'Pago Móvil' : 'Tarjeta'}
                     </p>
-                    <p className="text-[10px] text-text-secondary shrink-0">
+                    <p className="text-xs text-text-secondary shrink-0">
                       {formatUsd(sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0)}
                     </p>
                   </div>

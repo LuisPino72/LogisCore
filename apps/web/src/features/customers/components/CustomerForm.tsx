@@ -175,6 +175,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           hint="Monto máximo de crédito que puede deber este cliente"
           inputClassName="text-sm"
           inputMode="decimal"
+          autoComplete="off"
         />
 
         <Textarea
@@ -185,6 +186,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           rows={2}
           validation={{ maxLength: 30 }}
           error={fieldErrors.notes}
+          autoComplete="off"
         />
 
         {fieldErrors.form && (

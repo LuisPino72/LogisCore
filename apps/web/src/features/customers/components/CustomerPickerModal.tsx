@@ -132,7 +132,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-gray-700">Sin cliente</p>
-                  <p className="text-[10px] text-text-secondary">Venta anónima</p>
+                  <p className="text-xs text-text-secondary">Venta anónima</p>
                 </div>
                 {!selectedCustomerId && <span className="text-xs text-primary font-medium">✓</span>}
               </button>
@@ -161,7 +161,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
                     <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
                       {/* AUDIT-017: Cédula field V/E/J/P + 6-8 digits */}
-                      <div className="flex items-center gap-2 text-[10px] text-text-secondary">
+                      <div className="flex items-center gap-2 text-xs text-text-secondary">
                         {c.cedula && <span className="font-mono">{c.cedula}</span>}
                         {c.cedula && c.phone && <span>·</span>}
                         {c.phone && <span className="truncate">{c.phone}</span>}
@@ -189,7 +189,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
           <button
             type="button"
             onClick={() => setShowCreateForm(false)}
-            className="text-xs text-primary hover:text-primary-dark"
+            className="text-xs text-primary hover:text-primary-dark min-h-11 py-2 px-3 inline-flex items-center"
           >
             ← Volver a la lista
           </button>
@@ -202,6 +202,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
             placeholder="Ej: Juan Pérez"
             validation={{ required: 'Ingresa el nombre del cliente', maxLength: 25 }}
             inputClassName="text-sm"
+            autoComplete="name"
           />
 
           <CedulaInput
@@ -221,6 +222,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
             validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
             hint="Formato: 0412-1234567"
             inputClassName="text-sm"
+            inputMode="tel"
           />
 
           {fieldErrors.form && (
