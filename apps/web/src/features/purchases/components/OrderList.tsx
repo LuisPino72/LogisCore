@@ -236,7 +236,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                   </div>
                 ))}
                 {order.items.length > 3 && (
-                  <div className="text-[11px] text-text-secondary text-center pt-1 border-t border-gray-100/80 mt-1">
+                  <div className="text-xs text-text-secondary text-center pt-1 border-t border-gray-100/80 mt-1">
                     +{order.items.length - 3} artículos más
                   </div>
                 )}

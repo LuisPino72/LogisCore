@@ -149,7 +149,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-bold text-primary">{formatUsd(order.totalUsd)}</p>
-                <p className="text-[10px] text-text-secondary">Total orden</p>
+                <p className="text-xs text-text-secondary">Total orden</p>
               </div>
             </div>
           </div>
@@ -170,7 +170,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-semibold text-gray-800 truncate">{item.productName || item.productId.slice(0, 8)}</p>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded-full shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded-full shrink-0">
                         {info.unit}
                       </span>
                     </div>
@@ -198,6 +198,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
                   <div className="flex-1">
                     <Input
                       sanitize="number"
+                      inputMode="decimal"
                       decimals={hasDecimals ? 2 : 0}
                       value={received}
                       onChange={(e) => handleQtyChange(item.id, hasDecimals ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0)}

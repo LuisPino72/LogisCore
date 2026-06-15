@@ -267,18 +267,18 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                   )}
                 </div>
                 {!hasProduct && (
-                  <p className="text-[11px] text-danger">Selecciona un producto para este item</p>
+                  <p className="text-xs text-danger">Selecciona un producto para este item</p>
                 )}
 
                 {hasProduct && (
                   <div className="flex items-center gap-2">
                     {weighted && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded-full">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-accent bg-accent/10 px-1.5 py-0.5 rounded-full">
                         {unit}
                       </span>
                     )}
                     {sku && (
-                      <span className="text-[10px] text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded font-mono">
+                      <span className="text-xs text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded font-mono">
                         {sku}
                       </span>
                     )}
@@ -296,7 +296,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                       <button
                         type="button"
                         onClick={() => updateItemFields(idx, { presentationId: undefined, unitMultiplier: undefined })}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                        className={`w-full text-left px-3 py-2 min-h-11 rounded-lg text-xs transition-all ${
                           !item.presentationId
                             ? 'bg-white text-gray-900 shadow-sm border border-primary/30'
                             : 'text-gray-500 hover:text-gray-700'
@@ -312,7 +312,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                             presentationId: p.id,
                             unitMultiplier: p.unitMultiplier,
                           })}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                          className={`w-full text-left px-3 py-2 min-h-11 rounded-lg text-xs transition-all ${
                             item.presentationId === p.id
                               ? 'bg-white text-gray-900 shadow-sm border border-primary/30'
                               : 'text-gray-500 hover:text-gray-700'
@@ -331,6 +331,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                   <div className="flex-1">
                     <Input
                       sanitize="number"
+                      inputMode={weighted ? 'decimal' : 'numeric'}
                       decimals={weighted ? 2 : 0}
                       step={weighted ? '0.01' : '1'}
                       placeholder={`Cantidad (${unit})`}
@@ -343,6 +344,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
                   <div className="flex-1">
                     <Input
                       sanitize="currency"
+                      inputMode="decimal"
                       step="0.01"
                       placeholder="Costo($)"
                       value={item.totalCostUsd || ''}

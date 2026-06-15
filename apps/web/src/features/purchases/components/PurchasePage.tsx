@@ -192,7 +192,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
+    <div className="p-3 sm:p-6 pb-24 sm:pb-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -200,7 +200,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
           </div>
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>Compras</h1>
-            <p className="text-[11px] text-text-secondary hidden sm:block">Gestiona órdenes y proveedores</p>
+            <p className="text-xs text-text-secondary hidden sm:block">Gestiona órdenes y proveedores</p>
           </div>
         </div>
         {isOwner && (
@@ -250,7 +250,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
                   type="button"
                   onClick={(e) => handleStatusFilter(opt.value, e.currentTarget)}
                   className={cn(
-                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-[0.98]',
+                    'shrink-0 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-[0.98]',
                     tabState.statusFilter === opt.value
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
@@ -285,7 +285,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
                 <button
                   type="button"
                   onClick={() => saveTabState(activeTab, { dateFilter: '' })}
-                  className="text-xs text-primary font-medium px-3 py-2 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors shrink-0"
+                  className="text-xs text-primary font-medium px-3 py-2 min-h-11 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors shrink-0"
                 >
                   Limpiar
                 </button>

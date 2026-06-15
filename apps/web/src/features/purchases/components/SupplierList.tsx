@@ -76,7 +76,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
                 )}
                 {activeOrders > 0 && (
                   <Badge variant="info" className="flex items-center gap-0.5">
-                    <ShoppingCart size={10} />
+                    <ShoppingCart size={12} />
                     <span>{activeOrders}</span>
                   </Badge>
                 )}
