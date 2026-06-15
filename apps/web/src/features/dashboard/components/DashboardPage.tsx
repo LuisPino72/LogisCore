@@ -124,7 +124,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
           </Card>
         </div>
 
-        {pendingTasks.length > 0 && (
+        {!pendingTasksLoading && (
           <div className="dashboard-card-entrance dashboard-card--full" style={{ animationDelay: '0.12s' }}>
             <Card>
               <div className="p-4 sm:p-5">

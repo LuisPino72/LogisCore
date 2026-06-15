@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, EmptyState, Spinner, Pagination } from '../../../common/components';
+import { Modal, EmptyState, Spinner, Pagination, Button } from '../../../common/components';
 import { History } from 'lucide-react';
 import { purchaseService } from '../services/purchaseService';
 import { formatUsd } from '@/lib/formatBs';
@@ -26,16 +26,29 @@ interface PriceEntry {
 export function PriceHistoryModal({ supplierId, productId, productName, tenantId, isOpen, onClose }: PriceHistoryModalProps) {
   const [history, setHistory] = useState<PriceEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!isOpen || !supplierId || !productId) return;
     setLoading(true);
+    setError(null);
+    setHistory([]);
     setPage(1);
-    purchaseService.getPriceHistory(supplierId, productId, tenantId).then((result) => {
-      if (result.ok) setHistory(result.data);
-      setLoading(false);
-    });
+    purchaseService.getPriceHistory(supplierId, productId, tenantId)
+      .then((result) => {
+        if (result.ok) {
+          setHistory(result.data);
+        } else {
+          setError(result.error?.message || 'Error al cargar historial de precios');
+        }
+      })
+      .catch(() => {
+        setError('Error inesperado al cargar historial');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [isOpen, supplierId, productId, tenantId]);
 
   const totalPages = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
@@ -51,6 +64,23 @@ export function PriceHistoryModal({ supplierId, productId, productName, tenantId
         {loading ? (
           <div className="flex justify-center py-8">
             <Spinner />
+          </div>
+        ) : error ? (
+          <div className="text-center py-6 space-y-3">
+            <p className="text-sm text-red-600">{error}</p>
+            <Button variant="ghost" size="sm" onClick={() => {
+              setLoading(true);
+              setError(null);
+              purchaseService.getPriceHistory(supplierId, productId, tenantId)
+                .then((result) => {
+                  if (result.ok) setHistory(result.data);
+                  else setError(result.error?.message || 'Error al cargar historial');
+                })
+                .catch(() => setError('Error inesperado'))
+                .finally(() => setLoading(false));
+            }}>
+              Reintentar
+            </Button>
           </div>
         ) : history.length === 0 ? (
           <EmptyState
@@ -116,7 +146,7 @@ export function PriceHistoryModal({ supplierId, productId, productName, tenantId
               <span>{history.length} compra{history.length !== 1 ? 's' : ''}</span>
               <span>
                 Promedio:{' '}
-                {formatUsd(history.reduce((sum, e) => sum + e.costPerUnit, 0) / history.length)}
+                {formatUsd(history.reduce((sum, e) => sum + e.totalUsd, 0) / history.reduce((sum, e) => sum + e.quantity, 0))}
               </span>
             </div>
 

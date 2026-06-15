@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, ShoppingCart, DollarSign, Clock, ArrowRight } from 'lucide-react';
+import { CreditCard, ShoppingCart, DollarSign, Clock, ArrowRight, CheckCircle } from 'lucide-react';
 import type { PendingTask } from '../types';
 
 interface PendingTasksWidgetProps {
@@ -44,7 +44,19 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
   }
 
   if (!tasks.length) {
-    return null;
+    return (
+      <div className="pending-tasks-widget">
+        <div className="pending-tasks-header">
+          <Clock size={18} />
+          <span>Tareas pendientes</span>
+        </div>
+        <div className="pending-tasks-empty">
+          <CheckCircle size={18} style={{ color: '#22C55E' }} />
+          <span>Todo listo. No hay tareas pendientes.</span>
+        </div>
+        <style>{STYLES}</style>
+      </div>
+    );
   }
 
   const grouped = {
@@ -64,18 +76,22 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
           if (!items.length) return null;
           const config = TYPE_CONFIG[type as keyof typeof TYPE_CONFIG];
           const Icon = config.icon;
+          const count = items[0].totalCount ?? items.length;
           return (
             <div
               key={type}
               className="pending-tasks-item"
+              role="button"
+              tabIndex={0}
               onClick={() => navigate(items[0].route)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(items[0].route); } }}
               style={{ '--accent': config.color, '--accent-bg': config.bgColor } as React.CSSProperties}
             >
               <div className="pending-tasks-item-icon">
                 <Icon size={16} />
               </div>
               <div className="pending-tasks-item-content">
-                <span className="pending-tasks-item-count">{items.length}</span>
+                <span className="pending-tasks-item-count">{count}</span>
                 <span className="pending-tasks-item-label">{config.label}</span>
               </div>
               <ArrowRight size={14} className="pending-tasks-item-arrow" />
@@ -117,6 +133,16 @@ const STYLES = `
     justify-content: center;
   }
 
+  .pending-tasks-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #22C55E;
+    font-size: 0.875rem;
+    padding: 16px;
+    justify-content: center;
+  }
+
   .pending-tasks-list {
     display: flex;
     flex-direction: column;
@@ -138,6 +164,15 @@ const STYLES = `
     background: var(--accent-bg);
     filter: brightness(1.1);
     transform: translateX(2px);
+  }
+
+  .pending-tasks-item:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .pending-tasks-item:active {
+    transform: scale(0.98);
   }
 
   .pending-tasks-item-icon {

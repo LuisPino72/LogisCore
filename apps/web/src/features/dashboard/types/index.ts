@@ -24,6 +24,7 @@ export interface PendingTask {
   subtitle: string;
   amount?: number;
   route: string;
+  totalCount?: number;
 }
 
 export interface DashboardState {

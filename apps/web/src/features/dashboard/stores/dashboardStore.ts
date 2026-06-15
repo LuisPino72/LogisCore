@@ -93,10 +93,11 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   fetchPendingTasks: async (tenantId: string) => {
     set({ pendingTasksLoading: true });
     const result = await dashboardService.getPendingTasks(tenantId);
-    set({
-      pendingTasks: result.ok ? result.data : [],
-      pendingTasksLoading: false,
-    });
+    if (result.ok) {
+      set({ pendingTasks: result.data, pendingTasksLoading: false });
+    } else {
+      set({ pendingTasks: [], pendingTasksLoading: false });
+    }
   },
 
   reset: () => {

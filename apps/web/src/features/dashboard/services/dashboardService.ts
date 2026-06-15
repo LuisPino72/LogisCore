@@ -309,7 +309,7 @@ export const dashboardService = {
         .where({ tenantId })
         .filter((e) => !e.deletedAt && e.status === 'pending')
         .toArray();
-      for (const exp of pendingExpenses.slice(0, 5)) {
+      for (const exp of pendingExpenses) {
         tasks.push({
           id: exp.id,
           type: 'expense',
@@ -317,6 +317,7 @@ export const dashboardService = {
           subtitle: exp.description || `${exp.amountUsd.toFixed(2)} USD`,
           amount: exp.amountUsd,
           route: '/expenses',
+          totalCount: pendingExpenses.length,
         });
       }
 
@@ -326,7 +327,7 @@ export const dashboardService = {
         .toArray();
       const supplierRows = await db.suppliers.where({ tenantId }).filter((s) => !s.deletedAt).toArray();
       const supplierMap = new Map(supplierRows.map((s) => [s.id, s.name]));
-      for (const ord of orders.slice(0, 5)) {
+      for (const ord of orders) {
         tasks.push({
           id: ord.id,
           type: 'order',
@@ -334,6 +335,7 @@ export const dashboardService = {
           subtitle: supplierMap.get(ord.supplierId) || 'Proveedor',
           amount: ord.totalUsd,
           route: '/purchases',
+          totalCount: orders.length,
         });
       }
 
@@ -341,7 +343,7 @@ export const dashboardService = {
         .where({ tenantId })
         .filter((c) => !c.deletedAt && c.balance > 0)
         .toArray();
-      for (const cust of customers.slice(0, 5)) {
+      for (const cust of customers) {
         tasks.push({
           id: cust.id,
           type: 'credit',
@@ -349,6 +351,7 @@ export const dashboardService = {
           subtitle: `Deuda: ${cust.balance.toFixed(2)} USD`,
           amount: cust.balance,
           route: '/customers',
+          totalCount: customers.length,
         });
       }
 
