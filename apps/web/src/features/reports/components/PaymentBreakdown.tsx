@@ -108,7 +108,7 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
             </div>
             <div className="flex flex-col items-end shrink-0">
               <span className="font-semibold text-gray-900">{d.percentage}%</span>
-              <span className="text-[11px] text-gray-700">{d.count} trans.</span>
+              <span className="text-xs text-gray-700">{d.count} trans.</span>
             </div>
           </div>
         ))}

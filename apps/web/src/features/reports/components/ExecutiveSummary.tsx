@@ -68,7 +68,7 @@ function KpiCard({
         <div className="truncate">{value}</div>
         {subtitle && <div className="text-xs sm:text-sm text-gray-700 truncate">{subtitle}</div>}
         {trend && (
-          <div className={`flex items-center gap-1 text-[11px] sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
+          <div className={`flex items-center gap-1 text-xs sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
             {trend.positive ? <ArrowUpRight size={10} className="sm:w-3 sm:h-3" /> : <TrendingDown size={10} className="sm:w-3 sm:h-3" />}
             <span>{Math.abs(trend.value)}%</span>
           </div>

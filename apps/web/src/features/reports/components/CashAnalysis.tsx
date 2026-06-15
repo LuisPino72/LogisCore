@@ -42,11 +42,11 @@ function DiffIndicator({ differenceBs, differenceUsd }: { differenceBs: number |
       <span className="text-danger mt-0.5">{icon}</span>
       <div className="flex flex-col">
         <span className="text-sm font-semibold text-danger">Desajuste</span>
-        <span className="text-[11px] text-danger">
+        <span className="text-xs text-danger">
           {(isPositive ? '+' : '-')}{formatBs(Math.abs(differenceBs))}
         </span>
         {differenceUsd !== undefined && differenceUsd !== null && (
-          <span className="text-[11px] text-danger">
+          <span className="text-xs text-danger">
             {(isPositive ? '+' : '-')}{formatUsd(Math.abs(differenceUsd))}
           </span>
         )}

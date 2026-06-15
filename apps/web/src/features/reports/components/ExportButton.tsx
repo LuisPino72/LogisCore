@@ -62,7 +62,7 @@ export function ExportButton({
         size="sm"
         onClick={handleExcel}
         disabled={loading || isExportingExcel}
-        className="rounded-r-none border-r-0 active:scale-[0.98]"
+        className="min-h-11 rounded-r-none border-r-0 active:scale-[0.98]"
       >
         {isExportingExcel ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
         <span className="hidden sm:inline">{isExportingExcel ? 'Exportando...' : 'Excel'}</span>
@@ -73,7 +73,7 @@ export function ExportButton({
         size="sm"
         onClick={handlePrint}
         disabled={loading || isGeneratingPdf}
-        className="rounded-l-none active:scale-[0.98]"
+        className="min-h-11 rounded-l-none active:scale-[0.98]"
       >
         {isGeneratingPdf ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
         <span className="hidden sm:inline">{isGeneratingPdf ? 'Generando...' : 'PDF'}</span>

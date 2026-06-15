@@ -46,9 +46,9 @@ function KpiCard({ label, value, subtitle, icon, gradient, onClick }: KpiCardPro
         {icon}
       </div>
       <div className="space-y-0.5 sm:space-y-1 pr-7 sm:pr-9">
-        <p className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wide leading-tight">{label}</p>
+        <p className="text-xs sm:text-xs font-medium text-gray-500 uppercase tracking-wide leading-tight">{label}</p>
         <div className="text-base sm:text-lg font-bold text-gray-900 leading-tight truncate">{value}</div>
-        {subtitle && <div className="text-[10px] sm:text-xs text-gray-500 leading-tight truncate">{subtitle}</div>}
+        {subtitle && <div className="text-xs sm:text-xs text-gray-500 leading-tight truncate">{subtitle}</div>}
       </div>
       {onClick && (
         <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 text-gray-600/40">

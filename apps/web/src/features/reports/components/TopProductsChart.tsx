@@ -77,7 +77,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
               <div className="flex items-start gap-2 sm:gap-3 mb-1 sm:mb-0.5">
                 {isTop3 && (
                   <span
-                    className="w-5 h-5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold text-white shrink-0 mt-0.5 sm:mt-0"
+                    className="w-5 h-5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-xs sm:text-xs font-bold text-white shrink-0 mt-0.5 sm:mt-0"
                     style={{ backgroundColor: RANK_COLORS[index] }}
                   >
                     {index + 1}
@@ -85,27 +85,27 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-700 wrap-break-word text-xs sm:text-sm">{p.name}</p>
-                  <p className="text-[11px] sm:text-xs text-gray-700">
+                  <p className="text-xs sm:text-xs text-gray-700">
                     {p.quantitySold.toFixed(p.quantitySold % 1 !== 0 ? 2 : 0)} u
                   </p>
                 </div>
               </div>
               <div className="flex gap-3 sm:gap-4 mb-1 sm:mb-0.5">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] sm:text-xs text-gray-700 uppercase tracking-wide">Ingreso</p>
+                  <p className="text-xs sm:text-xs text-gray-700 uppercase tracking-wide">Ingreso</p>
                   <p className="text-xs sm:text-sm font-medium text-gray-700 truncate">
                     {formatBs(p.revenueBs)}
                   </p>
-                  <p className="text-[11px] sm:text-xs text-gray-700">
+                  <p className="text-xs sm:text-xs text-gray-700">
                     {formatUsd(p.revenueUsd)}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] sm:text-xs text-gray-700 uppercase tracking-wide">Ganancia Bruta</p>
+                  <p className="text-xs sm:text-xs text-gray-700 uppercase tracking-wide">Ganancia Bruta</p>
                   <p className={`text-xs sm:text-sm font-semibold truncate ${p.profitBs >= 0 ? 'text-success' : 'text-danger'}`}>
                     {formatBs(p.profitBs)}
                   </p>
-                  <p className={`text-[11px] sm:text-xs ${p.profitBs >= 0 ? 'text-success/70' : 'text-danger/70'}`}>
+                  <p className={`text-xs sm:text-xs ${p.profitBs >= 0 ? 'text-success/70' : 'text-danger/70'}`}>
                     {formatUsd(p.profitUsd)}
                   </p>
                 </div>
