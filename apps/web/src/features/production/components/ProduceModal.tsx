@@ -173,6 +173,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
             <Input
               label="Cantidad de lotes (máx 1000)"
               type="number"
+              inputMode="numeric"
               value={batchCount}
               onChange={(e) => handleBatchChange(Number(e.target.value))}
               min={1}

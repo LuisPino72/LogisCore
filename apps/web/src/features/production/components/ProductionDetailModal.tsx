@@ -125,19 +125,19 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500">Lotes</p>
-            <p className="text-lg font-semibold text-gray-900">{order.batchCount}</p>
+            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.batchCount}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500">Objetivo</p>
-            <p className="text-lg font-semibold text-gray-900">{order.quantityTarget}</p>
+            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityTarget}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500">Producido</p>
-            <p className="text-lg font-semibold text-gray-900">{order.quantityProduced}</p>
+            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityProduced}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500">Merma</p>
-            <p className="text-lg font-semibold text-gray-900">{details?.wastePct || 0}%</p>
+            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{details?.wastePct || 0}%</p>
           </div>
         </div>
 
@@ -176,7 +176,21 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
         {details?.ingredientCosts && details.ingredientCosts.length > 0 && (
           <div className="bg-gray-50 rounded-lg p-3">
             <h5 className="text-sm font-medium text-gray-700 mb-2">Ingredientes Consumidos</h5>
-            <div className="overflow-x-auto">
+            <div className="sm:hidden space-y-2">
+              {details.ingredientCosts.map((ing, idx) => (
+                <div key={idx} className="bg-white rounded-lg p-3 border border-gray-100 space-y-1">
+                  <div className="flex justify-between items-start">
+                    <span className="text-sm font-semibold text-gray-900 min-w-0">{ing.productName}</span>
+                    <span className="text-sm font-medium text-gray-900 shrink-0 ml-2">{formatUsd(ing.totalCost)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>{ing.quantity} {ing.unit}</span>
+                    <span>{formatUsd(ing.costPerUnit)}/un</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -220,7 +234,25 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
         {movements.length > 0 && (
           <div className="bg-gray-50 rounded-lg p-3">
             <h5 className="text-sm font-medium text-gray-700 mb-2">Movimientos de Inventario</h5>
-            <div className="overflow-x-auto">
+            <div className="sm:hidden space-y-2">
+              {movements.map((m, idx) => (
+                <div key={idx} className="bg-white rounded-lg p-3 border border-gray-100 space-y-1">
+                  <div className="flex justify-between items-start">
+                    <span className="text-sm font-semibold text-gray-900 min-w-0">{m.productName}</span>
+                    <span className={`text-sm font-medium shrink-0 ml-2 ${m.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {m.quantity > 0 ? '+' : ''}{m.quantity}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${m.type === 'production_output' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {m.type === 'production_output' ? 'Producción' : 'Consumo'}
+                    </span>
+                    <span>{m.previousStock} → {m.newStock}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">

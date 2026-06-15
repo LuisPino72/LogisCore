@@ -121,7 +121,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                   <span>{formatDate(order.createdAt)}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0 self-start">
+              <div className="flex items-center gap-2 shrink-0 self-start flex-wrap">
                 <Button
                   variant="ghost"
                   size="sm"

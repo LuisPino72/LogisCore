@@ -177,7 +177,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
         onClose={onClose}
         title="Editar Receta"
         footer={
-          <div className="flex gap-2 justify-between">
+          <div className="flex gap-2 justify-between flex-wrap">
             <div>
               {currentStep > 1 && (
                 <Button variant="ghost" onClick={prevStep} className="flex items-center gap-1">
@@ -271,9 +271,10 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                         {errors[`line_${index}_product`] && (
                           <p className="text-xs text-danger wrap-break-word">{errors[`line_${index}_product`]}</p>
                         )}
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <Input
                             type="number"
+                            inputMode="decimal"
                             value={line.quantity}
                             onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
                             step={0.01}
@@ -348,7 +349,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                                 <span className="font-mono text-gray-500 shrink-0">#{preview.index + 1}</span>
                                 <span className="truncate font-medium text-gray-700 wrap-break-word">{preview.productName}</span>
                                 {preview.isSubRecipe && (
-                                  <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
+                                  <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
                                     Sub-receta
                                   </span>
                                 )}
@@ -359,7 +360,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                             </li>
                           ))}
                         </ul>
-                        <p className="mt-2 text-[11px] text-gray-500 italic wrap-break-word">
+                        <p className="mt-2 text-xs text-gray-500 italic wrap-break-word">
                           El desglose muestra las líneas tal como se guardarán. La expansión completa se calculará al ejecutar la receta.
                         </p>
                       </Card>
@@ -387,6 +388,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               <Input
                 label="Merma %"
                 type="number"
+                inputMode="decimal"
                 value={form.wastePct}
                 onChange={(e) => updateField('wastePct', Number(e.target.value))}
                 min={0}
@@ -454,7 +456,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
       onClose={onClose}
       title="Nueva Receta"
       footer={
-        <div className="flex gap-2 justify-between">
+        <div className="flex gap-2 justify-between flex-wrap">
           <div>
             {currentStep > 1 && (
               <Button variant="ghost" onClick={prevStep} className="flex items-center gap-1">
@@ -521,6 +523,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 placeholder="Ej: Pan de jamón"
                 error={errors.newProductName}
                 validation={{ required: true, maxLength: 25 }}
+                autoComplete="off"
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input
@@ -530,10 +533,12 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   placeholder="Ej: PAN-001"
                   error={errors.newProductSku}
                   validation={{ required: true, maxLength: 18 }}
+                  autoComplete="off"
                 />
                 <Input
                   label="Precio de venta ($)"
                   type="number"
+                  inputMode="decimal"
                   value={form.newProductPriceUsd || ''}
                   onChange={(e) => updateField('newProductPriceUsd', Number(e.target.value) || 0)}
                   placeholder="0.00"
@@ -562,7 +567,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               )}
             </Card>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer py-2">
               <input
                 type="checkbox"
                 checked={form.newProductIsTaxable}
@@ -652,9 +657,10 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     {errors[`line_${index}_product`] && (
                       <p className="text-xs text-danger wrap-break-word">{errors[`line_${index}_product`]}</p>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <Input
                         type="number"
+                        inputMode="decimal"
                         value={line.quantity}
                         onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
                         min={0.01}
@@ -729,7 +735,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                             <span className="font-mono text-gray-500 shrink-0">#{preview.index + 1}</span>
                             <span className="truncate font-medium text-gray-700 wrap-break-word">{preview.productName}</span>
                             {preview.isSubRecipe && (
-                              <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
+                              <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
                                 Sub-receta
                               </span>
                             )}
@@ -740,7 +746,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-2 text-[11px] text-gray-500 italic wrap-break-word">
+                    <p className="mt-2 text-xs text-gray-500 italic wrap-break-word">
                       El desglose muestra las líneas tal como se guardarán. La expansión completa se calculará al ejecutar la receta.
                     </p>
                   </Card>
@@ -768,6 +774,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               <Input
                 label="Merma %"
                 type="number"
+                inputMode="decimal"
                 value={form.wastePct}
                 onChange={(e) => updateField('wastePct', Number(e.target.value))}
                 min={0}
@@ -780,6 +787,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   <Input
                     label="Cantidad producida"
                     type="number"
+                    inputMode="numeric"
                     value={form.yieldQuantity}
                     onChange={(e) => updateField('yieldQuantity', Number(e.target.value))}
                     min={1}

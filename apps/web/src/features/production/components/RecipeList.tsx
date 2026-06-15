@@ -52,6 +52,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="Buscar recetas..."
+        inputMode="search"
       />
 
       {filteredRecipes.length === 0 ? (
