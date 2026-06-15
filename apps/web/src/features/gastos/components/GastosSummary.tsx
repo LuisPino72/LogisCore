@@ -43,49 +43,53 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
   }, [gastos]);
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3">
       <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <DollarSign size={16} className="text-primary" />
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <DollarSign size={14} className="text-primary sm:hidden" />
+            <DollarSign size={16} className="text-primary hidden sm:block" />
           </div>
-          <span className="text-xs text-text-secondary font-medium">Total del mes</span>
+          <span className="text-[11px] sm:text-xs text-text-secondary font-medium leading-tight">Total del mes</span>
         </div>
-        <p className="text-lg sm:text-xl font-bold text-primary">{formatUsd(summary.total)}</p>
-        <p className="text-[10px] text-text-secondary mt-0.5">{gastos.length} gasto{gastos.length !== 1 ? 's' : ''}</p>
+        <p className="text-base sm:text-xl font-bold text-primary leading-tight">{formatUsd(summary.total)}</p>
+        <p className="text-[11px] sm:text-xs text-text-secondary mt-1">{gastos.length} gasto{gastos.length !== 1 ? 's' : ''}</p>
       </Card>
 
       <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
-            <Clock size={16} className="text-warning" />
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+            <Clock size={14} className="text-warning sm:hidden" />
+            <Clock size={16} className="text-warning hidden sm:block" />
           </div>
-          <span className="text-xs text-text-secondary font-medium">Pendientes</span>
+          <span className="text-[11px] sm:text-xs text-text-secondary font-medium leading-tight">Pendientes</span>
         </div>
-        <p className="text-lg sm:text-xl font-bold text-warning">{summary.pendingCount}</p>
-        <p className="text-[10px] text-text-secondary mt-0.5">{formatUsd(summary.pendingTotal)}</p>
+        <p className="text-base sm:text-xl font-bold text-warning leading-tight">{summary.pendingCount}</p>
+        <p className="text-[11px] sm:text-xs text-text-secondary mt-1">{formatUsd(summary.pendingTotal)}</p>
       </Card>
 
       <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-            <CheckCircle size={16} className="text-success" />
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+            <CheckCircle size={14} className="text-success sm:hidden" />
+            <CheckCircle size={16} className="text-success hidden sm:block" />
           </div>
-          <span className="text-xs text-text-secondary font-medium">Pagados</span>
+          <span className="text-[11px] sm:text-xs text-text-secondary font-medium leading-tight">Pagados</span>
         </div>
-        <p className="text-lg sm:text-xl font-bold text-success">{summary.paidCount}</p>
-        <p className="text-[10px] text-text-secondary mt-0.5">{formatUsd(summary.paidTotal)}</p>
+        <p className="text-base sm:text-xl font-bold text-success leading-tight">{summary.paidCount}</p>
+        <p className="text-[11px] sm:text-xs text-text-secondary mt-1">{formatUsd(summary.paidTotal)}</p>
       </Card>
 
       <Card className="p-3 sm:p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-            <TrendingUp size={16} className="text-accent" />
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+            <TrendingUp size={14} className="text-accent sm:hidden" />
+            <TrendingUp size={16} className="text-accent hidden sm:block" />
           </div>
-          <span className="text-xs text-text-secondary font-medium">Categoría principal</span>
+          <span className="text-[11px] sm:text-xs text-text-secondary font-medium leading-tight">Categoría top</span>
         </div>
-        <p className="text-sm font-bold text-gray-900 truncate">{summary.topCategory ? getExpenseCategoryLabel(summary.topCategory) : '—'}</p>
-        <p className="text-[10px] text-text-secondary mt-0.5">{summary.topAmount > 0 ? formatUsd(summary.topAmount) : '—'}</p>
+        <p className="text-sm sm:text-base font-bold text-gray-900 truncate leading-tight">{summary.topCategory ? getExpenseCategoryLabel(summary.topCategory) : 'Sin datos'}</p>
+        <p className="text-[11px] sm:text-xs text-text-secondary mt-1">{summary.topAmount > 0 ? formatUsd(summary.topAmount) : '—'}</p>
       </Card>
     </div>
   );
