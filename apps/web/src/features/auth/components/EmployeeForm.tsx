@@ -73,7 +73,7 @@ export function EmployeeForm({ onSubmit, isSubmitting = false, externalError }: 
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           minLength={8}
-          maxLength={20}
+          maxLength={14}
           required
           autoComplete="new-password"
           hint="Mín. 8 caracteres: mayúscula, minúscula, número y símbolo"

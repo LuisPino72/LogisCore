@@ -71,7 +71,7 @@ export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, userI
           placeholder="Mínimo 8 caracteres"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          validation={{ required: true, minLength: 8, maxLength: 20 }}
+          validation={{ required: true, minLength: 8, maxLength: 14 }}
           hint="Mín. 8 caracteres: mayúscula, minúscula, número y símbolo"
         />
       </div>

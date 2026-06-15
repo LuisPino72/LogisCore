@@ -6,7 +6,7 @@ export const LoginInputSchema = z.object({
   email: z.string().email('Email inválido').max(30, 'Email máximo 30 caracteres'),
   password: z.string()
     .min(8, 'Mínimo 8 caracteres')
-    .max(100)
+    .max(14)
     .regex(/[A-Z]/, 'Debe contener una mayúscula')
     .regex(/[a-z]/, 'Debe contener una minúscula')
     .regex(/[0-9]/, 'Debe contener un número')
@@ -52,7 +52,7 @@ export function isValidRole(role: unknown): role is UserRole {
 
 const employeePasswordSchema = z.string()
   .min(8, 'Mínimo 8 caracteres')
-  .max(20)
+  .max(14)
   .regex(/[A-Z]/, 'Debe contener una mayúscula')
   .regex(/[a-z]/, 'Debe contener una minúscula')
   .regex(/[0-9]/, 'Debe contener un número')

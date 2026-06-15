@@ -135,7 +135,7 @@ export function LoginPage() {
             value={password}
             onChange={(e) => { setPassword(e.target.value); clearLoginError(); }}
             error={fieldErrors.password}
-            validation={{ required: 'Ingresa tu contraseña', minLength: 8, maxLength: 100 }}
+            validation={{ required: 'Ingresa tu contraseña', minLength: 8, maxLength: 14 }}
             iconRight={
               <button
                 type="button"

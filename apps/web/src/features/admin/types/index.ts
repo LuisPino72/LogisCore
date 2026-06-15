@@ -11,7 +11,7 @@ export type CreateTenantInput = z.infer<typeof CreateTenantInputSchema>;
 
 export const passwordSchema = z.string()
   .min(8, 'Mínimo 8 caracteres')
-  .max(20)
+  .max(14)
   .regex(/[A-Z]/, 'Debe contener una mayúscula')
   .regex(/[a-z]/, 'Debe contener una minúscula')
   .regex(/[0-9]/, 'Debe contener un número')

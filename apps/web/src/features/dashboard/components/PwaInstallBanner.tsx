@@ -6,6 +6,9 @@ export const PwaInstallBanner: FC = () => {
   const { isInstallable, dismissed, install, dismiss, showInstructions } = usePwaInstall();
   const [installing, setInstalling] = useState(false);
 
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) return null;
+
   // Don't render if installed, dismissed, or no way to install
   if (dismissed || (!isInstallable && !showInstructions)) return null;
 
