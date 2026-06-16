@@ -225,7 +225,12 @@ async function renderAndDownload(
     container.style.zIndex = '9999';
 
     await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 300));
+
+    if (container.offsetHeight === 0) {
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => setTimeout(r, 200));
+    }
 
     const html2pdf = (await import('html2pdf.js')).default;
     const opt = {

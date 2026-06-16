@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, Printer } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosNavigation } from '../hooks/usePosNavigation';
 import { usePosModals } from '../hooks/usePosModals';
@@ -785,6 +785,23 @@ export function PosPage({ tenantId }: PosPageProps) {
         ]}
         onComplete={() => {}}
       />
+
+      {generatingPdf && (
+        <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-2xl border border-gray-100 animate-slide-down">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+              <Printer size={28} className="text-primary" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-900">Generando PDF</p>
+              <p className="text-xs text-gray-700 mt-1">Esto puede tomar unos segundos...</p>
+            </div>
+            <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full animate-shimmer" style={{ width: '40%', backgroundSize: '200px 100%' }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
