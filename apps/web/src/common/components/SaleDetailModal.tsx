@@ -233,7 +233,7 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
                 {generatingPdf ? 'Generando...' : 'Factura PDF'}
               </Button>
             </div>
-            {customer?.phone && (() => {
+            {customer?.phone && typeof customer.phone === 'string' && (() => {
               const digits = customer.phone.replace(/[^0-9]/g, '');
               const waPhone = digits.startsWith('58') ? digits
                 : digits.startsWith('0') ? `58${digits.slice(1)}`
