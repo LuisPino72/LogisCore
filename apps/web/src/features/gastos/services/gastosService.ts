@@ -188,6 +188,25 @@ export const gastosService = {
         await db.expenses.update(id, updated);
         await syncQueue.enqueue('expenses', 'UPDATE', id, { id, ...toSnake(updated as unknown as Record<string, unknown>) }, tenantId);
         await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
+
+        // Si es un template recurrente y se marca como pagado, propagar a instancias pendientes hijas
+        if (isPayingPending && existing.isRecurring && !existing.parentExpenseId) {
+          const childInstances = await db.expenses
+            .where('parentExpenseId').equals(id)
+            .filter((e) => !e.deletedAt && e.status === 'pending' && e.tenantId === tenantId)
+            .toArray();
+          const payRate = effectiveRate ?? currentRate;
+          for (const child of childInstances) {
+            const childAmountBs = payRate ? preciseRound(child.amountUsd * payRate, 2) : child.amountBs;
+            await db.expenses.update(child.id, {
+              status: 'paid',
+              ...(payRate ? { exchangeRate: payRate, amountBs: childAmountBs } : {}),
+              updatedAt: now,
+            });
+            await syncQueue.enqueue('expenses', 'UPDATE', child.id, { id: child.id, status: 'paid', updated_at: now }, tenantId);
+            await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: child.id, changes: ['status'] });
+          }
+        }
       });
       // AUDIT-CRUD-007: audit post-tx
       await logAuditEventOnly({
@@ -330,7 +349,7 @@ export const gastosService = {
             date: today,
             isRecurring: false,
             parentExpenseId: tpl.id,
-            status: 'pending',
+            status: tpl.status === 'paid' ? 'paid' : 'pending',
             createdAt: now,
             updatedAt: now,
           };
@@ -427,6 +446,25 @@ export const gastosService = {
           });
           await syncQueue.enqueue('expenses', 'UPDATE', id, { id, status: 'paid', exchange_rate: currentRate, amount_bs: amountBs, updated_at: now }, tenantId);
           await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: ['status', 'exchangeRate'] });
+
+          // Si es un template recurrente, propagar pago a instancias pendientes hijas
+          if (existing.isRecurring && !existing.parentExpenseId) {
+            const childInstances = await db.expenses
+              .where('parentExpenseId').equals(id)
+              .filter((e) => !e.deletedAt && e.status === 'pending' && e.tenantId === tenantId)
+              .toArray();
+            for (const child of childInstances) {
+              const childAmountBs = preciseRound(child.amountUsd * currentRate, 2);
+              await db.expenses.update(child.id, {
+                status: 'paid',
+                exchangeRate: currentRate,
+                amountBs: childAmountBs,
+                updatedAt: now,
+              });
+              await syncQueue.enqueue('expenses', 'UPDATE', child.id, { id: child.id, status: 'paid', exchange_rate: currentRate, amount_bs: childAmountBs, updated_at: now }, tenantId);
+              await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: child.id, changes: ['status', 'exchangeRate'] });
+            }
+          }
         }
       });
 
