@@ -153,116 +153,118 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
   }, [sale, items, customer, tenantInfo]);
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Detalle de venta"
-    >
-      {loading ? (
-        <div className="flex justify-center py-8">
-          <Spinner size="sm" />
-        </div>
-      ) : sale ? (
-        <div className="flex flex-col gap-3">
-          {customer && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
-              <User size={14} className="text-primary shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-gray-900 truncate">
-                  {customer.cedula || customer.name}
-                </p>
-                {customer.cedula && customer.name && (
-                  <p className="text-[10px] text-text-secondary truncate">{customer.name}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="text-sm text-gray-600 space-y-1">
-            <p><strong>Fecha:</strong> {new Date(sale.createdAt).toLocaleString('es-VE')}</p>
-            <p><strong>Método:</strong> {METADATA_PAGOS[sale.paymentMethod as PaymentMethod]?.label ?? sale.paymentMethod}</p>
-            <p><strong>Tasa:</strong> {sale.exchangeRate.toFixed(4)} Bs/$</p>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Detalle de venta"
+      >
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Spinner size="sm" />
           </div>
-
-          <div className="border-t border-border pt-2">
-            <h4 className="text-sm font-semibold mb-2">Productos</h4>
-            <div className="space-y-1.5">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <span>{item.productName}{item.presentationName ? ` - ${item.presentationName}` : ''} x {item.quantity}</span>
-                  <span className="font-medium">{formatUsd(item.totalPriceUsd)}</span>
+        ) : sale ? (
+          <div className="flex flex-col gap-3">
+            {customer && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                <User size={14} className="text-primary shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-gray-900 truncate">
+                    {customer.cedula || customer.name}
+                  </p>
+                  {customer.cedula && customer.name && (
+                    <p className="text-[10px] text-text-secondary truncate">{customer.name}</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-2 space-y-1">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Subtotal</span>
-              <span>{formatUsd(sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0)} / {formatBs(sale.subtotalBs)}</span>
-            </div>
-            {sale.igtfBs > 0 && (
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
-                <span>{formatBs(sale.igtfBs)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>IVA (16%)</span>
-              <span>{formatBs(sale.ivaBs ?? 0)}</span>
-            </div>
-            <div className="flex justify-between text-base font-bold">
-              <span>Total</span>
-              <span>{formatBs(sale.totalBs)} / {formatUsd(sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0)}</span>
-            </div>
-          </div>
 
-          {/* Action buttons */}
-          <div className="border-t border-border pt-3 flex flex-col gap-2">
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => handleWhatsAppShare('ticket')}
-              disabled={sharing || !tenantInfo}
-              className="min-h-11"
-              style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
-            >
-              <FileText size={16} />
-              {sharing ? 'Enviando...' : 'Ticket por WhatsApp'}
-            </Button>
-            {customer?.phone && typeof customer.phone === 'string' && (
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><strong>Fecha:</strong> {new Date(sale.createdAt).toLocaleString('es-VE')}</p>
+              <p><strong>Método:</strong> {METADATA_PAGOS[sale.paymentMethod as PaymentMethod]?.label ?? sale.paymentMethod}</p>
+              <p><strong>Tasa:</strong> {sale.exchangeRate.toFixed(4)} Bs/$</p>
+            </div>
+
+            <div className="border-t border-border pt-2">
+              <h4 className="text-sm font-semibold mb-2">Productos</h4>
+              <div className="space-y-1.5">
+                {items.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span>{item.productName}{item.presentationName ? ` - ${item.presentationName}` : ''} x {item.quantity}</span>
+                    <span className="font-medium">{formatUsd(item.totalPriceUsd)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-2 space-y-1">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Subtotal</span>
+                <span>{formatUsd(sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0)} / {formatBs(sale.subtotalBs)}</span>
+              </div>
+              {sale.igtfBs > 0 && (
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
+                  <span>{formatBs(sale.igtfBs)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>IVA (16%)</span>
+                <span>{formatBs(sale.ivaBs ?? 0)}</span>
+              </div>
+              <div className="flex justify-between text-base font-bold">
+                <span>Total</span>
+                <span>{formatBs(sale.totalBs)} / {formatUsd(sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0)}</span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="border-t border-border pt-3 flex flex-col gap-2">
               <Button
-                variant="secondary"
+                variant="primary"
                 fullWidth
-                onClick={() => handleWhatsAppShare('text')}
-                disabled={sharing}
+                onClick={() => handleWhatsAppShare('ticket')}
+                disabled={sharing || !tenantInfo}
                 className="min-h-11"
                 style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
               >
-                <MessageCircle size={16} />
-                {sharing ? 'Enviando...' : 'Solo texto por WhatsApp'}
+                <FileText size={16} />
+                {sharing ? 'Enviando...' : 'Ticket por WhatsApp'}
               </Button>
-            )}
-          </div>
-
-          {sharing && (
-            <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-2xl border border-gray-100 animate-slide-down">
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-                  <MessageCircle size={28} className="text-primary" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-900">Enviando por WhatsApp</p>
-                  <p className="text-xs text-gray-700 mt-1">Generando PDF y abriendo WhatsApp...</p>
-                </div>
-                <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full animate-shimmer" style={{ width: '40%', backgroundSize: '200px 100%' }} />
-                </div>
-              </div>
+              {customer?.phone && typeof customer.phone === 'string' && (
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => handleWhatsAppShare('text')}
+                  disabled={sharing}
+                  className="min-h-11"
+                  style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
+                >
+                  <MessageCircle size={16} />
+                  {sharing ? 'Enviando...' : 'Solo texto por WhatsApp'}
+                </Button>
+              )}
             </div>
-          )}
+          </div>
+        ) : null}
+      </Modal>
+
+      {sharing && (
+        <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-2xl border border-gray-100 animate-slide-down">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+              <MessageCircle size={28} className="text-primary" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-900">Enviando por WhatsApp</p>
+              <p className="text-xs text-gray-700 mt-1">Generando PDF y abriendo WhatsApp...</p>
+            </div>
+            <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full animate-shimmer" style={{ width: '40%', backgroundSize: '200px 100%' }} />
+            </div>
+          </div>
         </div>
-      ) : null}
-    </Modal>
+      )}
+    </>
   );
 }
