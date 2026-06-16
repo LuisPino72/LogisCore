@@ -316,7 +316,7 @@ export const dashboardService = {
           title: exp.category,
           subtitle: exp.description || `${exp.amountUsd.toFixed(2)} USD`,
           amount: exp.amountUsd,
-          route: '/expenses',
+          route: '/gastos',
           totalCount: pendingExpenses.length,
         });
       }

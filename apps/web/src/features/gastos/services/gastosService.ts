@@ -251,6 +251,28 @@ export const gastosService = {
     }
   },
 
+  async getAllMonthly(tenantId: string, month?: string): Promise<Result<Gasto[], AppError>> {
+    try {
+      const db = getDb();
+      const targetMonth = month ?? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit' }).format(new Date());
+      const startDate = `${targetMonth}-01`;
+      const d = new Date(parseInt(targetMonth.split('-')[0]), parseInt(targetMonth.split('-')[1]), 0);
+      const endDate = d.toISOString().slice(0, 10);
+
+      const expenses = await db.expenses
+        .where('tenantId')
+        .equals(tenantId)
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.date >= startDate && e.date <= endDate)
+        .toArray();
+
+      const mapped = expenses.sort((a, b) => b.date.localeCompare(a.date)).map(mapExpense);
+      return success(mapped);
+    } catch (err) {
+      console.error('[gastosService.getAllMonthly]', err);
+      return failure(new AppError(GASTOS_ERRORS.GASTOS_FETCH_FAILED.code, GASTOS_ERRORS.GASTOS_FETCH_FAILED.message));
+    }
+  },
+
   async getRecurringTemplates(tenantId: string): Promise<Result<Gasto[], AppError>> {
     try {
       const db = getDb();

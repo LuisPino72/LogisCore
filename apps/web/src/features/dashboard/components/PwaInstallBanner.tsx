@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react';
-import { Download, X, Smartphone, Share } from 'lucide-react';
+import { Download, X, Smartphone } from 'lucide-react';
 import { usePwaInstall } from '../../../hooks/usePwaInstall';
 
 export const PwaInstallBanner: FC = () => {
@@ -55,12 +55,12 @@ export const PwaInstallBanner: FC = () => {
               /* iOS / Safari fallback instructions */
               <div className="mt-2 space-y-1.5">
                 <p className="text-xs text-gray-600">
-                  Toca el botón de <strong>compartir</strong> y luego <strong>"Añadir a pantalla de inicio"</strong>:
+                  Toca el botón de <strong>descargar</strong> y luego <strong>"Añadir a pantalla de inicio"</strong>:
                 </p>
                 <div className="flex items-center gap-2 text-xs text-teal-700">
-                  <Share size={12} className="shrink-0" />
+                  <Download size={12} className="shrink-0" />
                   <span className="flex items-center gap-1">
-                    Compartir <span className="text-gray-400">→</span> Añadir a pantalla de inicio
+                    Descargar <span className="text-gray-400">→</span> Añadir a pantalla de inicio
                   </span>
                 </div>
               </div>
