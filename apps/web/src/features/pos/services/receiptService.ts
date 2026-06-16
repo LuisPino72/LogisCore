@@ -79,7 +79,7 @@ function buildTicketHtml(sale: ReceiptSaleData, items: ReceiptItemData[], custom
   const itemsHtml = items
     .map(
       (item) => {
-        const name = item.presentationName ? `${escapeHtml(item.productName)} - ${escapeHtml(item.presentationName)}` : escapeHtml(item.productName);
+        const name = escapeHtml(item.productName);
         return `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:10pt;">
           <span>${item.quantity}x ${name}</span>
           <span>${formatUsd(item.totalPriceUsd)}</span>
@@ -220,7 +220,7 @@ function buildWhatsAppText(
   ];
 
   for (const item of items) {
-    const name = item.presentationName ? `${item.productName} - ${item.presentationName}` : item.productName;
+    const name = item.productName;
     lines.push(`${item.quantity}x ${name}  ${formatUsd(item.totalPriceUsd)}`);
   }
 
