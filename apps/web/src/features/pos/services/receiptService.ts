@@ -210,35 +210,43 @@ async function renderAndDownload(
   fileName: string,
   format: ReceiptFormat,
 ): Promise<Result<void, AppError>> {
+  const widthMm = format === 'ticket' ? '80mm' : '210mm';
+
   const container = document.createElement('div');
-  container.style.position = 'fixed';
+  container.style.position = 'absolute';
   container.style.top = '0';
-  container.style.left = '-9999px';
+  container.style.left = '-10000px';
+  container.style.width = widthMm;
+  container.style.visibility = 'visible';
   container.style.opacity = '1';
   container.style.pointerEvents = 'none';
-  container.style.zIndex = '-1';
   container.innerHTML = html;
   document.body.appendChild(container);
 
+  const originalStyles = {
+    position: container.style.position,
+    left: container.style.left,
+    top: container.style.top,
+    zIndex: container.style.zIndex,
+  };
+
   try {
+    container.style.position = 'fixed';
     container.style.left = '0';
+    container.style.top = '0';
     container.style.zIndex = '9999';
 
     await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 150));
 
-    if (container.offsetHeight === 0) {
-      await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => setTimeout(r, 200));
-    }
-
+    const element = (container.firstElementChild || container) as HTMLElement;
     const html2pdf = (await import('html2pdf.js')).default;
     const opt = {
       margin: format === 'ticket' ? [2, 2, 2, 2] as [number, number, number, number] : [10, 10, 10, 10] as [number, number, number, number],
       filename: fileName,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: {
-        scale: format === 'ticket' ? 2 : 2,
+        scale: 2,
         useCORS: true,
         logging: false,
         letterRendering: true,
@@ -252,7 +260,7 @@ async function renderAndDownload(
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
     };
 
-    const task = html2pdf().set(opt).from(container).save();
+    const task = html2pdf().set(opt).from(element).save();
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('PDF_TIMEOUT')), RECEIPT_TIMEOUT),
     );
@@ -265,6 +273,10 @@ async function renderAndDownload(
     }
     return failure(new AppError('RECEIPT_GENERATION_FAILED', 'Error al generar el PDF. Intenta nuevamente.'));
   } finally {
+    container.style.position = originalStyles.position;
+    container.style.left = originalStyles.left;
+    container.style.top = originalStyles.top;
+    container.style.zIndex = originalStyles.zIndex;
     document.body.removeChild(container);
   }
 }
