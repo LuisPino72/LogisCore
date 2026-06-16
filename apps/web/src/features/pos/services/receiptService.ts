@@ -287,6 +287,114 @@ async function renderAndDownload(
   }
 }
 
+function buildWhatsAppText(
+  sale: ReceiptSaleData,
+  items: ReceiptItemData[],
+  tenantInfo: ReceiptTenantInfo,
+): string {
+  const lines = [
+    `*${tenantInfo.name}*`,
+    `RIF: ${tenantInfo.rif}`,
+    '',
+    `Factura: #${sale.id.slice(0, 8)}`,
+    `Fecha: ${formatDate(sale.createdAt)} ${formatTime(sale.createdAt)}`,
+    `Método: ${getPaymentLabel(sale.paymentMethod)}`,
+    '',
+    '--- Productos ---',
+  ];
+
+  for (const item of items) {
+    const name = item.presentationName ? `${item.productName} - ${item.presentationName}` : item.productName;
+    lines.push(`${item.quantity}x ${name}  ${formatUsd(item.totalPriceUsd)}`);
+  }
+
+  lines.push('');
+  lines.push(`Total: ${formatUsd(sale.totalUsd)}`);
+  if (sale.totalBs > 0) {
+    lines.push(`Total: ${formatBs(sale.totalBs)}`);
+  }
+  lines.push('');
+  lines.push('¡Gracias por su compra!');
+
+  return lines.join('\n');
+}
+
+function normalizeWaPhone(phone: string): string | null {
+  if (!phone || typeof phone !== 'string') return null;
+  const digits = phone.replace(/[^0-9]/g, '');
+  if (!digits) return null;
+  return digits.startsWith('58') ? digits
+    : digits.startsWith('0') ? `58${digits.slice(1)}`
+      : `58${digits}`;
+}
+
+async function renderToBlob(
+  html: string,
+  format: ReceiptFormat,
+): Promise<Blob> {
+  const widthMm = format === 'ticket' ? '80mm' : '210mm';
+
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.top = '0';
+  container.style.left = '-10000px';
+  container.style.width = widthMm;
+  container.style.visibility = 'visible';
+  container.style.opacity = '1';
+  container.style.pointerEvents = 'none';
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  const originalStyles = {
+    position: container.style.position,
+    left: container.style.left,
+    top: container.style.top,
+    zIndex: container.style.zIndex,
+  };
+
+  try {
+    container.style.position = 'fixed';
+    container.style.left = '0';
+    container.style.top = '0';
+    container.style.zIndex = '9999';
+
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => setTimeout(r, 150));
+
+    const element = (container.firstElementChild || container) as HTMLElement;
+    const html2pdf = (await import('html2pdf.js')).default;
+    const opt = {
+      margin: format === 'ticket' ? [2, 2, 2, 2] as [number, number, number, number] : [10, 10, 10, 10] as [number, number, number, number],
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        backgroundColor: '#ffffff',
+      },
+      jsPDF: {
+        unit: 'mm' as const,
+        format: format === 'ticket' ? [80, 297] as [number, number] : 'a4' as const,
+        orientation: 'portrait' as const,
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    };
+
+    const task = html2pdf().set(opt).from(element).outputPdf('blob');
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('PDF_TIMEOUT')), RECEIPT_TIMEOUT),
+    );
+    return await Promise.race([task, timeout]);
+  } finally {
+    container.style.position = originalStyles.position;
+    container.style.left = originalStyles.left;
+    container.style.top = originalStyles.top;
+    container.style.zIndex = originalStyles.zIndex;
+    document.body.removeChild(container);
+  }
+}
+
 export const receiptService = {
   async generatePdf(
     sale: ReceiptSaleData,
@@ -308,37 +416,60 @@ export const receiptService = {
     customer: ReceiptCustomerData | null,
     tenantInfo: ReceiptTenantInfo,
   ): string | null {
-    if (!customer?.phone || typeof customer.phone !== 'string') return null;
-    const digits = customer.phone.replace(/[^0-9]/g, '');
-    const waPhone = digits.startsWith('58') ? digits
-      : digits.startsWith('0') ? `58${digits.slice(1)}`
-        : `58${digits}`;
-
-    const lines = [
-      `*${tenantInfo.name}*`,
-      `RIF: ${tenantInfo.rif}`,
-      '',
-      `Factura: #${sale.id.slice(0, 8)}`,
-      `Fecha: ${formatDate(sale.createdAt)} ${formatTime(sale.createdAt)}`,
-      `Método: ${getPaymentLabel(sale.paymentMethod)}`,
-      '',
-      '--- Productos ---',
-    ];
-
-    for (const item of items) {
-      const name = item.presentationName ? `${item.productName} - ${item.presentationName}` : item.productName;
-      lines.push(`${item.quantity}x ${name}  ${formatUsd(item.totalPriceUsd)}`);
-    }
-
-    lines.push('');
-    lines.push(`Total: ${formatUsd(sale.totalUsd)}`);
-    if (sale.totalBs > 0) {
-      lines.push(`Total: ${formatBs(sale.totalBs)}`);
-    }
-    lines.push('');
-    lines.push('¡Gracias por su compra!');
-
-    const text = encodeURIComponent(lines.join('\n'));
+    const waPhone = normalizeWaPhone(customer?.phone ?? '');
+    if (!waPhone) return null;
+    const text = encodeURIComponent(buildWhatsAppText(sale, items, tenantInfo));
     return `https://wa.me/${waPhone}?text=${text}`;
+  },
+
+  async sharePdfViaWhatsApp(
+    sale: ReceiptSaleData,
+    items: ReceiptItemData[],
+    customer: ReceiptCustomerData | null,
+    tenantInfo: ReceiptTenantInfo,
+    format: ReceiptFormat,
+  ): Promise<Result<void, AppError>> {
+    const waPhone = normalizeWaPhone(customer?.phone ?? '');
+    if (!waPhone) {
+      return failure(new AppError('NO_PHONE', 'El cliente no tiene teléfono registrado'));
+    }
+
+    try {
+      const html = format === 'ticket'
+        ? buildTicketHtml(sale, items, customer, tenantInfo)
+        : buildA4Html(sale, items, customer, tenantInfo);
+      const fileName = `Sasa-${format === 'ticket' ? 'Ticket' : 'Factura'}-${sale.id.slice(0, 8)}.pdf`;
+
+      const blob = await renderToBlob(html, format);
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+        });
+        return success(undefined);
+      }
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+
+      const text = encodeURIComponent(
+        `📄 *${fileName}* descargado. Adjúntalo en este chat para enviárselo al cliente.\n\n${buildWhatsAppText(sale, items, tenantInfo)}`,
+      );
+      window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank');
+      return success(undefined);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return success(undefined);
+      }
+      logger.error('receiptService', 'WhatsApp share error:', err);
+      return failure(new AppError('WHATSAPP_SHARE_FAILED', 'Error al compartir. Intenta nuevamente.'));
+    }
   },
 };

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Spinner } from './Loading';
-import { User, FileText, MessageCircle, Printer } from 'lucide-react';
+import { User, FileText, MessageCircle } from 'lucide-react';
 import { METADATA_PAGOS, type Sale } from '@/specs/pos';
 import type { PaymentMethod } from '@/specs/pos';
 import { IGTF_RATE } from '@logiscore/shared';
@@ -10,7 +10,7 @@ import { formatBs, formatUsd } from '@/lib/formatBs';
 import { posService } from '@/features/pos/services/posService';
 import { customerService } from '@/features/customers/services/customerService';
 import { dashboardService } from '@/features/dashboard/services/dashboardService';
-import { receiptService, type ReceiptFormat } from '@/features/pos/services/receiptService';
+import { receiptService } from '@/features/pos/services/receiptService';
 import type { TenantInfoResponse } from '@/features/dashboard/types';
 
 interface SaleDetailModalProps {
@@ -53,7 +53,7 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
   const [customer, setCustomer] = useState<CustomerInfo | null>(null);
   const [tenantInfo, setTenantInfo] = useState<TenantInfoResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !saleId) {
@@ -108,69 +108,47 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
     return () => { cancelled = true; };
   }, [isOpen, saleId, tenantId]);
 
-  const handleGeneratePdf = useCallback(async (format: ReceiptFormat) => {
+  const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'a4' | 'text') => {
     if (!sale || !tenantInfo) return;
-    setGeneratingPdf(true);
+    setSharing(true);
     await new Promise((r) => setTimeout(r, 50));
     try {
       const subtotalUsd = sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0;
-      await receiptService.generatePdf(
-        {
-          id: sale.id,
-          createdAt: sale.createdAt,
-          paymentMethod: sale.paymentMethod,
-          exchangeRate: sale.exchangeRate,
-          subtotalBs: sale.subtotalBs,
-          igtfBs: sale.igtfBs,
-          ivaBs: sale.ivaBs,
-          totalBs: sale.totalBs,
-          subtotalUsd,
-          igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
-          ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
-          totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
-        },
-        items.map((i) => ({
-          productName: i.productName,
-          presentationName: i.presentationName,
-          quantity: i.quantity,
-          unitPriceUsd: i.unitPriceUsd,
-          totalPriceUsd: i.totalPriceUsd,
-        })),
-        customer,
-        tenantInfo,
-        format,
-      );
-      
-      const waLink = receiptService.generateWhatsAppLink(
-        {
-          id: sale.id,
-          createdAt: sale.createdAt,
-          paymentMethod: sale.paymentMethod,
-          exchangeRate: sale.exchangeRate,
-          subtotalBs: sale.subtotalBs,
-          igtfBs: sale.igtfBs,
-          ivaBs: sale.ivaBs,
-          totalBs: sale.totalBs,
-          subtotalUsd,
-          igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
-          ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
-          totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
-        },
-        items.map((i) => ({
-          productName: i.productName,
-          presentationName: i.presentationName,
-          quantity: i.quantity,
-          unitPriceUsd: i.unitPriceUsd,
-          totalPriceUsd: i.totalPriceUsd,
-        })),
-        customer,
-        tenantInfo,
-      );
-      if (waLink) {
-        window.open(waLink, '_blank');
+      const saleData = {
+        id: sale.id,
+        createdAt: sale.createdAt,
+        paymentMethod: sale.paymentMethod,
+        exchangeRate: sale.exchangeRate,
+        subtotalBs: sale.subtotalBs,
+        igtfBs: sale.igtfBs,
+        ivaBs: sale.ivaBs,
+        totalBs: sale.totalBs,
+        subtotalUsd,
+        igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
+        ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
+        totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
+      };
+      const itemsData = items.map((i) => ({
+        productName: i.productName,
+        presentationName: i.presentationName,
+        quantity: i.quantity,
+        unitPriceUsd: i.unitPriceUsd,
+        totalPriceUsd: i.totalPriceUsd,
+      }));
+
+      if (mode === 'text') {
+        const link = receiptService.generateWhatsAppLink(saleData, itemsData, customer, tenantInfo);
+        if (link) {
+          window.open(link, '_blank');
+        }
+      } else {
+        const result = await receiptService.sharePdfViaWhatsApp(saleData, itemsData, customer, tenantInfo, mode);
+        if (!result.ok) {
+          window.open(`https://wa.me`, '_blank');
+        }
       }
     } finally {
-      setGeneratingPdf(false);
+      setSharing(false);
     }
   }, [sale, items, customer, tenantInfo]);
 
@@ -241,80 +219,52 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
 
           {/* Action buttons */}
           <div className="border-t border-border pt-3 flex flex-col gap-2">
-            <div className="flex gap-2">
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => handleWhatsAppShare('ticket')}
+              disabled={sharing || !tenantInfo}
+              className="min-h-11"
+              style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
+            >
+              <FileText size={16} />
+              {sharing ? 'Enviando...' : 'Ticket por WhatsApp'}
+            </Button>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => handleWhatsAppShare('a4')}
+              disabled={sharing || !tenantInfo}
+              className="min-h-11"
+              style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
+            >
+              <FileText size={16} />
+              {sharing ? 'Enviando...' : 'Factura por WhatsApp'}
+            </Button>
+            {customer?.phone && typeof customer.phone === 'string' && (
               <Button
-                variant="primary"
+                variant="secondary"
                 fullWidth
-                onClick={() => handleGeneratePdf('ticket')}
-                disabled={generatingPdf || !tenantInfo}
+                onClick={() => handleWhatsAppShare('text')}
+                disabled={sharing}
                 className="min-h-11"
+                style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
               >
-                <FileText size={16} />
-                {generatingPdf ? 'Generando...' : 'Ticket PDF'}
+                <MessageCircle size={16} />
+                {sharing ? 'Enviando...' : 'Solo texto por WhatsApp'}
               </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => handleGeneratePdf('a4')}
-                disabled={generatingPdf || !tenantInfo}
-                className="min-h-11"
-              >
-                <FileText size={16} />
-                {generatingPdf ? 'Generando...' : 'Factura PDF'}
-              </Button>
-            </div>
-            {customer?.phone && typeof customer.phone === 'string' && sale && tenantInfo && (() => {
-              const subtotalUsd = sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0;
-              const link = receiptService.generateWhatsAppLink(
-                {
-                  id: sale.id,
-                  createdAt: sale.createdAt,
-                  paymentMethod: sale.paymentMethod,
-                  exchangeRate: sale.exchangeRate,
-                  subtotalBs: sale.subtotalBs,
-                  igtfBs: sale.igtfBs,
-                  ivaBs: sale.ivaBs,
-                  totalBs: sale.totalBs,
-                  subtotalUsd,
-                  igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
-                  ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
-                  totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
-                },
-                items.map((i) => ({
-                  productName: i.productName,
-                  presentationName: i.presentationName,
-                  quantity: i.quantity,
-                  unitPriceUsd: i.unitPriceUsd,
-                  totalPriceUsd: i.totalPriceUsd,
-                })),
-                customer,
-                tenantInfo,
-              );
-              if (!link) return null;
-              return (
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full min-h-11 rounded-lg font-medium text-sm transition-all active:scale-[0.98]"
-                  style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
-                >
-                  <MessageCircle size={16} />
-                  Enviar WhatsApp
-                </a>
-              );
-            })()}
+            )}
           </div>
 
-          {generatingPdf && (
+          {sharing && (
             <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-2xl border border-gray-100 animate-slide-down">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-                  <Printer size={28} className="text-primary" />
+                  <MessageCircle size={28} className="text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-900">Generando PDF</p>
-                  <p className="text-xs text-gray-700 mt-1">Esto puede tomar unos segundos...</p>
+                  <p className="text-sm font-semibold text-gray-900">Enviando por WhatsApp</p>
+                  <p className="text-xs text-gray-700 mt-1">Generando PDF y abriendo WhatsApp...</p>
                 </div>
                 <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-primary rounded-full animate-shimmer" style={{ width: '40%', backgroundSize: '200px 100%' }} />

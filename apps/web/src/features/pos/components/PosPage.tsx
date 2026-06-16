@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, Printer } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosNavigation } from '../hooks/usePosNavigation';
 import { usePosModals } from '../hooks/usePosModals';
@@ -28,7 +28,7 @@ import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
 import { isSameDayVzla } from '../../../lib/date';
 import { preciseRound } from '@logiscore/shared';
-import { receiptService, type ReceiptFormat } from '../services/receiptService';
+import { receiptService } from '../services/receiptService';
 import { dashboardService } from '../../dashboard/services/dashboardService';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
@@ -79,7 +79,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
 
   // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
@@ -190,78 +190,77 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs]);
 
-  const handleGeneratePdf = useCallback(async (format: ReceiptFormat) => {
+  const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'a4' | 'text') => {
     if (!completedSale || !tenantInfo) return;
-    setGeneratingPdf(true);
+    setSharing(true);
     await new Promise((r) => setTimeout(r, 50));
     try {
-      const subtotalUsd = completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0;
-      await receiptService.generatePdf(
-        {
-          id: completedSale.saleId,
-          createdAt: new Date().toISOString(),
-          paymentMethod: completedSale.paymentMethod,
-          exchangeRate: completedSale.exchangeRate,
-          subtotalBs: completedSale.subtotalBs,
-          igtfBs: 0,
-          ivaBs: 0,
-          totalBs: completedSale.totalBs,
-          subtotalUsd,
-          igtfUsd: 0,
-          ivaUsd: 0,
-          totalUsd: completedSale.totalUsd,
-        },
-        completedSale.items.map((i) => ({
-          productName: i.name,
-          presentationName: i.presentationName,
-          quantity: i.quantity,
-          unitPriceUsd: i.unitPriceUsd,
-          totalPriceUsd: i.totalPriceUsd,
-        })),
-        completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
-        tenantInfo,
-        format,
-      );
-      addToast({ type: 'success', message: 'PDF generado exitosamente', duration: 3000 });
-      handleWhatsApp();
+      if (mode === 'text') {
+        const link = receiptService.generateWhatsAppLink(
+          {
+            id: completedSale.saleId,
+            createdAt: new Date().toISOString(),
+            paymentMethod: completedSale.paymentMethod,
+            exchangeRate: completedSale.exchangeRate,
+            subtotalBs: completedSale.subtotalBs,
+            igtfBs: 0,
+            ivaBs: 0,
+            totalBs: completedSale.totalBs,
+            subtotalUsd: completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0,
+            igtfUsd: 0,
+            ivaUsd: 0,
+            totalUsd: completedSale.totalUsd,
+          },
+          completedSale.items.map((i) => ({
+            productName: i.name,
+            presentationName: i.presentationName,
+            quantity: i.quantity,
+            unitPriceUsd: i.unitPriceUsd,
+            totalPriceUsd: i.totalPriceUsd,
+          })),
+          completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
+          tenantInfo,
+        );
+        if (link) {
+          window.open(link, '_blank');
+        } else {
+          addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado', duration: 4000 });
+        }
+      } else {
+        const result = await receiptService.sharePdfViaWhatsApp(
+          {
+            id: completedSale.saleId,
+            createdAt: new Date().toISOString(),
+            paymentMethod: completedSale.paymentMethod,
+            exchangeRate: completedSale.exchangeRate,
+            subtotalBs: completedSale.subtotalBs,
+            igtfBs: 0,
+            ivaBs: 0,
+            totalBs: completedSale.totalBs,
+            subtotalUsd: completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0,
+            igtfUsd: 0,
+            ivaUsd: 0,
+            totalUsd: completedSale.totalUsd,
+          },
+          completedSale.items.map((i) => ({
+            productName: i.name,
+            presentationName: i.presentationName,
+            quantity: i.quantity,
+            unitPriceUsd: i.unitPriceUsd,
+            totalPriceUsd: i.totalPriceUsd,
+          })),
+          completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
+          tenantInfo,
+          mode,
+        );
+        if (!result.ok) {
+          addToast({ type: 'warning', message: result.error.message, duration: 4000 });
+        }
+      }
     } catch {
-      addToast({ type: 'error', message: 'Error al generar el PDF', duration: 5000 });
+      addToast({ type: 'error', message: 'Error al enviar por WhatsApp', duration: 5000 });
     } finally {
-      setGeneratingPdf(false);
-    }
-  }, [completedSale, tenantInfo, addToast]);
-
-  const handleWhatsApp = useCallback(() => {
-    if (!completedSale || !tenantInfo) return;
-    const link = receiptService.generateWhatsAppLink(
-      {
-        id: completedSale.saleId,
-        createdAt: new Date().toISOString(),
-        paymentMethod: completedSale.paymentMethod,
-        exchangeRate: completedSale.exchangeRate,
-        subtotalBs: completedSale.subtotalBs,
-        igtfBs: 0,
-        ivaBs: 0,
-        totalBs: completedSale.totalBs,
-        subtotalUsd: completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0,
-        igtfUsd: 0,
-        ivaUsd: 0,
-        totalUsd: completedSale.totalUsd,
-      },
-      completedSale.items.map((i) => ({
-        productName: i.name,
-        presentationName: i.presentationName,
-        quantity: i.quantity,
-        unitPriceUsd: i.unitPriceUsd,
-        totalPriceUsd: i.totalPriceUsd,
-      })),
-      completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
-      tenantInfo,
-    );
-    if (link) {
-      window.open(link, '_blank');
-    } else {
-      addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado', duration: 4000 });
+      setSharing(false);
     }
   }, [completedSale, tenantInfo, addToast]);
 
@@ -712,38 +711,39 @@ export function PosPage({ tenantId }: PosPageProps) {
             </Badge>
 
             <div className="flex flex-col gap-2 w-full pt-2">
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={() => handleGeneratePdf('ticket')}
-                  disabled={generatingPdf}
-                  className="min-h-11"
-                >
-                  <FileText size={16} />
-                  {generatingPdf ? 'Generando...' : 'Ticket'}
-                </Button>
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={() => handleGeneratePdf('a4')}
-                  disabled={generatingPdf}
-                  className="min-h-11"
-                >
-                  <FileText size={16} />
-                  {generatingPdf ? 'Generando...' : 'Factura'}
-                </Button>
-              </div>
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={() => handleWhatsAppShare('ticket')}
+                disabled={sharing}
+                className="min-h-11"
+                style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
+              >
+                <FileText size={16} />
+                {sharing ? 'Enviando...' : 'Ticket por WhatsApp'}
+              </Button>
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={() => handleWhatsAppShare('a4')}
+                disabled={sharing}
+                className="min-h-11"
+                style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
+              >
+                <FileText size={16} />
+                {sharing ? 'Enviando...' : 'Factura por WhatsApp'}
+              </Button>
               {completedSale.customerPhone && (
                 <Button
                   variant="secondary"
                   fullWidth
-                  onClick={handleWhatsApp}
+                  onClick={() => handleWhatsAppShare('text')}
+                  disabled={sharing}
                   className="min-h-11"
                   style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
                 >
                   <MessageCircle size={16} />
-                  Enviar WhatsApp
+                  {sharing ? 'Enviando...' : 'Solo texto por WhatsApp'}
                 </Button>
               )}
             </div>
@@ -788,15 +788,15 @@ export function PosPage({ tenantId }: PosPageProps) {
         onComplete={() => {}}
       />
 
-      {generatingPdf && (
+      {sharing && (
         <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white shadow-2xl border border-gray-100 animate-slide-down">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-              <Printer size={28} className="text-primary" />
+              <MessageCircle size={28} className="text-primary" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-semibold text-gray-900">Generando PDF</p>
-              <p className="text-xs text-gray-700 mt-1">Esto puede tomar unos segundos...</p>
+              <p className="text-sm font-semibold text-gray-900">Enviando por WhatsApp</p>
+              <p className="text-xs text-gray-700 mt-1">Generando PDF y abriendo WhatsApp...</p>
             </div>
             <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full animate-shimmer" style={{ width: '40%', backgroundSize: '200px 100%' }} />
