@@ -13,8 +13,14 @@ export function formatTimeAgo(dateStr: string | null): string {
   if (!dateStr) return 'Sin compras';
   const date = new Date(dateStr);
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  // Normalizar a inicio del día (00:00:00) para comparar días calendario
+  const d1 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const d2 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  const diffMs = d1.getTime() - d2.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  
   if (diffDays === 0) return 'Hoy';
   if (diffDays === 1) return 'Ayer';
   if (diffDays < 30) return `Hace ${diffDays} días`;
