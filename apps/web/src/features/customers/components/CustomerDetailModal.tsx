@@ -66,7 +66,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
               Editar
             </Button>
           )}
-          {customer.phone && (() => {
+          {typeof customer.phone === 'string' && customer.phone && (() => {
             const digits = customer.phone.replace(/[^0-9]/g, '');
             const waPhone = digits.startsWith('58') ? digits
               : digits.startsWith('0') ? `58${digits.slice(1)}`

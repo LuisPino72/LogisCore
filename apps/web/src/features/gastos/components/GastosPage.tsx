@@ -72,7 +72,11 @@ export function GastosPage({ tenantId }: GastosPageProps) {
 
   const handleDelete = async (id: string) => {
     if (!tenantId) return;
-    await removeGasto(id);
+    const result = await removeGasto(id);
+    if (!result.ok) {
+      addToast({ type: 'error', message: result.error.message });
+      return;
+    }
     setMonthlyRefreshKey((k) => k + 1);
   };
 

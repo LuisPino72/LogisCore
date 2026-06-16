@@ -235,23 +235,22 @@ export const gastosService = {
       if (!existing || existing.deletedAt || existing.tenantId !== tenantId) {
         return failure(new AppError(GASTOS_ERRORS.GASTOS_NOT_FOUND.code, GASTOS_ERRORS.GASTOS_NOT_FOUND.message));
       }
-      // PLAN-113 (C4): si es un template recurrente con instances vivas, bloquear soft-delete
-      // para evitar gastos huerfanos en getAll (instances aparecen sin contexto).
-      if (existing.isRecurring && !existing.parentExpenseId) {
-        const liveInstances = await db.expenses
-          .where('parentExpenseId').equals(id)
-          .filter((e) => !e.deletedAt)
-          .count();
-        if (liveInstances > 0) {
-          return failure(new AppError(
-            'GASTOS_RECURRING_HAS_INSTANCES',
-            `Este gasto recurrente tiene ${liveInstances} ocurrencia(s) activa(s). Elimina o cancela cada una antes de eliminarlo.`,
-          ));
-        }
-      }
+      // PLAN-113 (C4): si es un template recurrente con instances vivas, cancelarlas junto con el template
       const now = new Date().toISOString();
+      const childInstances = existing.isRecurring && !existing.parentExpenseId
+        ? await db.expenses
+            .where('parentExpenseId').equals(id)
+            .filter((e) => !e.deletedAt)
+            .toArray()
+        : [];
+
       // AUDIT-CRUD-008: update + syncQueue + outbox DENTRO de la MISMA tx (Regla #17)
       await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+        for (const child of childInstances) {
+          await db.expenses.update(child.id, { deletedAt: now, updatedAt: now });
+          await syncQueue.enqueue('expenses', 'DELETE', child.id, { id: child.id, deleted_at: now }, tenantId);
+          await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: child.id });
+        }
         await db.expenses.update(id, { deletedAt: now, updatedAt: now });
         await syncQueue.enqueue('expenses', 'DELETE', id, { id, deleted_at: now }, tenantId);
         await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
