@@ -7,6 +7,9 @@ Dexie.debug = false;
 
 export interface DexieTenantRef extends TenantInfo {
   rif?: string;
+  direccion?: string;
+  telefono?: string;
+  logoUrl?: string;
 }
 import type { SyncQueueItem, SyncMeta } from '../sync/types';
 import type { OutboxEntry } from '@logiscore/core';

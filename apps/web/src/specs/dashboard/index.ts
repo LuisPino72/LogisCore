@@ -8,6 +8,9 @@ export const TenantInfoSchema = z.object({
   name: z.string(),
   slug: z.string(),
   rif: z.string(),
+  direccion: z.string().optional(),
+  telefono: z.string().optional(),
+  logoUrl: z.string().nullable().optional(),
 });
 
 export const SubscriptionInfoSchema = z.object({

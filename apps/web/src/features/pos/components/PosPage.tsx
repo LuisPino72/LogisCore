@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
-import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosNavigation } from '../hooks/usePosNavigation';
 import { usePosModals } from '../hooks/usePosModals';
@@ -28,6 +28,8 @@ import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
 import { isSameDayVzla } from '../../../lib/date';
 import { preciseRound } from '@logiscore/shared';
+import { receiptService, type ReceiptFormat } from '../services/receiptService';
+import { dashboardService } from '../../dashboard/services/dashboardService';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { failure, AppError } from '@logiscore/core';
@@ -77,6 +79,8 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
 
   // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
   const [now, setNow] = useState(() => new Date());
@@ -107,11 +111,14 @@ export function PosPage({ tenantId }: PosPageProps) {
     inventoryService.getLowStockProducts(tenantId).then((res) => {
       if (res.ok) setLowStockAlert(res.data);
     });
+    dashboardService.getTenantInfo(tenantId).then((res) => {
+      if (res.ok && res.data) setTenantInfo(res.data);
+    });
   }, [tenantId]);
 
   useEffect(() => {
     if (completedSale) {
-      const timer = setTimeout(() => setCompletedSale(null), 3000);
+      const timer = setTimeout(() => setCompletedSale(null), 30000);
       return () => clearTimeout(timer);
     }
   }, [completedSale, setCompletedSale]);
@@ -168,7 +175,7 @@ export function PosPage({ tenantId }: PosPageProps) {
           presentationName: item.presentationName,
           unit: item.unit,
         }));
-        setCompletedSale({ saleId, subtotalBs, totalUsd, totalBs, paymentMethod, items, exchangeRate: exchangeRateBs });
+        setCompletedSale({ saleId, subtotalBs, totalUsd, totalBs, paymentMethod, items, exchangeRate: exchangeRateBs, customerId: selectedCustomer?.id, customerName: selectedCustomer?.name, customerPhone: selectedCustomer?.phone });
         setPaymentMethod(null);
         clearCart();
         closeMobileCart();
@@ -182,6 +189,79 @@ export function PosPage({ tenantId }: PosPageProps) {
       setProcessing(false);
     }
   }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs]);
+
+  const handleGeneratePdf = useCallback(async (format: ReceiptFormat) => {
+    if (!completedSale || !tenantInfo) return;
+    setGeneratingPdf(true);
+    try {
+      const subtotalUsd = completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0;
+      await receiptService.generatePdf(
+        {
+          id: completedSale.saleId,
+          createdAt: new Date().toISOString(),
+          paymentMethod: completedSale.paymentMethod,
+          exchangeRate: completedSale.exchangeRate,
+          subtotalBs: completedSale.subtotalBs,
+          igtfBs: 0,
+          ivaBs: 0,
+          totalBs: completedSale.totalBs,
+          subtotalUsd,
+          igtfUsd: 0,
+          ivaUsd: 0,
+          totalUsd: completedSale.totalUsd,
+        },
+        completedSale.items.map((i) => ({
+          productName: i.name,
+          presentationName: i.presentationName,
+          quantity: i.quantity,
+          unitPriceUsd: i.unitPriceUsd,
+          totalPriceUsd: i.totalPriceUsd,
+        })),
+        completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
+        tenantInfo,
+        format,
+      );
+      addToast({ type: 'success', message: 'PDF generado exitosamente', duration: 3000 });
+    } catch {
+      addToast({ type: 'error', message: 'Error al generar el PDF', duration: 5000 });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [completedSale, tenantInfo, addToast]);
+
+  const handleWhatsApp = useCallback(() => {
+    if (!completedSale || !tenantInfo) return;
+    const link = receiptService.generateWhatsAppLink(
+      {
+        id: completedSale.saleId,
+        createdAt: new Date().toISOString(),
+        paymentMethod: completedSale.paymentMethod,
+        exchangeRate: completedSale.exchangeRate,
+        subtotalBs: completedSale.subtotalBs,
+        igtfBs: 0,
+        ivaBs: 0,
+        totalBs: completedSale.totalBs,
+        subtotalUsd: completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0,
+        igtfUsd: 0,
+        ivaUsd: 0,
+        totalUsd: completedSale.totalUsd,
+      },
+      completedSale.items.map((i) => ({
+        productName: i.name,
+        presentationName: i.presentationName,
+        quantity: i.quantity,
+        unitPriceUsd: i.unitPriceUsd,
+        totalPriceUsd: i.totalPriceUsd,
+      })),
+      completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
+      tenantInfo,
+    );
+    if (link) {
+      window.open(link, '_blank');
+    } else {
+      addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado', duration: 4000 });
+    }
+  }, [completedSale, tenantInfo, addToast]);
 
   const isFromPreviousDay = useMemo(() => {
     if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
@@ -623,11 +703,48 @@ export function PosPage({ tenantId }: PosPageProps) {
             <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center animate-check-pop">
               <CheckCircle2 size={32} className="text-success" />
             </div>
-            <p className="text-[length:var(--text-fluid-2xl)] font-bold text-gray-900">{formatUsd(completedSale.totalUsd)}</p>
+            <p className="text-(length:--text-fluid-2xl) font-bold text-gray-900">{formatUsd(completedSale.totalUsd)}</p>
             <p className="text-sm text-text-secondary -mt-2">{formatBs(completedSale.totalBs)}</p>
             <Badge variant="success" className="text-xs">
               {METADATA_PAGOS[completedSale.paymentMethod]?.label ?? completedSale.paymentMethod}
             </Badge>
+
+            <div className="flex flex-col gap-2 w-full pt-2">
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={() => handleGeneratePdf('ticket')}
+                  disabled={generatingPdf}
+                  className="min-h-11"
+                >
+                  <FileText size={16} />
+                  {generatingPdf ? 'Generando...' : 'Ticket'}
+                </Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={() => handleGeneratePdf('a4')}
+                  disabled={generatingPdf}
+                  className="min-h-11"
+                >
+                  <FileText size={16} />
+                  {generatingPdf ? 'Generando...' : 'Factura'}
+                </Button>
+              </div>
+              {completedSale.customerPhone && (
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={handleWhatsApp}
+                  className="min-h-11"
+                  style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
+                >
+                  <MessageCircle size={16} />
+                  Enviar WhatsApp
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </Modal>

@@ -28,6 +28,9 @@ async function cacheTenantInfo(tenantId: string, info: TenantInfoResponse): Prom
       slug: info.slug,
       name: info.name,
       rif: info.rif,
+      direccion: info.direccion,
+      telefono: info.telefono,
+      logoUrl: info.logoUrl,
     };
     await db.tenantRefs.put(ref);
   } catch { /* best-effort */ }
@@ -39,7 +42,14 @@ async function readCachedTenantInfo(tenantId: string): Promise<TenantInfoRespons
     const db = getDb();
     const ref = await db.tenantRefs.get(tenantId);
     if (ref) {
-      return { name: ref.name, slug: ref.slug, rif: ref.rif ?? '' };
+      return {
+        name: ref.name,
+        slug: ref.slug,
+        rif: ref.rif ?? '',
+        direccion: ref.direccion,
+        telefono: ref.telefono,
+        logoUrl: ref.logoUrl,
+      };
     }
   } catch { /* best-effort */ }
   return null;
@@ -73,19 +83,23 @@ export const dashboardService = {
     }
     const { data, error } = await supabase
       .from('tenants')
-      .select('name, slug, rif')
+      .select('name, slug, rif, direccion, telefono, logo_url')
       .eq('id', tenantId)
       .is('deleted_at', null)
       .single();
 
     if (!error && data) {
-      const parsed = TenantInfoSchema.safeParse(data);
+      const mapped = {
+        ...data,
+        logoUrl: data.logo_url ?? undefined,
+      };
+      const parsed = TenantInfoSchema.safeParse(mapped);
       if (parsed.success) {
-        await cacheTenantInfo(tenantId, parsed.data);
-        return success(parsed.data);
+        await cacheTenantInfo(tenantId, mapped);
+        return success(mapped);
       }
-      await cacheTenantInfo(tenantId, data);
-      return success(data);
+      await cacheTenantInfo(tenantId, mapped);
+      return success(mapped);
     }
 
     const cached = await readCachedTenantInfo(tenantId);

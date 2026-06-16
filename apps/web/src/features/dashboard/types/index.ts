@@ -2,6 +2,9 @@ export interface TenantInfoResponse {
   name: string;
   slug: string;
   rif: string;
+  direccion?: string;
+  telefono?: string;
+  logoUrl?: string;
 }
 
 export interface SubscriptionResponse {

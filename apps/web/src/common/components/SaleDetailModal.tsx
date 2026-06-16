@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal } from './Modal';
+import { Button } from './Button';
 import { Spinner } from './Loading';
-import { User } from 'lucide-react';
+import { User, FileText, MessageCircle } from 'lucide-react';
 import { METADATA_PAGOS, type Sale } from '@/specs/pos';
 import type { PaymentMethod } from '@/specs/pos';
 import { IGTF_RATE } from '@logiscore/shared';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { posService } from '@/features/pos/services/posService';
 import { customerService } from '@/features/customers/services/customerService';
+import { dashboardService } from '@/features/dashboard/services/dashboardService';
+import { receiptService, type ReceiptFormat } from '@/features/pos/services/receiptService';
+import type { TenantInfoResponse } from '@/features/dashboard/types';
 
 interface SaleDetailModalProps {
   saleId: string | null;
@@ -25,6 +29,7 @@ interface SaleInfo {
   igtfBs: number;
   ivaBs: number;
   totalBs: number;
+  customerId?: string;
 }
 
 interface SaleItemInfo {
@@ -32,11 +37,13 @@ interface SaleItemInfo {
   productName: string;
   presentationName?: string;
   quantity: number;
+  unitPriceUsd: number;
   totalPriceUsd: number;
 }
 
 interface CustomerInfo {
   name: string;
+  phone?: string;
   cedula?: string;
 }
 
@@ -44,13 +51,16 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
   const [sale, setSale] = useState<SaleInfo | null>(null);
   const [items, setItems] = useState<SaleItemInfo[]>([]);
   const [customer, setCustomer] = useState<CustomerInfo | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<TenantInfoResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !saleId) {
       setSale(null);
       setItems([]);
       setCustomer(null);
+      setTenantInfo(null);
       return;
     }
 
@@ -70,7 +80,11 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
             if (found.customerId) {
               const custResult = await customerService.getCustomerById(found.customerId, tenantId);
               if (!cancelled && custResult.ok && custResult.data) {
-                setCustomer({ name: custResult.data.name, cedula: custResult.data.cedula });
+                setCustomer({
+                  name: custResult.data.name,
+                  phone: custResult.data.phone,
+                  cedula: custResult.data.cedula,
+                });
               }
             }
           }
@@ -80,6 +94,11 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
         if (!cancelled && itemsResult.ok) {
           setItems(itemsResult.data);
         }
+
+        const tenantResult = await dashboardService.getTenantInfo(tenantId);
+        if (!cancelled && tenantResult.ok && tenantResult.data) {
+          setTenantInfo(tenantResult.data);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -88,6 +107,75 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
     fetch();
     return () => { cancelled = true; };
   }, [isOpen, saleId, tenantId]);
+
+  const handleGeneratePdf = useCallback(async (format: ReceiptFormat) => {
+    if (!sale || !tenantInfo) return;
+    setGeneratingPdf(true);
+    try {
+      const subtotalUsd = sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0;
+      await receiptService.generatePdf(
+        {
+          id: sale.id,
+          createdAt: sale.createdAt,
+          paymentMethod: sale.paymentMethod,
+          exchangeRate: sale.exchangeRate,
+          subtotalBs: sale.subtotalBs,
+          igtfBs: sale.igtfBs,
+          ivaBs: sale.ivaBs,
+          totalBs: sale.totalBs,
+          subtotalUsd,
+          igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
+          ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
+          totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
+        },
+        items.map((i) => ({
+          productName: i.productName,
+          presentationName: i.presentationName,
+          quantity: i.quantity,
+          unitPriceUsd: i.unitPriceUsd,
+          totalPriceUsd: i.totalPriceUsd,
+        })),
+        customer,
+        tenantInfo,
+        format,
+      );
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [sale, items, customer, tenantInfo]);
+
+  const handleWhatsApp = useCallback(() => {
+    if (!sale || !tenantInfo) return;
+    const subtotalUsd = sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0;
+    const link = receiptService.generateWhatsAppLink(
+      {
+        id: sale.id,
+        createdAt: sale.createdAt,
+        paymentMethod: sale.paymentMethod,
+        exchangeRate: sale.exchangeRate,
+        subtotalBs: sale.subtotalBs,
+        igtfBs: sale.igtfBs,
+        ivaBs: sale.ivaBs,
+        totalBs: sale.totalBs,
+        subtotalUsd,
+        igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
+        ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
+        totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
+      },
+      items.map((i) => ({
+        productName: i.productName,
+        presentationName: i.presentationName,
+        quantity: i.quantity,
+        unitPriceUsd: i.unitPriceUsd,
+        totalPriceUsd: i.totalPriceUsd,
+      })),
+      customer,
+      tenantInfo,
+    );
+    if (link) {
+      window.open(link, '_blank');
+    }
+  }, [sale, customer, tenantInfo]);
 
   return (
     <Modal
@@ -152,6 +240,44 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
               <span>Total</span>
               <span>{formatBs(sale.totalBs)} / {formatUsd(sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0)}</span>
             </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="border-t border-border pt-3 flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={() => handleGeneratePdf('ticket')}
+                disabled={generatingPdf || !tenantInfo}
+                className="min-h-11"
+              >
+                <FileText size={16} />
+                {generatingPdf ? 'Generando...' : 'Ticket PDF'}
+              </Button>
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={() => handleGeneratePdf('a4')}
+                disabled={generatingPdf || !tenantInfo}
+                className="min-h-11"
+              >
+                <FileText size={16} />
+                {generatingPdf ? 'Generando...' : 'Factura PDF'}
+              </Button>
+            </div>
+            {customer?.phone && (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={handleWhatsApp}
+                className="min-h-11"
+                style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
+              >
+                <MessageCircle size={16} />
+                Enviar WhatsApp
+              </Button>
+            )}
           </div>
         </div>
       ) : null}

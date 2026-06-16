@@ -1,11 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
-import { Building2, Shield, UserPlus, Plus, Trash2 } from 'lucide-react';
+import { Building2, Shield, UserPlus, Plus, Trash2, Upload, X } from 'lucide-react';
 import { Modal, Input, Button } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
 import { formatPhone, unformatPhone } from '../../../lib/utils';
 import { CreateTenantWithUsersInputSchema } from '../types';
 import type { CreateTenantWithUsersInput, CreateTenantResponse } from '../types';
+import { adminService } from '../services/adminService';
 
 interface EmployeeForm {
   email: string;
@@ -25,6 +26,9 @@ const emptyCreateForm: CreateForm = {
   employees: [],
 };
 
+const LOGO_MAX_SIZE = 2 * 1024 * 1024;
+const LOGO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 interface CreateTenantModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,15 +39,48 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = useCallback(() => {
     setCreateForm(emptyCreateForm);
     setCreateError(null);
+    setLogoFile(null);
+    setLogoPreview(null);
+    setLogoError(null);
     onClose();
   }, [onClose]);
 
+  const handleLogoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoError(null);
+    if (!LOGO_ALLOWED_TYPES.includes(file.type)) {
+      setLogoError('Formato no válido. Usa JPG, PNG o WebP.');
+      return;
+    }
+    if (file.size > LOGO_MAX_SIZE) {
+      setLogoError('El logo debe ser menor a 2MB.');
+      return;
+    }
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleRemoveLogo = useCallback(() => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    setLogoError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
   const handleCreate = async () => {
     setCreateError(null);
+    setLogoError(null);
     const filteredEmployees = createForm.employees.filter(
       (emp) => emp.name.trim() || emp.email.trim() || emp.password.trim(),
     );
@@ -58,6 +95,12 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
     const result = await onCreateTenant(parsed.data);
     setIsSubmitting(false);
     if (result.ok) {
+      if (logoFile) {
+        const logoResult = await adminService.uploadLogo(result.data.tenant.id, logoFile);
+        if (!logoResult.ok) {
+          console.debug('[CreateTenantModal] Logo upload failed:', logoResult.error.message);
+        }
+      }
       handleClose();
     } else {
       setCreateError(result.error.message);
@@ -132,6 +175,39 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             validation={{ maxLength: 25 }}
             autoComplete="street-address"
           />
+
+          {/* Logo upload */}
+          <div className="pt-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleLogoSelect}
+            />
+            {logoPreview ? (
+              <div className="relative inline-block">
+                <img src={logoPreview} alt="Preview logo" className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors"
+              >
+                <Upload size={16} />
+                <span>Subir logo del negocio</span>
+              </button>
+            )}
+            {logoError && <p className="text-danger text-xs mt-1">{logoError}</p>}
+          </div>
         </div>
 
         {/* Owner section */}

@@ -12,7 +12,7 @@ export function usePosModals() {
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [selectedProductForPres, setSelectedProductForPres] = useState<Product | null>(null);
   const [voidConfirmId, setVoidConfirmId] = useState<string | null>(null);
-  const [completedSale, setCompletedSale] = useState<{ saleId: string; subtotalBs: number; totalUsd: number; totalBs: number; paymentMethod: PaymentMethod; items: Array<{ name: string; quantity: number; unitPriceUsd: number; totalPriceUsd: number; presentationName?: string; unit?: string }>; exchangeRate: number } | null>(null);
+  const [completedSale, setCompletedSale] = useState<{ saleId: string; subtotalBs: number; totalUsd: number; totalBs: number; paymentMethod: PaymentMethod; items: Array<{ name: string; quantity: number; unitPriceUsd: number; totalPriceUsd: number; presentationName?: string; unit?: string }>; exchangeRate: number; customerId?: string; customerName?: string; customerPhone?: string } | null>(null);
 
   const openWeightModal = useCallback((product: Product) => {
     setWeightingProduct(product);

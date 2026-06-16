@@ -69,6 +69,7 @@ export interface Tenant {
   rif: string;
   direccion?: string;
   telefono?: string;
+  logoUrl?: string;
   plan: TenantPlan;
   createdAt: string;
   deletedAt?: string;

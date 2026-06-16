@@ -5,6 +5,7 @@ import type { Tenant, TenantPlan, UserRole, GlobalUser, CreateTenantResponse, Su
 import { CreateTenantWithUsersInputSchema, CreateEmployeeInputSchema, UpdateTenantSchema, CreateGlobalCategorySchema, ResetPasswordSchema, RestoreTenantSchema } from '../types';
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -27,7 +28,7 @@ export const adminService = {
   async fetchTenants(): Promise<Result<Tenant[], AppError>> {
     const { data, error } = await supabase
       .from('tenants')
-      .select('id, name, slug, rif, direccion, telefono, created_at, deleted_at, subscriptions!inner(plan, status)')
+      .select('id, name, slug, rif, direccion, telefono, logo_url, created_at, deleted_at, subscriptions!inner(plan, status)')
       .order('deleted_at', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
 
@@ -44,6 +45,7 @@ export const adminService = {
         rif: t.rif as string,
         direccion: t.direccion as string | undefined,
         telefono: t.telefono as string | undefined,
+        logoUrl: (t.logo_url as string) ?? undefined,
         plan: (subs?.plan as TenantPlan) ?? 'basic',
         createdAt: t.created_at as string,
         deletedAt: t.deleted_at as string | undefined,
@@ -744,6 +746,89 @@ export const adminService = {
       activeProducts: productsResult.count ?? 0,
       totalUsers: usersResult.count ?? 0,
     });
+  },
+
+  async uploadLogo(tenantId: string, file: File): Promise<Result<string, AppError>> {
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 2 * 1024 * 1024;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return failure(new AppError('LOGO_INVALID_FORMAT', 'Formato no válido. Usa JPG, PNG o WebP.'));
+    }
+    if (file.size > MAX_SIZE) {
+      return failure(new AppError('LOGO_TOO_LARGE', 'El logo debe ser menor a 2MB.'));
+    }
+
+    let token: string;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token ?? '';
+      if (!token) {
+        return failure(new AppError('LOGO_UPLOAD_FAILED', 'No hay sesión activa.'));
+      }
+    } catch {
+      return failure(new AppError('LOGO_UPLOAD_FAILED', 'Error de autenticación.'));
+    }
+
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+    const filePath = `logos/${tenantUuid}.${ext}`;
+    const storageUrl = `${SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const res = await fetch(storageUrl, {
+        method: 'PUT',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          'content-type': file.type,
+          'cache-control': '3600',
+        },
+        body: buffer,
+      });
+
+      if (!res.ok) {
+        if (res.status === 413) {
+          return failure(new AppError('LOGO_TOO_LARGE', 'El logo debe ser menor a 2MB.'));
+        }
+        return failure(new AppError('LOGO_UPLOAD_FAILED', 'Error al subir el logo. Verifica tu conexión.'));
+      }
+    } catch {
+      return failure(new AppError('LOGO_UPLOAD_FAILED', 'Error de red al subir el logo.'));
+    }
+
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/Products/${filePath}`;
+
+    const { error: updateError } = await supabase
+      .from('tenants')
+      .update({ logo_url: publicUrl })
+      .eq('id', tenantId);
+
+    if (updateError) {
+      return failure(new AppError('LOGO_UPLOAD_FAILED', 'Logo subido pero no se pudo guardar la referencia.'));
+    }
+
+    return success(publicUrl);
+  },
+
+  async deleteLogo(logoUrl: string): Promise<void> {
+    try {
+      const parts = logoUrl.split('/Products/');
+      if (parts.length < 2) return;
+      const filePath = parts[1];
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? '';
+      if (!token) return;
+      const storageUrl = `${SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
+      await fetch(storageUrl, {
+        method: 'DELETE',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch { /* best-effort */ }
   },
 };
 
