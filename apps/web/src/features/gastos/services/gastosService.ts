@@ -283,6 +283,27 @@ export const gastosService = {
         .filter((e) => !e.deletedAt && !e.isRecurring && e.date >= startDate && e.date <= endDate)
         .toArray();
 
+      // Heal on read: si una instancia tiene parentExpenseId y el template está paid, marcarla como paid
+      const parentIds = [...new Set(expenses.filter((e) => e.parentExpenseId).map((e) => e.parentExpenseId!))];
+      if (parentIds.length > 0) {
+        const parents = await db.expenses.where('id').anyOf(parentIds).toArray();
+        const paidParentIds = new Set(parents.filter((p) => p.status === 'paid').map((p) => p.id));
+        const toFix = expenses.filter((e) => e.parentExpenseId && paidParentIds.has(e.parentExpenseId) && e.status !== 'paid');
+        if (toFix.length > 0) {
+          const now = new Date().toISOString();
+          await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
+            for (const exp of toFix) {
+              await db.expenses.update(exp.id, { status: 'paid', updatedAt: now });
+              await syncQueue.enqueue('expenses', 'UPDATE', exp.id, { id: exp.id, status: 'paid', updated_at: now }, tenantId);
+              await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: exp.id, changes: ['status'] });
+            }
+          });
+          for (const exp of toFix) {
+            exp.status = 'paid';
+          }
+        }
+      }
+
       const mapped = expenses.sort((a, b) => b.date.localeCompare(a.date)).map(mapExpense);
       return success(mapped);
     } catch (err) {
