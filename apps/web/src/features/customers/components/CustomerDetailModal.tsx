@@ -4,7 +4,7 @@ import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, Cred
 import type { Customer } from '../../../specs/customers';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useCustomerStore } from '../stores/customerStore';
-import { formatTimeAgo } from '../../../lib/utils';
+import { formatTimeAgo, formatPhone } from '../../../lib/utils';
 import { PaymentModal } from './PaymentModal';
 
 const HISTORY_PAGE_SIZE = 20;
@@ -124,7 +124,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
               {customer.phone && (
                 <p className="text-xs text-text-secondary flex items-center gap-1.5">
                   <Phone size={12} className="shrink-0" />
-                  <span className="wrap-break-word">{customer.phone}</span>
+                  <span className="wrap-break-word">{formatPhone(customer.phone)}</span>
                 </p>
               )}
               {customer.address && (

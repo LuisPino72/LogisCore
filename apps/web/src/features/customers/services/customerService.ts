@@ -32,7 +32,7 @@ function toCustomer(raw: Record<string, unknown>): Customer {
   return {
     id: raw.id as string,
     name: raw.name as string,
-    phone: (raw.phone as string | undefined) || undefined,
+    phone: raw.phone != null ? String(raw.phone) : undefined,
     cedula: (raw.cedula as string | undefined)?.toUpperCase() || undefined, // PLAN-112 (NEW-2): normalizar lectura
     address: (raw.address as string | undefined) || undefined,
     creditLimit: (raw.creditLimit as number) ?? 0,
@@ -326,7 +326,7 @@ export const customerService = {
                 id: c.id as string,
                 tenantId,
                 name: c.name as string,
-                phone: (c.phone as string | null) ?? undefined,
+                phone: c.phone != null ? String(c.phone) : undefined,
                 cedula: (c.cedula as string | null)?.toUpperCase() ?? undefined, // PLAN-112 (NEW-2): normalizar lectura
                 address: (c.address as string | null) ?? undefined,
                 creditLimit: (c.credit_limit as number) ?? 0,
