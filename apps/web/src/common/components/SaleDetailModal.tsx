@@ -111,6 +111,7 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
   const handleGeneratePdf = useCallback(async (format: ReceiptFormat) => {
     if (!sale || !tenantInfo) return;
     setGeneratingPdf(true);
+    await new Promise((r) => setTimeout(r, 50));
     try {
       const subtotalUsd = sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0;
       await receiptService.generatePdf(
@@ -233,14 +234,37 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
                 {generatingPdf ? 'Generando...' : 'Factura PDF'}
               </Button>
             </div>
-            {customer?.phone && typeof customer.phone === 'string' && (() => {
-              const digits = customer.phone.replace(/[^0-9]/g, '');
-              const waPhone = digits.startsWith('58') ? digits
-                : digits.startsWith('0') ? `58${digits.slice(1)}`
-                  : `58${digits}`;
+            {customer?.phone && typeof customer.phone === 'string' && sale && tenantInfo && (() => {
+              const subtotalUsd = sale.exchangeRate > 0 ? sale.subtotalBs / sale.exchangeRate : 0;
+              const link = receiptService.generateWhatsAppLink(
+                {
+                  id: sale.id,
+                  createdAt: sale.createdAt,
+                  paymentMethod: sale.paymentMethod,
+                  exchangeRate: sale.exchangeRate,
+                  subtotalBs: sale.subtotalBs,
+                  igtfBs: sale.igtfBs,
+                  ivaBs: sale.ivaBs,
+                  totalBs: sale.totalBs,
+                  subtotalUsd,
+                  igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
+                  ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
+                  totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
+                },
+                items.map((i) => ({
+                  productName: i.productName,
+                  presentationName: i.presentationName,
+                  quantity: i.quantity,
+                  unitPriceUsd: i.unitPriceUsd,
+                  totalPriceUsd: i.totalPriceUsd,
+                })),
+                customer,
+                tenantInfo,
+              );
+              if (!link) return null;
               return (
                 <a
-                  href={`https://wa.me/${waPhone}`}
+                  href={link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full min-h-11 rounded-lg font-medium text-sm transition-all active:scale-[0.98]"

@@ -193,6 +193,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleGeneratePdf = useCallback(async (format: ReceiptFormat) => {
     if (!completedSale || !tenantInfo) return;
     setGeneratingPdf(true);
+    await new Promise((r) => setTimeout(r, 50));
     try {
       const subtotalUsd = completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0;
       await receiptService.generatePdf(

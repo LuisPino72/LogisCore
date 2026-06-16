@@ -136,10 +136,10 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
       (item) => {
         const name = item.presentationName ? `${escapeHtml(item.productName)} - ${escapeHtml(item.presentationName)}` : escapeHtml(item.productName);
         return `<tr>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:center;">${item.quantity}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;">${name}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;">${formatUsd(item.unitPriceUsd)}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;">${formatUsd(item.totalPriceUsd)}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:center;width:8%;">${item.quantity}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;width:52%;word-wrap:break-word;">${name}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:20%;">${formatUsd(item.unitPriceUsd)}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:20%;">${formatUsd(item.totalPriceUsd)}</td>
         </tr>`;
       },
     )
@@ -150,7 +150,7 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
     : `<div style="width:80px;height:80px;border-radius:50%;background:#0D9488;color:white;display:flex;align-items:center;justify-content:center;font-size:24pt;font-weight:700;">${getInitials(tenant.name)}</div>`;
 
   return `
-    <div style="width:210mm;font-family:'Segoe UI',Arial,Helvetica,sans-serif;padding:15mm;background:white;color:#1a1a1a;">
+    <div style="width:210mm;font-family:'Segoe UI',Arial,Helvetica,sans-serif;padding:15mm;background:white;color:#1a1a1a;box-sizing:border-box;">
       <div style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #0D9488;">
         ${logoSection}
         <h1 style="font-size:18pt;font-weight:800;margin:8px 0 4px;color:#111;">${escapeHtml(tenant.name)}</h1>
@@ -174,7 +174,13 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
         </div>
       </div>
 
-      <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:16px;">
+      <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9pt;margin-bottom:16px;">
+        <colgroup>
+          <col style="width:8%;" />
+          <col style="width:52%;" />
+          <col style="width:20%;" />
+          <col style="width:20%;" />
+        </colgroup>
         <thead>
           <tr>
             <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:center;font-size:8pt;">Cant</th>
