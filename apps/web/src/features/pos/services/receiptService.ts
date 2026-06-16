@@ -220,10 +220,13 @@ async function renderAndDownload(
   container.innerHTML = html;
   document.body.appendChild(container);
 
-  await new Promise((r) => requestAnimationFrame(r));
-  await new Promise((r) => setTimeout(r, 100));
-
   try {
+    container.style.left = '0';
+    container.style.zIndex = '9999';
+
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => setTimeout(r, 50));
+
     const html2pdf = (await import('html2pdf.js')).default;
     const opt = {
       margin: format === 'ticket' ? [2, 2, 2, 2] as [number, number, number, number] : [10, 10, 10, 10] as [number, number, number, number],
