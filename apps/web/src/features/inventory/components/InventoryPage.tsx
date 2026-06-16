@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EventBus } from '@logiscore/core';
 import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2, Upload } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect, Checkbox } from '../../../common/components';
+import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { useStockAlerts } from '../hooks/useStockAlerts';
@@ -913,12 +913,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                   </p>
                 </div>
 
-                <Checkbox
-                  label="Actualizar también el costo de compra"
-                  checked={bulkPrice.includeCost}
-                  onChange={(e) => bulkPrice.setIncludeCost((e.target as HTMLInputElement).checked)}
-                />
-
                 {bulkPrice.preview.length > 0 && bulkPrice.impact && (
                   <div className={`rounded-xl p-3 space-y-2 ${
                     bulkPrice.impact.isDecreasing
@@ -969,8 +963,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                       {bulkPrice.impact?.isDecreasing ? '¿Reducir precios?' : '¿Actualizar precios?'}
                     </p>
                     <p className="text-xs text-gray-600 mt-0.5">
-                      Se actualizarán {bulkPrice.impact?.productsWithPrice} producto(s)
-                      {bulkPrice.includeCost && ' (precio y costo)'}.
+                      Se actualizarán {bulkPrice.impact?.productsWithPrice} producto(s).
                       {bulkPrice.impact && bulkPrice.impact.productsSkipped > 0 && ` ${bulkPrice.impact.productsSkipped} sin precio serán omitidos.`}
                     </p>
                   </div>

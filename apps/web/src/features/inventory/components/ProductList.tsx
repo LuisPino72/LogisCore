@@ -325,6 +325,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
             {bulkMode ? (
               <button
                 type="button"
+                disabled={!product.isSellable}
                 onClick={() => {
                   setSelectedForBulk(prev => {
                     const next = new Set(prev);
@@ -333,7 +334,9 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                     return next;
                   });
                 }}
-                className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
+                className={`min-w-11 min-h-11 rounded-full flex items-center justify-center transition-colors ${
+                  product.isSellable ? 'hover:bg-primary/10' : 'opacity-30 cursor-not-allowed'
+                }`}
               >
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
                   selectedForBulk.has(product.id)
@@ -461,7 +464,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
       </div>
 
       {isOwner && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {bulkMode ? (
             <>
               <button
@@ -477,13 +480,12 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                 size="sm"
                 disabled={selectedForBulk.size === 0 || !isOnline}
                 onClick={() => onBulkAdjust?.(Array.from(selectedForBulk))}
-                className="ml-auto"
               >
                 <ClipboardCheck size={14} />
                 Ajustar stock
               </Button>
               <Button
-                variant="ghost"
+                variant="primary"
                 size="sm"
                 disabled={selectedForBulk.size === 0 || !isOnline}
                 onClick={() => onBulkPriceUpdate?.(Array.from(selectedForBulk))}
@@ -579,6 +581,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                     {bulkMode ? (
                       <button
                         type="button"
+                        disabled={!product.isSellable}
                         onClick={() => {
                           setSelectedForBulk(prev => {
                             const next = new Set(prev);
@@ -587,7 +590,9 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                             return next;
                           });
                         }}
-                        className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-primary/10 transition-colors"
+                        className={`min-w-11 min-h-11 rounded-full flex items-center justify-center transition-colors ${
+                          product.isSellable ? 'hover:bg-primary/10' : 'opacity-30 cursor-not-allowed'
+                        }`}
                       >
                         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
                           selectedForBulk.has(product.id)

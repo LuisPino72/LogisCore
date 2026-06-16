@@ -32,7 +32,6 @@ interface UseBulkPriceUpdateReturn {
   selectedIds: string[];
   mode: BulkPriceMode;
   value: string;
-  includeCost: boolean;
   submitting: boolean;
   error: string;
   preview: PricePreview[];
@@ -43,7 +42,6 @@ interface UseBulkPriceUpdateReturn {
   backToForm: () => void;
   setMode: (mode: BulkPriceMode) => void;
   setValue: (value: string) => void;
-  setIncludeCost: (include: boolean) => void;
   handleSubmit: () => Promise<{ success: number; skipped: number; failed: number }>;
 }
 
@@ -68,7 +66,6 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mode, setMode] = useState<BulkPriceMode>('percentage');
   const [value, setValue] = useState('');
-  const [includeCost, setIncludeCost] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -108,7 +105,6 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
     setSelectedIds(productIds);
     setMode('percentage');
     setValue('');
-    setIncludeCost(false);
     setError('');
     setShowConfirm(false);
     setShowModal(true);
@@ -180,9 +176,6 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
       const newPrice = computeNewPrice(product.priceUsd, mode, numValue);
       const roundedPrice = Math.round(newPrice * 100) / 100;
       const updateInput: Partial<Product> = { priceUsd: roundedPrice };
-      if (includeCost) {
-        updateInput.costPrice = roundedPrice;
-      }
       const result = await inventoryService.updateProduct(product.id, updateInput, tenantId);
       if (result.ok) {
         success++;
@@ -199,7 +192,7 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
       onSuccess?.();
     }
     return { success, skipped, failed };
-  }, [value, mode, selectedProducts, includeCost, tenantId, onSuccess]);
+  }, [value, mode, selectedProducts, tenantId, onSuccess]);
 
   return {
     showModal,
@@ -207,7 +200,6 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
     selectedIds,
     mode,
     value,
-    includeCost,
     submitting,
     error,
     preview,
@@ -218,7 +210,6 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
     backToForm,
     setMode,
     setValue,
-    setIncludeCost,
     handleSubmit,
   };
 }
