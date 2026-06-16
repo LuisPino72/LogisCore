@@ -154,9 +154,9 @@ async function renderAndDownload(
 
   try {
     container.style.position = 'fixed';
-    container.style.left = '0';
-    container.style.top = '0';
-    container.style.zIndex = '9999';
+    container.style.left = '-99999px';
+    container.style.top = '-99999px';
+    container.style.zIndex = '-1';
 
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => setTimeout(r, 150));
@@ -269,9 +269,9 @@ async function renderToBlob(
 
   try {
     container.style.position = 'fixed';
-    container.style.left = '0';
-    container.style.top = '0';
-    container.style.zIndex = '9999';
+    container.style.left = '-99999px';
+    container.style.top = '-99999px';
+    container.style.zIndex = '-1';
 
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => setTimeout(r, 150));
