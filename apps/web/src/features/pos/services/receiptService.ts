@@ -2,6 +2,8 @@ import { type Result, success, failure, AppError } from '@logiscore/core';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { logger } from '../../../lib/logger';
 
+const RECEIPT_TIMEOUT = 15000;
+
 export interface ReceiptSaleData {
   id: string;
   createdAt: string;
@@ -134,10 +136,10 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
       (item) => {
         const name = item.presentationName ? `${escapeHtml(item.productName)} - ${escapeHtml(item.presentationName)}` : escapeHtml(item.productName);
         return `<tr>
-          <td style="padding:5px 4px;border:1px solid #d0d0d0;text-align:center;width:7%;">${item.quantity}</td>
-          <td style="padding:5px 4px;border:1px solid #d0d0d0;width:48%;word-wrap:break-word;">${name}</td>
-          <td style="padding:5px 4px;border:1px solid #d0d0d0;text-align:right;width:20%;">${formatUsd(item.unitPriceUsd)}</td>
-          <td style="padding:5px 4px;border:1px solid #d0d0d0;text-align:center;width:25%;">${formatUsd(item.totalPriceUsd)}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:center;width:8%;">${item.quantity}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;width:44%;word-wrap:break-word;">${name}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:22%;">${formatUsd(item.unitPriceUsd)}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:26%;">${formatUsd(item.totalPriceUsd)}</td>
         </tr>`;
       },
     )
@@ -148,7 +150,7 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
     : `<div style="width:80px;height:80px;border-radius:50%;background:#0D9488;color:white;display:flex;align-items:center;justify-content:center;font-size:24pt;font-weight:700;">${getInitials(tenant.name)}</div>`;
 
   return `
-    <div style="width:210mm;font-family:'Segoe UI',Arial,Helvetica,sans-serif;padding:12mm 10mm;background:white;color:#1a1a1a;box-sizing:border-box;">
+    <div style="width:210mm;font-family:'Segoe UI',Arial,Helvetica,sans-serif;padding:15mm;background:white;color:#1a1a1a;box-sizing:border-box;">
       <div style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #0D9488;">
         ${logoSection}
         <h1 style="font-size:18pt;font-weight:800;margin:8px 0 4px;color:#111;">${escapeHtml(tenant.name)}</h1>
@@ -174,17 +176,17 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
 
       <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9pt;margin-bottom:16px;">
         <colgroup>
-          <col style="width:7%;" />
-          <col style="width:40%;" />
-          <col style="width:25%;" />
-          <col style="width:28%;" />
+          <col style="width:8%;" />
+          <col style="width:44%;" />
+          <col style="width:22%;" />
+          <col style="width:26%;" />
         </colgroup>
         <thead>
           <tr>
-            <th style="background:#0D9488;color:white;padding:5px 4px;border:1px solid #0F766E;text-align:center;font-size:7pt;">Cant</th>
-            <th style="background:#0D9488;color:white;padding:5px 4px;border:1px solid #0F766E;text-align:left;font-size:7pt;">Descripción</th>
-            <th style="background:#0D9488;color:white;padding:5px 4px;border:1px solid #0F766E;text-align:right;font-size:7pt;">Precio Uni</th>
-            <th style="background:#0D9488;color:white;padding:5px 4px;border:1px solid #0F766E;text-align:center;font-size:7pt;">Subtotal</th>
+            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:center;font-size:8pt;">Cant</th>
+            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:left;font-size:8pt;">Descripción</th>
+            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:right;font-size:8pt;">P.Unit</th>
+            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:right;font-size:8pt;">Subtotal</th>
           </tr>
         </thead>
         <tbody>
@@ -239,71 +241,36 @@ async function renderAndDownload(
     container.style.left = '0';
     container.style.top = '0';
     container.style.zIndex = '9999';
-    container.style.overflow = 'visible';
 
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => setTimeout(r, 150));
 
     const element = (container.firstElementChild || container) as HTMLElement;
+    const html2pdf = (await import('html2pdf.js')).default;
+    const opt = {
+      margin: format === 'ticket' ? [2, 2, 2, 2] as [number, number, number, number] : [10, 10, 10, 10] as [number, number, number, number],
+      filename: fileName,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        backgroundColor: '#ffffff',
+      },
+      jsPDF: {
+        unit: 'mm' as const,
+        format: format === 'ticket' ? [80, 297] as [number, number] : 'a4' as const,
+        orientation: 'portrait' as const,
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    };
 
-    const html2canvas = (await import('html2canvas')).default;
-    const { jsPDF } = await import('jspdf');
-
-    const canvasWidth = element.scrollWidth;
-    const canvasHeight = element.scrollHeight;
-
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      width: canvasWidth,
-      height: canvasHeight,
-      windowWidth: canvasWidth,
-      windowHeight: canvasHeight,
-    });
-
-    const pdfMargins = format === 'ticket' ? [2, 2, 2, 2] : [10, 10, 10, 10];
-    const pdf = new jsPDF({
-      unit: 'mm',
-      format: format === 'ticket' ? [80, 297] : 'a4',
-      orientation: 'portrait',
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const contentWidth = pdfWidth - pdfMargins[1] - pdfMargins[3];
-    const contentHeight = pdfHeight - pdfMargins[0] - pdfMargins[2];
-    const imgWidth = contentWidth;
-    const imgHeight = (canvasHeight / canvasWidth) * imgWidth;
-
-    let y = pdfMargins[0];
-    let remainingHeight = imgHeight;
-    let srcY = 0;
-
-    while (remainingHeight > 0) {
-      const sliceHeight = Math.min(contentHeight, remainingHeight);
-      const sliceSrcHeight = (sliceHeight / imgHeight) * canvasHeight;
-
-      const sliceCanvas = document.createElement('canvas');
-      sliceCanvas.width = canvasWidth;
-      sliceCanvas.height = sliceSrcHeight;
-      const ctx = sliceCanvas.getContext('2d')!;
-      ctx.drawImage(canvas, 0, srcY, canvasWidth, sliceSrcHeight, 0, 0, canvasWidth, sliceSrcHeight);
-
-      const imgData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-      pdf.addImage(imgData, 'JPEG', pdfMargins[1], y, imgWidth, sliceHeight);
-
-      remainingHeight -= sliceHeight;
-      srcY += sliceSrcHeight;
-
-      if (remainingHeight > 0) {
-        pdf.addPage();
-        y = pdfMargins[0];
-      }
-    }
-
-    pdf.save(fileName);
+    const task = html2pdf().set(opt).from(element).save();
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('PDF_TIMEOUT')), RECEIPT_TIMEOUT),
+    );
+    await Promise.race([task, timeout]);
     return success(undefined);
   } catch (err) {
     logger.error('receiptService', 'PDF generation error:', err);
@@ -390,72 +357,35 @@ async function renderToBlob(
     container.style.left = '0';
     container.style.top = '0';
     container.style.zIndex = '9999';
-    container.style.overflow = 'visible';
 
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => setTimeout(r, 150));
 
     const element = (container.firstElementChild || container) as HTMLElement;
+    const html2pdf = (await import('html2pdf.js')).default;
+    const opt = {
+      margin: format === 'ticket' ? [2, 2, 2, 2] as [number, number, number, number] : [10, 10, 10, 10] as [number, number, number, number],
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        backgroundColor: '#ffffff',
+      },
+      jsPDF: {
+        unit: 'mm' as const,
+        format: format === 'ticket' ? [80, 297] as [number, number] : 'a4' as const,
+        orientation: 'portrait' as const,
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    };
 
-    const html2canvas = (await import('html2canvas')).default;
-    const { jsPDF } = await import('jspdf');
-
-    const canvasWidth = element.scrollWidth;
-    const canvasHeight = element.scrollHeight;
-
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      width: canvasWidth,
-      height: canvasHeight,
-      windowWidth: canvasWidth,
-      windowHeight: canvasHeight,
-    });
-
-    const pdfMargins = format === 'ticket' ? [2, 2, 2, 2] : [10, 10, 10, 10];
-    const pdf = new jsPDF({
-      unit: 'mm',
-      format: format === 'ticket' ? [80, 297] : 'a4',
-      orientation: 'portrait',
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const contentWidth = pdfWidth - pdfMargins[1] - pdfMargins[3];
-    const contentHeight = pdfHeight - pdfMargins[0] - pdfMargins[2];
-    const imgWidth = contentWidth;
-    const imgHeight = (canvasHeight / canvasWidth) * imgWidth;
-
-    let y = pdfMargins[0];
-    let remainingHeight = imgHeight;
-    let srcY = 0;
-
-    while (remainingHeight > 0) {
-      const sliceHeight = Math.min(contentHeight, remainingHeight);
-      const sliceSrcHeight = (sliceHeight / imgHeight) * canvasHeight;
-
-      const sliceCanvas = document.createElement('canvas');
-      sliceCanvas.width = canvasWidth;
-      sliceCanvas.height = sliceSrcHeight;
-      const ctx = sliceCanvas.getContext('2d')!;
-      ctx.drawImage(canvas, 0, srcY, canvasWidth, sliceSrcHeight, 0, 0, canvasWidth, sliceSrcHeight);
-
-      const imgData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-      pdf.addImage(imgData, 'JPEG', pdfMargins[1], y, imgWidth, sliceHeight);
-
-      remainingHeight -= sliceHeight;
-      srcY += sliceSrcHeight;
-
-      if (remainingHeight > 0) {
-        pdf.addPage();
-        y = pdfMargins[0];
-      }
-    }
-
-    const blob = pdf.output('blob');
-    return blob;
+    const task = html2pdf().set(opt).from(element).outputPdf('blob');
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('PDF_TIMEOUT')), RECEIPT_TIMEOUT),
+    );
+    return await Promise.race([task, timeout]);
   } finally {
     container.style.position = originalStyles.position;
     container.style.left = originalStyles.left;

@@ -193,7 +193,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'a4' | 'text') => {
     if (!completedSale || !tenantInfo) return;
     setSharing(true);
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 300));
     try {
       if (mode === 'text') {
         const link = receiptService.generateWhatsAppLink(
