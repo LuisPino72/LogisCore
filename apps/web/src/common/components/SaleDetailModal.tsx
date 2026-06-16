@@ -140,6 +140,35 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
         tenantInfo,
         format,
       );
+      
+      const waLink = receiptService.generateWhatsAppLink(
+        {
+          id: sale.id,
+          createdAt: sale.createdAt,
+          paymentMethod: sale.paymentMethod,
+          exchangeRate: sale.exchangeRate,
+          subtotalBs: sale.subtotalBs,
+          igtfBs: sale.igtfBs,
+          ivaBs: sale.ivaBs,
+          totalBs: sale.totalBs,
+          subtotalUsd,
+          igtfUsd: sale.exchangeRate > 0 ? sale.igtfBs / sale.exchangeRate : 0,
+          ivaUsd: sale.exchangeRate > 0 ? sale.ivaBs / sale.exchangeRate : 0,
+          totalUsd: sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0,
+        },
+        items.map((i) => ({
+          productName: i.productName,
+          presentationName: i.presentationName,
+          quantity: i.quantity,
+          unitPriceUsd: i.unitPriceUsd,
+          totalPriceUsd: i.totalPriceUsd,
+        })),
+        customer,
+        tenantInfo,
+      );
+      if (waLink) {
+        window.open(waLink, '_blank');
+      }
     } finally {
       setGeneratingPdf(false);
     }

@@ -223,6 +223,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         format,
       );
       addToast({ type: 'success', message: 'PDF generado exitosamente', duration: 3000 });
+      handleWhatsApp();
     } catch {
       addToast({ type: 'error', message: 'Error al generar el PDF', duration: 5000 });
     } finally {
