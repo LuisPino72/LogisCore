@@ -1,5 +1,4 @@
 import { useState, useRef, type ReactNode, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import { useClickOutside } from '../hooks/useClickOutside';
 
@@ -69,6 +68,12 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
     }
   }, [open, items]);
 
+  const alignClass = align === 'right'
+    ? 'right-0'
+    : align === 'center'
+      ? 'left-1/2 -translate-x-1/2'
+      : 'left-0';
+
   return (
     <div ref={ref} className={cn('relative inline-block', className)} onKeyDown={handleKeyDown}>
       <button
@@ -81,30 +86,15 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
         {trigger}
       </button>
 
-      {open && createPortal(
+      {open && (
         <div
           ref={menuRef}
           className={cn(
-            'fixed z-50 mt-1 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-y-auto animate-slide-down',
+            'absolute top-full mt-1 z-50 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-y-auto animate-slide-down',
+            alignClass,
           )}
           role="menu"
-          style={(() => {
-            if (!ref.current) return { top: 0, left: 0 };
-            const rect = ref.current.getBoundingClientRect();
-            const menuWidth = 160;
-            const padding = 8;
-            let left: number;
-            if (align === 'right') {
-              left = rect.right - menuWidth;
-            } else if (align === 'center') {
-              left = rect.left + rect.width / 2 - menuWidth / 2;
-            } else {
-              left = rect.left;
-            }
-            left = Math.max(padding, Math.min(left, window.innerWidth - menuWidth - padding));
-            const maxHeight = Math.min(320, window.innerHeight - rect.bottom - 12);
-            return { top: rect.bottom + 4, left, maxHeight };
-          })()}
+          style={{ maxHeight: 320 }}
         >
           {items.map((item, i) => (
             <button
@@ -124,8 +114,7 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
               {item.label}
             </button>
           ))}
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

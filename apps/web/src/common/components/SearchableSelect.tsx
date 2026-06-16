@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { Search, ChevronDown } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { cn } from '../../lib/utils';
@@ -123,22 +122,10 @@ export function SearchableSelect({
         <ChevronDown size={16} />
       </div>
 
-      {isOpen && createPortal(
+      {isOpen && (
         <div
           ref={menuRef}
-          className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg animate-slide-down"
-          style={{
-            top: wrapperRef.current ? wrapperRef.current.getBoundingClientRect().bottom + 4 : 0,
-            left: wrapperRef.current ? (() => {
-              const rect = wrapperRef.current.getBoundingClientRect();
-              const menuWidth = Math.max(200, rect.width);
-              const padding = 8;
-              return Math.max(padding, Math.min(rect.left, window.innerWidth - menuWidth - padding));
-            })() : 0,
-   minWidth: wrapperRef.current ? Math.max(200, wrapperRef.current.getBoundingClientRect().width) : 200,
-      maxWidth: wrapperRef.current ? wrapperRef.current.getBoundingClientRect().width : '100%',
-      boxSizing: 'border-box',
-          }}
+          className="absolute left-0 top-full mt-1 w-full z-50 bg-white border border-gray-200 rounded-lg shadow-lg animate-slide-down overflow-hidden"
         >
           {!hideSearch && (
             <div className="relative border-b border-gray-100">
@@ -157,12 +144,7 @@ export function SearchableSelect({
 
           <div
             ref={listRef}
-            className="overflow-y-auto"
-            style={{
-              maxHeight: wrapperRef.current
-                ? Math.min(320, window.innerHeight - wrapperRef.current.getBoundingClientRect().bottom - 12 - (hideSearch ? 0 : 44))
-                : 320,
-            }}
+            className="overflow-y-auto max-h-60"
           >
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-xs text-gray-600 text-center">{noResultsText}</div>
@@ -190,8 +172,7 @@ export function SearchableSelect({
               </div>
             )}
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

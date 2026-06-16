@@ -22,12 +22,13 @@ export function formatTimeAgo(dateStr: string | null): string {
   return `Hace ${Math.floor(diffDays / 365)} años`;
 }
 
-export function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
+export function formatPhone(value: string | number | undefined | null): string {
+  const str = String(value ?? '');
+  const digits = str.replace(/\D/g, '').slice(0, 11);
   if (digits.length <= 4) return digits;
   return `${digits.slice(0, 4)}-${digits.slice(4)}`;
 }
 
-export function unformatPhone(value: string): string {
-  return value.replace(/\D/g, '');
+export function unformatPhone(value: string | number | undefined | null): string {
+  return String(value ?? '').replace(/\D/g, '');
 }
