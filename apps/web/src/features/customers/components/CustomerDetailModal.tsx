@@ -96,52 +96,57 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
       }
     >
       <div className="space-y-4">
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-linear-to-br from-primary/5 to-primary/10 border border-primary/20">
-          <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm ring-1 ring-primary/10">
-            <Users size={28} className="text-primary" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold text-gray-900 wrap-break-word">{customer.name}</h3>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Badge variant="neutral" className="text-xs">
-                <Calendar className="h-3 w-3 mr-1 inline" />
-                Miembro desde {new Date(customer.createdAt).toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })}
-              </Badge>
-              {stats?.lastPurchaseAt && (
-                <Badge variant="info" className="text-xs">
-                  <ShoppingBag className="h-3 w-3 mr-1 inline" />
-                  Última compra: {formatTimeAgo(stats.lastPurchaseAt)}
-                </Badge>
-              )}
+        {/* Header: icono + crédito */}
+        <div className="flex items-start justify-between gap-3 p-4 rounded-xl bg-linear-to-br from-primary/5 to-primary/10 border border-primary/20">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm ring-1 ring-primary/10">
+              <Users size={28} className="text-primary" />
             </div>
-            <div className="flex flex-col gap-1 mt-1.5">
-              {customer.cedula && ( // AUDIT-017: Cédula field V/E/J/P + 6-8 digits
-                <p className="text-xs text-text-secondary flex items-center gap-1.5 font-mono">
-                  <IdCard size={12} className="shrink-0" />
-                  <span className="wrap-break-word">{customer.cedula}</span>
-                </p>
-              )}
-              {customer.phone && (
-                <p className="text-xs text-text-secondary flex items-center gap-1.5">
-                  <Phone size={12} className="shrink-0" />
-                  <span className="wrap-break-word">{formatPhone(customer.phone)}</span>
-                </p>
-              )}
-              {customer.address && (
-                <p className="text-xs text-text-secondary flex items-center gap-1.5">
-                  <MapPin size={12} className="shrink-0" />
-                  <span className="wrap-break-word">{customer.address}</span>
-                </p>
-              )}
-              {customer.notes && (
-                <p className="text-xs text-text-secondary italic mt-1">{customer.notes}</p>
-              )}
+            <div className="min-w-0 flex-1">
+              <h3 className="text-lg font-bold text-gray-900 wrap-break-word">{customer.name}</h3>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Badge variant="neutral" className="text-xs">
+                  <Calendar className="h-3 w-3 mr-1 inline" />
+                  Miembro desde {new Date(customer.createdAt).toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })}
+                </Badge>
+                {stats?.lastPurchaseAt && (
+                  <Badge variant="info" className="text-xs">
+                    <ShoppingBag className="h-3 w-3 mr-1 inline" />
+                    Última compra: {formatTimeAgo(stats.lastPurchaseAt)}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           {(customer.creditLimit ?? 0) > 0 && (
             <Badge variant="info" className="shrink-0">
               Crédito: {formatUsd(customer.creditLimit ?? 0)}
             </Badge>
+          )}
+        </div>
+
+        {/* Datos del cliente */}
+        <div className="flex flex-col gap-1.5 px-1">
+          {customer.cedula && (
+            <p className="text-xs text-text-secondary flex items-center gap-1.5 font-mono">
+              <IdCard size={12} className="shrink-0" />
+              <span className="wrap-break-word">{customer.cedula}</span>
+            </p>
+          )}
+          {customer.phone && (
+            <p className="text-xs text-text-secondary flex items-center gap-1.5">
+              <Phone size={12} className="shrink-0" />
+              <span className="wrap-break-word">{formatPhone(customer.phone)}</span>
+            </p>
+          )}
+          {customer.address && (
+            <p className="text-xs text-text-secondary flex items-center gap-1.5">
+              <MapPin size={12} className="shrink-0" />
+              <span className="wrap-break-word">{customer.address}</span>
+            </p>
+          )}
+          {customer.notes && (
+            <p className="text-xs text-text-secondary italic mt-1">{customer.notes}</p>
           )}
         </div>
 

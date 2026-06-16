@@ -70,18 +70,10 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
     if (!tenantId) return false;
     if (editCustomer) {
       const ok = await updateCustomer(editCustomer.id, data);
-      if (ok) {
-        addToast({ type: 'success', message: 'Cliente actualizado.', duration: 3000 });
-        return true;
-      }
-      return false;
+      return ok;
     }
     const newId = await createCustomer(data);
-    if (newId) {
-      addToast({ type: 'success', message: 'Cliente creado.', duration: 3000 });
-      return true;
-    }
-    return false;
+    return !!newId;
   };
 
   const handleDelete = async () => {
