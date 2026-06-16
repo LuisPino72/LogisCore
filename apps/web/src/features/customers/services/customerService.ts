@@ -344,7 +344,25 @@ export const customerService = {
         }
       }
 
-      return success(rows.map((r) => toCustomer(r as unknown as Record<string, unknown>)));
+      // CUST-006: batch lastPurchaseAt — una sola query de ventas para todos los clientes
+      const sales = await db.sales
+        .where({ tenantId })
+        .filter((s) => !s.deletedAt && s.status === 'completed' && !!s.customerId)
+        .toArray();
+      const lastPurchaseMap = new Map<string, string>();
+      for (const s of sales) {
+        const cid = s.customerId!;
+        const prev = lastPurchaseMap.get(cid);
+        if (!prev || s.createdAt > prev) {
+          lastPurchaseMap.set(cid, s.createdAt);
+        }
+      }
+
+      return success(rows.map((r) => {
+        const customer = toCustomer(r as unknown as Record<string, unknown>);
+        const lastPurchase = lastPurchaseMap.get(customer.id);
+        return lastPurchase ? { ...customer, lastPurchaseAt: lastPurchase } : customer;
+      }));
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en getCustomers:', err);
       return failure(

@@ -26,6 +26,7 @@ export const CustomerSchema = z.object({
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
   deletedAt: isoDateTime.optional(),
+  lastPurchaseAt: isoDateTime.optional(),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;
