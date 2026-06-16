@@ -168,7 +168,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         const totalBs = exchangeRateBs > 0 ? preciseRound(totalUsd * exchangeRateBs, 2) : 0;
         const subtotalBs = totalBs;
         const items = cart.map((item) => ({
-          name: item.presentationName ? `${item.name} - ${item.presentationName}` : item.name,
+          name: item.name,
           quantity: item.quantity,
           unitPriceUsd: item.unitPriceUsd,
           totalPriceUsd: item.totalPriceUsd,
