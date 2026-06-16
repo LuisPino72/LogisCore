@@ -53,11 +53,11 @@ function formatTime(dateStr: string): string {
 
 function getPaymentLabel(method: string): string {
   const labels: Record<string, string> = {
-    cash: 'Efectivo',
-    usd: 'USD',
-    card: 'Tarjeta',
-    transfer: 'Transferencia',
-    credit: 'Crédito',
+    efectivo_bs: 'Efectivo',
+    pago_movil: 'Pago Móvil',
+    tarjeta_bs: 'Tarjeta',
+    efectivo_usd: 'Efectivo $',
+    credito: 'A crédito',
   };
   return labels[method] ?? method;
 }
@@ -79,9 +79,11 @@ function buildTicketHtml(sale: ReceiptSaleData, items: ReceiptItemData[], custom
   const itemsHtml = items
     .map(
       (item) => {
-        const name = escapeHtml(item.productName);
+        const displayName = item.presentationName
+          ? `${escapeHtml(item.productName)} - ${escapeHtml(item.presentationName)}`
+          : escapeHtml(item.productName);
         return `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:10pt;">
-          <span>${item.quantity}x ${name}</span>
+          <span>${item.quantity}x ${displayName}</span>
           <span>${formatUsd(item.totalPriceUsd)}</span>
         </div>`;
       },
