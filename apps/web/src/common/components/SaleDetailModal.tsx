@@ -108,7 +108,7 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
     return () => { cancelled = true; };
   }, [isOpen, saleId, tenantId]);
 
-  const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'a4' | 'text') => {
+  const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'text') => {
     if (!sale || !tenantInfo) return;
     setSharing(true);
     await new Promise((r) => setTimeout(r, 300));
@@ -142,7 +142,7 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
           window.open(link, '_blank');
         }
       } else {
-        const result = await receiptService.sharePdfViaWhatsApp(saleData, itemsData, customer, tenantInfo, mode);
+        const result = await receiptService.sharePdfViaWhatsApp(saleData, itemsData, customer, tenantInfo);
         if (!result.ok) {
           window.open(`https://wa.me`, '_blank');
         }
@@ -229,17 +229,6 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
             >
               <FileText size={16} />
               {sharing ? 'Enviando...' : 'Ticket por WhatsApp'}
-            </Button>
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => handleWhatsAppShare('a4')}
-              disabled={sharing || !tenantInfo}
-              className="min-h-11"
-              style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
-            >
-              <FileText size={16} />
-              {sharing ? 'Enviando...' : 'Factura por WhatsApp'}
             </Button>
             {customer?.phone && typeof customer.phone === 'string' && (
               <Button

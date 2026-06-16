@@ -190,7 +190,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs]);
 
-  const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'a4' | 'text') => {
+  const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'text') => {
     if (!completedSale || !tenantInfo) return;
     setSharing(true);
     await new Promise((r) => setTimeout(r, 300));
@@ -251,7 +251,6 @@ export function PosPage({ tenantId }: PosPageProps) {
           })),
           completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
           tenantInfo,
-          mode,
         );
         if (!result.ok) {
           addToast({ type: 'warning', message: result.error.message, duration: 4000 });
@@ -721,17 +720,6 @@ export function PosPage({ tenantId }: PosPageProps) {
               >
                 <FileText size={16} />
                 {sharing ? 'Enviando...' : 'Ticket por WhatsApp'}
-              </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => handleWhatsAppShare('a4')}
-                disabled={sharing}
-                className="min-h-11"
-                style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
-              >
-                <FileText size={16} />
-                {sharing ? 'Enviando...' : 'Factura por WhatsApp'}
               </Button>
               {completedSale.customerPhone && (
                 <Button

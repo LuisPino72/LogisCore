@@ -41,8 +41,6 @@ export interface ReceiptTenantInfo {
   logoUrl?: string;
 }
 
-export type ReceiptFormat = 'ticket' | 'a4';
-
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -130,93 +128,11 @@ function buildTicketHtml(sale: ReceiptSaleData, items: ReceiptItemData[], custom
     </div>`;
 }
 
-function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: ReceiptCustomerData | null, tenant: ReceiptTenantInfo): string {
-  const itemsRows = items
-    .map(
-      (item) => {
-        const name = item.presentationName ? `${escapeHtml(item.productName)} - ${escapeHtml(item.presentationName)}` : escapeHtml(item.productName);
-        return `<tr>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:center;width:8%;">${item.quantity}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;width:44%;word-wrap:break-word;">${name}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:22%;">${formatUsd(item.unitPriceUsd)}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:26%;">${formatUsd(item.totalPriceUsd)}</td>
-        </tr>`;
-      },
-    )
-    .join('');
-
-  const logoSection = tenant.logoUrl
-    ? `<img src="${escapeHtml(tenant.logoUrl)}" style="width:80px;height:80px;object-fit:contain;border-radius:6px;" />`
-    : `<div style="width:80px;height:80px;border-radius:50%;background:#0D9488;color:white;display:flex;align-items:center;justify-content:center;font-size:24pt;font-weight:700;">${getInitials(tenant.name)}</div>`;
-
-  return `
-    <div style="width:210mm;font-family:'Segoe UI',Arial,Helvetica,sans-serif;padding:15mm;background:white;color:#1a1a1a;box-sizing:border-box;">
-      <div style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid #0D9488;">
-        ${logoSection}
-        <h1 style="font-size:18pt;font-weight:800;margin:8px 0 4px;color:#111;">${escapeHtml(tenant.name)}</h1>
-        <div style="font-size:9pt;color:#555;">RIF: ${escapeHtml(tenant.rif)}</div>
-        ${tenant.direccion ? `<div style="font-size:9pt;color:#555;">${escapeHtml(tenant.direccion)}</div>` : ''}
-        ${tenant.telefono ? `<div style="font-size:9pt;color:#555;">Tel: ${escapeHtml(tenant.telefono)}</div>` : ''}
-      </div>
-
-      <div style="text-align:center;margin-bottom:16px;">
-        <h2 style="font-size:14pt;font-weight:700;margin:0;color:#0D9488;">FACTURA / NOTA DE VENTA</h2>
-      </div>
-
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:9pt;">
-        <div>
-          <div><strong>Factura:</strong> #${sale.id.slice(0, 8)}</div>
-          <div><strong>Fecha:</strong> ${formatDate(sale.createdAt)} ${formatTime(sale.createdAt)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div><strong>Método:</strong> ${getPaymentLabel(sale.paymentMethod)}</div>
-          ${customer ? `<div><strong>Cliente:</strong> ${escapeHtml(customer.name)}</div>` : ''}
-        </div>
-      </div>
-
-      <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9pt;margin-bottom:16px;">
-        <colgroup>
-          <col style="width:8%;" />
-          <col style="width:44%;" />
-          <col style="width:22%;" />
-          <col style="width:26%;" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:center;font-size:8pt;">Cant</th>
-            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:left;font-size:8pt;">Descripción</th>
-            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:right;font-size:8pt;">P.Unit</th>
-            <th style="background:#0D9488;color:white;padding:6px 8px;border:1px solid #0F766E;text-align:right;font-size:8pt;">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsRows}
-        </tbody>
-      </table>
-
-      <div style="display:flex;justify-content:flex-end;">
-        <div style="width:250px;font-size:9pt;">
-          <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Subtotal:</span><span>${formatUsd(sale.subtotalUsd)}</span></div>
-          ${sale.ivaUsd > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>IVA 16%:</span><span>${formatUsd(sale.ivaUsd)}</span></div>` : ''}
-          ${sale.igtfUsd > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>IGTF 3%:</span><span>${formatUsd(sale.igtfUsd)}</span></div>` : ''}
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid #0D9488;font-weight:700;font-size:12pt;"><span>TOTAL USD:</span><span>${formatUsd(sale.totalUsd)}</span></div>
-          ${sale.exchangeRate > 0 ? `<div style="font-size:8pt;color:#555;text-align:right;">Tasa: ${sale.exchangeRate.toFixed(2)} Bs/$</div>` : ''}
-          ${sale.totalBs > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;font-size:11pt;"><span>TOTAL Bs:</span><span>${formatBs(sale.totalBs)}</span></div>` : ''}
-        </div>
-      </div>
-
-      <div style="text-align:center;margin-top:24px;padding-top:12px;border-top:2px solid #e0e0e0;font-size:8pt;color:#999;">
-        ¡Gracias por su compra! — Sasa ERP
-      </div>
-    </div>`;
-}
-
 async function renderAndDownload(
   html: string,
   fileName: string,
-  format: ReceiptFormat,
 ): Promise<Result<void, AppError>> {
-  const widthMm = format === 'ticket' ? '80mm' : '210mm';
+  const widthMm = '80mm';
 
   const container = document.createElement('div');
   container.style.position = 'absolute';
@@ -248,7 +164,7 @@ async function renderAndDownload(
     const element = (container.firstElementChild || container) as HTMLElement;
     const html2pdf = (await import('html2pdf.js')).default;
     const opt = {
-      margin: format === 'ticket' ? [2, 2, 2, 2] as [number, number, number, number] : [10, 10, 10, 10] as [number, number, number, number],
+      margin: [2, 2, 2, 2] as [number, number, number, number],
       filename: fileName,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: {
@@ -260,7 +176,7 @@ async function renderAndDownload(
       },
       jsPDF: {
         unit: 'mm' as const,
-        format: format === 'ticket' ? [80, 297] as [number, number] : 'a4' as const,
+        format: [80, 297] as [number, number],
         orientation: 'portrait' as const,
       },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
@@ -330,9 +246,8 @@ function normalizeWaPhone(phone: string): string | null {
 
 async function renderToBlob(
   html: string,
-  format: ReceiptFormat,
 ): Promise<Blob> {
-  const widthMm = format === 'ticket' ? '80mm' : '210mm';
+  const widthMm = '80mm';
 
   const container = document.createElement('div');
   container.style.position = 'absolute';
@@ -364,7 +279,7 @@ async function renderToBlob(
     const element = (container.firstElementChild || container) as HTMLElement;
     const html2pdf = (await import('html2pdf.js')).default;
     const opt = {
-      margin: format === 'ticket' ? [2, 2, 2, 2] as [number, number, number, number] : [10, 10, 10, 10] as [number, number, number, number],
+      margin: [2, 2, 2, 2] as [number, number, number, number],
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: {
         scale: 2,
@@ -375,7 +290,7 @@ async function renderToBlob(
       },
       jsPDF: {
         unit: 'mm' as const,
-        format: format === 'ticket' ? [80, 297] as [number, number] : 'a4' as const,
+        format: [80, 297] as [number, number],
         orientation: 'portrait' as const,
       },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
@@ -401,13 +316,10 @@ export const receiptService = {
     items: ReceiptItemData[],
     customer: ReceiptCustomerData | null,
     tenantInfo: ReceiptTenantInfo,
-    format: ReceiptFormat,
   ): Promise<Result<void, AppError>> {
-    const html = format === 'ticket'
-      ? buildTicketHtml(sale, items, customer, tenantInfo)
-      : buildA4Html(sale, items, customer, tenantInfo);
-    const fileName = `Sasa-${format === 'ticket' ? 'Ticket' : 'Factura'}-${sale.id.slice(0, 8)}.pdf`;
-    return renderAndDownload(html, fileName, format);
+    const html = buildTicketHtml(sale, items, customer, tenantInfo);
+    const fileName = `Sasa-Ticket-${sale.id.slice(0, 8)}.pdf`;
+    return renderAndDownload(html, fileName);
   },
 
   generateWhatsAppLink(
@@ -427,7 +339,6 @@ export const receiptService = {
     items: ReceiptItemData[],
     customer: ReceiptCustomerData | null,
     tenantInfo: ReceiptTenantInfo,
-    format: ReceiptFormat,
   ): Promise<Result<void, AppError>> {
     const waPhone = normalizeWaPhone(customer?.phone ?? '');
     if (!waPhone) {
@@ -435,12 +346,10 @@ export const receiptService = {
     }
 
     try {
-      const html = format === 'ticket'
-        ? buildTicketHtml(sale, items, customer, tenantInfo)
-        : buildA4Html(sale, items, customer, tenantInfo);
-      const fileName = `Sasa-${format === 'ticket' ? 'Ticket' : 'Factura'}-${sale.id.slice(0, 8)}.pdf`;
+      const html = buildTicketHtml(sale, items, customer, tenantInfo);
+      const fileName = `Sasa-Ticket-${sale.id.slice(0, 8)}.pdf`;
 
-      const blob = await renderToBlob(html, format);
+      const blob = await renderToBlob(html);
       const file = new File([blob], fileName, { type: 'application/pdf' });
 
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
