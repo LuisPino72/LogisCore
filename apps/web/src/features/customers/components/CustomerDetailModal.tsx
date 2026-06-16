@@ -96,33 +96,34 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
       }
     >
       <div className="space-y-4">
-        {/* Header: icono + crédito */}
-        <div className="flex items-start justify-between gap-3 p-4 rounded-xl bg-linear-to-br from-primary/5 to-primary/10 border border-primary/20">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
+        {/* Header card */}
+        <div className="p-4 rounded-xl bg-linear-to-br from-primary/5 to-primary/10 border border-primary/20">
+          {/* Fila 1: Icono izquierda + Crédito derecha */}
+          <div className="flex items-start justify-between mb-3">
             <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm ring-1 ring-primary/10">
               <Users size={28} className="text-primary" />
             </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-lg font-bold text-gray-900 wrap-break-word">{customer.name}</h3>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Badge variant="neutral" className="text-xs">
-                  <Calendar className="h-3 w-3 mr-1 inline" />
-                  Miembro desde {new Date(customer.createdAt).toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })}
-                </Badge>
-                {stats?.lastPurchaseAt && (
-                  <Badge variant="info" className="text-xs">
-                    <ShoppingBag className="h-3 w-3 mr-1 inline" />
-                    Última compra: {formatTimeAgo(stats.lastPurchaseAt)}
-                  </Badge>
-                )}
-              </div>
-            </div>
+            {(customer.creditLimit ?? 0) > 0 && (
+              <Badge variant="info" className="shrink-0">
+                Crédito: {formatUsd(customer.creditLimit ?? 0)}
+              </Badge>
+            )}
           </div>
-          {(customer.creditLimit ?? 0) > 0 && (
-            <Badge variant="info" className="shrink-0">
-              Crédito: {formatUsd(customer.creditLimit ?? 0)}
+          {/* Fila 2: Nombre completo */}
+          <h3 className="text-lg font-bold text-gray-900 break-words">{customer.name}</h3>
+          {/* Fila 3: Badges */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Badge variant="neutral" className="text-xs">
+              <Calendar className="h-3 w-3 mr-1 inline" />
+              Miembro desde {new Date(customer.createdAt).toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })}
             </Badge>
-          )}
+            {stats?.lastPurchaseAt && (
+              <Badge variant="info" className="text-xs">
+                <ShoppingBag className="h-3 w-3 mr-1 inline" />
+                Última compra: {formatTimeAgo(stats.lastPurchaseAt)}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Datos del cliente */}
