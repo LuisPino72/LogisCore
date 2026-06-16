@@ -137,9 +137,9 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
         const name = item.presentationName ? `${escapeHtml(item.productName)} - ${escapeHtml(item.presentationName)}` : escapeHtml(item.productName);
         return `<tr>
           <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:center;width:8%;">${item.quantity}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;width:52%;word-wrap:break-word;">${name}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:20%;">${formatUsd(item.unitPriceUsd)}</td>
-          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:20%;">${formatUsd(item.totalPriceUsd)}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;width:36%;word-wrap:break-word;">${name}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:26%;">${formatUsd(item.unitPriceUsd)}</td>
+          <td style="padding:6px 8px;border:1px solid #d0d0d0;text-align:right;width:30%;">${formatUsd(item.totalPriceUsd)}</td>
         </tr>`;
       },
     )
@@ -177,9 +177,9 @@ function buildA4Html(sale: ReceiptSaleData, items: ReceiptItemData[], customer: 
       <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9pt;margin-bottom:16px;">
         <colgroup>
           <col style="width:8%;" />
-          <col style="width:52%;" />
-          <col style="width:20%;" />
-          <col style="width:20%;" />
+          <col style="width:36%;" />
+          <col style="width:26%;" />
+          <col style="width:30%;" />
         </colgroup>
         <thead>
           <tr>
