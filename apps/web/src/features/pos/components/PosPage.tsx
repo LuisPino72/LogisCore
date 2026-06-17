@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
+import { usePosStore } from '../stores/posStore';
 import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosNavigation } from '../hooks/usePosNavigation';
@@ -142,6 +143,11 @@ export function PosPage({ tenantId }: PosPageProps) {
       const added = await addToCart(product, 1);
       if (added) {
         addToast({ type: 'success', message: `${product.name} agregado`, duration: 1500 });
+      } else {
+        const error = usePosStore.getState().error;
+        if (error) {
+          addToast({ type: 'warning', message: error, duration: 3000 });
+        }
       }
     },
     [addToCart, addToast, getPresentations, openWeightModal, openPresModal],
@@ -155,6 +161,11 @@ export function PosPage({ tenantId }: PosPageProps) {
     closeWeightModal();
     if (added) {
       addToast({ type: 'success', message: `${weightingProduct.name} agregado`, duration: 1500 });
+    } else {
+      const error = usePosStore.getState().error;
+      if (error) {
+        addToast({ type: 'warning', message: error, duration: 3000 });
+      }
     }
   }, [weightingProduct, weightingQty, addToCart, addToast, closeWeightModal]);
 

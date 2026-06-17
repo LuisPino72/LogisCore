@@ -363,14 +363,18 @@ export const usePosStore = create<PosStore>()(
     const currentQtyInCart = cart.find((item) => item.productId === product.id)?.quantity ?? 0;
     const totalRequested = currentQtyInCart + quantity;
     const isAssembly = product.hasAssemblyRecipe;
+    // Sanitizar campos que pueden ser null/undefined en Dexie (Zod v4 rechaza null)
+    const safeIsWeighted = product.isWeighted === true;
+    const safeUnit = product.unit || 'unidad';
+    const safeStock = typeof product.stock === 'number' && Number.isFinite(product.stock) ? product.stock : 0;
     // AUDIT-004: Pesable stock check (UI kg/lt, internals g/ml). totalRequested está en unidades de display;
     // product.stock está en unidades de almacenamiento. Comparar en mismas unidades.
-    const stockInDisplayUnits = product.isWeighted ? product.stock / 1000 : product.stock;
+    const stockInDisplayUnits = safeIsWeighted ? safeStock / 1000 : safeStock;
     if (!isAssembly && totalRequested > stockInDisplayUnits) {
-      const available = product.unit === 'kg' || product.unit === 'lt'
-        ? (product.stock / 1000).toFixed(2)
-        : product.stock;
-      set({ error: `Stock insuficiente. Disponible: ${available} ${product.unit === 'lt' ? 'Lt' : product.unit === 'kg' ? 'Kg' : ''}` });
+      const available = safeUnit === 'kg' || safeUnit === 'lt'
+        ? (safeStock / 1000).toFixed(2)
+        : safeStock;
+      set({ error: `Stock insuficiente. Disponible: ${available} ${safeUnit === 'lt' ? 'Lt' : safeUnit === 'kg' ? 'Kg' : ''}` });
       return false;
     }
 
@@ -389,7 +393,7 @@ export const usePosStore = create<PosStore>()(
     if (existing) {
       const foundProduct = get().products.find(p => p.id === product.id);
       const isAssemblyProd = foundProduct?.hasAssemblyRecipe;
-      const maxQty = isAssemblyProd ? Infinity : (foundProduct?.isWeighted ? (foundProduct?.stock ?? 0) / 1000 : (foundProduct?.stock ?? 0));
+      const maxQty = isAssemblyProd ? Infinity : (safeIsWeighted ? safeStock / 1000 : safeStock);
       const newQty = Math.min(preciseRound(existing.quantity + quantity, 2), maxQty);
       set({
         cart: cart.map((item) =>
@@ -400,7 +404,7 @@ export const usePosStore = create<PosStore>()(
       });
     } else {
       const isAssemblyProd = product.hasAssemblyRecipe;
-      const maxQty = isAssemblyProd ? Infinity : (product.isWeighted ? product.stock / 1000 : product.stock);
+      const maxQty = isAssemblyProd ? Infinity : (safeIsWeighted ? safeStock / 1000 : safeStock);
       const finalQty = Math.min(quantity, maxQty);
       set({
         cart: [
@@ -412,10 +416,10 @@ export const usePosStore = create<PosStore>()(
             quantity: finalQty,
             unitPriceUsd: product.priceUsd,
             totalPriceUsd: preciseRound(finalQty * product.priceUsd, 2),
-            isWeighted: product.isWeighted,
+            isWeighted: safeIsWeighted,
             isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
-            unit: product.unit,
-            stock: product.stock,
+            unit: safeUnit,
+            stock: safeStock,
             unitMultiplier: 1,
           },
         ],
