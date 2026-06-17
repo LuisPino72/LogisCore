@@ -426,7 +426,7 @@ export class LogisCoreDB extends Dexie {
       suppliers: 'id, tenantId, [tenantId+deletedAt]',
       customers: 'id, tenantId, name, [tenantId+deletedAt]',
       purchaseOrders: 'id, tenantId, supplierId, status, [tenantId+status], [tenantId+deletedAt]',
-      purchaseOrderItems: 'id, orderId, productId, [orderId]',
+      purchaseOrderItems: 'id, tenantId, orderId, productId, [tenantId+orderId], [orderId]',
       auditEntries: '++id, eventName, status, createdAt, [status+createdAt]',
       notifications: 'id, tenantId, type, read, createdAt, [tenantId+read], [tenantId+deletedAt]',
       recipes: 'id, tenantId, productId, mode, isActive, [tenantId+deletedAt]',
@@ -470,6 +470,11 @@ export class LogisCoreDB extends Dexie {
     // Sistema de crédito (fiado) — v22: nueva tabla creditPayments
     this.version(22).stores({
       creditPayments: 'id, tenantId, customerId, saleId, [tenantId+customerId], [tenantId+saleId]',
+    });
+    // [PURCHASES-001]: v23 — agregar tenantId index a purchaseOrderItems
+    // Fix: getPriceHistory() usa .where({ tenantId }) pero tenantId no estaba indexado
+    this.version(23).stores({
+      purchaseOrderItems: 'id, tenantId, orderId, productId, [tenantId+orderId], [orderId]',
     });
   }
 }
