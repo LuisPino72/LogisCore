@@ -1,11 +1,12 @@
 import { type FC, useMemo } from 'react';
-import { Sun, Sunset, Moon, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Sun, Sunset, Moon, Calendar, AlertTriangle, CheckCircle, Store } from 'lucide-react';
 import { startOfDayVzla } from '@/lib/date';
 import type { SubscriptionResponse } from '../types';
 
 interface WelcomeBannerProps {
   userName: string;
   tenantName: string | null;
+  logoUrl?: string | null;
   subscription?: SubscriptionResponse | null;
 }
 
@@ -16,7 +17,7 @@ function getGreeting(): { text: string; icon: FC<{ size?: number; className?: st
   return { text: 'Buenas noches', icon: Moon };
 }
 
-export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription }) => {
+export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, subscription }) => {
   const dateKey = new Date().toDateString();
 
   const today = useMemo(
@@ -31,7 +32,6 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription
   );
 
   const greeting = useMemo(() => getGreeting(), [dateKey]);
-  const GreetingIcon = greeting.icon;
 
   const daysRemaining = subscription?.expires_at
     ? Math.round((new Date(startOfDayVzla(new Date(subscription.expires_at))).getTime() - new Date(startOfDayVzla()).getTime()) / 86400000)
@@ -62,12 +62,24 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription
 
       <div className="relative p-5 sm:p-6 welcome-stagger">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 shadow-sm">
-            <GreetingIcon size={20} className="text-accent-dark" />
-          </div>
+          {/* Logo del negocio */}
+          {logoUrl ? (
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-white/80 flex items-center justify-center ring-2 ring-accent/20 shadow-sm shrink-0 dashboard-logo-shine">
+              <img
+                src={logoUrl}
+                alt={`Logo de ${tenantName}`}
+                className="w-full h-full object-contain p-1"
+              />
+            </div>
+          ) : (
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-accent/15 flex items-center justify-center ring-2 ring-accent/20 shadow-sm shrink-0">
+              <Store size={24} className="text-accent-dark sm:hidden" />
+              <Store size={28} className="text-accent-dark hidden sm:block" />
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-semibold text-accent-dark uppercase tracking-wider">
+              <span className="text-[11px] sm:text-xs font-semibold text-accent-dark uppercase tracking-wider">
                 {tenantName ?? 'Cargando...'}
               </span>
               {daysRemaining !== null && expiryUrgency === 'ok' && daysRemaining > 7 && (
@@ -78,9 +90,9 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription
               )}
             </div>
             <p className="text-xs text-accent-dark mt-0.5">{greeting.text}</p>
+            <p className="text-sm sm:text-base text-gray-800 mt-0.5 capitalize font-medium">{today}</p>
           </div>
         </div>
-        <p className="text-sm text-gray-800 mt-0.5 capitalize">{today}</p>
       </div>
 
       {daysRemaining !== null && expiryUrgency !== 'ok' && (

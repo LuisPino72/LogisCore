@@ -6,7 +6,7 @@ import { WelcomeBanner } from './WelcomeBanner';
 import { PwaInstallBanner } from './PwaInstallBanner';
 import { PendingTasksWidget } from './PendingTasksWidget';
 import { EmptyState, Card, Badge } from '../../../common/components';
-import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Store } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
 import { formatUsd } from '../../../lib/formatBs';
 
@@ -77,39 +77,11 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
       <WelcomeBanner
         userName={email}
         tenantName={tenantInfo?.name ?? null}
+        logoUrl={tenantInfo?.logoUrl ?? null}
         subscription={subscription}
       />
 
       <PwaInstallBanner />
-
-      {/* Logo + Nombre del negocio */}
-      {tenantInfo && (
-        <div className="dashboard-logo-wrapper mt-4 sm:mt-5">
-          <div className="flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm">
-            {tenantInfo.logoUrl ? (
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm dashboard-logo-shine shrink-0">
-                <img
-                  src={tenantInfo.logoUrl}
-                  alt={`Logo de ${tenantInfo.name}`}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ) : (
-              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm shrink-0">
-                <Store size={16} className="text-primary sm:hidden" />
-                <Store size={20} className="text-primary hidden sm:block" />
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-base font-title font-bold text-gray-900 truncate">{tenantInfo.name}</h1>
-              <p className="text-[11px] sm:text-xs text-text-muted truncate">{tenantInfo.rif}</p>
-            </div>
-            {tenantInfo.direccion && (
-              <span className="hidden md:block text-xs text-text-muted truncate max-w-[200px]">{tenantInfo.direccion}</span>
-            )}
-          </div>
-        </div>
-      )}
 
       <div className="dashboard-grid mt-4 sm:mt-6">
         {/* Ganancias de hoy */}
@@ -154,7 +126,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
         </div>
 
         {!pendingTasksLoading && (
-          <div className="dashboard-card-entrance dashboard-card--full" style={{ animationDelay: '0.12s' }}>
+          <div className="dashboard-card-entrance" style={{ animationDelay: '0.12s' }}>
             <Card>
               <div className="p-4 sm:p-5">
                 <PendingTasksWidget tasks={pendingTasks} loading={pendingTasksLoading} />
@@ -247,7 +219,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
         </div>
 
         {/* Stock bajo */}
-        <div className="dashboard-card-entrance dashboard-card--full" style={{ animationDelay: '0.15s' }}>
+        <div className="dashboard-card-entrance" style={{ animationDelay: '0.15s' }}>
           <Card>
             <div className="p-4 sm:p-5">
               <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
