@@ -284,10 +284,11 @@ export const usePosStore = create<PosStore>()(
     const { cart } = get();
     set({ error: null });
 
-    // Guard: rechazar productos con precio inválido
-    const priceUsd = presentation?.priceUsd ?? product.priceUsd;
+    // Guard: rechazar productos con precio inválido (forzar Number por si viene como string de Dexie)
+    const rawPrice = presentation?.priceUsd ?? product.priceUsd;
+    const priceUsd = Number(rawPrice);
     if (!priceUsd || priceUsd <= 0 || !Number.isFinite(priceUsd)) {
-      set({ error: `El precio de "${product.name}" no es válido (${priceUsd}). Verifica el producto.` });
+      set({ error: `El precio de "${product.name}" no es válido (${rawPrice}). Verifica el producto.` });
       return false;
     }
 
@@ -297,8 +298,9 @@ export const usePosStore = create<PosStore>()(
         .reduce((sum, item) => sum + item.quantity * item.unitMultiplier, 0);
       const requestedConsumption = quantity * (presentation.unitMultiplier || 1);
       const isAssembly = product.hasAssemblyRecipe;
-      if (!isAssembly && totalConsumption + requestedConsumption > product.stock) {
-        const available = Math.floor((product.stock - totalConsumption) / presentation.unitMultiplier);
+      const presSafeStock = typeof product.stock === 'number' && Number.isFinite(product.stock) ? product.stock : 0;
+      if (!isAssembly && totalConsumption + requestedConsumption > presSafeStock) {
+        const available = Math.floor((presSafeStock - totalConsumption) / presentation.unitMultiplier);
         set({ error: `Stock insuficiente. Disponible: ${Math.max(0, available)} unidades.` });
         return false;
       }
@@ -348,7 +350,7 @@ export const usePosStore = create<PosStore>()(
               isWeighted: false,
               isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
               unit: 'unidad',
-              stock: product.stock,
+              stock: presSafeStock,
               presentationId: presentation.id,
               presentationName: presentation.name,
               unitMultiplier: presentation.unitMultiplier || 1,
@@ -414,8 +416,8 @@ export const usePosStore = create<PosStore>()(
             name: product.name,
             sku: product.sku,
             quantity: finalQty,
-            unitPriceUsd: product.priceUsd,
-            totalPriceUsd: preciseRound(finalQty * product.priceUsd, 2),
+            unitPriceUsd: priceUsd,
+            totalPriceUsd: preciseRound(finalQty * priceUsd, 2),
             isWeighted: safeIsWeighted,
             isTaxable: product.isTaxable !== undefined ? product.isTaxable : true,
             unit: safeUnit,
@@ -463,7 +465,9 @@ export const usePosStore = create<PosStore>()(
       const product = get().products.find(p => p.id === productId);
       if (!product) { get().removeFromCart(productId, presentationId); return; }
       const isAssemblyProd = product.hasAssemblyRecipe;
-      maxQty = isAssemblyProd ? Infinity : (product.isWeighted ? product.stock / 1000 : product.stock);
+      const safeStock = typeof product.stock === 'number' && Number.isFinite(product.stock) ? product.stock : 0;
+      const safeIsWeighted = product.isWeighted === true;
+      maxQty = isAssemblyProd ? Infinity : (safeIsWeighted ? safeStock / 1000 : safeStock);
     }
 
     // A2: Pre-validación de ingredientes para productos assembly
@@ -525,11 +529,22 @@ export const usePosStore = create<PosStore>()(
     }
 
     const { discount } = get();
+    // Sanitizar items del carrito antes de enviar a Zod (protege contra sessionStorage corrupto)
+    const sanitizedItems = cart.map((item) => ({
+      ...item,
+      quantity: typeof item.quantity === 'number' && Number.isFinite(item.quantity) && item.quantity > 0 ? item.quantity : 1,
+      unitPriceUsd: typeof item.unitPriceUsd === 'number' && Number.isFinite(item.unitPriceUsd) && item.unitPriceUsd > 0 ? item.unitPriceUsd : 0,
+      totalPriceUsd: typeof item.totalPriceUsd === 'number' && Number.isFinite(item.totalPriceUsd) && item.totalPriceUsd > 0 ? item.totalPriceUsd : 0,
+      stock: typeof item.stock === 'number' && Number.isFinite(item.stock) ? item.stock : 0,
+      isWeighted: item.isWeighted === true,
+      unit: typeof item.unit === 'string' && item.unit ? item.unit : 'unidad',
+      unitMultiplier: typeof item.unitMultiplier === 'number' && item.unitMultiplier > 0 ? item.unitMultiplier : 1,
+    }));
     const input: CreateSaleInput = {
       tenantId,
       userId,
       paymentMethod,
-      items: cart,
+      items: sanitizedItems,
       exchangeRate,
       ...(discount && { discountType: discount.type, discountValue: discount.value }),
       ...(selectedCustomerId && { customerId: selectedCustomerId }),
