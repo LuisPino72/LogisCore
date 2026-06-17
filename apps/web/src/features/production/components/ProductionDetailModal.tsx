@@ -22,6 +22,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warni
 };
 
 export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: ProductionDetailModalProps) {
+  const [activeTab, setActiveTab] = useState<'resumen' | 'ingredientes' | 'movimientos'>('resumen');
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState<{
     recipeName: string;
@@ -121,68 +122,104 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
           <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
         </div>
 
-        {/* Resumen de producción */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-primary stat-card-glow">
-            <p className="text-xs text-gray-500">Lotes</p>
-            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.batchCount}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-info stat-card-glow">
-            <p className="text-xs text-gray-500">Objetivo</p>
-            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityTarget}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-success stat-card-glow">
-            <p className="text-xs text-gray-500">Producido</p>
-            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityProduced}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-warning stat-card-glow">
-            <p className="text-xs text-gray-500">Merma</p>
-            <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{details?.wastePct || 0}%</p>
-          </div>
+        {/* Tab bar */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          {(['resumen', 'ingredientes', 'movimientos'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
+                activeTab === tab
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab === 'resumen' ? 'Resumen' : tab === 'ingredientes' ? `Ingredientes (${details?.ingredientCosts?.length || 0})` : `Movimientos (${movements.length})`}
+            </button>
+          ))}
         </div>
 
-        {/* Fechas - Timeline */}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Fechas</h5>
-          <div className="flex items-start gap-3">
-            <div className="flex flex-col items-center">
-              <div className="w-2 h-2 rounded-full bg-primary" />
-              <div className="w-0.5 h-6 bg-gray-200" />
-              {order.startedAt && <div className="w-2 h-2 rounded-full bg-info" />}
-              {order.startedAt && <div className="w-0.5 h-6 bg-gray-200" />}
-              {order.completedAt && <div className="w-2 h-2 rounded-full bg-success" />}
-            </div>
-            <div className="space-y-3 text-sm">
-              <div>
-                <span className="text-gray-500">Creación:</span>{' '}
-                <span className="text-gray-900 font-medium">{new Date(order.createdAt).toLocaleDateString()}</span>
+        {/* Tab content */}
+        {activeTab === 'resumen' && (
+          <div className="space-y-4">
+            {/* Resumen de producción */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-primary stat-card-glow">
+                <p className="text-xs text-gray-500">Lotes</p>
+                <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.batchCount}</p>
               </div>
-              {order.startedAt && (
-                <div>
-                  <span className="text-gray-500">Inicio:</span>{' '}
-                  <span className="text-gray-900 font-medium">{new Date(order.startedAt).toLocaleDateString()}</span>
+              <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-info stat-card-glow">
+                <p className="text-xs text-gray-500">Objetivo</p>
+                <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityTarget}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-success stat-card-glow">
+                <p className="text-xs text-gray-500">Producido</p>
+                <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityProduced}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-warning stat-card-glow">
+                <p className="text-xs text-gray-500">Merma</p>
+                <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{details?.wastePct || 0}%</p>
+              </div>
+            </div>
+
+            {/* Fechas - Timeline */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <h5 className="text-sm font-medium text-gray-700 mb-3">Fechas</h5>
+              <div className="flex items-start gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div className="w-0.5 h-6 bg-gray-200" />
+                  {order.startedAt && <div className="w-2 h-2 rounded-full bg-info" />}
+                  {order.startedAt && <div className="w-0.5 h-6 bg-gray-200" />}
+                  {order.completedAt && <div className="w-2 h-2 rounded-full bg-success" />}
                 </div>
-              )}
-              {order.completedAt && (
-                <div>
-                  <span className="text-gray-500">Completado:</span>{' '}
-                  <span className="text-gray-900 font-medium">{new Date(order.completedAt).toLocaleDateString()}</span>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Creación:</span>{' '}
+                    <span className="text-gray-900 font-medium">{new Date(order.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {order.startedAt && (
+                    <div>
+                      <span className="text-gray-500">Inicio:</span>{' '}
+                      <span className="text-gray-900 font-medium">{new Date(order.startedAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {order.completedAt && (
+                    <div>
+                      <span className="text-gray-500">Completado:</span>{' '}
+                      <span className="text-gray-900 font-medium">{new Date(order.completedAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Notas de merma */}
+            {details?.wasteNotes && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h5 className="text-sm font-medium text-gray-700 mb-1">Notas de Merma</h5>
+                <p className="text-sm text-gray-600 wrap-break-word">{details.wasteNotes}</p>
+              </div>
+            )}
+
+            {/* Costos */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <h5 className="text-sm font-medium text-gray-700 mb-2">Costos</h5>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Costo total ingredientes:</span>
+                <span className="font-semibold text-gray-900">{formatUsd(details?.totalCost || 0)}</span>
+              </div>
+              {details?.costPerUnit != null && details.costPerUnit > 0 && (
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-gray-600">Costo por unidad producida:</span>
+                  <span className="font-semibold text-gray-900">{formatUsd(details.costPerUnit)}</span>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Notas de merma */}
-        {details?.wasteNotes && (
-          <div className="bg-gray-50 rounded-lg p-3">
-            <h5 className="text-sm font-medium text-gray-700 mb-1">Notas de Merma</h5>
-            <p className="text-sm text-gray-600 wrap-break-word">{details.wasteNotes}</p>
           </div>
         )}
 
-        {/* Ingredientes */}
-        {details?.ingredientCosts && details.ingredientCosts.length > 0 && (
+        {activeTab === 'ingredientes' && details?.ingredientCosts && details.ingredientCosts.length > 0 && (
           <div className="bg-gray-50 rounded-lg p-3">
             <h5 className="text-sm font-medium text-gray-700 mb-2">Ingredientes Consumidos</h5>
             <div className="sm:hidden space-y-2">
@@ -224,23 +261,7 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
           </div>
         )}
 
-        {/* Costos */}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <h5 className="text-sm font-medium text-gray-700 mb-2">Costos</h5>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Costo total ingredientes:</span>
-            <span className="font-semibold text-gray-900">{formatUsd(details?.totalCost || 0)}</span>
-          </div>
-          {details?.costPerUnit != null && details.costPerUnit > 0 && (
-            <div className="flex justify-between text-sm mt-1">
-              <span className="text-gray-600">Costo por unidad producida:</span>
-              <span className="font-semibold text-gray-900">{formatUsd(details.costPerUnit)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Movimientos de inventario */}
-        {movements.length > 0 && (
+        {activeTab === 'movimientos' && movements.length > 0 && (
           <div className="bg-gray-50 rounded-lg p-3">
             <h5 className="text-sm font-medium text-gray-700 mb-2">Movimientos de Inventario</h5>
             <div className="sm:hidden space-y-2">

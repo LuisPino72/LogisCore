@@ -75,6 +75,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
     toInput,
     getAvailableIngredients,
     getExpandPreview, categories,
+    getUnitOptions,
   } = useRecipeForm();
 
   const { createRecipe, updateRecipe, getRecipeWithLines } = useProductionStore();
@@ -288,9 +289,9 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                               onChange={(e) => updateLine(index, 'unit', e.target.value)}
                               className={`input w-full ${errors[`line_${index}_unit`] ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
                             >
-                              <option value="g">Gramos</option>
-                              <option value="ml">Mililitros</option>
-                              <option value="unidad">Unidad</option>
+                              {getUnitOptions(line.productId).map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
                             </select>
                             {errors[`line_${index}_unit`] && (
                               <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_unit`]}</p>
@@ -551,18 +552,15 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               {categoryOptions.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Categoría <span className="text-gray-600 text-xs">(opcional)</span>
+                    Categoría <span className="text-danger">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={[{ value: '', label: 'Seleccionar categoría...' }, ...categoryOptions]}
                     value={form.newProductCategoryId}
-                    onChange={(e) => updateField('newProductCategoryId', e.target.value)}
-                    className="input w-full"
-                  >
-                    <option value="">Sin categoría</option>
-                    {categoryOptions.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
+                    onChange={(value) => updateField('newProductCategoryId', value)}
+                    placeholder="Seleccionar categoría..."
+                    searchPlaceholder="Buscar categoría..."
+                  />
                 </div>
               )}
             </Card>
@@ -674,9 +672,9 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                           onChange={(e) => updateLine(index, 'unit', e.target.value)}
                           className={`input w-full ${errors[`line_${index}_unit`] ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
                         >
-                          <option value="g">Gramos</option>
-                          <option value="ml">Mililitros</option>
-                          <option value="unidad">Unidad</option>
+                          {getUnitOptions(line.productId).map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
                         </select>
                         {errors[`line_${index}_unit`] && (
                           <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_unit`]}</p>

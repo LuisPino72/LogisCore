@@ -51,6 +51,18 @@ function getMaxQuantityForUnit(recipeUnit: string): number {
   return MAX_QUANTITY_PER_UNIT[recipeUnit] ?? 99_999;
 }
 
+// Helper: obtener unidad de receta por defecto según unidad de inventario
+function getDefaultRecipeUnit(inventoryUnit: string): string {
+  const MAP: Record<string, string> = {
+    kg: 'g',
+    gr: 'g',
+    lt: 'ml',
+    m: 'm',
+    unidad: 'unidad',
+  };
+  return MAP[inventoryUnit] ?? 'unidad';
+}
+
 interface RecipeFormState {
   name: string;
   productId: string;
@@ -130,11 +142,20 @@ export function useRecipeForm() {
   const updateLine = useCallback((index: number, field: keyof RecipeLineInput, value: string | number) => {
     setForm((prev) => ({
       ...prev,
-      lines: prev.lines.map((line, i) =>
-        i === index ? { ...line, [field]: value } : line
-      ),
+      lines: prev.lines.map((line, i) => {
+        if (i !== index) return line;
+        const next = { ...line, [field]: value };
+        // Auto-fill unit when product changes
+        if (field === 'productId' && value) {
+          const product = products.find(p => p.id === value);
+          if (product?.unit) {
+            next.unit = getDefaultRecipeUnit(product.unit);
+          }
+        }
+        return next;
+      }),
     }));
-  }, []);
+  }, [products]);
 
   const removeLine = useCallback((index: number) => {
     setForm((prev) => ({
@@ -538,6 +559,37 @@ export function useRecipeForm() {
     setCurrentStep(1);
   }, []);
 
+  const getUnitOptions = useCallback((productId: string) => {
+    const compat: Record<string, string[]> = {
+      kg: ['g', 'kg'],
+      gr: ['g', 'kg'],
+      lt: ['ml', 'lt'],
+      m: ['m'],
+      unidad: ['unidad'],
+    };
+    const labels: Record<string, string> = {
+      g: 'Gramos', kg: 'Kilogramos', ml: 'Mililitros', lt: 'Litros',
+      m: 'Metros', unidad: 'Unidad',
+    };
+    if (!productId) {
+      return [
+        { value: 'g', label: 'Gramos' },
+        { value: 'ml', label: 'Mililitros' },
+        { value: 'unidad', label: 'Unidad' },
+      ];
+    }
+    const product = products.find(p => p.id === productId);
+    if (!product) {
+      return [
+        { value: 'g', label: 'Gramos' },
+        { value: 'ml', label: 'Mililitros' },
+        { value: 'unidad', label: 'Unidad' },
+      ];
+    }
+    const units = compat[product.unit] ?? ['unidad'];
+    return units.map(u => ({ value: u, label: labels[u] || u }));
+  }, [products]);
+
   const toInput = useCallback(async (): Promise<CreateRecipeInput | null> => {
     if (!(await validate())) return null;
     // Siempre se crea producto nuevo desde la receta
@@ -585,6 +637,7 @@ export function useRecipeForm() {
     getExpandPreview,
     toInput,
     reset,
+    getUnitOptions,
     setIngredientAvailability,
     setIsCheckingAvailability,
     categories,
