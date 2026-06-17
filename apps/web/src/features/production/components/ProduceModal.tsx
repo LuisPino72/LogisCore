@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Utensils, AlertTriangle, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { Utensils, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Package } from 'lucide-react';
 import { Alert, Button, Card, Modal, Input, Spinner } from '../../../common/components';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
@@ -183,7 +183,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
             />
 
             {/* Total Production — more prominent */}
-            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/10">
+            <div className="flex items-center justify-between p-3 bg-linear-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/15 total-glow">
               <span className="text-sm text-gray-600">Total a producir:</span>
               <span className="font-bold text-base text-primary">{recipe.yieldQuantity * batchCount} {recipe.yieldUnit}</span>
             </div>
@@ -198,7 +198,10 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
 
             {/* Ingredient Availability */}
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Ingredientes</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                <Package size={14} className="text-primary/60" />
+                Ingredientes
+              </h4>
               {isChecking ? (
                 <div className="flex justify-center py-4">
                   <Spinner size="sm" />
@@ -208,10 +211,10 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
                   {ingredientAvailability.map((item) => (
                     <div
                       key={item.productId}
-                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-2.5 rounded-lg text-sm ${
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-2.5 rounded-lg text-sm border-l-[3px] transition-colors ${
                         item.sufficient
-                          ? 'bg-success/5 border border-success/20'
-                          : 'bg-danger/5 border border-danger/20'
+                          ? 'bg-success/5 border border-success/20 border-l-success'
+                          : 'bg-danger/5 border border-danger/20 border-l-danger'
                       }`}
                     >
                       <span className="wrap-break-word font-medium">{item.productName}</span>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChefHat, Plus, History, Utensils, Package } from 'lucide-react';
+import { ChefHat, Plus, History, Utensils, Package, AlertTriangle } from 'lucide-react';
 import { Button, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding, Modal } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { useProduction } from '../hooks/useProduction';
@@ -88,13 +88,22 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
     setCancelConfirm({ orderId, recipeName });
   };
 
+  const activeRecipes = recipes.filter((r) => r.isActive).length;
+  const pendingOrders = productionOrders.filter((o) => o.status === 'confirmed').length;
+  const completedOrders = productionOrders.filter((o) => o.status === 'done').length;
+
   return (
-    <div className="animate-fade-in pb-20 sm:pb-0">
+    <div className="p-3 sm:p-6 pb-24 sm:pb-0 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <ChefHat size={24} className="text-primary" />
-          <h1 className="text-xl font-title font-bold">Producción</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
+            <ChefHat size={18} className="text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-title font-bold truncate" style={{ fontSize: 'var(--text-fluid-xl)' }}>Producción</h1>
+            <p className="text-xs text-text-secondary hidden sm:block">Recetas, producción e historial</p>
+          </div>
         </div>
         {activeTab === 'recipes' && (
           <Button
@@ -110,22 +119,61 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
       </div>
 
       {/* Desktop tabs */}
-      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm mb-4">
+      <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
         {bottomNavItems.map((tab) => (
           <button
             key={tab.id}
             onClick={tab.onClick}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200 ${
               activeTab === tab.id
-                ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                ? 'bg-primary text-white shadow-sm'
                 : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
             {tab.icon}
             {tab.label}
+            {tab.id === 'recipes' && activeRecipes > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
+                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
+              }`}>
+                {activeRecipes}
+              </span>
+            )}
+            {tab.id === 'produce' && pendingOrders > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
+                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {pendingOrders}
+              </span>
+            )}
+            {tab.id === 'history' && completedOrders > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
+                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'
+              }`}>
+                {completedOrders}
+              </span>
+            )}
           </button>
         ))}
       </div>
+
+      {/* Quick stats bar - desktop only */}
+      {activeTab === 'recipes' && recipes.length > 0 && (
+        <div className="hidden sm:flex items-center gap-3 text-xs">
+          {activeRecipes > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-50 border border-primary/15">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="text-primary font-medium">{activeRecipes} receta{activeRecipes !== 1 ? 's' : ''} activa{activeRecipes !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+          {recipes.length - activeRecipes > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 border border-gray-200/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+              <span className="text-gray-600 font-medium">{recipes.length - activeRecipes} inactiva{recipes.length - activeRecipes !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       {loading && recipes.length === 0 ? (
@@ -146,25 +194,25 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
             <div className="space-y-4">
               {recipes.filter((r) => r.mode === 'batch' && r.isActive).length === 0 ? (
                 <EmptyState
-                  icon={<Utensils size={48} className="text-gray-300" />}
+                  icon={<Utensils size={48} className="text-gray-300 icon-float" />}
                   title="Sin recetas activas"
                   description="Crea recetas de producción por lotes para poder producir."
                 />
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 recipe-stagger">
                   {recipes
                     .filter((r) => r.mode === 'batch' && r.isActive)
                     .map((recipe) => (
-                      <Card key={recipe.id} className="p-4 hover:shadow-md transition-shadow">
+                      <Card key={recipe.id} className="p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                         <div className="flex items-start justify-between mb-3">
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <h3 className="font-semibold text-sm wrap-break-word">{recipe.name}</h3>
-                              <p className="text-xs text-gray-500 wrap-break-word">
+                            <p className="text-xs text-gray-500 wrap-break-word">
                               Rendimiento: {recipe.yieldQuantity} {recipe.yieldUnit}
                             </p>
                           </div>
                           {recipe.wastePct > 0 && (
-                            <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded-full">
+                            <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200/60 px-2 py-0.5 rounded-full shrink-0 ml-2">
                               -{recipe.wastePct}% merma
                             </span>
                           )}
@@ -270,10 +318,17 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
             </div>
           }
         >
-          <p className="text-sm text-gray-600 wrap-break-word">
-            Vas a cancelar la orden de <strong>{cancelConfirm.recipeName}</strong>.
-            El stock de ingredientes se revertirá automáticamente.
-          </p>
+          <div className="space-y-4 animate-slide-down">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center shrink-0 ring-1 ring-danger/20">
+                <AlertTriangle size={24} className="text-danger" />
+              </div>
+              <div className="pt-1">
+                <p className="text-sm font-semibold text-gray-900">¿Cancelar orden de {cancelConfirm.recipeName}?</p>
+                <p className="text-xs text-gray-500 mt-1">El stock de ingredientes se revertirá automáticamente.</p>
+              </div>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Badge, Button, Card, EmptyState, Pagination } from '../../../common/components';
-import { History, Clock, CheckCircle2, XCircle, AlertCircle, X, Eye } from 'lucide-react';
+import { History, Clock, CheckCircle2, XCircle, AlertCircle, Eye, Package, Hash } from 'lucide-react';
 import type { Recipe, ProductionOrder } from '../types';
 import { ProductionDetailModal } from './ProductionDetailModal';
 import { useProductionStore } from '../stores/productionStore';
@@ -70,7 +70,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
   if (orders.length === 0) {
     return (
       <EmptyState
-        icon={<History size={48} className="text-gray-300" />}
+        icon={<History size={48} className="text-gray-300 icon-float" />}
         title="Sin historial"
         description="Crea una receta y ejecútala para generar tu primer historial."
       />
@@ -87,21 +87,32 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
     });
   };
 
+  const getStatusBorderColor = (status: string) => {
+    switch (status) {
+      case 'done': return 'border-l-success';
+      case 'confirmed': return 'border-l-info';
+      case 'in_progress': return 'border-l-warning';
+      case 'cancelled': return 'border-l-danger';
+      default: return 'border-l-gray-300';
+    }
+  };
+
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-700 mb-2">
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-gray-700 mb-2 px-1">
         {orders.length} orden{orders.length !== 1 ? 'es' : ''} registrada{orders.length !== 1 ? 's' : ''}
       </h3>
 
+      <div className="history-stagger">
       {paginatedOrders.map((order) => {
         const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.draft;
         const canCancel = order.status === 'confirmed' && onCancel != null && !ordersWithSales.has(order.id);
         const isCancelling = cancellingOrderId === order.id;
 
         return (
-          <Card key={order.id} className="p-3 sm:p-4">
+          <Card key={order.id} className={`p-3 sm:p-4 mb-2 hover:shadow-md transition-all duration-200 border-l-[3px] ${getStatusBorderColor(order.status)}`}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex-1 min-w-0 text-center sm:text-left">
+              <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <h4 className="font-semibold text-sm wrap-break-word">
                     {recipeMap.get(order.recipeId) || 'Receta eliminada'}
@@ -113,12 +124,19 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                     </span>
                   </Badge>
                 </div>
-                <div className="flex flex-wrap justify-center sm:justify-start gap-x-3 gap-y-0.5 text-xs text-gray-500">
-                  <span>{order.batchCount} lote(s)</span>
-                  <span>·</span>
-                  <span>{order.quantityTarget} unidades</span>
-                  <span>·</span>
-                  <span>{formatDate(order.createdAt)}</span>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Package size={11} className="text-gray-400" />
+                    {order.batchCount} lote{order.batchCount !== 1 ? 's' : ''}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Hash size={11} className="text-gray-400" />
+                    {order.quantityTarget} unid.
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={11} className="text-gray-400" />
+                    {formatDate(order.createdAt)}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0 self-start flex-wrap">
@@ -141,7 +159,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                     className="text-danger hover:bg-danger/10 min-h-[44px]"
                     aria-label="Cancelar orden"
                   >
-                    <X size={14} className="mr-1" />
+                    <XCircle size={14} className="mr-1" />
                     {isCancelling ? 'Cancelando...' : 'Cancelar'}
                   </Button>
                 )}
@@ -150,6 +168,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
           </Card>
         );
       })}
+      </div>
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 

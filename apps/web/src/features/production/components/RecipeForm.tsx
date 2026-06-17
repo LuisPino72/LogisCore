@@ -37,7 +37,7 @@ function ProgressBar({ currentStep, totalSteps, isEdit }: { currentStep: number;
                   currentStep > step.num
                     ? 'bg-success text-white'
                     : currentStep === step.num
-                    ? 'bg-primary text-white shadow-md shadow-primary/30'
+                    ? 'bg-primary text-white shadow-md shadow-primary/30 ring-2 ring-primary/20'
                     : 'bg-gray-200 text-gray-500'
                 }`}
               >
@@ -50,7 +50,7 @@ function ProgressBar({ currentStep, totalSteps, isEdit }: { currentStep: number;
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 mt-0 sm:mt-[-14px] rounded transition-colors duration-200 ${
+              <div className={`flex-1 h-0.5 mx-2 mt-0 sm:mt-[-14px] rounded transition-all duration-300 ${
                 currentStep > step.num ? 'bg-success' : 'bg-gray-200'
               }`} />
             )}
@@ -508,7 +508,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               <label className="block text-sm font-medium text-gray-700 mb-1">Producto que se crea (nuevo)</label>
             </div>
 
-            <Card className="p-3 bg-teal-50 border-teal-200 space-y-3">
+            <Card className="p-3 bg-linear-to-br from-teal-50 to-teal-100/80 border-teal-200 space-y-3">
               <div className="flex items-center gap-2 text-teal-700">
                 <Package size={16} />
                 <span className="text-sm font-semibold wrap-break-word">Nuevo producto terminado</span>

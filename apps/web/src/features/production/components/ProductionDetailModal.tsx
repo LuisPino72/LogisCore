@@ -123,44 +123,53 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
 
         {/* Resumen de producción */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-primary stat-card-glow">
             <p className="text-xs text-gray-500">Lotes</p>
             <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.batchCount}</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-info stat-card-glow">
             <p className="text-xs text-gray-500">Objetivo</p>
             <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityTarget}</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-success stat-card-glow">
             <p className="text-xs text-gray-500">Producido</p>
             <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityProduced}</p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-warning stat-card-glow">
             <p className="text-xs text-gray-500">Merma</p>
             <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{details?.wastePct || 0}%</p>
           </div>
         </div>
 
-        {/* Fechas */}
+        {/* Fechas - Timeline */}
         <div className="bg-gray-50 rounded-lg p-3">
-          <h5 className="text-sm font-medium text-gray-700 mb-2">Fechas</h5>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-            <div>
-              <span className="text-gray-500">Creación:</span>{' '}
-              <span className="text-gray-900">{new Date(order.createdAt).toLocaleDateString()}</span>
+          <h5 className="text-sm font-medium text-gray-700 mb-3">Fechas</h5>
+          <div className="flex items-start gap-3">
+            <div className="flex flex-col items-center">
+              <div className="w-2 h-2 rounded-full bg-primary" />
+              <div className="w-0.5 h-6 bg-gray-200" />
+              {order.startedAt && <div className="w-2 h-2 rounded-full bg-info" />}
+              {order.startedAt && <div className="w-0.5 h-6 bg-gray-200" />}
+              {order.completedAt && <div className="w-2 h-2 rounded-full bg-success" />}
             </div>
-            {order.startedAt && (
+            <div className="space-y-3 text-sm">
               <div>
-                <span className="text-gray-500">Inicio:</span>{' '}
-                <span className="text-gray-900">{new Date(order.startedAt).toLocaleDateString()}</span>
+                <span className="text-gray-500">Creación:</span>{' '}
+                <span className="text-gray-900 font-medium">{new Date(order.createdAt).toLocaleDateString()}</span>
               </div>
-            )}
-            {order.completedAt && (
-              <div>
-                <span className="text-gray-500">Completado:</span>{' '}
-                <span className="text-gray-900">{new Date(order.completedAt).toLocaleDateString()}</span>
-              </div>
-            )}
+              {order.startedAt && (
+                <div>
+                  <span className="text-gray-500">Inicio:</span>{' '}
+                  <span className="text-gray-900 font-medium">{new Date(order.startedAt).toLocaleDateString()}</span>
+                </div>
+              )}
+              {order.completedAt && (
+                <div>
+                  <span className="text-gray-500">Completado:</span>{' '}
+                  <span className="text-gray-900 font-medium">{new Date(order.completedAt).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -202,7 +211,7 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
                 </thead>
                 <tbody>
                   {details.ingredientCosts.map((ing, idx) => (
-                    <tr key={idx} className="border-b border-gray-100 last:border-0">
+                    <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-primary/5 transition-colors">
                       <td className="py-2 text-gray-900 wrap-break-word">{ing.productName}</td>
                       <td className="py-2 text-right text-gray-700">{ing.quantity} {ing.unit}</td>
                       <td className="py-2 text-right text-gray-700">{formatUsd(ing.costPerUnit)}</td>
@@ -236,7 +245,7 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
             <h5 className="text-sm font-medium text-gray-700 mb-2">Movimientos de Inventario</h5>
             <div className="sm:hidden space-y-2">
               {movements.map((m, idx) => (
-                <div key={idx} className="bg-white rounded-lg p-3 border border-gray-100 space-y-1">
+                <div key={idx} className={`bg-white rounded-lg p-3 border border-gray-100 space-y-1 border-l-[3px] ${m.type === 'production_output' ? 'border-l-success' : 'border-l-danger'}`}>
                   <div className="flex justify-between items-start">
                     <span className="text-sm font-semibold text-gray-900 min-w-0">{m.productName}</span>
                     <span className={`text-sm font-medium shrink-0 ml-2 ${m.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -265,7 +274,7 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
                 </thead>
                 <tbody>
                   {movements.map((m, idx) => (
-                    <tr key={idx} className="border-b border-gray-100 last:border-0">
+                    <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-primary/5 transition-colors">
                       <td className="py-2 text-gray-900 wrap-break-word">{m.productName}</td>
                       <td className="py-2 text-gray-700">
                         {m.type === 'production_output' ? 'Producción' : 'Consumo'}

@@ -1175,6 +1175,59 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   transform-origin: left;
 }
 
+/* ───────────────────── PRODUCTION MODULE ───────────────────── */
+
+/* Recipe card entrance */
+@keyframes recipeCardIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.recipe-stagger > * {
+  opacity: 0;
+  animation: recipeCardIn 0.25s ease-out forwards;
+}
+.recipe-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.recipe-stagger > *:nth-child(2) { animation-delay: 0.04s; }
+.recipe-stagger > *:nth-child(3) { animation-delay: 0.06s; }
+.recipe-stagger > *:nth-child(4) { animation-delay: 0.08s; }
+.recipe-stagger > *:nth-child(5) { animation-delay: 0.1s; }
+.recipe-stagger > *:nth-child(6) { animation-delay: 0.12s; }
+
+/* Stat card with top border glow */
+.stat-card-glow {
+  transition: all 0.2s ease;
+}
+.stat-card-glow:hover {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06);
+}
+
+/* History card entrance */
+@keyframes historyCardIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.history-stagger > * {
+  opacity: 0;
+  animation: historyCardIn 0.25s ease-out forwards;
+}
+.history-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.history-stagger > *:nth-child(2) { animation-delay: 0.04s; }
+.history-stagger > *:nth-child(3) { animation-delay: 0.06s; }
+.history-stagger > *:nth-child(4) { animation-delay: 0.08s; }
+.history-stagger > *:nth-child(5) { animation-delay: 0.1s; }
+
+/* Timeline dots */
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.timeline-line {
+  width: 2px;
+  flex-shrink: 0;
+}
+
 /* ───────────────────── PWA STANDALONE ───────────────────── */
 @media (display-mode: standalone) {
   .app-topbar {
