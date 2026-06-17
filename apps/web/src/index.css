@@ -578,7 +578,8 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px;
+  min-height: 48px;
   border-radius: 10px;
   background: var(--accent-bg);
   cursor: pointer;
@@ -678,6 +679,7 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
 @media (min-width: 768px) {
   .pending-tasks-item {
     padding: 8px 10px;
+    min-height: auto;
   }
   .pending-tasks-item-icon {
     width: 28px;

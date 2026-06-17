@@ -85,9 +85,9 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
       {/* Logo + Nombre del negocio */}
       {tenantInfo && (
         <div className="dashboard-logo-wrapper mt-4 sm:mt-5">
-          <div className="flex items-center gap-3 px-4 py-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm">
             {tenantInfo.logoUrl ? (
-              <div className="w-11 h-11 rounded-xl overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm dashboard-logo-shine">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm dashboard-logo-shine shrink-0">
                 <img
                   src={tenantInfo.logoUrl}
                   alt={`Logo de ${tenantInfo.name}`}
@@ -95,16 +95,17 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                 />
               </div>
             ) : (
-              <div className="w-11 h-11 rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm">
-                <Store size={20} className="text-primary" />
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm shrink-0">
+                <Store size={16} className="text-primary sm:hidden" />
+                <Store size={20} className="text-primary hidden sm:block" />
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <h1 className="text-base font-title font-bold text-gray-900 truncate">{tenantInfo.name}</h1>
-              <p className="text-xs text-text-muted">{tenantInfo.rif}</p>
+              <h1 className="text-sm sm:text-base font-title font-bold text-gray-900 truncate">{tenantInfo.name}</h1>
+              <p className="text-[11px] sm:text-xs text-text-muted truncate">{tenantInfo.rif}</p>
             </div>
             {tenantInfo.direccion && (
-              <span className="hidden sm:block text-xs text-text-muted truncate max-w-[200px]">{tenantInfo.direccion}</span>
+              <span className="hidden md:block text-xs text-text-muted truncate max-w-[200px]">{tenantInfo.direccion}</span>
             )}
           </div>
         </div>
