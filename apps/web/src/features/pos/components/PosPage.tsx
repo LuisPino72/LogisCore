@@ -129,7 +129,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   }, [navigate]);
 
   const handleAddToCart = useCallback(
-    (product: Product) => {
+    async (product: Product) => {
       if (product.isWeighted) {
         openWeightModal(product);
         return;
@@ -139,19 +139,23 @@ export function PosPage({ tenantId }: PosPageProps) {
         openPresModal(product);
         return;
       }
-      addToCart(product, 1);
-      addToast({ type: 'success', message: `${product.name} agregado`, duration: 1500 });
+      const added = await addToCart(product, 1);
+      if (added) {
+        addToast({ type: 'success', message: `${product.name} agregado`, duration: 1500 });
+      }
     },
     [addToCart, addToast, getPresentations, openWeightModal, openPresModal],
   );
 
-  const handleWeightedConfirm = useCallback(() => {
+  const handleWeightedConfirm = useCallback(async () => {
     if (!weightingProduct) return;
     const qty = parseFloat(weightingQty);
     if (!qty || qty <= 0) return;
-    addToCart(weightingProduct, qty);
+    const added = await addToCart(weightingProduct, qty);
     closeWeightModal();
-    addToast({ type: 'success', message: `${weightingProduct.name} agregado`, duration: 1500 });
+    if (added) {
+      addToast({ type: 'success', message: `${weightingProduct.name} agregado`, duration: 1500 });
+    }
   }, [weightingProduct, weightingQty, addToCart, addToast, closeWeightModal]);
 
   const handlePay = useCallback(async () => {
@@ -744,8 +748,11 @@ export function PosPage({ tenantId }: PosPageProps) {
         onClose={closePresModal}
         product={selectedProductForPres}
         presentations={selectedProductForPres ? getPresentations(selectedProductForPres.id) : []}
-        onSelect={(_product, selection) => {
-          addToCart(_product, 1, selection);
+        onSelect={async (_product, selection) => {
+          const added = await addToCart(_product, 1, selection);
+          if (added) {
+            addToast({ type: 'success', message: `${_product.name} agregado`, duration: 1500 });
+          }
         }}
       />
 

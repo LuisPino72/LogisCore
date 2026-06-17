@@ -27,7 +27,7 @@ interface PosStore extends PosState {
   fetchCashRegister: (tenantId: string, silent?: boolean) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
-  addToCart: (product: Product, quantity: number, presentation?: PresentationSelection) => Promise<void>;
+  addToCart: (product: Product, quantity: number, presentation?: PresentationSelection) => Promise<boolean>;
   removeFromCart: (productId: string, presentationId?: string) => void;
   updateCartItemQuantity: (productId: string, quantity: number, presentationId?: string) => Promise<void>;
   clearCart: () => void;
@@ -284,6 +284,13 @@ export const usePosStore = create<PosStore>()(
     const { cart } = get();
     set({ error: null });
 
+    // Guard: rechazar productos con precio inválido
+    const priceUsd = presentation?.priceUsd ?? product.priceUsd;
+    if (!priceUsd || priceUsd <= 0 || !Number.isFinite(priceUsd)) {
+      set({ error: `El precio de "${product.name}" no es válido (${priceUsd}). Verifica el producto.` });
+      return false;
+    }
+
       if (presentation) {
       const totalConsumption = cart
         .filter((item) => item.productId === product.id)
@@ -293,7 +300,7 @@ export const usePosStore = create<PosStore>()(
       if (!isAssembly && totalConsumption + requestedConsumption > product.stock) {
         const available = Math.floor((product.stock - totalConsumption) / presentation.unitMultiplier);
         set({ error: `Stock insuficiente. Disponible: ${Math.max(0, available)} unidades.` });
-        return;
+        return false;
       }
 
       // A2: Pre-validación de ingredientes para productos assembly
@@ -303,13 +310,13 @@ export const usePosStore = create<PosStore>()(
           const error = await validateAssemblyIngredients(recipeData, product, quantity);
           if (error) {
             set({ error });
-            return;
+            return false;
           }
         }
       }
 
       const displayName = `${product.name} - ${presentation.name}`;
-      const presUnitPrice = presentation.priceUsd;
+      const presUnitPrice = priceUsd;
 
       const existing = cart.find(
         (item) => item.productId === product.id && item.presentationId === presentation.id,
@@ -349,7 +356,7 @@ export const usePosStore = create<PosStore>()(
           ],
         });
       }
-      return;
+      return true;
     }
 
     // Original behavior for products without presentations
@@ -364,18 +371,18 @@ export const usePosStore = create<PosStore>()(
         ? (product.stock / 1000).toFixed(2)
         : product.stock;
       set({ error: `Stock insuficiente. Disponible: ${available} ${product.unit === 'lt' ? 'Lt' : product.unit === 'kg' ? 'Kg' : ''}` });
-      return;
+      return false;
     }
 
     // A2: Pre-validación de ingredientes para productos assembly
     if (isAssembly) {
       const recipeData = get().assemblyRecipesMap[product.id];
       if (recipeData) {
-        const error = await validateAssemblyIngredients(recipeData, product, totalRequested);
-        if (error) {
-          set({ error });
-          return;
-        }
+          const error = await validateAssemblyIngredients(recipeData, product, totalRequested);
+          if (error) {
+            set({ error });
+            return false;
+          }
       }
     }
     const existing = cart.find((item) => item.productId === product.id);
@@ -414,6 +421,7 @@ export const usePosStore = create<PosStore>()(
         ],
       });
     }
+    return true;
   },
 
   removeFromCart: (productId, presentationId?: string) => {
