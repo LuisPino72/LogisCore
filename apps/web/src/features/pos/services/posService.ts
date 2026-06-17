@@ -11,7 +11,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
-import { isSameDayVzla, startOfDayVzla, endOfDayVzla } from '../../../lib/date';
+import { isSameDayVzla, startOfDayVzla, endOfDayVzla, startOfDayFromDateStringVzla, endOfDayFromDateStringVzla } from '../../../lib/date';
 import { PosErrors } from '../../../specs/pos/errors';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import { CreateSaleInputSchema, calculateSaleTotals, MAX_PARKED_CARTS } from '../../../specs/pos';
@@ -1130,11 +1130,11 @@ export const posService = {
           if (r.deletedAt || r.status !== 'completed') return false;
           if (startDate) {
             const saleDate = new Date(r.createdAt);
-            if (saleDate < new Date(startOfDayVzla(new Date(startDate)))) return false;
+            if (saleDate < new Date(startOfDayFromDateStringVzla(startDate))) return false;
           }
           if (endDate) {
             const saleDate = new Date(r.createdAt);
-            if (saleDate > new Date(endOfDayVzla(new Date(endDate)))) return false;
+            if (saleDate > new Date(endOfDayFromDateStringVzla(endDate))) return false;
           }
           return true;
         })
@@ -1154,10 +1154,10 @@ export const posService = {
           .limit(50);
 
         if (startDate) {
-          query = query.gte('created_at', startOfDayVzla(new Date(startDate)));
+          query = query.gte('created_at', startOfDayFromDateStringVzla(startDate));
         }
         if (endDate) {
-          query = query.lte('created_at', endOfDayVzla(new Date(endDate)));
+          query = query.lte('created_at', endOfDayFromDateStringVzla(endDate));
         }
 
         const { data } = await query;

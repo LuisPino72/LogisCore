@@ -146,7 +146,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   ];
 
   return (
-    <div className="flex flex-col h-full p-3 pb-24 sm:pb-3">
+    <div className="flex flex-col h-full p-3 pb-32 sm:pb-3">
       <div className="flex gap-1 sm:hidden mb-2 shrink-0 overflow-x-auto">
         {[
           { label: 'Hoy', getRange: () => { const today = toDateStringVzla(); return { start: today, end: today }; } },

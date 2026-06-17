@@ -11,7 +11,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
 
   return (
     <div className="flex items-center justify-center sm:justify-between gap-3 px-2 py-3 text-sm text-gray-600">
-      <span className="truncate">Pág. {page}/{totalPages}</span>
+      <span className="truncate">{page}/{totalPages}</span>
       <div className="flex items-center gap-1">
         <button
           disabled={page <= 1}

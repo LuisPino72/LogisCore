@@ -44,3 +44,15 @@ export function toDateStringVzla(date?: Date): string {
   const p = getVzlaParts(date);
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 }
+
+/** Parse a "YYYY-MM-DD" string (Vzla date) → start of that day in Vzla as ISO UTC */
+export function startOfDayFromDateStringVzla(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 4, 0, 0, 0)).toISOString();
+}
+
+/** Parse a "YYYY-MM-DD" string (Vzla date) → end of that day in Vzla (23:59:59.999) as ISO UTC */
+export function endOfDayFromDateStringVzla(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1, 3, 59, 59, 999)).toISOString();
+}
