@@ -349,6 +349,8 @@ export interface DexieProductionOrder {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  totalCost?: number;
+  costPerUnit?: number;
 }
 
 // BACKLOG-106 [AUTH-002]: Tabla rolePermissions (modelo simplificado Owner/Admin/Employee)
@@ -476,6 +478,8 @@ export class LogisCoreDB extends Dexie {
     this.version(23).stores({
       purchaseOrderItems: 'id, tenantId, orderId, productId, [tenantId+orderId], [orderId]',
     });
+    // PLAN-PRODUCTION-COST: v24 — add totalCost, costPerUnit to productionOrders (no index needed)
+    this.version(24).stores({});
   }
 }
 

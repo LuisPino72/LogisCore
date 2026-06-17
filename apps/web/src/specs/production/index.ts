@@ -123,6 +123,9 @@ export const ProductionOrderSchema = z.object({
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
   deletedAt: isoDateTime.optional(),
+  // PLAN-PRODUCTION-COST: Costos FIFO capturados al momento de crear la orden
+  totalCost: z.number().optional(),
+  costPerUnit: z.number().optional(),
 });
 
 export type ProductionOrder = z.infer<typeof ProductionOrderSchema>;

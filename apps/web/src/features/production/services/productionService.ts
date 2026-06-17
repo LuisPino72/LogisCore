@@ -272,6 +272,8 @@ function toProductionOrder(raw: Record<string, unknown>): ProductionOrder {
     createdAt: raw.createdAt as string,
     updatedAt: raw.updatedAt as string,
     deletedAt: raw.deletedAt as string | undefined,
+    totalCost: raw.totalCost != null ? (raw.totalCost as number) : undefined,
+    costPerUnit: raw.costPerUnit != null ? (raw.costPerUnit as number) : undefined,
   };
 }
 
@@ -1048,6 +1050,8 @@ export const productionService = {
           createdBy: userId,
           createdAt: now,
           updatedAt: now,
+          totalCost: preciseRound(totalIngredientCost, 2),
+          costPerUnit: costPerProducedUnit,
         };
         await db.productionOrders.add(order);
         await syncQueue.enqueue('production_orders', 'CREATE', orderId, toSnake(order as unknown as Record<string, unknown>), tenantId);
@@ -1158,6 +1162,8 @@ export const productionService = {
         batchCount: input.batchCount, quantityTarget, quantityProduced: 0,
         status: 'confirmed', plannedDate: input.plannedDate, createdBy: userId,
         createdAt: now, updatedAt: now,
+        totalCost: preciseRound(totalIngredientCost, 2),
+        costPerUnit: costPerProducedUnit,
       } as unknown as Record<string, unknown>));
     } catch (err) {
       if (err instanceof AppError) return failure(err);
@@ -1606,9 +1612,11 @@ export const productionService = {
         });
       }
 
-      const costPerUnit = order.quantityTarget > 0
+      // Prefer stored FIFO costs from creation time; fall back to WAC recalculation for old orders
+      const finalTotalCost = order.totalCost ?? preciseRound(totalCost, 2);
+      const finalCostPerUnit = order.costPerUnit ?? (order.quantityTarget > 0
         ? preciseRound(totalCost / order.quantityTarget, 4)
-        : 0;
+        : 0);
 
       return success({
         order: toProductionOrder(order as unknown as Record<string, unknown>),
@@ -1625,8 +1633,8 @@ export const productionService = {
           deletedAt: undefined,
         })),
         ingredientCosts,
-        totalCost: preciseRound(totalCost, 2),
-        costPerUnit,
+        totalCost: finalTotalCost,
+        costPerUnit: finalCostPerUnit,
       });
     } catch (err) {
       logger.error(PRODUCTION_MODULE, 'Error en getOrderDetails:', err);
