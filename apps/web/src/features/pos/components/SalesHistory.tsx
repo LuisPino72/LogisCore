@@ -9,6 +9,7 @@ import type { PaymentMethod } from '../../../specs/pos';
 import { usePosStore } from '../stores/posStore';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { toDateStringVzla } from '@/lib/date';
 
 const PAGE_SIZE = 20;
 
@@ -34,7 +35,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
 
   // Auto-swap if start > end, and reject future dates
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toDateStringVzla();
     if (startDate && startDate > today) {
       setStartDate(today);
     }
@@ -147,10 +148,10 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
     <div className="flex flex-col h-full p-3">
       <div className="flex gap-1 sm:hidden mb-2 shrink-0 overflow-x-auto">
         {[
-          { label: 'Hoy', getRange: () => { const d = new Date(); return { start: d.toISOString().split('T')[0], end: d.toISOString().split('T')[0] }; } },
-          { label: 'Ayer', getRange: () => { const d = new Date(); d.setDate(d.getDate() - 1); return { start: d.toISOString().split('T')[0], end: d.toISOString().split('T')[0] }; } },
-          { label: '7 días', getRange: () => { const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 7); return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }; } },
-          { label: '30 días', getRange: () => { const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 30); return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }; } },
+          { label: 'Hoy', getRange: () => { const today = toDateStringVzla(); return { start: today, end: today }; } },
+          { label: 'Ayer', getRange: () => { const d = new Date(); d.setDate(d.getDate() - 1); const y = toDateStringVzla(d); return { start: y, end: y }; } },
+          { label: '7 días', getRange: () => { const end = toDateStringVzla(); const start = new Date(); start.setDate(start.getDate() - 7); return { start: toDateStringVzla(start), end }; } },
+          { label: '30 días', getRange: () => { const end = toDateStringVzla(); const start = new Date(); start.setDate(start.getDate() - 30); return { start: toDateStringVzla(start), end }; } },
         ].map(({ label, getRange }) => (
           <button
             key={label}

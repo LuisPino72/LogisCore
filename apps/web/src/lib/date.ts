@@ -39,3 +39,8 @@ export function startOfNextDayVzla(date?: Date): string {
   const nextMidnightUtc = Date.UTC(p.year, p.month - 1, p.day + 1, 4, 0, 0, 0);
   return new Date(nextMidnightUtc).toISOString();
 }
+
+export function toDateStringVzla(date?: Date): string {
+  const p = getVzlaParts(date);
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+}
