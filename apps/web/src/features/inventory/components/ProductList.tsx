@@ -120,17 +120,17 @@ function ProductActions({ product, bulkMode, isOwner, isOnline, selectedForBulk,
   }
 
   return (
-    <div className="flex items-center justify-end gap-0">
-      <Button variant="ghost" size="sm" onClick={() => onEdit(product)} className="p-1 min-w-10 min-h-10" title="Editar" disabled={!isOnline}>
+    <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:justify-end sm:gap-0 sm:flex-nowrap max-w-[120px] sm:max-w-none">
+      <Button variant="ghost" size="sm" onClick={() => onEdit(product)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Editar" disabled={!isOnline}>
         <Edit3 size={15} />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-10 min-h-10" title="Eliminar" disabled={!isOnline}>
+      <Button variant="ghost" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Eliminar" disabled={!isOnline}>
         <Trash2 size={15} className="text-danger" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1 min-w-10 min-h-10" title="Ajustar stock" disabled={!isOnline}>
+      <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Ajustar stock" disabled={!isOnline}>
         <Settings size={15} className="text-primary" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1 min-w-10 min-h-10" title="Lotes">
+      <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Lotes">
         <Layers size={15} className="text-gray-600" />
       </Button>
     </div>
@@ -616,7 +616,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   </Badge>
                 </div>
                 {isOwner && (
-                  <div className="mt-2 flex items-center justify-center gap-0.5">
+                  <div className="mt-2 grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:justify-center sm:gap-0.5">
                     {bulkMode ? (
                       <button
                         type="button"
@@ -645,16 +645,16 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                       </button>
                     ) : (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-11 min-h-11" title="Editar" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Editar" disabled={!isOnline}>
                           <Edit3 size={15} />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Eliminar" disabled={!isOnline}>
                           <Trash2 size={15} className="text-danger" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-11 min-h-11" title="Ajustar stock" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Ajustar stock" disabled={!isOnline}>
                           <Settings size={15} className="text-primary" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1.5 min-w-11 min-h-11" title="Lotes">
+                        <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Lotes">
                           <Layers size={15} className="text-gray-600" />
                         </Button>
                       </>

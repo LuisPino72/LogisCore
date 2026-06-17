@@ -378,7 +378,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             <button
               type="button"
               onClick={removeImage}
-              className="absolute top-0 right-0 min-w-11 min-h-11 flex items-center justify-center bg-gray-900/60 text-white rounded-bl-lg hover:bg-danger transition-colors"
+              className="absolute top-0.5 right-0.5 w-6 h-6 flex items-center justify-center bg-gray-900/70 text-white rounded-md hover:bg-danger transition-colors"
             >
               <X size={14} />
             </button>
@@ -560,10 +560,10 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="input-wrapper">
               <label className="input-label">
-                Costo total de la compra $
+                Costo de la compra $
               </label>
               <Input
                 sanitize="currency"
@@ -583,7 +583,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
             <div className="input-wrapper">
               <label className="input-label">
-                Stock inicial (requerido)
+                Stock inicial
                 {formData.unit === 'kg' && ' (Kg)'}
                 {formData.unit === 'lt' && ' (Lt)'}
               </label>
@@ -605,24 +605,24 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 {formData.unit === 'unidad' && 'Cantidad inicial en unidades'}
               </p>
             </div>
-          </div>
 
-          <div className="input-wrapper">
-            <label className="input-label">
-              Stock mínimo (alerta)
-              {formData.unit === 'kg' && ' (Kg)'}
-              {formData.unit === 'lt' && ' (Lt)'}
-            </label>
-            <Input
-              sanitize="number"
-              decimals={0}
-              placeholder="0"
+            <div className="input-wrapper">
+              <label className="input-label">
+                Stock mínimo (alerta)
+                {formData.unit === 'kg' && ' (Kg)'}
+                {formData.unit === 'lt' && ' (Lt)'}
+              </label>
+              <Input
+                sanitize="number"
+                decimals={0}
+                placeholder="0"
                 value={formData.stockMin || ''}
                 onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
                 validation={{ min: 0, max: 999 }}
                 error={errors.stockMin}
                 inputMode="numeric"
               />
+            </div>
           </div>
 
           <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
@@ -669,16 +669,32 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         {!isVariants && (
           <>
             {creationType === 'weighted' && (
-              <div className="input-wrapper">
-                <label className="input-label">Unidad de medida</label>
-                <Select
-                  className="max-w-xs"
-                  value={formData.productType}
-                  onChange={(e) => setField('productType', e.target.value as 'unidad' | 'pesable_kg' | 'pesable_lt')}
-                >
-                  <option value="pesable_kg">Kilogramos (Kg)</option>
-                  <option value="pesable_lt">Litros (Lt)</option>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr] gap-3">
+                <div className="input-wrapper">
+                  <label className="input-label">Unidad de medida</label>
+                  <Select
+                    value={formData.productType}
+                    onChange={(e) => setField('productType', e.target.value as 'unidad' | 'pesable_kg' | 'pesable_lt')}
+                  >
+                    <option value="pesable_kg">Kilogramos (Kg)</option>
+                    <option value="pesable_lt">Litros (Lt)</option>
+                  </Select>
+                </div>
+                <div className="input-wrapper">
+                  <label className="input-label">Opciones</label>
+                  <div className="flex items-center gap-4 h-10.5 px-3 border border-gray-300 rounded-lg bg-surface-alt">
+                    <Checkbox
+                      label="IVA"
+                      checked={formData.isTaxable}
+                      onChange={(e) => setField('isTaxable', e.target.checked)}
+                    />
+                    <Checkbox
+                      label="Disponible para venta"
+                      checked={formData.isSellable}
+                      onChange={(e) => setField('isSellable', e.target.checked)}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -710,7 +726,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   inputClassName="text-sm"
                   inputMode="decimal"
                 />
-                <p className="text-xs text-gray-600 mt-0.5">Costo total pagado por el lote de productos.</p>
+                <p className="text-xs text-gray-600 mt-0.5">Costo total pagado por el lote.</p>
               </div>
 
               <div className="input-wrapper">
@@ -735,43 +751,43 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   {formData.productType === 'pesable_lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
                 </p>
               </div>
-            </div>
 
-            
-
-            <div className="input-wrapper">
-              <label className="input-label">
-                Stock mínimo (alerta)
-                {formData.productType === 'pesable_kg' && ' (Kg)'}
-                {formData.productType === 'pesable_lt' && ' (Lt)'}
-              </label>
-              <Input
-                sanitize="number"
-                decimals={0}
-                placeholder="0"
-                value={formData.stockMin || ''}
-                onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
-                validation={{ min: 0, max: 999 }}
-                error={errors.stockMin}
-                inputMode="numeric"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-              <Settings size={14} className="text-gray-400 shrink-0" />
-              <div className="flex-1 space-y-1">
-                <Checkbox
-                  label="Producto con IVA"
-                  checked={formData.isTaxable}
-                  onChange={(e) => setField('isTaxable', e.target.checked)}
-                />
-                <Checkbox
-                  label="Disponible para venta"
-                  checked={formData.isSellable}
-                  onChange={(e) => setField('isSellable', e.target.checked)}
+              <div className="input-wrapper">
+                <label className="input-label">
+                  Stock mínimo (alerta)
+                  {formData.productType === 'pesable_kg' && ' (Kg)'}
+                  {formData.productType === 'pesable_lt' && ' (Lt)'}
+                </label>
+                <Input
+                  sanitize="number"
+                  decimals={0}
+                  placeholder="0"
+                  value={formData.stockMin || ''}
+                  onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+                  validation={{ min: 0, max: 999 }}
+                  error={errors.stockMin}
+                  inputMode="numeric"
                 />
               </div>
             </div>
+
+            {creationType !== 'weighted' && (
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <Settings size={14} className="text-gray-400 shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <Checkbox
+                    label="Producto con IVA"
+                    checked={formData.isTaxable}
+                    onChange={(e) => setField('isTaxable', e.target.checked)}
+                  />
+                  <Checkbox
+                    label="Disponible para venta"
+                    checked={formData.isSellable}
+                    onChange={(e) => setField('isSellable', e.target.checked)}
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -1053,21 +1069,23 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         </div>
       )}
 
-      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-        <Settings size={14} className="text-gray-400 shrink-0" />
-        <div className="flex-1 space-y-1">
-          <Checkbox
-            label="Producto con IVA"
-            checked={formData.isTaxable}
-            onChange={(e) => setField('isTaxable', e.target.checked)}
-          />
-          <Checkbox
-            label="Disponible para venta"
-            checked={formData.isSellable}
-            onChange={(e) => setField('isSellable', e.target.checked)}
-          />
-        </div>
-      </div>
+            {creationType !== 'weighted' && (
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <Settings size={14} className="text-gray-400 shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <Checkbox
+                    label="Producto con IVA"
+                    checked={formData.isTaxable}
+                    onChange={(e) => setField('isTaxable', e.target.checked)}
+                  />
+                  <Checkbox
+                    label="Disponible para venta"
+                    checked={formData.isSellable}
+                    onChange={(e) => setField('isSellable', e.target.checked)}
+                  />
+                </div>
+              </div>
+            )}
     </div>
   );
 
