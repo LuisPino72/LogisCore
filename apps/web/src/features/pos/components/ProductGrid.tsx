@@ -180,7 +180,7 @@ export const ProductGrid = memo(function ProductGrid({
       )}
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} variant="shimmer" className="aspect-square rounded-lg" />
           ))}
@@ -198,8 +198,8 @@ export const ProductGrid = memo(function ProductGrid({
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto flex-1 pb-16 md:pb-4">
-            {pagedProducts.map((product) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pb-16 md:pb-4">
+            {pagedProducts.map((product, index) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -209,6 +209,7 @@ export const ProductGrid = memo(function ProductGrid({
                 exchangeRateBs={exchangeRateBs}
                 onReorder={onReorder}
                 hasAssemblyRecipe={product.hasAssemblyRecipe}
+                index={index}
               />
             ))}
           </div>

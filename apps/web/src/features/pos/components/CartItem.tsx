@@ -82,7 +82,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
   const btnActive = 'bg-primary/20 scale-95';
 
   return (
-    <div className="py-2.5 border-b border-border last:border-0">
+    <div className="py-2.5 border-b border-border last:border-0 animate-cart-add">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex flex-col flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-800 wrap-break-word">{item.name}</p>
@@ -117,13 +117,13 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
               onTouchEnd={stopRepeat}
               onTouchCancel={cancelRepeat}
               onClick={() => handleClick(-step)}
-              className={`${btnBase} ${isRepeating === 'minus' ? btnActive : btnIdle}`}
+              className={`${btnBase} ${isRepeating === 'minus' ? btnActive : btnIdle} active:scale-90`}
               aria-label="Reducir cantidad"
             >
               <Minus size={16} className={`transition-transform duration-150 ${isRepeating === 'minus' ? 'scale-110' : ''}`} />
             </button>
 
-            <div className="w-18 sm:w-22">
+            <div key={item.quantity} className="w-18 sm:w-22 animate-count-pop">
               <Input
                 type="text"
                 inputMode="decimal"
@@ -146,7 +146,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
               onTouchEnd={stopRepeat}
               onTouchCancel={cancelRepeat}
               onClick={() => handleClick(step)}
-              className={`${btnBase} ${isRepeating === 'plus' ? btnActive : btnIdle}`}
+              className={`${btnBase} ${isRepeating === 'plus' ? btnActive : btnIdle} active:scale-90`}
               aria-label="Aumentar cantidad"
             >
               <Plus size={16} className={`transition-transform duration-150 ${isRepeating === 'plus' ? 'scale-110' : ''}`} />

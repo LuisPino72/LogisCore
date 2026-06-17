@@ -81,6 +81,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
 
   // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
@@ -491,16 +492,25 @@ export function PosPage({ tenantId }: PosPageProps) {
           <div className="px-3 pt-1">
             <div className="flex items-center gap-2 p-2 rounded-lg bg-warning/10 border border-warning/20">
               <AlertTriangle size={16} className="text-warning shrink-0" />
-              <span className="text-xs text-warning font-medium truncate">
+              <span className={`text-xs text-warning font-medium ${showFullAlert ? '' : 'line-clamp-1 sm:line-clamp-none'}`}>
                 Stock bajo: {lowStockAlert.slice(0, 3).map((p) => p.name).join(', ')}{lowStockAlert.length > 3 ? ` +${lowStockAlert.length - 3}` : ''}
               </span>
+              {lowStockAlert.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setShowFullAlert((v) => !v)}
+                  className="text-[10px] text-warning font-semibold hover:underline shrink-0 sm:hidden"
+                >
+                  {showFullAlert ? 'Ver menos' : 'Ver más'}
+                </button>
+              )}
               <Badge variant="warning" className="ml-auto text-xs shrink-0">{lowStockAlert.length}</Badge>
             </div>
           </div>
         )}
 
         {activeTab === 'sell' ? (
-          <>
+          <div className="animate-tab-fade">
             <ParkedCartsList
               carts={parkedCarts}
               onLoad={handleLoadParked}
@@ -547,9 +557,9 @@ export function PosPage({ tenantId }: PosPageProps) {
                 onReorder={handleReorder}
               />
             </div>
-          </>
+          </div>
         ) : (
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden animate-tab-fade">
             <SalesHistory
               tenantId={tenantId ?? ''}
               sales={salesHistory}

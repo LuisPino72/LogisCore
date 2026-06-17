@@ -97,7 +97,10 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         return (
           <div className="flex flex-wrap items-center gap-1">
             <Badge variant="info">{meta?.label ?? sale.paymentMethod}</Badge>
-            {sale.isCreditSale && (
+            {sale.status === 'voided' && (
+              <Badge variant="danger">Anulada</Badge>
+            )}
+            {sale.isCreditSale && sale.status !== 'voided' && (
               <Badge variant={sale.creditCollected ? 'success' : 'warning'}>
                 {sale.creditCollected ? 'Cobrado' : 'Fiado'}
               </Badge>
@@ -155,7 +158,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             key={label}
             type="button"
             onClick={() => { const r = getRange(); setStartDate(r.start); setEndDate(r.end); }}
-            className="px-3 py-2.5 min-h-11 rounded-lg text-xs font-medium whitespace-nowrap bg-surface-alt text-gray-600 border border-border hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            className="px-3 py-2.5 min-h-11 rounded-lg text-xs font-medium whitespace-nowrap bg-surface-alt text-gray-600 border border-border hover:bg-gray-100 active:bg-gray-200 active:scale-[0.95] transition-all"
           >
             {label}
           </button>
@@ -232,6 +235,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             sortKey={sortKey}
             sortDirection={sortDirection}
             onSort={handleSort}
+            rowClassName={(sale) => sale.status === 'voided' ? 'opacity-60 hover:bg-gray-50/80 transition-colors' : 'hover:bg-gray-50/80 transition-colors'}
           />
         </div>
       )}

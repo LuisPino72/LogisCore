@@ -13,9 +13,10 @@ interface CardProps {
   role?: string;
   tabIndex?: number;
   'aria-label'?: string;
+  style?: React.CSSProperties;
 }
 
-export const Card: FC<CardProps> = ({ children, header, footer, className, bodyClassName, interactive, onClick, onKeyDown, role, tabIndex, 'aria-label': ariaLabel }) => {
+export const Card: FC<CardProps> = ({ children, header, footer, className, bodyClassName, interactive, onClick, onKeyDown, role, tabIndex, 'aria-label': ariaLabel, style }) => {
   return (
     <div 
       className={cn(
@@ -23,6 +24,7 @@ export const Card: FC<CardProps> = ({ children, header, footer, className, bodyC
         interactive && 'card-interactive', 
         className
       )}
+      style={style}
       onClick={interactive ? onClick : undefined}
       onKeyDown={interactive ? onKeyDown : undefined}
       role={role}

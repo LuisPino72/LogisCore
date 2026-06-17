@@ -14,9 +14,10 @@ interface ProductCardProps {
   presentationCount?: number;
   onReorder?: (product: Product) => void;
   hasAssemblyRecipe?: boolean;
+  index?: number;
 }
 
-export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount, onReorder, hasAssemblyRecipe }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount, onReorder, hasAssemblyRecipe, index = 0 }: ProductCardProps) {
   const priceBs = exchangeRateBs > 0
     ? formatBs(product.priceUsd * exchangeRateBs)
     : null;
@@ -40,7 +41,8 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
       tabIndex={isOutOfStock ? -1 : 0}
       aria-label={isOutOfStock ? `${product.name} sin stock` : `Agregar ${product.name} al carrito`}
       bodyClassName="p-0"
-      className={`relative flex flex-col gap-0 overflow-hidden transition-all duration-200 ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.98] cursor-pointer hover:shadow-md hover:-translate-y-0.5'}`}
+      className={`relative flex flex-col gap-0 overflow-hidden transition-all duration-200 animate-card-in ripple-effect ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.98] cursor-pointer hover:shadow-md hover:-translate-y-0.5'}`}
+      style={{ animationDelay: `${index * 40}ms` }}
     >
       <button
         type="button"
@@ -58,7 +60,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
         />
       </button>
 
-      <div className="relative bg-surface-alt overflow-hidden aspect-4/3">
+      <div className="relative bg-surface-alt overflow-hidden aspect-4/3 shrink-0">
         <ImageWithFallback
           productId={product.id}
           imageUrl={product.imageUrl}

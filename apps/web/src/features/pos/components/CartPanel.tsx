@@ -62,7 +62,13 @@ export const CartPanel = memo(function CartPanel({
           {cart.length === 0 ? (
             <div className="py-8">
               <EmptyState
-                icon={<ShoppingCart size={32} />}
+                icon={
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" strokeDasharray="4 2" />
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <path d="M16 10a4 4 0 01-8 0" />
+                  </svg>
+                }
                 title="Carrito vacío"
                 description="Selecciona productos para agregar al carrito."
               />
@@ -109,7 +115,7 @@ export const CartPanel = memo(function CartPanel({
   return (
     <>
       {/* Desktop: fixed sidebar */}
-      <div className="hidden md:flex w-80 xl:w-96 shrink-0 h-full border-l border-border bg-white flex-col overflow-hidden">
+      <div className="hidden md:flex w-80 xl:w-96 shrink-0 h-full border-l border-border bg-white flex-col overflow-hidden animate-slide-in-right">
         {renderContent()}
       </div>
 
@@ -124,7 +130,7 @@ export const CartPanel = memo(function CartPanel({
           <ShoppingCart size={20} />
           {cart.length > 0 && (
             <>
-              <span className="ml-1 font-bold">{itemCount}</span>
+              <span className={`ml-1 font-bold ${cart.length > 0 ? 'animate-badge-bounce' : ''}`}>{itemCount}</span>
               <span className="ml-1 text-xs opacity-80">
                 ${cart.reduce((sum, item) => sum + item.totalPriceUsd, 0).toFixed(2)}
               </span>

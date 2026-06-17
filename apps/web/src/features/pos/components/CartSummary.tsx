@@ -137,7 +137,7 @@ export function CartSummary({
 
       <div className="flex justify-between min-w-0 flex-wrap text-base font-bold text-gray-900">
         <span>Total</span>
-        <span className="min-w-0 text-right">{formatUsd(totalUsd)} / {formatBs(totalBs)}</span>
+        <span key={totalUsd} className="min-w-0 text-right animate-count-pop">{formatUsd(totalUsd)} / {formatBs(totalBs)}</span>
       </div>
 
       {selectedCustomer ? (
@@ -219,7 +219,7 @@ export function CartSummary({
       )}
 
       {showDiscountInput && (
-        <div className="space-y-2 p-2 rounded-xl bg-surface-alt border border-border shadow-sm">
+        <div className="space-y-2 p-2 rounded-xl bg-surface-alt border border-border shadow-sm animate-slide-down-panel">
           <div className="flex gap-1">
             <button
               type="button"
@@ -270,7 +270,7 @@ export function CartSummary({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
         {normalPaymentMethods.map((m) => {
           const meta = METADATA_PAGOS[m];
           const selected = paymentMethod === m && !isCreditSale;
