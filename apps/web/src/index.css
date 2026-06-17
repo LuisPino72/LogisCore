@@ -178,6 +178,8 @@
 
 @media (max-width: 639px) {
   .modal-content, .modal-content-sm, .modal-content-lg, .modal-content-full {
+    max-height: 100dvh;
+    border-radius: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .modal-cart {

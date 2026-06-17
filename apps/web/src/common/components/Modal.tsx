@@ -37,7 +37,7 @@ export function Modal({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const { isKeyboardOpen, keyboardHeight } = useKeyboardLayout();
+  const { isKeyboardOpen } = useKeyboardLayout();
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (closeOnEsc && e.key === 'Escape') {
@@ -100,7 +100,9 @@ export function Modal({
     full: 'modal-content-full',
   };
 
-  const dynamicMaxHeight = isKeyboardOpen ? `${window.innerHeight - keyboardHeight - 16}px` : undefined;
+  const dynamicMaxHeight = isKeyboardOpen
+    ? `${window.visualViewport?.height ?? window.innerHeight}px`
+    : undefined;
 
   return createPortal(
     <div
