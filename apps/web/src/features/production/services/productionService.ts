@@ -1558,10 +1558,10 @@ export const productionService = {
         return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
       }
 
-      const lines = await db.recipeLines
-        .where({ recipeId: order.recipeId })
-        .filter((l) => !l.deletedAt)
-        .sortBy('sortOrder');
+      // BUG-PROD-002: Use expandRecipe to resolve sub-recipes (same as createOrder)
+      const expandResult = await expandRecipe(order.recipeId, order.batchCount);
+      if (!expandResult.ok) return expandResult;
+      const expandedLines = expandResult.data;
 
       const wasteMultiplier = 1 + (recipe.wastePct / 100);
       const ingredientCosts: Array<{
@@ -1575,23 +1575,33 @@ export const productionService = {
 
       let totalCost = 0;
 
-      for (const line of lines) {
+      for (const line of expandedLines) {
         const product = await db.products.where({ id: line.productId, tenantId }).first();
         const productName = product?.name || 'Desconocido';
+        // expandedLines already have batchCount multiplied; apply wasteMultiplier
         const neededInStorage = product
-          ? recipeQtyToStorageBase(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
-          : line.quantity * order.batchCount * wasteMultiplier;
+          ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
+          : line.quantity * wasteMultiplier;
         const needed = Math.ceil(neededInStorage);
-        const costPerUnit = product?.costPrice ?? 0;
-        const lineCost = needed * costPerUnit;
+        // BUG-PROD-006: Display quantity in product's native unit (e.g., 0.5 kg not 500 g)
+        const displayQty = product
+          ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+          : line.quantity * wasteMultiplier;
+        const displayUnit = product?.unit || line.unit;
+        // BUG-PROD-001: Pesable products store costPrice per display unit ($/kg, $/lt)
+        // but needed is in storage base (g, ml). Divide by 1000 for weighted products.
+        const costPerStorageUnit = product && product.isWeighted
+          ? (product.costPrice ?? 0) / 1000
+          : (product?.costPrice ?? 0);
+        const lineCost = needed * costPerStorageUnit;
         totalCost += lineCost;
 
         ingredientCosts.push({
           productId: line.productId,
           productName,
-          quantity: needed,
-          unit: line.unit,
-          costPerUnit,
+          quantity: preciseRound(displayQty, 2),
+          unit: displayUnit,
+          costPerUnit: preciseRound(costPerStorageUnit, 4),
           totalCost: preciseRound(lineCost, 2),
         });
       }
@@ -1603,7 +1613,17 @@ export const productionService = {
       return success({
         order: toProductionOrder(order as unknown as Record<string, unknown>),
         recipe: toRecipe(recipe as unknown as Record<string, unknown>),
-        lines: lines.map((l) => toRecipeLine(l as unknown as Record<string, unknown>)),
+        lines: expandedLines.map((l) => ({
+          id: '',
+          tenantId,
+          recipeId: order.recipeId,
+          productId: l.productId,
+          quantity: l.quantity,
+          unit: l.unit,
+          sortOrder: 0,
+          createdAt: '',
+          deletedAt: undefined,
+        })),
         ingredientCosts,
         totalCost: preciseRound(totalCost, 2),
         costPerUnit,
@@ -1639,7 +1659,9 @@ export const productionService = {
 
       // Buscar movimientos de inventario del producto terminado (production_output)
       // y de ingredientes (adjustment con reasonType consumo_interno) alrededor de la fecha de la orden
-      const orderDate = order.completedAt || order.createdAt;
+      // BUG-PROD-003: Movements are timestamped at order creation time (createdAt),
+      // not completion time. Always use createdAt for the time window.
+      const orderDate = order.createdAt;
       const startDate = new Date(new Date(orderDate).getTime() - 60000).toISOString(); // 1 min antes
       const endDate = new Date(new Date(orderDate).getTime() + 60000).toISOString(); // 1 min después
 
