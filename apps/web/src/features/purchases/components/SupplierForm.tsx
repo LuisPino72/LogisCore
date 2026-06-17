@@ -85,8 +85,8 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
     >
       <div className="space-y-4">
         {/* Header visual */}
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-linear-to-r from-primary/5 to-primary/10 border border-primary/10">
+          <div className="w-10 h-10 rounded-lg bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
             <Truck size={20} className="text-primary" />
           </div>
           <div className="min-w-0">

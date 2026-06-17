@@ -101,7 +101,7 @@ export function PriceHistoryModal({ supplierId, productId, productName, tenantId
                     <th className="text-right py-2 px-2 font-medium text-text-secondary">Total</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="purchase-stagger">
                   {pageData.map((entry, i) => (
                     <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                       <td className="py-2 px-2 text-gray-700">
@@ -121,9 +121,9 @@ export function PriceHistoryModal({ supplierId, productId, productName, tenantId
             </div>
 
             {/* Mobile cards */}
-            <div className="sm:hidden space-y-2">
+            <div className="sm:hidden space-y-2 supplier-stagger">
               {pageData.map((entry, i) => (
-                <div key={i} className="rounded-lg border border-gray-100 bg-white p-3 space-y-1.5">
+                <div key={i} className="rounded-lg border border-gray-100 bg-white p-3 space-y-1.5 hover:border-primary/20 transition-colors">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
                       {new Date(entry.date).toLocaleDateString('es-VE', {
@@ -142,9 +142,9 @@ export function PriceHistoryModal({ supplierId, productId, productName, tenantId
               ))}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-text-secondary pt-1 border-t border-gray-100">
-              <span>{history.length} compra{history.length !== 1 ? 's' : ''}</span>
-              <span>
+            <div className="flex items-center justify-between text-xs text-text-secondary pt-2 border-t border-gray-100">
+              <span className="px-2.5 py-1 rounded-full bg-gray-100 font-medium">{history.length} compra{history.length !== 1 ? 's' : ''}</span>
+              <span className="px-2.5 py-1 rounded-full bg-primary/5 text-primary font-semibold">
                 Promedio:{' '}
                 {formatUsd(history.reduce((sum, e) => sum + e.totalUsd, 0) / history.reduce((sum, e) => sum + e.quantity, 0))}
               </span>

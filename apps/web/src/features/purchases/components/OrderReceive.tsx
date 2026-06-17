@@ -165,7 +165,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
             const hasDecimals = info.isWeighted;
 
             return (
-              <div key={item.id} className={`rounded-lg border p-3 space-y-2 transition-colors ${isComplete ? 'border-success/30 bg-success/5' : 'border-border bg-surface-alt'}`}>
+              <div key={item.id} className={`rounded-lg border p-3 space-y-2 transition-all duration-300 ${isComplete ? 'border-success/30 bg-success/5 shadow-sm' : 'border-border bg-surface-alt'}`}>
                 <div className="flex justify-between items-start">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -177,21 +177,23 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
                     <p className="text-xs text-text-secondary">Pendiente: {hasDecimals ? pending.toFixed(2) : pending} {info.unit}</p>
                   </div>
                   {isComplete && (
-                    <CheckCircle size={16} className="text-success shrink-0 ml-2" />
+                    <span className="animate-completion-pop">
+                      <CheckCircle size={20} className="text-success shrink-0 ml-2" />
+                    </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-300"
+                      className={`h-full rounded-full transition-all duration-500 ${pct < 100 ? 'progress-shimmer' : ''}`}
                       style={{
                         width: `${Math.min(pct, 100)}%`,
                         backgroundColor: isComplete ? 'var(--color-success)' : 'var(--color-accent)',
                       }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-text-secondary shrink-0 w-10 text-right">{pct}%</span>
+                  <span className="text-xs font-semibold text-text-secondary shrink-0 w-10 text-right">{pct}%</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -226,7 +228,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
           <button
             type="button"
             onClick={receiveAll}
-            className="w-full text-sm text-primary font-medium py-3 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors min-h-11"
+            className="w-full text-sm text-primary font-semibold py-3 rounded-lg border border-primary/20 bg-linear-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 transition-all duration-200 min-h-11 hover:shadow-sm active:scale-[0.98]"
           >
             <Package size={14} className="inline mr-1.5 -mt-0.5" />
             Recibir todo lo pendiente

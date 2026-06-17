@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShoppingCart, CheckCircle, Package, XCircle, Pencil, Trash2, MoreVertical, Eye } from 'lucide-react';
 import { Button, Badge, EmptyState, Modal, Dropdown, Pagination } from '../../../common/components';
+import { cn } from '../../../lib/utils';
 import type { PurchaseOrderWithItems, PurchaseOrderStatus, PurchaseOrderItem } from '../../../specs/purchases';
 import { OrderReceive } from './OrderReceive';
 import { formatUsd } from '@/lib/formatBs';
@@ -42,7 +43,12 @@ const STATUS_LABELS: Record<PurchaseOrderStatus, { label: string; variant: 'succ
 
 function StatusBadge({ status }: { status: PurchaseOrderStatus }) {
   const cfg = STATUS_LABELS[status];
-  return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
+  const isActive = status === 'confirmed' || status === 'partially_received';
+  return (
+    <span className={cn(isActive && 'status-pulse')}>
+      <Badge variant={cfg.variant} dot={isActive}>{cfg.label}</Badge>
+    </span>
+  );
 }
 
 function getOrderProgress(order: PurchaseOrderWithItems): { received: number; total: number; pct: number } {
@@ -58,7 +64,7 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Orden #${order.id.slice(0, 8).toUpperCase()}`}>
-      <div className={`space-y-4 border-l-3 ${getStatusBorderColor(order.status)}`}>
+      <div className={`space-y-4 border-l-[3px] pl-4 ${getStatusBorderColor(order.status)}`}>
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <span className="text-xs font-bold text-primary">{getInitials(order.supplierName || 'SP')}</span>
@@ -98,11 +104,11 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
           <div className="border-t border-border pt-3 space-y-1">
             <div className="flex justify-between text-xs text-text-secondary">
               <span>Progreso de recepción</span>
-              <span>{progress.received}/{progress.total} ({progress.pct}%)</span>
+              <span className="font-medium">{progress.received}/{progress.total} ({progress.pct}%)</span>
             </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-300 progress-fill"
+                className="h-full rounded-full transition-all duration-500 progress-fill progress-shimmer"
                 style={{
                   width: `${Math.min(progress.pct, 100)}%`,
                   backgroundColor: progress.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)',
@@ -174,6 +180,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
 
   return (
     <div className="space-y-3">
+      <div className="purchase-stagger">
       {pagedOrders.map((order) => {
         const progress = getOrderProgress(order);
         const isReceiving = order.status === 'confirmed' || order.status === 'partially_received';
@@ -181,12 +188,12 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
         return (
           <div
             key={order.id}
-            className={`rounded-xl border border-border bg-white overflow-hidden transition-shadow hover:shadow-md border-l-3 ${getStatusBorderColor(order.status)}`}
+            className={`mb-3 rounded-xl border border-border bg-white overflow-hidden transition-all duration-200 order-card-hover border-l-3 ${getStatusBorderColor(order.status)}`}
           >
             <div className="p-3 space-y-3">
               {/* Header: icon + info + actions */}
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
                   <ShoppingCart size={18} className="text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -200,7 +207,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                 {isOwner && (
                   <Dropdown
                     align="right"
-                    trigger={<MoreVertical size={18} className="text-gray-500 shrink-0" />}
+                    trigger={<MoreVertical size={18} className="text-gray-800 shrink-0" />}
                     items={[
                       { label: 'Ver detalle', icon: <Eye size={16} />, onClick: () => setDetailOrder(order) },
                     ]}
@@ -213,11 +220,11 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-text-secondary">
                     <span>Progreso de recepción</span>
-                    <span>{progress.received}/{progress.total} ({progress.pct}%)</span>
+                    <span className="font-medium">{progress.received}/{progress.total} ({progress.pct}%)</span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-300 progress-fill"
+                      className="h-full rounded-full transition-all duration-500 progress-fill progress-shimmer"
                       style={{
                         width: `${Math.min(progress.pct, 100)}%`,
                         backgroundColor: progress.pct === 100 ? 'var(--color-success)' : 'var(--color-accent)',
@@ -230,13 +237,13 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
               {/* Items preview */}
               <div className="space-y-1.5 bg-gray-50/80 rounded-lg border border-gray-100 p-2.5">
                 {order.items.slice(0, 3).map((item: PurchaseOrderItem) => (
-                  <div key={item.id} className="flex justify-between text-xs text-gray-600">
+                  <div key={item.id} className="flex justify-between text-xs text-gray-800 hover:bg-gray-100/50 rounded px-1 py-0.5 transition-colors">
                     <span className="truncate flex-1 mr-2 font-medium">{item.productName || item.productId.slice(0, 8)}</span>
                     <span className="shrink-0 text-text-secondary">x{item.quantity} · {formatUsd(item.totalUsd)}</span>
                   </div>
                 ))}
                 {order.items.length > 3 && (
-                  <div className="text-xs text-text-secondary text-center pt-1 border-t border-gray-100/80 mt-1">
+                  <div className="text-xs text-text-secondary text-center pt-1 border-t border-gray-100/80 mt-1 font-medium">
                     +{order.items.length - 3} artículos más
                   </div>
                 )}
@@ -279,6 +286,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
           </div>
         );
       })}
+      </div>
 
       {receivingOrder && (
         <OrderReceive

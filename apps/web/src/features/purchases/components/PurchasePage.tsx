@@ -191,11 +191,15 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
     return <EmptyState icon={<ShoppingCart size={48} />} title="Selecciona un negocio" description="Elige o crea un negocio para empezar a usar Compras." />;
   }
 
+  const draftCount = orders.filter((o) => o.status === 'draft').length;
+  const confirmedCount = orders.filter((o) => o.status === 'confirmed').length;
+  const receivedCount = orders.filter((o) => o.status === 'received').length;
+
   return (
     <div className="p-3 sm:p-6 pb-24 sm:pb-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
             <ShoppingCart size={18} className="text-primary" />
           </div>
           <div className="min-w-0">
@@ -211,11 +215,12 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
         )}
       </div>
 
+      {/* Desktop tabs */}
       <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
         <button
           type="button"
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200',
+            'relative flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200',
             activeTab === 'ordenes'
               ? 'bg-primary text-white shadow-sm'
               : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
@@ -224,11 +229,19 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
         >
           <ShoppingCart size={18} />
           Órdenes
+          {pendingOrdersCount > 0 && (
+            <span className={cn(
+              'ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center',
+              activeTab === 'ordenes' ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
+            )}>
+              {pendingOrdersCount}
+            </span>
+          )}
         </button>
         <button
           type="button"
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200',
+            'relative flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200',
             activeTab === 'proveedores'
               ? 'bg-primary text-white shadow-sm'
               : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
@@ -237,8 +250,40 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
         >
           <Truck size={18} />
           Proveedores
+          {suppliers.length > 0 && (
+            <span className={cn(
+              'ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center',
+              activeTab === 'proveedores' ? 'bg-white/25 text-white' : 'bg-gray-200 text-gray-600'
+            )}>
+              {suppliers.length}
+            </span>
+          )}
         </button>
       </div>
+
+      {/* Quick stats bar - desktop only */}
+      {activeTab === 'ordenes' && orders.length > 0 && (
+        <div className="hidden sm:flex items-center gap-3 text-xs">
+          {draftCount > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="text-amber-700 font-medium">{draftCount} borrador{draftCount !== 1 ? 'es' : ''}</span>
+            </div>
+          )}
+          {confirmedCount > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              <span className="text-blue-700 font-medium">{confirmedCount} confirmada{confirmedCount !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+          {receivedCount > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="text-green-700 font-medium">{receivedCount} recibida{receivedCount !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <Card>
         {activeTab === 'ordenes' && (

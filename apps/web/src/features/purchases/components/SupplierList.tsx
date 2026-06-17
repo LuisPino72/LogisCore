@@ -43,7 +43,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
   if (suppliers.length === 0) {
     return (
       <EmptyState
-        icon={<Truck size={32} />}
+        icon={<Truck size={32} className="icon-float" />}
         title="Todavía no hay proveedores"
         description="Agrega tu primer proveedor. Así podrás crear órdenes de compra rápido."
       />
@@ -51,7 +51,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 supplier-stagger">
       {pagedSuppliers.map((s) => {
         const activeOrders = activeOrdersBySupplier?.[s.id] ?? 0;
         const initials = getInitials(s.name);
@@ -59,10 +59,10 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
         return (
           <div
             key={s.id}
-            className="flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-xl border border-gray-100 bg-white sm:hover:shadow-sm sm:hover:border-primary/20 sm:group transition-all duration-200 sm:hover:border-l-primary sm:hover:border-l-3"
+            className="supplier-card-hover flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-xl border border-gray-100 bg-white transition-all duration-200"
             style={{ borderLeft: s.phone ? '3px solid transparent' : undefined }}
           >
-            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
               <span className="text-xs font-bold text-primary">{initials}</span>
             </div>
             <div className="min-w-0 flex-1 w-full text-center sm:text-left">
@@ -75,7 +75,7 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
                   </p>
                 )}
                 {activeOrders > 0 && (
-                  <Badge variant="info" className="flex items-center gap-0.5">
+                  <Badge variant="info" className="flex items-center gap-0.5 animate-badge-glow">
                     <ShoppingCart size={12} />
                     <span>{activeOrders}</span>
                   </Badge>

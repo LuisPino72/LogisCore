@@ -30,11 +30,11 @@ interface OrderItemInput {
 
 const SectionDivider = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
   <div className="flex items-center gap-2 pt-2">
-    <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+    <div className="w-6 h-6 rounded-md bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center ring-1 ring-primary/10">
       {icon}
     </div>
     <h3 className="text-xs font-title font-semibold text-gray-700 uppercase tracking-wide">{title}</h3>
-    <div className="flex-1 h-px bg-gray-100" />
+    <div className="flex-1 h-px bg-linear-to-r from-gray-200 to-transparent" />
   </div>
 );
 
@@ -246,8 +246,8 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
             const hasProduct = !!item.productId;
 
             return (
-              <div key={idx} className={`rounded-lg border bg-surface-alt p-3 space-y-2 transition-colors ${
-                !hasProduct ? 'border-danger/50 bg-danger/5' : 'border-border'
+              <div key={idx} className={`animate-item-slide-in rounded-lg border p-3 space-y-2 transition-all duration-200 ${
+                !hasProduct ? 'border-danger/50 bg-danger/5' : 'border-border bg-surface-alt hover:border-primary/20'
               }`}>
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
@@ -422,7 +422,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
           </div>
         )}
 
-        <div className="flex justify-between items-center bg-primary/5 border border-primary/10 p-3 rounded-lg">
+        <div className="flex justify-between items-center bg-linear-to-r from-primary/5 to-primary/10 border border-primary/15 p-3 rounded-lg total-glow">
           <span className="text-sm font-medium text-primary">Total de la orden:</span>
           <span className="text-xl font-bold text-primary">{formatUsd(totalUsd)}</span>
         </div>
