@@ -29,6 +29,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
 
   const debouncedStartDate = useDebounce(startDate, 400);
   const debouncedEndDate = useDebounce(endDate, 400);
@@ -145,7 +146,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
   ];
 
   return (
-    <div className="flex flex-col h-full p-3">
+    <div className="flex flex-col h-full p-3 pb-24 sm:pb-3">
       <div className="flex gap-1 sm:hidden mb-2 shrink-0 overflow-x-auto">
         {[
           { label: 'Hoy', getRange: () => { const today = toDateStringVzla(); return { start: today, end: today }; } },
@@ -156,8 +157,12 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
           <button
             key={label}
             type="button"
-            onClick={() => { const r = getRange(); setStartDate(r.start); setEndDate(r.end); }}
-            className="px-3 py-2.5 min-h-11 rounded-lg text-xs font-medium whitespace-nowrap bg-surface-alt text-gray-600 border border-border hover:bg-gray-100 active:bg-gray-200 active:scale-[0.95] transition-all"
+            onClick={() => { const r = getRange(); setStartDate(r.start); setEndDate(r.end); setActiveQuickFilter(label); }}
+            className={`px-3 py-2.5 min-h-11 rounded-lg text-xs font-medium whitespace-nowrap border transition-all ${
+              activeQuickFilter === label
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-surface-alt text-gray-600 border-border hover:bg-gray-100 active:bg-gray-200 active:scale-[0.95]'
+            }`}
           >
             {label}
           </button>
@@ -165,7 +170,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         {(startDate || endDate) && (
           <button
             type="button"
-            onClick={() => { setStartDate(''); setEndDate(''); }}
+            onClick={() => { setStartDate(''); setEndDate(''); setActiveQuickFilter(null); }}
             className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap text-danger hover:bg-red-50 transition-colors"
           >
             Limpiar
@@ -179,7 +184,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
           <span>Desde:</span>
           <DatePicker
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(e) => { setStartDate(e.target.value); setActiveQuickFilter(null); }}
             formatHint="dd/mm/aaaa"
             className="w-full sm:w-36"
           />
@@ -188,7 +193,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
           <span>Hasta:</span>
           <DatePicker
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => { setEndDate(e.target.value); setActiveQuickFilter(null); }}
             formatHint="dd/mm/aaaa"
             className="w-full sm:w-36"
           />
@@ -197,7 +202,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setStartDate(''); setEndDate(''); }}
+            onClick={() => { setStartDate(''); setEndDate(''); setActiveQuickFilter(null); }}
             className="text-xs"
           >
             Limpiar

@@ -1130,13 +1130,11 @@ export const posService = {
           if (r.deletedAt || r.status !== 'completed') return false;
           if (startDate) {
             const saleDate = new Date(r.createdAt);
-            if (saleDate < new Date(startDate)) return false;
+            if (saleDate < new Date(startOfDayVzla(new Date(startDate)))) return false;
           }
           if (endDate) {
             const saleDate = new Date(r.createdAt);
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            if (saleDate > end) return false;
+            if (saleDate > new Date(endOfDayVzla(new Date(endDate)))) return false;
           }
           return true;
         })
@@ -1156,12 +1154,10 @@ export const posService = {
           .limit(50);
 
         if (startDate) {
-          query = query.gte('created_at', startDate);
+          query = query.gte('created_at', startOfDayVzla(new Date(startDate)));
         }
         if (endDate) {
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999);
-          query = query.lte('created_at', end.toISOString());
+          query = query.lte('created_at', endOfDayVzla(new Date(endDate)));
         }
 
         const { data } = await query;
