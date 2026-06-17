@@ -109,12 +109,12 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
         )}
       </div>
 
-      <div className="flex flex-col gap-1 p-2 flex-1">
+      <div className="flex flex-col items-center gap-1 p-2 flex-1 text-center">
         <p className="text-sm font-medium text-gray-800 line-clamp-2 leading-tight">
           {product.name}
         </p>
 
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col items-center gap-0.5">
           <p className="text-base font-bold text-primary">
             {formatUsd(product.priceUsd)}
           </p>
@@ -123,7 +123,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1 mt-auto pt-1">
+        <div className="flex flex-wrap items-center justify-center gap-1 mt-auto pt-1">
           {!product.isTaxable && (
             <Badge variant="neutral" className="text-[10px] px-1 py-0.5">Exento</Badge>
           )}

@@ -84,7 +84,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
       header: 'Fecha',
       sortable: true,
       render: (sale) => (
-        <span className="text-xs text-gray-500">
+        <span className="text-sm font-semibold text-gray-800">
           {new Date(sale.createdAt).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
         </span>
       ),
@@ -119,14 +119,14 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
         return (
           <div className="text-right">
             <p className="text-sm font-bold">{formatBs(sale.totalBs)}</p>
-            <p className="text-xs text-gray-800">{formatUsd(totalUsd)}</p>
+            <p className="text-sm font-semibold text-gray-800">{formatUsd(totalUsd)}</p>
           </div>
         );
       },
     },
     {
       key: 'actions',
-      header: '',
+      header: 'Acciones',
       className: 'text-right',
       render: (sale) => (
         <div className="flex items-center justify-end gap-1">
@@ -142,8 +142,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
       ),
     },
   ];
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="flex flex-col h-full p-3">
@@ -237,21 +235,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             onSort={handleSort}
             rowClassName={(sale) => sale.status === 'voided' ? 'opacity-60 hover:bg-gray-50/80 transition-colors' : 'hover:bg-gray-50/80 transition-colors'}
           />
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2 shrink-0 text-xs text-gray-500">
-          <span>{total} ventas en total</span>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              Anterior
-            </Button>
-            <span className="px-2">{page} / {totalPages}</span>
-            <Button variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-              Siguiente
-            </Button>
-          </div>
         </div>
       )}
 
