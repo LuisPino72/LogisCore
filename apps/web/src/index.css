@@ -872,6 +872,35 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   animation: cartItemAdd 0.5s ease-out;
 }
 
+/* Fly to cart animation */
+@keyframes flyToCart {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--fly-x), var(--fly-y)) scale(0.2); opacity: 0.5; }
+}
+.animate-fly-to-cart {
+  animation: flyToCart 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Cart item bounce on add */
+@keyframes cartItemBounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.02); }
+  60% { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+.animate-cart-item-bounce {
+  animation: cartItemBounce 0.3s ease-out;
+}
+
+/* Badge glow pulse */
+@keyframes badgeGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.4); }
+  50% { box-shadow: 0 0 8px 2px rgba(13, 148, 136, 0.25); }
+}
+.animate-badge-glow {
+  animation: badgeGlow 0.6s ease-in-out;
+}
+
 /* Cart item remove slide out */
 @keyframes cartItemRemove {
   0% { opacity: 1; transform: translateX(0); max-height: 200px; }
@@ -894,11 +923,11 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
 
 /* Slide in from right (cart sidebar) */
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(100%) scale(0.98); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
 }
 .animate-slide-in-right {
-  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideInRight 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Product card stagger entry */
@@ -962,6 +991,21 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
 }
 .animate-tab-fade {
   animation: tabFadeIn 0.2s ease-out;
+}
+
+/* Out of stock pulse */
+@keyframes outOfStockPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.98); }
+}
+.animate-out-of-stock-pulse {
+  animation: outOfStockPulse 3s ease-in-out infinite;
+}
+
+/* Scroll fade mask */
+.scroll-fade-mask {
+  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
 }
 
 /* ───────────────────── PWA STANDALONE ───────────────────── */

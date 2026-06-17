@@ -22,6 +22,8 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
   const priceBs = exchangeRate && exchangeRate > 0 ? formatBs(item.totalPriceUsd * exchangeRate) : null;
 
   const [localQty, setLocalQty] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
 
   const qtyRef = useRef(item.quantity);
   qtyRef.current = item.quantity;
@@ -75,6 +77,14 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     setLocalQty(null);
   };
 
+  const handleRemove = useCallback(() => {
+    setIsRemoving(true);
+    setTimeout(() => {
+      onRemove(item.productId, item.presentationId);
+      setIsRemoving(false);
+    }, 300);
+  }, [item.productId, item.presentationId, onRemove]);
+
   const displayQty = localQty ?? (item.isWeighted ? item.quantity.toFixed(2) : item.quantity.toString());
 
   const btnBase = 'w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs hover:shadow-sm';
@@ -82,7 +92,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
   const btnActive = 'bg-primary/20 scale-95';
 
   return (
-    <div className="py-2.5 border-b border-border last:border-0 animate-cart-add">
+    <div className={`py-2.5 border-b border-border last:border-0 animate-cart-add animate-cart-item-bounce${isRemoving ? ' animate-cart-remove' : ''}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex flex-col flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-800 wrap-break-word">{item.name}</p>
@@ -152,12 +162,12 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
             </button>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRemove(item.productId, item.presentationId)}
-            className="p-2 min-w-10 min-h-10 sm:ml-1 active:bg-danger/10"
-          >
+           <Button
+             variant="ghost"
+             size="sm"
+             onClick={handleRemove}
+             className="p-2 min-w-10 min-h-10 sm:ml-1 active:bg-danger/10"
+           >
             <Trash2 size={16} className="text-danger" />
           </Button>
         </div>

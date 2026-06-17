@@ -10,6 +10,7 @@ import { usePosModals } from '../hooks/usePosModals';
 import { usePosVerification } from '../hooks/usePosVerification';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
+import { FlyToCart } from './FlyToCart';
 import { WeightEntryModal } from './WeightEntryModal';
 import { CashRegisterModal } from './CashRegisterModal';
 import { CashStatusBadge } from './CashStatusBadge';
@@ -571,6 +572,8 @@ export function PosPage({ tenantId }: PosPageProps) {
           </div>
         )}
       </div>
+
+      {activeTab === 'sell' && <FlyToCart />}
 
       {activeTab === 'sell' && (
         <CartPanel

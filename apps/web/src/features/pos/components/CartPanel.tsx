@@ -130,7 +130,7 @@ export const CartPanel = memo(function CartPanel({
           <ShoppingCart size={20} />
           {cart.length > 0 && (
             <>
-              <span className={`ml-1 font-bold ${cart.length > 0 ? 'animate-badge-bounce' : ''}`}>{itemCount}</span>
+              <span key={itemCount} className={`ml-1 font-bold cart-badge ${cart.length > 0 ? 'animate-badge-bounce animate-badge-glow' : ''}`}>{itemCount}</span>
               <span className="ml-1 text-xs opacity-80">
                 ${cart.reduce((sum, item) => sum + item.totalPriceUsd, 0).toFixed(2)}
               </span>

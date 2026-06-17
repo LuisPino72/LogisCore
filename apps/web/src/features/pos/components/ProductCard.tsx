@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Star } from 'lucide-react';
+import { EventBus } from '@logiscore/core';
 import { Card, Badge, ImageWithFallback } from '../../../common/components';
 import type { Product } from '../../../specs/inventory';
 import { displayStock } from '../../inventory/types';
@@ -32,16 +33,29 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
   const isLowStock = stockInDisplay <= (product.stockMin ?? 5);
   const isOutOfStock = stockInDisplay <= 0 && !hasAssemblyRecipe;
 
+  const handleCardClick = (e: unknown) => {
+    if (isOutOfStock) return;
+    const mouseEvent = e as React.MouseEvent | undefined;
+    if (mouseEvent?.clientX !== undefined) {
+      EventBus.emit('CART.ADD_ANIMATION', {
+        fromX: mouseEvent.clientX,
+        fromY: mouseEvent.clientY,
+        imageUrl: product.imageUrl || '',
+      });
+    }
+    onAdd(product);
+  };
+
   return (
     <Card
       interactive={!isOutOfStock}
-      onClick={() => !isOutOfStock && onAdd(product)}
+      onClick={handleCardClick as () => void}
       onKeyDown={(e) => { if (!isOutOfStock && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onAdd(product); } }}
       role="button"
       tabIndex={isOutOfStock ? -1 : 0}
       aria-label={isOutOfStock ? `${product.name} sin stock` : `Agregar ${product.name} al carrito`}
       bodyClassName="p-0"
-      className={`relative flex flex-col gap-0 overflow-hidden transition-all duration-200 animate-card-in ripple-effect ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.98] cursor-pointer hover:shadow-md hover:-translate-y-0.5'}`}
+      className={`relative flex flex-col gap-0 overflow-hidden transition-all duration-200 animate-card-in ripple-effect ${isOutOfStock ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.98] cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-primary/20'}`}
       style={{ animationDelay: `${index * 40}ms` }}
     >
       <button
@@ -87,13 +101,13 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
           </span>
         )}
 
-        {isOutOfStock && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
-            <span className="px-2.5 py-1 rounded-lg bg-gray-900/70 text-white text-xs font-semibold shadow-sm">
-              Sin stock
-            </span>
-          </div>
-        )}
+         {isOutOfStock && (
+           <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 animate-out-of-stock-pulse">
+             <span className="px-2.5 py-1 rounded-lg bg-gray-900/70 text-white text-xs font-semibold shadow-sm">
+               Sin stock
+             </span>
+           </div>
+         )}
         {isOutOfStock && !hasAssemblyRecipe && onReorder && (
           <button
             type="button"

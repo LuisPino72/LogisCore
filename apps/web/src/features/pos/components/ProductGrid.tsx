@@ -84,42 +84,44 @@ export const ProductGrid = memo(function ProductGrid({
 
       {categories.length > 0 && (
         <>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            <button
-              type="button"
-              onClick={(e) => { onCategoryChange(null); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
-              className={`shrink-0 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
-                selectedCategory === null
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
-              }`}
-            >
-              Todos
-            </button>
-            {visibleCategories.map((cat) => (
+          <div className="scroll-fade-mask">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
               <button
-                key={cat.id}
                 type="button"
-                onClick={(e) => { onCategoryChange(cat.id); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
+                onClick={(e) => { onCategoryChange(null); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
                 className={`shrink-0 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
-                  selectedCategory === cat.id
+                  selectedCategory === null
                     ? 'bg-primary text-white border-primary shadow-sm'
                     : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
                 }`}
               >
-                {cat.name}
+                Todos
               </button>
-            ))}
-            {hasMoreCategories && (
-              <button
-                type="button"
-                onClick={() => setShowAllCategories(true)}
-                className="shrink-0 flex items-center gap-1 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border border-border bg-white text-text-secondary hover:border-primary/30 hover:text-primary transition-all"
-              >
-                <ListTree size={12} />
-                +{categories.length - VISIBLE_CATEGORIES}
-              </button>
-            )}
+              {visibleCategories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={(e) => { onCategoryChange(cat.id); e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}
+                  className={`shrink-0 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${
+                    selectedCategory === cat.id
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+              {hasMoreCategories && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllCategories(true)}
+                  className="shrink-0 flex items-center gap-1 px-3 py-1.5 min-h-11 rounded-full text-xs font-medium border border-border bg-white text-text-secondary hover:border-primary/30 hover:text-primary transition-all"
+                >
+                  <ListTree size={12} />
+                  +{categories.length - VISIBLE_CATEGORIES}
+                </button>
+              )}
+            </div>
           </div>
 
           <Modal
@@ -198,7 +200,7 @@ export const ProductGrid = memo(function ProductGrid({
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pb-16 md:pb-4">
+          <div key={`${selectedCategory ?? 'all'}-${searchQuery}`} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pb-16 md:pb-4 animate-fade-in">
             {pagedProducts.map((product, index) => (
               <ProductCard
                 key={product.id}
