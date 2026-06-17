@@ -14,6 +14,8 @@ export interface Column<T> {
   hideOnMobile?: boolean;
   hideLabelOnMobile?: boolean;
   className?: string;
+  width?: string;
+  align?: 'left' | 'center' | 'right';
 }
 
 export type SortDirection = 'asc' | 'desc';
@@ -69,7 +71,7 @@ const DataRow = <T,>(props: DataRowProps<T>): ReactNode => {
       {columns.map((col) => {
         const content = col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? '');
         return (
-          <div key={col.key} role="cell" className={cn('data-table-cell', col.hideOnMobile && 'hidden sm:flex', col.className)}>
+          <div key={col.key} role="cell" className={cn('data-table-cell', col.hideOnMobile && 'hidden sm:flex', col.align === 'center' && 'justify-center text-center', col.align === 'right' && 'justify-end text-right', col.className)}>
             {content}
           </div>
         );
@@ -138,11 +140,11 @@ export function DataTable<T>({
   }
 
   return (
-    <div role="table" className={cn('data-table', className)} style={{ ['--cols' as unknown as string]: `repeat(${columns.length}, minmax(0,1fr))` } as React.CSSProperties}>
+    <div role="table" className={cn('data-table', className)} style={{ ['--cols' as unknown as string]: columns.map(c => c.width ?? '1fr').join(' ') } as React.CSSProperties}>
       {/* Desktop / Tablet header */}
       <div role="rowgroup" className={cn('data-table-header hidden sm:grid', stickyHeader && 'sticky top-0 z-10')}>
         {columns.map((col) => (
-          <div key={col.key} role="columnheader" className={cn('data-table-cell font-semibold', col.className)}>
+          <div key={col.key} role="columnheader" className={cn('data-table-cell font-semibold', col.align === 'center' && 'justify-center text-center', col.align === 'right' && 'justify-end text-right', col.className)}>
             {col.sortable ? (
               <button
                 className="flex items-center gap-1 hover:text-gray-700 transition-colors"

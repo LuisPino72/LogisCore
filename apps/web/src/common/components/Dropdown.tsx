@@ -90,11 +90,11 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
         <div
           ref={menuRef}
           className={cn(
-            'absolute top-full mt-1 z-50 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-y-auto animate-slide-down',
+            'absolute top-full mt-1 z-50 min-w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 overflow-visible animate-slide-down',
             alignClass,
           )}
           role="menu"
-          style={{ maxHeight: 320 }}
+          style={{ maxHeight: 320, overflowY: 'auto' }}
         >
           {items.map((item, i) => (
             <button
@@ -102,7 +102,7 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
               onClick={() => { item.onClick(); closeAndReset(); }}
               disabled={item.disabled}
               className={cn(
-                'flex items-center gap-2 w-full px-3 py-2 text-sm text-left transition-colors',
+                'flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left transition-colors whitespace-nowrap',
                 item.variant === 'danger' ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-100',
                 item.disabled && 'opacity-50 cursor-not-allowed',
                 focusedIndex === i && 'bg-gray-100',

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, MoreVertical, Settings, ClipboardCheck, DollarSign } from 'lucide-react';
-import { Button, Badge, DataTable, Dropdown, EmptyState, ImageWithFallback, SearchableSelect, Modal } from '../../../common/components';
+import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, Settings, ClipboardCheck, DollarSign } from 'lucide-react';
+import { Button, Badge, DataTable, EmptyState, ImageWithFallback, SearchableSelect, Modal } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
@@ -120,27 +120,19 @@ function ProductActions({ product, bulkMode, isOwner, isOnline, selectedForBulk,
   }
 
   return (
-    <div className="flex items-center justify-end gap-0.5">
-      <Button variant="ghost" size="sm" onClick={() => onEdit(product)} className="p-1.5 min-w-11 min-h-11" title="Editar" disabled={!isOnline}>
+    <div className="flex items-center justify-end gap-0">
+      <Button variant="ghost" size="sm" onClick={() => onEdit(product)} className="p-1 min-w-10 min-h-10" title="Editar" disabled={!isOnline}>
         <Edit3 size={15} />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar" disabled={!isOnline}>
+      <Button variant="ghost" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-10 min-h-10" title="Eliminar" disabled={!isOnline}>
         <Trash2 size={15} className="text-danger" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-11 min-h-11" title="Ajustar stock" disabled={!isOnline}>
+      <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1 min-w-10 min-h-10" title="Ajustar stock" disabled={!isOnline}>
         <Settings size={15} className="text-primary" />
       </Button>
-      <Dropdown
-        align="right"
-        trigger={
-          <div className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
-            <MoreVertical size={15} className="text-gray-600" />
-          </div>
-        }
-        items={[
-          { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-        ]}
-      />
+      <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1 min-w-10 min-h-10" title="Lotes">
+        <Layers size={15} className="text-gray-600" />
+      </Button>
     </div>
   );
 }
@@ -265,6 +257,8 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         key: 'image',
         header: '',
         hideOnMobile: true,
+        width: '80px',
+        align: 'center',
         render: (product) => (
           <ImageWithFallback
             productId={product.id}
@@ -278,6 +272,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
       {
         key: 'name',
         header: 'Producto',
+        width: '2fr',
         render: (product) => (
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -293,6 +288,11 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               {!product.isSellable && (
                 <span className="hidden md:inline-flex text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   No vendible
+                </span>
+              )}
+              {product.isSellable && !product.isWeighted && product.productType !== 'materia_prima' && (
+                <span className="hidden md:inline-flex text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  Vendible
                 </span>
               )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
@@ -324,6 +324,13 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   </span>
                 </div>
               )}
+              {product.isSellable && !product.isWeighted && product.productType !== 'materia_prima' && (
+                <div className="flex md:hidden mt-1">
+                  <span className="text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    Vendible
+                  </span>
+                </div>
+              )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
                 <div className="flex md:hidden mt-1">
                   <span className="text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
@@ -345,17 +352,21 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         key: 'price',
         header: 'Precio',
         hideLabelOnMobile: true,
+        width: '0.6fr',
+        align: 'center',
         render: (product) =>
           product.productType === 'materia_prima' ? (
-            <span className="text-xs text-gray-400">—</span>
+            <span className="text-sm text-gray-400">—</span>
           ) : (
-            <span className="text-xs font-semibold">{formatUsd(product.priceUsd)}</span>
+            <span className="text-sm font-bold text-gray-800">{formatUsd(product.priceUsd)}</span>
           ),
       },
       {
         key: 'stock',
         header: 'Total',
         hideLabelOnMobile: true,
+        width: '0.8fr',
+        align: 'center',
         render: (product) => {
           return (
             <div className="flex items-center gap-2">
@@ -373,6 +384,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         key: 'category',
         header: 'Categoría',
         hideOnMobile: true,
+        width: '1fr',
         render: (product) => {
           const cat = product.categoryId ? categories.find((c) => c.id === product.categoryId) : undefined;
           return cat ? <span className="text-[12px]">{cat.name}</span> : null;
@@ -384,7 +396,8 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
       cols.push({
         key: 'actions',
         header: 'Acciones',
-        className: 'text-right',
+        width: '0.8fr',
+        align: 'center',
         render: (product) => (
           <ProductActions
             product={product}
@@ -641,23 +654,9 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                         <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-11 min-h-11" title="Ajustar stock" disabled={!isOnline}>
                           <Settings size={15} className="text-primary" />
                         </Button>
-                        <Dropdown
-                          align="right"
-                          trigger={
-                            <div className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
-                              <MoreVertical size={15} className="text-gray-600" />
-                            </div>
-                          }
-                          items={
-                            isOnline
-                              ? [
-                                { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                              ]
-                              : [
-                                { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                              ]
-                          }
-                        />
+                        <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1.5 min-w-11 min-h-11" title="Lotes">
+                          <Layers size={15} className="text-gray-600" />
+                        </Button>
                       </>
                     )}
                   </div>

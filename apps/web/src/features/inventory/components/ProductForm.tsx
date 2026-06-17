@@ -563,7 +563,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="input-wrapper">
               <label className="input-label">
-                Costo total de la compra (requerido) ($)
+                Costo total de la compra $
               </label>
               <Input
                 sanitize="currency"
@@ -699,7 +699,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               </div>
 
               <div className="input-wrapper">
-                <label className="input-label">Costo total del lote ($)</label>
+                <label className="input-label">Costo total del lote $</label>
                 <Input
                   sanitize="currency"
                   step="0.01"
@@ -792,7 +792,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 />
               </div>
               <div className="input-wrapper">
-                <label className="input-label">Costo total del lote ($)</label>
+                <label className="input-label">Costo total del lote $</label>
                 <Input
                   sanitize="currency"
                   step="0.01"
