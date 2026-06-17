@@ -45,6 +45,8 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription
         ? 'warning'
         : 'ok';
 
+  const isUrgent = expiryUrgency === 'critical' || expiryUrgency === 'expired';
+
   return (
     <div className="relative overflow-hidden rounded-xl bg-linear-to-br from-amber-50 via-amber-50/80 to-orange-100 border border-amber-200/60 animate-slide-up">
       {/* Decorative dot pattern */}
@@ -58,7 +60,7 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription
       <div className="absolute -top-6 -right-6 w-28 h-28 bg-accent/8 rounded-full blur-2xl" />
       <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-accent/5 rounded-full blur-xl" />
 
-      <div className="relative p-5 sm:p-6">
+      <div className="relative p-5 sm:p-6 welcome-stagger">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 shadow-sm">
             <GreetingIcon size={20} className="text-accent-dark" />
@@ -86,7 +88,7 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, subscription
           expiryUrgency === 'expired'
             ? 'bg-danger/10 text-danger border border-danger/20'
             : 'bg-warning/10 text-warning border border-warning/20'
-        }`}>
+        } ${isUrgent ? 'urgent-pulse' : ''}`}>
           {expiryUrgency === 'expired'
             ? <AlertTriangle size={14} className="shrink-0" />
             : <Calendar size={14} className="shrink-0" />

@@ -6,7 +6,7 @@ import { WelcomeBanner } from './WelcomeBanner';
 import { PwaInstallBanner } from './PwaInstallBanner';
 import { PendingTasksWidget } from './PendingTasksWidget';
 import { EmptyState, Card, Badge } from '../../../common/components';
-import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart, Store } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
 import { formatUsd } from '../../../lib/formatBs';
 
@@ -82,11 +82,39 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
       <PwaInstallBanner />
 
+      {/* Logo + Nombre del negocio */}
+      {tenantInfo && (
+        <div className="dashboard-logo-wrapper mt-4 sm:mt-5">
+          <div className="flex items-center gap-3 px-4 py-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm">
+            {tenantInfo.logoUrl ? (
+              <div className="w-11 h-11 rounded-xl overflow-hidden bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm dashboard-logo-shine">
+                <img
+                  src={tenantInfo.logoUrl}
+                  alt={`Logo de ${tenantInfo.name}`}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-11 h-11 rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shadow-sm">
+                <Store size={20} className="text-primary" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base font-title font-bold text-gray-900 truncate">{tenantInfo.name}</h1>
+              <p className="text-xs text-text-muted">{tenantInfo.rif}</p>
+            </div>
+            {tenantInfo.direccion && (
+              <span className="hidden sm:block text-xs text-text-muted truncate max-w-[200px]">{tenantInfo.direccion}</span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="dashboard-grid mt-4 sm:mt-6">
         {/* Ganancias de hoy */}
         <div className="dashboard-card-entrance" style={{ animationDelay: '0.1s' }}>
           <Card>
-            <div className="p-4 sm:p-5">
+            <div className="p-4 sm:p-5 dashboard-kpi-card" style={{ '--kpi-accent': 'var(--color-success)' } as React.CSSProperties}>
               <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
                   <DollarSign size={16} className="text-success" />
@@ -189,7 +217,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                           </div>
                           <span className="text-xs text-gray-600 ml-8 block">{p.totalQty} {p.isWeighted ? 'kg vendidos' : 'vendidos'}</span>
                         </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden ml-8">
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden ml-8 progress-bar-shimmer">
                           <div
                             className="h-full rounded-full progress-fill"
                             style={{
@@ -266,7 +294,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden progress-bar-shimmer">
                             <div
                               className="h-full rounded-full progress-fill"
                               style={{

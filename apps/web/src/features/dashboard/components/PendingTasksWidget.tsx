@@ -35,10 +35,9 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
     return (
       <div className="pending-tasks-widget">
         <div className="pending-tasks-loading">
-          <Clock size={20} style={{ opacity: 0.5 }} />
+          <Clock size={20} className="opacity-50 animate-spin" />
           <span>Cargando tareas...</span>
         </div>
-        <style>{STYLES}</style>
       </div>
     );
   }
@@ -51,10 +50,9 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
           <span>Tareas pendientes</span>
         </div>
         <div className="pending-tasks-empty">
-          <CheckCircle size={18} style={{ color: '#22C55E' }} />
+          <CheckCircle size={18} />
           <span>Todo listo. No hay tareas pendientes.</span>
         </div>
-        <style>{STYLES}</style>
       </div>
     );
   }
@@ -77,6 +75,7 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
           const config = TYPE_CONFIG[type as keyof typeof TYPE_CONFIG];
           const Icon = config.icon;
           const count = items[0].totalCount ?? items.length;
+          const isHighCount = count >= 5;
           return (
             <div
               key={type}
@@ -91,7 +90,7 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
                 <Icon size={16} />
               </div>
               <div className="pending-tasks-item-content">
-                <span className="pending-tasks-item-count">{count}</span>
+                <span className={`pending-tasks-item-count${isHighCount ? ' pending-tasks-item-count--alert' : ''}`}>{count}</span>
                 <span className="pending-tasks-item-label">{config.label}</span>
               </div>
               <ArrowRight size={14} className="pending-tasks-item-arrow" />
@@ -99,138 +98,6 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
           );
         })}
       </div>
-      <style>{STYLES}</style>
     </div>
   );
 }
-
-const STYLES = `
-  .pending-tasks-widget {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .pending-tasks-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--color-text-secondary, #94A3B8);
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .pending-tasks-loading {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--color-text-secondary, #94A3B8);
-    font-size: 0.875rem;
-    padding: 16px;
-    justify-content: center;
-  }
-
-  .pending-tasks-empty {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #22C55E;
-    font-size: 0.875rem;
-    padding: 16px;
-    justify-content: center;
-  }
-
-  .pending-tasks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .pending-tasks-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--accent-bg);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .pending-tasks-item:hover {
-    background: var(--accent-bg);
-    filter: brightness(1.1);
-    transform: translateX(2px);
-  }
-
-  .pending-tasks-item:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .pending-tasks-item:active {
-    transform: scale(0.98);
-  }
-
-  .pending-tasks-item-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--accent);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .pending-tasks-item-content {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .pending-tasks-item-count {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--accent);
-  }
-
-  .pending-tasks-item-label {
-    font-size: 0.8rem;
-    color: var(--color-text-secondary, #94A3B8);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .pending-tasks-item-arrow {
-    color: var(--accent);
-    opacity: 0.6;
-    flex-shrink: 0;
-  }
-
-  @media (min-width: 768px) {
-    .pending-tasks-item {
-      padding: 8px 10px;
-    }
-
-    .pending-tasks-item-icon {
-      width: 28px;
-      height: 28px;
-    }
-
-    .pending-tasks-item-count {
-      font-size: 0.95rem;
-    }
-
-    .pending-tasks-item-label {
-      font-size: 0.75rem;
-    }
-  }
-`;
