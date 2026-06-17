@@ -80,6 +80,71 @@ function applyProductTypeFilter(product: { isWeighted: boolean; id: string; prod
   }
 }
 
+interface ProductActionsProps {
+  product: Product;
+  bulkMode: boolean;
+  isOwner: boolean;
+  isOnline: boolean;
+  selectedForBulk: Set<string>;
+  onToggleBulk: (id: string) => void;
+  onEdit: (product: Product) => void;
+  onDelete: (id: string, name: string) => void;
+  onAdjust: (id: string) => void;
+  onViewLots: (id: string) => void;
+}
+
+function ProductActions({ product, bulkMode, isOwner, isOnline, selectedForBulk, onToggleBulk, onEdit, onDelete, onAdjust, onViewLots }: ProductActionsProps) {
+  if (!isOwner) return null;
+
+  if (bulkMode) {
+    return (
+      <button
+        type="button"
+        disabled={!product.isSellable}
+        onClick={() => onToggleBulk(product.id)}
+        className={`min-w-11 min-h-11 rounded-full flex items-center justify-center transition-colors ${
+          product.isSellable ? 'hover:bg-primary/10' : 'opacity-30 cursor-not-allowed'
+        }`}
+      >
+        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+          selectedForBulk.has(product.id)
+            ? 'bg-primary border-primary'
+            : 'border-gray-300 bg-white'
+        }`}>
+          {selectedForBulk.has(product.id) && (
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          )}
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-0.5">
+      <Button variant="ghost" size="sm" onClick={() => onEdit(product)} className="p-1.5 min-w-11 min-h-11" title="Editar" disabled={!isOnline}>
+        <Edit3 size={15} />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar" disabled={!isOnline}>
+        <Trash2 size={15} className="text-danger" />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-11 min-h-11" title="Ajustar stock" disabled={!isOnline}>
+        <Settings size={15} className="text-primary" />
+      </Button>
+      <Dropdown
+        align="right"
+        trigger={
+          <div className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+            <MoreVertical size={15} className="text-gray-600" />
+          </div>
+        }
+        items={[
+          { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
+        ]}
+      />
+    </div>
+  );
+}
+
 export function ProductList({ products, categories, tenantId, onSearch, initialTabState, onSaveTabState, isOwner, isOnline, totalLowStock = 0, onNewProduct, onEditProduct, onRequestDelete, onAdjust, onViewLots, onBulkAdjust, onBulkPriceUpdate }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState(initialTabState.searchQuery);
   const [filterCategory, setFilterCategory] = useState(initialTabState.filterCategory);
@@ -219,7 +284,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               <span className="font-medium text-gray-900">{product.name}</span>
               {productIdsWithVariants.has(product.id) && (
                 <span
-                  className="hidden md:inline-flex text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                  className="hidden md:inline-flex text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors badge-bounce"
                   onClick={(e) => { e.stopPropagation(); openVariantModal(product.id); }}
                 >
                   Variantes
@@ -321,64 +386,25 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         header: 'Acciones',
         className: 'text-right',
         render: (product) => (
-          <div className="flex items-center justify-end gap-0.5">
-            {bulkMode ? (
-              <button
-                type="button"
-                disabled={!product.isSellable}
-                onClick={() => {
-                  setSelectedForBulk(prev => {
-                    const next = new Set(prev);
-                    if (next.has(product.id)) next.delete(product.id);
-                    else next.add(product.id);
-                    return next;
-                  });
-                }}
-                className={`min-w-11 min-h-11 rounded-full flex items-center justify-center transition-colors ${
-                  product.isSellable ? 'hover:bg-primary/10' : 'opacity-30 cursor-not-allowed'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                  selectedForBulk.has(product.id)
-                    ? 'bg-primary border-primary'
-                    : 'border-gray-300 bg-white'
-                }`}>
-                  {selectedForBulk.has(product.id) && (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  )}
-                </div>
-              </button>
-            ) : (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-11 min-h-11" title="Editar" disabled={!isOnline}>
-                  <Edit3 size={15} />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar" disabled={!isOnline}>
-                  <Trash2 size={15} className="text-danger" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-11 min-h-11" title="Ajustar stock" disabled={!isOnline}>
-                  <Settings size={15} className="text-primary" />
-                </Button>
-                <Dropdown
-                  align="right"
-                  trigger={
-                    <div className="min-w-11 min-h-11 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
-                      <MoreVertical size={15} className="text-gray-600" />
-                    </div>
-                  }
-                  items={
-                    isOnline
-                      ? [
-                        { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                      ]
-                      : [
-                        { label: 'Lotes', icon: <Layers size={15} />, onClick: () => onViewLots(product.id) },
-                      ]
-                  }
-                />
-              </>
-            )}
-          </div>
+          <ProductActions
+            product={product}
+            bulkMode={bulkMode}
+            isOwner={isOwner}
+            isOnline={isOnline}
+            selectedForBulk={selectedForBulk}
+            onToggleBulk={(id) => {
+              setSelectedForBulk(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              });
+            }}
+            onEdit={onEditProduct}
+            onDelete={onRequestDelete}
+            onAdjust={onAdjust}
+            onViewLots={onViewLots}
+          />
         ),
       });
     }
@@ -434,7 +460,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               onClick={(e) => handleStockFilter(opt.value, e.currentTarget)}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-[0.98] ${
                 stockFilter === opt.value
-                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
                   : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary hover:bg-primary/2'
               }`}
             >
@@ -453,7 +479,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               onClick={(e) => handleProductTypeFilter(opt.value, e.currentTarget)}
               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 whitespace-nowrap active:scale-[0.98] ${
                 productTypeFilter === opt.value
-                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
                   : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary hover:bg-primary/2'
               }`}
             >

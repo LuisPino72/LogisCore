@@ -119,7 +119,7 @@ export function CategoryManager({ categories, products, isOwner, onCreate, onUpd
         />
       ) : (
         <>
-          <div className="space-y-2">
+          <div className="space-y-2 inventory-stagger">
             {paginated.map((cat) => (
             <div key={cat.id} className="flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-lg bg-white sm:hover:bg-primary/5 transition-colors border border-gray-100 sm:border-transparent sm:hover:border-primary/10">
               <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

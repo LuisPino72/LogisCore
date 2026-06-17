@@ -15,10 +15,11 @@ import { CategoryManager } from './CategoryManager';
 import { MovementHistory } from './MovementHistory';
 import { LowStockBadge } from './LowStockBadge';
 import { CSVUploadModal } from './CSVUploadModal';
+import { StockAdjustmentModal } from './StockAdjustmentModal';
+import { BulkPriceUpdateModal } from './BulkPriceUpdateModal';
 import { useStockAdjustment } from '../hooks/useStockAdjustment';
 import { useBulkPriceUpdate } from '../hooks/useBulkPriceUpdate';
 import { logger } from '../../../lib/logger';
-import { formatUsd } from '../../../lib/formatBs';
 import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
 
 
@@ -331,38 +332,40 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   return (
     <div className="p-3 sm:p-6 pb-24 sm:pb-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            {activeTab === 'categorias' ? <ListTree size={18} className="text-primary" /> : <Package size={18} className="text-primary" />}
+      <div className="bg-linear-to-r from-primary/3 via-transparent to-transparent rounded-xl p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              {activeTab === 'categorias' ? <ListTree size={18} className="text-primary" /> : <Package size={18} className="text-primary" />}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-[clamp(1.25rem,1rem+1.5vw,1.75rem)] font-title font-bold wrap-break-word">
+                {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
+              </h1>
+              <p className="text-[13px] text-text-secondary hidden sm:block truncate max-w-md">
+                {activeTab === 'categorias' ? 'Organiza tus productos por categorías para encontrarlos más rápido al vender.' : activeTab === 'historial' ? 'Revisa todos los movimientos de tus productos: ventas, compras, ajustes y más.' : 'Administra tu inventario: crea, edita y organiza tus productos.'}
+              </p>
+              {totalLowStock > 0 && activeTab === 'productos' && (
+                <div className="mt-0.5">
+                  <LowStockBadge count={totalLowStock} onClick={() => setShowLowStockModal(true)} />
+                </div>
+              )}
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-title font-bold wrap-break-word" style={{ fontSize: 'var(--text-fluid-xl)' }}>
-              {activeTab === 'categorias' ? 'Categorías' : activeTab === 'historial' ? 'Historial' : 'Inventario'}
-            </h1>
-            <p className="text-[13px] text-text-secondary hidden sm:block truncate max-w-md">
-              {activeTab === 'categorias' ? 'Organiza tus productos por categorías para encontrarlos más rápido al vender.' : activeTab === 'historial' ? 'Revisa todos los movimientos de tus productos: ventas, compras, ajustes y más.' : 'Administra tu inventario: crea, edita y organiza tus productos.'}
-            </p>
-            {totalLowStock > 0 && activeTab === 'productos' && (
-              <div className="mt-0.5">
-                <LowStockBadge count={totalLowStock} onClick={() => setShowLowStockModal(true)} />
-              </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isOwner && activeTab === 'productos' && (
+              <Button variant="outline" size="sm" onClick={() => setShowCsvImport(true)} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para importar' : undefined}>
+                <Upload size={16} />
+                <span className="hidden sm:inline">Importar CSV</span>
+              </Button>
+            )}
+            {isOwner && activeTab !== 'historial' && (
+              <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para esta acción' : undefined}>
+                <Plus size={16} />
+                <span className="hidden sm:inline">{activeTab === 'categorias' ? 'Nueva categoría' : 'Nuevo producto'}</span>
+              </Button>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {isOwner && activeTab === 'productos' && (
-            <Button variant="outline" size="sm" onClick={() => setShowCsvImport(true)} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para importar' : undefined}>
-              <Upload size={16} />
-              <span className="hidden sm:inline">Importar CSV</span>
-            </Button>
-          )}
-          {isOwner && activeTab !== 'historial' && (
-            <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para esta acción' : undefined}>
-              <Plus size={16} />
-              <span className="hidden sm:inline">{activeTab === 'categorias' ? 'Nueva categoría' : 'Nuevo producto'}</span>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -512,165 +515,29 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         />
       )}
 
-      {showAdjustment && (() => {
-        const product = products.find((p) => p.id === adjProductId);
-        const displayStockValue = product ? (() => {
-          if (product.unit === 'kg') return (product.stock / 1000).toFixed(2);
-          if (product.unit === 'lt') return (product.stock / 1000).toFixed(2);
-          return product.stock.toString();
-        })() : '';
-        const unitLabel = product?.unit === 'kg' ? 'Kg' : product?.unit === 'lt' ? 'Lt' : '';
-
-        const REASON_OPTIONS: { value: AdjustmentReason; label: string }[] = [
-          { value: 'inventario_inicial', label: 'Error de ingreso inicial' },
-          { value: 'perdida', label: 'Pérdida' },
-          { value: 'robo', label: 'Robo' },
-          { value: 'vencido', label: 'Vencido' },
-          { value: 'consumo_interno', label: 'Consumo interno' },
-          { value: 'otros', label: 'Otros' },
-        ];
-
-        return (
-          <Modal
-            isOpen={showAdjustment}
-            onClose={closeAdjustment}
-            title="Ajuste de stock"
-            footer={
-              <div className="flex gap-3 w-full">
-                <Button variant="ghost" fullWidth onClick={closeAdjustment}>Cancelar</Button>
-                <Button variant="primary" fullWidth onClick={handleSubmitAdjustment} disabled={adjSubmitting || !isOnline}>{adjSubmitting ? 'Ajustando...' : 'Ajustar stock'}</Button>
-              </div>
-            }
-          >
-            <div className="space-y-4">
-              {product && (
-                <div className="bg-linear-to-br from-primary/4 to-primary/2 border border-primary/10 rounded-xl p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <Package size={18} className="text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {product.name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-xs font-medium text-primary">
-                          Stock: {displayStockValue} {unitLabel}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="input-label">Tipo de ajuste</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdjMode(adjMode === 'sumar' ? '' : 'sumar');
-                      setAdjQuantity('');
-                      setAdjError('');
-                      setAdjReasonType(adjMode === 'sumar' ? '' : 'inventario_inicial');
-                    }}
-                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      adjMode === 'sumar'
-                        ? 'bg-success text-white shadow-sm'
-                        : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
-                    }`}
-                  >
-                    <Plus size={16} />
-                    Sumar stock
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdjMode(adjMode === 'restar' ? '' : 'restar');
-                      setAdjQuantity('');
-                      setAdjError('');
-                      setAdjReasonType(adjMode === 'restar' ? '' : 'perdida');
-                    }}
-                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      adjMode === 'restar'
-                        ? 'bg-danger text-white shadow-sm'
-                        : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
-                    }`}
-                  >
-                    <Minus size={16} />
-                    Restar stock
-                  </button>
-                </div>
-              </div>
-
-              {adjMode && (
-                <div className="input-wrapper">
-                  <label className="input-label">Cantidad {adjMode === 'sumar' ? 'a sumar' : 'a restar'}</label>
-                  <Input
-                    sanitize="number"
-                    decimals={product?.isWeighted ? 2 : 0}
-                    inputMode={product?.isWeighted ? "decimal" : "numeric"}
-                    placeholder={product?.isWeighted ? "Ej: 10.5" : "Ej: 10"}
-                    value={adjQuantity}
-                    onChange={(e) => setAdjQuantity(e.target.value)}
-                    validation={{ required: true, min: 0.01 }}
-                    error={adjError}
-                    inputClassName="text-sm"
-                  />
-                </div>
-              )}
-
-              {adjMode && (
-                <div className="input-wrapper">
-                  <label className="input-label">Motivo</label>
-                  <SearchableSelect
-                    value={adjReasonType}
-                    onChange={(v) => setAdjReasonType(v)}
-                    options={REASON_OPTIONS.filter((o) =>
-                      adjMode === 'sumar'
-                        ? o.value === 'inventario_inicial'
-                        : o.value !== 'inventario_inicial'
-                    )}
-                    hideSearch
-                  />
-                </div>
-              )}
-
-              {!adjHasCost && (
-                <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 space-y-2">
-                  <p className="text-xs text-warning-dark font-medium">
-                    ⚠️ Este producto no tiene costo registrado. Los ajustes se registrarán con costo <strong>$0 por unidad</strong>.
-                  </p>
-                  {!adjShowCostInput && (
-                    <Button variant="outline" size="sm" onClick={() => setAdjShowCostInput(true)}>
-                      Agregar costo total ($)
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {adjShowCostInput && (
-                <div className="input-wrapper">
-                  <label className="input-label">Costo total del ajuste ($)</label>
-                  <Input
-                    sanitize="currency"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={adjCostTotal}
-                    onChange={(e) => setAdjCostTotal(e.target.value)}
-                    validation={{ min: 0, max: 999999 }}
-                    inputClassName="text-sm"
-                    inputMode="decimal"
-                  />
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    Costo total de las unidades que entran (para ajustes positivos).
-                  </p>
-                </div>
-              )}
-            </div>
-          </Modal>
-        );
-      })()}
+      {showAdjustment && (
+        <StockAdjustmentModal
+          open={showAdjustment}
+          onClose={closeAdjustment}
+          product={products.find((p) => p.id === adjProductId)}
+          adjMode={adjMode}
+          adjQuantity={adjQuantity}
+          adjReasonType={adjReasonType}
+          adjCostTotal={adjCostTotal}
+          adjShowCostInput={adjShowCostInput}
+          adjHasCost={adjHasCost}
+          adjError={adjError}
+          adjSubmitting={adjSubmitting}
+          isOnline={isOnline}
+          onSetMode={setAdjMode}
+          onSetQuantity={setAdjQuantity}
+          onSetReasonType={setAdjReasonType}
+          onSetCostTotal={setAdjCostTotal}
+          onSetShowCostInput={setAdjShowCostInput}
+          onSetError={setAdjError}
+          onSubmit={handleSubmitAdjustment}
+        />
+      )}
 
       {showBulkAdjustment && (() => {
         const bulkProducts = bulkProductIds
@@ -821,185 +688,13 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
       })()}
 
       {bulkPrice.showModal && (
-        <Modal
-          isOpen={bulkPrice.showModal}
+        <BulkPriceUpdateModal
+          open={bulkPrice.showModal}
           onClose={bulkPrice.closeModal}
-          title={bulkPrice.showConfirm ? 'Confirmar cambios' : 'Actualizar precios'}
-          footer={
-            bulkPrice.showConfirm ? (
-              <div className="flex gap-3 w-full">
-                <Button variant="ghost" fullWidth onClick={bulkPrice.backToForm} disabled={bulkPrice.submitting}>
-                  Volver
-                </Button>
-                <Button variant="primary" fullWidth onClick={bulkPrice.handleSubmit} disabled={bulkPrice.submitting || !isOnline}>
-                  {bulkPrice.submitting ? 'Actualizando...' : `Confirmar ${bulkPrice.impact?.productsWithPrice || 0} cambios`}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-3 w-full">
-                <Button variant="ghost" fullWidth onClick={bulkPrice.closeModal} disabled={bulkPrice.submitting}>
-                  Cancelar
-                </Button>
-                <Button variant="primary" fullWidth onClick={bulkPrice.proceedToConfirm} disabled={bulkPrice.submitting || !isOnline}>
-                  Revisar cambios
-                </Button>
-              </div>
-            )
-          }
-        >
-          <div className="space-y-4">
-            {!bulkPrice.showConfirm ? (
-              <>
-                <div className="bg-gray-50 rounded-xl p-3 max-h-[25vh] overflow-y-auto">
-                  <p className="text-xs font-medium text-gray-500 mb-2">{bulkPrice.selectedIds.length} producto(s) seleccionado(s)</p>
-                  <div className="space-y-1.5">
-                    {products.filter((p) => bulkPrice.selectedIds.includes(p.id)).slice(0, 8).map((p) => (
-                      <div key={p.id} className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
-                        <span className="text-gray-700 truncate min-w-0 flex-1 mr-2">{p.name}</span>
-                        <span className="text-xs text-gray-500 shrink-0">{p.priceUsd > 0 ? formatUsd(p.priceUsd) : 'Sin precio'}</span>
-                      </div>
-                    ))}
-                    {bulkPrice.selectedIds.length > 8 && (
-                      <p className="text-xs text-gray-400 text-center pt-1">+{bulkPrice.selectedIds.length - 8} más</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="input-label">Tipo de ajuste</label>
-                  <div className="flex gap-2">
-                    {([
-                      { key: 'percentage' as const, label: 'Porcentaje', icon: '%', desc: 'Aumentar o reducir por %' },
-                      { key: 'fixed_amount' as const, label: 'Monto fijo', icon: '+', desc: 'Sumar o restar $' },
-                      { key: 'fixed_price' as const, label: 'Precio fijo', icon: '=', desc: 'Establecer precio exacto' },
-                    ]).map((opt) => (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        onClick={() => { bulkPrice.setMode(opt.key); bulkPrice.setValue(''); }}
-                        className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium transition-all duration-200 min-h-[44px] ${
-                          bulkPrice.mode === opt.key
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'bg-gray-50 text-text-secondary hover:bg-gray-100 border border-border'
-                        }`}
-                        title={opt.desc}
-                      >
-                        <span className="block text-base font-bold mb-0.5">{opt.icon}</span>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="input-wrapper">
-                  <label className="input-label">
-                    {bulkPrice.mode === 'percentage' ? 'Porcentaje' : bulkPrice.mode === 'fixed_amount' ? 'Monto en $' : 'Nuevo precio en $'}
-                  </label>
-                  <Input
-                    sanitize="currency"
-                    decimals={2}
-                    inputMode="decimal"
-                    placeholder={bulkPrice.mode === 'percentage' ? 'Ej: 10' : 'Ej: 0.50'}
-                    value={bulkPrice.value}
-                    onChange={(e) => { bulkPrice.setValue(e.target.value); }}
-                    validation={{ required: true, min: 0.01, max: bulkPrice.mode === 'percentage' ? 500 : 999999 }}
-                    error={bulkPrice.error}
-                    inputClassName="text-sm"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {bulkPrice.mode === 'percentage' && 'Ej: 10 = $1.00 pasa a $1.10 · -5 = $1.00 pasa a $0.95'}
-                    {bulkPrice.mode === 'fixed_amount' && 'Ej: 0.50 = $1.00 pasa a $1.50 · -0.30 = $1.00 pasa a $0.70'}
-                    {bulkPrice.mode === 'fixed_price' && 'Ej: 3.00 = todos los precios quedan en $3.00'}
-                  </p>
-                </div>
-
-                {bulkPrice.preview.length > 0 && bulkPrice.impact && (
-                  <div className={`rounded-xl p-3 space-y-2 ${
-                    bulkPrice.impact.isDecreasing
-                      ? 'bg-warning/5 border border-warning/20'
-                      : 'bg-primary/5 border border-primary/10'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <p className={`text-xs font-medium ${bulkPrice.impact.isDecreasing ? 'text-warning' : 'text-primary'}`}>
-                        {bulkPrice.impact.isDecreasing ? '⚠️ Reduciendo precios' : 'Vista previa'}
-                      </p>
-                      <span className="text-xs text-gray-500">
-                        {bulkPrice.impact.productsWithPrice} de {bulkPrice.impact.totalProducts} productos
-                        {bulkPrice.impact.productsSkipped > 0 && ` · ${bulkPrice.impact.productsSkipped} sin precio`}
-                      </span>
-                    </div>
-                    {bulkPrice.impact.isDecreasing && (
-                      <p className="text-xs text-warning-dark bg-warning/10 rounded-lg px-2 py-1.5">
-                        Vas a reducir precios. Asegúrate de que es lo que quieres hacer.
-                      </p>
-                    )}
-                    {bulkPrice.preview.map((p) => (
-                      <div key={p.productId} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-700 truncate min-w-0 flex-1 mr-2">{p.name}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-xs text-gray-500">{formatUsd(p.currentPrice)}</span>
-                          <span className="text-xs text-gray-400">→</span>
-                          <span className={`text-xs font-medium ${bulkPrice.impact?.isDecreasing ? 'text-warning' : 'text-primary'}`}>
-                            {formatUsd(p.newPrice)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="space-y-4 animate-slide-down">
-                <div className={`flex items-start gap-3 p-3 rounded-xl ${
-                  bulkPrice.impact?.isDecreasing ? 'bg-warning/10' : 'bg-primary/5'
-                }`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    bulkPrice.impact?.isDecreasing ? 'bg-warning/20' : 'bg-primary/10'
-                  }`}>
-                    <AlertTriangle size={20} className={bulkPrice.impact?.isDecreasing ? 'text-warning' : 'text-primary'} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {bulkPrice.impact?.isDecreasing ? '¿Reducir precios?' : '¿Actualizar precios?'}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      Se actualizarán {bulkPrice.impact?.productsWithPrice} producto(s).
-                      {bulkPrice.impact && bulkPrice.impact.productsSkipped > 0 && ` ${bulkPrice.impact.productsSkipped} sin precio serán omitidos.`}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-3 max-h-[35vh] overflow-y-auto space-y-1.5">
-                  {bulkPrice.preview.map((p) => (
-                    <div key={p.productId} className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
-                      <span className="text-gray-700 truncate min-w-0 flex-1 mr-2">{p.name}</span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-xs text-gray-500">{formatUsd(p.currentPrice)}</span>
-                        <span className="text-xs text-gray-400">→</span>
-                        <span className={`text-xs font-bold ${bulkPrice.impact?.isDecreasing ? 'text-warning' : 'text-success'}`}>
-                          {formatUsd(p.newPrice)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {bulkPrice.impact && bulkPrice.impact.totalProducts > 3 && (
-                    <p className="text-xs text-gray-400 text-center pt-1">
-                      +{bulkPrice.impact.totalProducts - 3} productos más
-                    </p>
-                  )}
-                </div>
-
-                {bulkPrice.impact?.isDecreasing && (
-                  <div className="bg-danger/5 border border-danger/20 rounded-xl p-3">
-                    <p className="text-xs text-danger font-medium">
-                      Esta acción reducirá los precios de venta. Los productos ya vendidos a precios anteriores no se verán afectados.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </Modal>
+          selectedProducts={products.filter((p) => bulkPrice.selectedIds.includes(p.id))}
+          bulkPrice={bulkPrice}
+          isOnline={isOnline}
+        />
       )}
 
       {confirmDelete && (
@@ -1087,7 +782,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                     isSelected
                       ? 'border-primary ring-1 ring-primary/30 bg-primary/2'
                       : 'border-border hover:border-primary/30 hover:bg-gray-50/50'
-                  } ${isZero ? 'border-l-3 border-l-danger' : 'border-l-3 border-l-warning'}`}
+                  } ${isZero ? 'low-stock-card--danger' : ''}`}
                   style={!isSelected && !isZero ? { borderLeftColor: 'var(--color-warning)' } : undefined}
                 >
                   <div className="flex items-center gap-3">

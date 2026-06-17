@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Button, Modal, Badge, Input } from '../../../common/components';
+import { Button, Modal, Badge, Input, Select } from '../../../common/components';
 import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Plus, Trash2, ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { parseCsvFile, validateCsvRows, importProductsFromCsv, validateRow, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
 
@@ -251,17 +251,23 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
           <div
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer"
+            className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer overflow-hidden"
             onClick={() => fileInputRef.current?.click()}
           >
+            <div
+              className="absolute inset-0 opacity-[0.02]"
+              style={{
+                backgroundImage: `repeating-linear-gradient(90deg, rgba(13,148,136,0.1) 0px, rgba(13,148,136,0.1) 1px, transparent 1px, transparent 20px)`,
+              }}
+            />
             {loading ? (
               <div className="flex flex-col items-center gap-3">
                 <Loader2 size={32} className="text-primary animate-spin" />
                 <p className="text-sm text-gray-500">Procesando archivo...</p>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 relative">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center pwa-icon-bounce">
                   <Upload size={24} className="text-primary" />
                 </div>
                 <div>
@@ -661,8 +667,8 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Pesable</label>
-                      <select
+                      <Select
+                        label="Pesable"
                         value={row.pesable || 'no'}
                         onChange={(e) => {
                           updateEditRow(i, 'pesable', e.target.value);
@@ -673,16 +679,16 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                           }
                           handleBlurValidate(i);
                         }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="text-xs"
                       >
                         <option value="no">No</option>
                         <option value="si">Sí</option>
-                      </select>
+                      </Select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Unidad</label>
-                      <select
+                      <Select
+                        label="Unidad"
                         value={row.unidad || (row.pesable === 'si' ? 'kg' : 'unidad')}
                         onChange={(e) => {
                           updateEditRow(i, 'unidad', e.target.value);
@@ -694,43 +700,43 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                           }
                           handleBlurValidate(i);
                         }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="text-xs"
                       >
                         <option value="unidad">Unidad</option>
                         <option value="kg">Kg</option>
                         <option value="gr">Gramos</option>
                         <option value="lt">Litros</option>
                         <option value="m">Metros</option>
-                      </select>
+                      </Select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">IVA</label>
-                      <select
+                      <Select
+                        label="IVA"
                         value={row.iva || 'si'}
                         onChange={(e) => { updateEditRow(i, 'iva', e.target.value); handleBlurValidate(i); }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="text-xs"
                       >
                         <option value="si">Sí</option>
                         <option value="no">No</option>
-                      </select>
+                      </Select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Vendible</label>
-                      <select
+                      <Select
+                        label="Vendible"
                         value={row.vendible || 'si'}
                         onChange={(e) => { updateEditRow(i, 'vendible', e.target.value); handleBlurValidate(i); }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="text-xs"
                       >
                         <option value="si">Sí</option>
                         <option value="no">No</option>
-                      </select>
+                      </Select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
-                      <select
+                      <Select
+                        label="Tipo"
                         value={row.tipo || 'resale'}
                         onChange={(e) => {
                           updateEditRow(i, 'tipo', e.target.value);
@@ -740,11 +746,11 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                           }
                           handleBlurValidate(i);
                         }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="text-xs"
                       >
                         <option value="resale">Venta</option>
                         <option value="materia_prima">Materia Prima</option>
-                      </select>
+                      </Select>
                     </div>
 
                     <div className="col-span-2 border-t border-gray-100 pt-2 mt-1">
@@ -832,12 +838,12 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
         <div className="flex flex-col items-center gap-4 py-8">
           <Loader2 size={32} className="text-primary animate-spin" />
           <p className="text-sm text-gray-600">Importando productos...</p>
-          <div className="w-full max-w-xs">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>Progreso</span>
-              <span>{importProgress.done} / {importProgress.total}</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full max-w-xs">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Progreso</span>
+                <span>{importProgress.done} / {importProgress.total}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 progress-bar-shimmer">
               <div
                 className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${importProgress.total > 0 ? (importProgress.done / importProgress.total) * 100 : 0}%` }}
@@ -851,7 +857,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
       {step === 'result' && summary && (
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3 py-4">
-            <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center animate-check-pop">
               <CheckCircle2 size={24} className="text-success" />
             </div>
             <p className="text-lg font-bold text-gray-900">Importación completada</p>

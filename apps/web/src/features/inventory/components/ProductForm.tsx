@@ -823,7 +823,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               {presentations.map((pres, index) => (
                 <div
                   key={index}
-                  className="border border-border rounded-xl p-4 space-y-3 bg-white hover:border-primary/20 hover:shadow-sm transition-all duration-200"
+                  className="border border-border rounded-xl p-4 space-y-3 bg-white hover:border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-200"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-gray-500">Variante #{index + 1}</span>
@@ -964,7 +964,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         {presentations.map((pres, index) => (
           <div
             key={index}
-            className="border border-border rounded-xl p-4 space-y-3 bg-white hover:border-primary/20 hover:shadow-sm transition-all duration-200"
+            className="border border-border rounded-xl p-4 space-y-3 bg-white hover:border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-gray-500">Variante #{index + 1}</span>

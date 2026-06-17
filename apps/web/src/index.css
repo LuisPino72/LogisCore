@@ -823,6 +823,36 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   animation: shimmerBtn 1.5s ease-in-out infinite;
 }
 
+/* ───────────────────── INVENTORY STAGGER ───────────────────── */
+@keyframes inventoryItemSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.inventory-stagger > * {
+  opacity: 0;
+  animation: inventoryItemSlide 0.25s ease-out forwards;
+}
+
+.inventory-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.inventory-stagger > *:nth-child(2) { animation-delay: 0.04s; }
+.inventory-stagger > *:nth-child(3) { animation-delay: 0.06s; }
+.inventory-stagger > *:nth-child(4) { animation-delay: 0.08s; }
+.inventory-stagger > *:nth-child(5) { animation-delay: 0.1s; }
+.inventory-stagger > *:nth-child(6) { animation-delay: 0.12s; }
+.inventory-stagger > *:nth-child(7) { animation-delay: 0.14s; }
+.inventory-stagger > *:nth-child(8) { animation-delay: 0.16s; }
+.inventory-stagger > *:nth-child(9) { animation-delay: 0.18s; }
+.inventory-stagger > *:nth-child(10) { animation-delay: 0.2s; }
+
+@keyframes badgeBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.badge-bounce:hover {
+  animation: badgeBounce 0.3s ease-in-out;
+}
+
 /* ───────────────────── POS ───────────────────── */
 @keyframes checkPop {
   0% { transform: scale(0); opacity: 0; }

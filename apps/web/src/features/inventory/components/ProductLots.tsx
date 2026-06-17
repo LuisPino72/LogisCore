@@ -99,7 +99,7 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
                   <span>Consumo</span>
                   <span>{displayQty(consumed, unit)}/{displayQty(lot.quantityAdded, unit)} ({pct}%)</span>
                 </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden progress-bar-shimmer">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
