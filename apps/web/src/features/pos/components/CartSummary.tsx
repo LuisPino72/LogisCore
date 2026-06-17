@@ -141,60 +141,57 @@ export function CartSummary({
       </div>
 
       {selectedCustomer ? (
-        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20">
           <User size={14} className="text-primary shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-900 truncate">
-              {selectedCustomer.cedula || selectedCustomer.name}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {hasCustomerWithCredit && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowCreditInfo(!showCreditInfo)}
-                  className="p-2 min-w-11 min-h-11 rounded-md hover:bg-primary/10 transition-colors text-primary flex items-center justify-center"
-                >
-                  <Info size={14} />
-                </button>
-                {showCreditInfo && (
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-lg shadow-lg p-3 min-w-[180px]">
-                    <p className="text-xs font-medium text-gray-900 mb-1">Crédito</p>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Límite:</span>
-                        <span className="font-medium">{formatUsd(selectedCustomer.creditLimit)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Deuda actual:</span>
-                        <span className="font-medium">{formatUsd(selectedCustomer.balance)}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-border pt-1">
-                        <span className="text-gray-500">Disponible:</span>
-                        <span className="font-medium text-success">{formatUsd(availableCredit)}</span>
-                      </div>
+          <p className="text-xs font-medium text-gray-900 truncate">
+            {selectedCustomer.cedula || selectedCustomer.name}
+          </p>
+          {hasCustomerWithCredit && (
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCreditInfo(!showCreditInfo)}
+                className="p-1.5 rounded-md hover:bg-primary/10 transition-colors text-primary flex items-center justify-center"
+              >
+                <Info size={13} />
+              </button>
+              {showCreditInfo && (
+                <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-border rounded-lg shadow-lg p-3 min-w-[180px]">
+                  <p className="text-xs font-medium text-gray-900 mb-1">Crédito</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Límite:</span>
+                      <span className="font-medium">{formatUsd(selectedCustomer.creditLimit)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Deuda actual:</span>
+                      <span className="font-medium">{formatUsd(selectedCustomer.balance)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-border pt-1">
+                      <span className="text-gray-500">Disponible:</span>
+                      <span className="font-medium text-success">{formatUsd(availableCredit)}</span>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={onClearCustomer}
-              className="p-2 min-w-11 min-h-11 rounded-md hover:bg-danger/10 transition-colors text-gray-400 hover:text-danger flex items-center justify-center"
-              title="Quitar cliente"
-            >
-              <X size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={onSelectCustomer}
-              className="min-h-11 min-w-11 text-xs font-medium text-primary hover:text-primary-dark px-2 py-1.5 rounded-md hover:bg-primary/10 transition-colors flex items-center justify-center"
-            >
-              Cambiar
-            </button>
-          </div>
+                </div>
+              )}
+            </div>
+          )}
+           <button
+            type="button"
+            onClick={onSelectCustomer}
+            className="text-xs font-medium text-primary hover:text-primary-dark px-2 py-1 rounded-md hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0"
+          >
+            Cambiar
+          </button>
+          <button
+            type="button"
+            onClick={onClearCustomer}
+            className="p-1.5 rounded-md hover:bg-danger/10 transition-colors text-gray-800 hover:text-danger flex items-center justify-center shrink-0"
+            title="Quitar cliente"
+          >
+            <X size={14} />
+          </button>
+         
         </div>
       ) : (
         <button
