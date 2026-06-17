@@ -138,7 +138,14 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
     if (!silent) set({ loading: true, error: null });
     const result = await productionService.getOrders(tenantId, filters);
     if (result.ok) {
-      set({ productionOrders: result.data, loading: false });
+      // Deduplicate by id (race condition: createOrder optimistic prepend + EventBus fetch)
+      const seen = new Set<string>();
+      const unique = result.data.filter((o) => {
+        if (seen.has(o.id)) return false;
+        seen.add(o.id);
+        return true;
+      });
+      set({ productionOrders: unique, loading: false });
     } else {
       set({ loading: false, error: result.error });
     }

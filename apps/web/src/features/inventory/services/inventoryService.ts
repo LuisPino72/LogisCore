@@ -1323,7 +1323,6 @@ export const inventoryService = {
         fileType: file.type === 'image/png' ? 'image/png' : 'image/jpeg',
       };
       compressedFile = await imageCompression(file, options);
-      logger.info('uploadProductImage', `Imagen comprimida: ${file.size} bytes → ${compressedFile.size} bytes`);
     } catch (err) {
       logger.error('uploadProductImage', 'Compresión fallida, usando original:', err);
       compressedFile = file;
@@ -1332,7 +1331,6 @@ export const inventoryService = {
     const ext = compressedFile.name.split('.').pop() ?? 'jpg';
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const filePath = `${tenantUuid}/${productId}.${ext}`;
-    logger.info('uploadProductImage', `filePath: ${filePath}, ext: ${ext}, original ext: ${file.name.split('.').pop()}`);
 
     let token: string;
     try {
@@ -1378,7 +1376,6 @@ export const inventoryService = {
     }
 
     const publicUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/Products/${filePath}`;
-    logger.info('uploadProductImage', `publicUrl generada: ${publicUrl}`);
 
     try {
       const db = getDb();
