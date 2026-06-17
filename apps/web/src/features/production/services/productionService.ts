@@ -339,8 +339,8 @@ export const productionService = {
 
     // Check duplicate recipe name
     const existingName = await db.recipes
-      .where({ tenantId, name: input.name })
-      .filter((r) => !r.deletedAt)
+      .where({ tenantId })
+      .filter((r) => !r.deletedAt && r.name === input.name)
       .first();
     if (existingName) {
       return failure(new AppError(ProductionErrors.RECIPE_DUPLICATE_NAME, 'Ya existe una receta con ese nombre.'));

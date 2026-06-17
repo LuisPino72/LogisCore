@@ -306,7 +306,11 @@ export function useRecipeForm() {
           }
         }
         if (form.name.trim()) {
-          const existingRecipe = await db.recipes.where('name').equalsIgnoreCase(form.name.trim()).first();
+          const session = useAuthStore.getState().session;
+          const existingRecipe = await db.recipes
+            .where({ tenantId: session?.tenantId })
+            .filter((r) => !r.deletedAt && r.name.toLowerCase() === form.name.trim().toLowerCase())
+            .first();
           if (existingRecipe) {
             stepErrors.name = 'Ya existe una receta con este nombre';
           }
