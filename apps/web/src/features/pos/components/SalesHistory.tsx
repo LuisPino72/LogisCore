@@ -113,11 +113,11 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
       key: 'totalBs',
       header: 'Total',
       sortable: true,
-      className: 'text-right',
+      align: 'center',
       render: (sale) => {
         const totalUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
         return (
-          <div className="text-right">
+          <div className="flex flex-col items-center">
             <p className="text-sm font-bold">{formatBs(sale.totalBs)}</p>
             <p className="text-sm font-semibold text-gray-800">{formatUsd(totalUsd)}</p>
           </div>

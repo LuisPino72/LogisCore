@@ -77,7 +77,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
 
   const displayQty = localQty ?? (item.isWeighted ? item.quantity.toFixed(2) : item.quantity.toString());
 
-  const btnBase = 'w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs hover:shadow-sm';
+  const btnBase = 'w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs hover:shadow-sm';
   const btnIdle = 'bg-surface-alt hover:bg-gray-200/80 active:bg-gray-300';
   const btnActive = 'bg-primary/20 scale-95';
 
@@ -99,14 +99,14 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         </div>
         <div className="text-right shrink-0">
           <p className="text-sm font-semibold text-gray-900">{formatUsd(item.totalPriceUsd)}</p>
-          {priceBs && <p className="text-xs text-text-muted">{priceBs}</p>}
+          {priceBs && <p className="text-sm text-gray-700">{priceBs}</p>}
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <p className="text-xs text-gray-500 shrink-0 order-last sm:order-0">
+        <p className="text-xs text-gray-600 shrink-0 order-last sm:order-0">
           {item.isWeighted ? item.unit : 'u'} x {formatUsd(item.unitPriceUsd)}
         </p>
-        <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
+        <div className="flex items-center justify-between sm:justify-end gap-1 w-full sm:w-auto">
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -157,7 +157,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
             variant="ghost"
             size="sm"
             onClick={() => onRemove(item.productId, item.presentationId)}
-            className="p-2 min-w-11 min-h-11 sm:ml-1 active:bg-danger/10"
+            className="p-2 min-w-10 min-h-10 sm:ml-1 active:bg-danger/10"
           >
             <Trash2 size={16} className="text-danger" />
           </Button>
