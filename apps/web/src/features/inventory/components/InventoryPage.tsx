@@ -19,7 +19,7 @@ import { StockAdjustmentModal } from './StockAdjustmentModal';
 import { BulkPriceUpdateModal } from './BulkPriceUpdateModal';
 import { useStockAdjustment } from '../hooks/useStockAdjustment';
 import { useBulkPriceUpdate } from '../hooks/useBulkPriceUpdate';
-import { logger } from '../../../lib/logger';
+
 import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
 
 
@@ -235,13 +235,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
 
   const handleEditProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => {
     if (!editProduct || !tenantId) return false;
-    logger.info('InventoryPage', `[handleEditProduct] imageUrl en data: ${data.imageUrl ?? 'undefined'}`);
-    logger.info('InventoryPage', `[handleEditProduct] imageFile: ${imageFile?.name ?? 'null'}`);
 
     // Si hay un nuevo archivo de imagen, preservar la URL existente hasta que uploadProductImage la actualice
     if (imageFile && editProduct.imageUrl) {
       data.imageUrl = editProduct.imageUrl;
-      logger.info('InventoryPage', `[handleEditProduct] preservando imageUrl existente para upload posterior`);
     }
 
     const ok = await updateProduct(editProduct.id, data, tenantId);
@@ -252,10 +249,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     addToast({ type: 'success', message: 'Producto actualizado exitosamente.', duration: 3000 });
     if (imageFile) {
       const publicUrl = await uploadProductImage(imageFile, tenantId, editProduct.id);
-      logger.info('InventoryPage', `[handleEditProduct] uploadProductImage retornó: ${publicUrl}`);
       if (publicUrl) {
         setEditProduct(prev => prev ? { ...prev, imageUrl: publicUrl } : null);
-        logger.info('InventoryPage', `[handleEditProduct] setEditProduct con imageUrl: ${publicUrl}`);
         EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
       } else {
         addToast({ type: 'warning', message: 'Producto actualizado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });

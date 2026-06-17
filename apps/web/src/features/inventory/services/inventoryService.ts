@@ -502,10 +502,6 @@ export const inventoryService = {
         delete safeInput.imageUrl;
       }
       const updated = { ...existing, ...safeInput };
-      logger.info('updateProduct', `[updateProduct] imageUrl in input: ${input.imageUrl ?? 'undefined'}`);
-      logger.info('updateProduct', `[updateProduct] safeInput.imageUrl: ${safeInput.imageUrl ?? 'undefined'}`);
-      logger.info('updateProduct', `[updateProduct] existing.imageUrl: ${existing.imageUrl ?? 'undefined'}`);
-      logger.info('updateProduct', `[updateProduct] updated.imageUrl: ${updated.imageUrl ?? 'undefined'}`);
 
       await db.transaction('rw', [
         db.products,
