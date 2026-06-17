@@ -77,6 +77,11 @@ export function SearchableSelect({
     if (!hideSearch) {
       setTimeout(() => searchRef.current?.focus(), 0);
     }
+    if (window.innerWidth < 640) {
+      setTimeout(() => {
+        wrapperRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 50);
+    }
   }, [hideSearch]);
 
   const handleSelect = useCallback((optionValue: string) => {

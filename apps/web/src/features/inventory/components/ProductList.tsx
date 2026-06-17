@@ -597,6 +597,11 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   No vendible
                 </span>
               )}
+              {product.isSellable && !product.isWeighted && product.productType !== 'materia_prima' && (
+                <span className="text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  Vendible
+                </span>
+              )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
                 <span className="text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   Pesable
