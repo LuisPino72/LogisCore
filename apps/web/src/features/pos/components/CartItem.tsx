@@ -103,7 +103,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <p className="text-xs text-gray-600 shrink-0 order-last sm:order-0">
+        <p className="text-base text-gray-800 shrink-0 order-last sm:order-0">
           {item.isWeighted ? item.unit : 'u'} x {formatUsd(item.unitPriceUsd)}
         </p>
         <div className="flex items-center justify-between sm:justify-end gap-1 w-full sm:w-auto">
@@ -132,7 +132,6 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
                 onChange={handleChange}
                 onBlur={handleBlur}
                 validation={{ required: true, min: 0.01, max: 99999 }}
-                hint={item.isWeighted ? 'Máx. 99999' : 'Máx. 99999'}
                 className="text-center py-1.5 text-sm font-semibold"
               />
             </div>
