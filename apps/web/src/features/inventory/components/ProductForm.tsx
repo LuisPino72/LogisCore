@@ -313,7 +313,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
         </div>
         <div className="min-w-0">
           <span className="block text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors">Producto pesable</span>
-          <span className="block text-xs text-gray-500 mt-0.5">Se vende por peso (Kg) o Litros (Lt)</span>
+          <span className="block text-xs text-gray-500 mt-0.5">Se vende por peso (Kg), Litros (Lt) o Metros (m)</span>
         </div>
       </button>
 

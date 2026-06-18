@@ -70,7 +70,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
     return {
       ...base,
       productType: options.initialValues?.isWeighted
-        ? options.initialValues?.unit === 'lt' ? 'pesable_lt' : 'pesable_kg'
+        ? options.initialValues?.unit === 'm' ? 'pesable_m' : options.initialValues?.unit === 'lt' ? 'pesable_lt' : 'pesable_kg'
         : 'unidad',
     };
   });
@@ -95,7 +95,7 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
           // Fix isRawMaterial if it was incorrectly set
           setFormData(prev => {
             if (prev.isRawMaterial) {
-              return { ...prev, isRawMaterial: false, productionType: undefined, productType: prev.isWeighted ? (prev.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad' };
+              return { ...prev, isRawMaterial: false, productionType: undefined, productType: prev.isWeighted ? (prev.unit === 'm' ? 'pesable_m' : prev.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad' };
             }
             return prev;
           });
@@ -114,8 +114,8 @@ export function useProductForm(options: UseProductFormOptions): UseProductFormRe
       const next = { ...prev, [key]: value };
 
       if (key === 'productType') {
-        next.isWeighted = value === 'pesable_kg' || value === 'pesable_lt';
-        next.unit = value === 'pesable_kg' ? 'kg' : value === 'pesable_lt' ? 'lt' : 'unidad';
+        next.isWeighted = value === 'pesable_kg' || value === 'pesable_lt' || value === 'pesable_m';
+        next.unit = value === 'pesable_kg' ? 'kg' : value === 'pesable_lt' ? 'lt' : value === 'pesable_m' ? 'm' : 'unidad';
       }
 
       // Materia prima: auto-set isSellable e isTaxable a false

@@ -37,7 +37,7 @@ export interface ProductFormData {
   isTaxable: boolean;
   isSellable: boolean;
   isRawMaterial: boolean;
-  productType: 'unidad' | 'pesable_kg' | 'pesable_lt' | 'raw_material';
+  productType: 'unidad' | 'pesable_kg' | 'pesable_lt' | 'pesable_m' | 'raw_material';
   productionType?: 'materia_prima';
   unit: string;
   stockInicial: number;
@@ -111,16 +111,37 @@ export function mlToLt(ml: number): number {
   return ml / 1000;
 }
 
+export function mToMm(m: number): number {
+  return Math.round(m * 1000);
+}
+
+export function mmToM(mm: number): number {
+  return mm / 1000;
+}
+
 export function displayStock(stock: number, unit: string): string {
   if (unit === 'kg') return gramsToKg(stock).toFixed(2);
   if (unit === 'lt') return mlToLt(stock).toFixed(2);
   if (unit === 'gr') return stock.toFixed(0);
-  if (unit === 'm') return stock.toFixed(2);
+  if (unit === 'm') return mmToM(stock).toFixed(2);
   return stock.toString();
 }
 
 export function convertToStorage(value: number, productType: string): number {
   if (productType === 'pesable_kg') return kgToGrams(value);
   if (productType === 'pesable_lt') return ltToMl(value);
+  if (productType === 'pesable_m') return mToMm(value);
   return Math.round(value);
+}
+
+/**
+ * Mapea unit + isWeighted al productType correcto para almacenamiento.
+ * Reemplaza ternarios hardcodeados como: unit === 'lt' ? 'pesable_lt' : 'pesable_kg'
+ */
+export function unitToStorageType(isWeighted: boolean, unit: string): string {
+  if (!isWeighted) return 'unidad';
+  if (unit === 'kg') return 'pesable_kg';
+  if (unit === 'lt') return 'pesable_lt';
+  if (unit === 'm') return 'pesable_m';
+  return 'pesable_kg';
 }

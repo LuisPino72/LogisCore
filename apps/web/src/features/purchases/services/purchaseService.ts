@@ -19,7 +19,7 @@ import type {
   ReceivePurchaseOrderInput,
 } from '../../../specs/purchases';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
-import { convertToStorage } from '../../inventory/types';
+import { convertToStorage, unitToStorageType } from '../../inventory/types';
 import { requireRole } from '../../auth/services/roleGuard';
 
 const PURCHASES_MODULE = 'PURCHASES';
@@ -676,7 +676,7 @@ export const purchaseService = {
             if (!product) continue;
 
             const storageQty = product.isWeighted
-              ? convertToStorage(rec.receivedQuantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
+              ? convertToStorage(rec.receivedQuantity, unitToStorageType(product.isWeighted, product.unit))
               : rec.receivedQuantity;
 
             const effectiveQty = item.unitMultiplier && item.unitMultiplier > 1

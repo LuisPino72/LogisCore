@@ -12,7 +12,7 @@ import { InventoryErrors } from '../../../specs/inventory/errors';
 import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
-import { convertToStorage } from '../types';
+import { convertToStorage, unitToStorageType, displayStock } from '../types';
 import { requireRole } from '../../auth/services/roleGuard';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './mappers';
@@ -194,7 +194,7 @@ export const inventoryService = {
     const now = new Date().toISOString();
 
     const stockInicial = input.stockInicial && input.stockInicial > 0
-      ? convertToStorage(input.stockInicial, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
+      ? convertToStorage(input.stockInicial, unitToStorageType(input.isWeighted, input.unit))
       : 0;
 
     const costPerDisplayUnit = input.costPrice != null && (input.stockInicial ?? 0) > 0
@@ -215,7 +215,7 @@ export const inventoryService = {
       unit: input.unit,
       stock: stockInicial,
       stockMin: input.stockMin != null
-        ? convertToStorage(input.stockMin, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
+        ? convertToStorage(input.stockMin, unitToStorageType(input.isWeighted, input.unit))
         : undefined,
       costPrice: costPerDisplayUnit,
         productType: input.productType ?? 'resale',
@@ -314,7 +314,7 @@ export const inventoryService = {
     const now = new Date().toISOString();
 
     const parentStock = input.stockInicial && input.stockInicial > 0
-      ? convertToStorage(input.stockInicial, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
+      ? convertToStorage(input.stockInicial, unitToStorageType(input.isWeighted, input.unit))
       : 0;
 
     const presentationRecords: Array<{
@@ -372,7 +372,7 @@ export const inventoryService = {
         unit: input.unit,
         stock: parentStock,
         stockMin: input.stockMin != null
-          ? convertToStorage(input.stockMin, input.isWeighted ? (input.unit === 'lt' ? 'pesable_lt' : 'pesable_kg') : 'unidad')
+          ? convertToStorage(input.stockMin, unitToStorageType(input.isWeighted, input.unit))
           : undefined,
         costPrice: costPerDisplayUnit,
         imageUrl: input.imageUrl,
@@ -494,7 +494,7 @@ export const inventoryService = {
       if (safeInput.stockMin !== undefined && existing.isWeighted) {
         safeInput.stockMin = convertToStorage(
           safeInput.stockMin as number,
-          existing.unit === 'lt' ? 'pesable_lt' : 'pesable_kg',
+          unitToStorageType(existing.isWeighted, existing.unit),
         );
       }
       // Preservar imageUrl existente si no viene explícitamente en el input
@@ -1162,9 +1162,9 @@ export const inventoryService = {
     const now = new Date().toISOString();
     const previousStock = product.stock;
     
-    // Convert input quantity to storage units (g/ml) if weighted
+    // Convert input quantity to storage units (g/ml/mm) if weighted
     const storageQuantity = product.isWeighted 
-      ? convertToStorage(input.quantity, product.unit === 'kg' ? 'pesable_kg' : 'pesable_lt')
+      ? convertToStorage(input.quantity, unitToStorageType(product.isWeighted, product.unit))
       : Math.round(input.quantity);
 
     const newStock = previousStock + storageQuantity;
@@ -1645,13 +1645,9 @@ export const inventoryService = {
     }
 
     const lowStock = rows.filter((p) => {
-      const displayStock = p.isWeighted
-        ? (p.unit === 'kg' || p.unit === 'lt' ? p.stock / 1000 : p.stock)
-        : p.stock;
-      const displayStockMin = p.isWeighted
-        ? (p.unit === 'kg' || p.unit === 'lt' ? p.stockMin! / 1000 : p.stockMin!)
-        : p.stockMin!;
-      return displayStock <= displayStockMin;
+      const stock = displayStock(p.stock, p.unit);
+      const stockMin = displayStock(p.stockMin!, p.unit);
+      return parseFloat(stock) <= parseFloat(stockMin);
     });
     return success(lowStock.map((r) => toProduct(r as unknown as Record<string, unknown>)));
   },

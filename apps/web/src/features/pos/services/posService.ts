@@ -18,7 +18,7 @@ import { CreateSaleInputSchema, calculateSaleTotals, MAX_PARKED_CARTS } from '..
 import { saleFromSupabase, saleItemFromSupabase, cashRegisterFromSupabase } from './mappers';
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
-import { convertToStorage } from '../../../features/inventory/types';
+import { convertToStorage, unitToStorageType } from '../../../features/inventory/types';
 import { requireRole } from '../../auth/services/roleGuard';
 import { useAuthStore } from '../../auth/stores/authStore';
 
@@ -633,7 +633,7 @@ export const posService = {
           }
 
           const baseQuantity = product.isWeighted
-            ? convertToStorage(cartItem.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
+            ? convertToStorage(cartItem.quantity, unitToStorageType(product.isWeighted, product.unit))
             : Math.round(cartItem.quantity);
           const storageQuantity = baseQuantity * (cartItem.unitMultiplier || 1);
 
@@ -1419,7 +1419,7 @@ export const posService = {
             // Producto normal: revertir stock del producto
             const previousStock = product.stock;
             const baseQty = product.isWeighted
-              ? convertToStorage(item.quantity, product.unit === 'lt' ? 'pesable_lt' : 'pesable_kg')
+              ? convertToStorage(item.quantity, unitToStorageType(product.isWeighted, product.unit))
               : Math.round(item.quantity);
             const storageQty = baseQty * (item.unitMultiplier || 1);
             const newStock = previousStock + storageQty;
