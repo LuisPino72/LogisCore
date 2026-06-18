@@ -3,7 +3,6 @@
  * BDD Unit Tests for INV-007 (Metros Lineales)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { outboxService } from '../../services/outbox/outboxService';
 import { mToMm, mmToM, displayStock, convertToStorage } from '../../features/inventory/types';
 
 const mockDb = {
