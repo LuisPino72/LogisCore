@@ -249,10 +249,7 @@ function MobileCard({
 
       {/* Status badge */}
       <div className="flex justify-center pb-3 px-4">
-        <Badge variant={status.variant}>
-          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-          {status.label}
-        </Badge>
+        <Badge variant={status.variant}>{status.label}</Badge>
       </div>
 
       {/* Fecha + recurrente */}
