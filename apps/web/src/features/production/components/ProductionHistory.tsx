@@ -141,10 +141,10 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
               </div>
               <div className="flex items-center gap-2 shrink-0 self-start flex-wrap">
                 <Button
-                  variant="ghost"
+                  variant="ghost-primary"
                   size="sm"
                   onClick={() => setSelectedOrder(order)}
-                  className="text-primary hover:bg-primary/10 min-h-[44px]"
+                  className="min-h-[44px]"
                   aria-label="Ver detalles"
                 >
                   <Eye size={14} className="mr-1" />
@@ -152,11 +152,11 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                 </Button>
                 {canCancel && (
                   <Button
-                    variant="ghost"
+                    variant="ghost-danger"
                     size="sm"
                     onClick={() => onCancel(order.id)}
                     disabled={isCancelling}
-                    className="text-danger hover:bg-danger/10 min-h-[44px]"
+                    className="min-h-[44px]"
                     aria-label="Cancelar orden"
                   >
                     <XCircle size={14} className="mr-1" />

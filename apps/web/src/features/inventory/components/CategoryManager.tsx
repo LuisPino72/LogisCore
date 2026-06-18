@@ -131,11 +131,11 @@ export function CategoryManager({ categories, products, isOwner, onCreate, onUpd
               </span>
               {isOwner && (
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-11 min-h-11" title="Editar">
+                  <Button variant="ghost-primary" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-11 min-h-11" title="Editar">
                     <Edit3 size={14} />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar">
-                    <Trash2 size={14} className="text-danger" />
+                  <Button variant="ghost-danger" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar">
+                    <Trash2 size={14} />
                   </Button>
                 </div>
               )}

@@ -102,7 +102,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
             <div className="flex gap-1">
               <Tooltip content="Ver historial" position="top">
                 <Button
-                  variant="ghost"
+                  variant="ghost-primary"
                   size="sm"
                   onClick={() => onViewHistory(c)}
                   className="p-1.5 min-w-11 min-h-11"
@@ -115,7 +115,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                 <>
                   <Tooltip content="Editar" position="top">
                     <Button
-                      variant="ghost"
+                      variant="ghost-accent"
                       size="sm"
                       onClick={() => onEdit(c)}
                       className="p-1.5 min-w-11 min-h-11"
@@ -126,10 +126,10 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                   </Tooltip>
                   <Tooltip content="Eliminar" position="top">
                     <Button
-                      variant="ghost"
+                      variant="ghost-danger"
                       size="sm"
                       onClick={() => onDelete(c.id, c.name)}
-                      className="p-1.5 min-w-11 min-h-11 text-danger"
+                      className="p-1.5 min-w-11 min-h-11"
                       title="Eliminar"
                     >
                       <Trash2 size={14} />

@@ -90,6 +90,10 @@
 .btn-secondary { @apply bg-white text-gray-900 hover:bg-gray-50 border border-gray-200 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-danger { @apply bg-danger text-white hover:bg-red-700 active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-ghost { @apply bg-transparent text-gray-600 hover:bg-gray-100 active:scale-[0.98]; }
+.btn-ghost-success { @apply bg-transparent text-success hover:bg-success/15 active:scale-[0.98]; }
+.btn-ghost-danger { @apply bg-transparent text-danger hover:bg-danger/15 active:scale-[0.98]; }
+.btn-ghost-primary { @apply bg-transparent text-primary hover:bg-primary/15 active:scale-[0.98]; }
+.btn-ghost-accent { @apply bg-transparent text-accent hover:bg-accent/15 active:scale-[0.98]; }
 .btn-outline { @apply bg-transparent text-primary border border-primary hover:bg-primary/5 active:scale-[0.98]; }
 .btn-accent { @apply bg-accent text-white hover:bg-accent-dark active:scale-[0.98] shadow-sm hover:shadow-md hover:-translate-y-px; }
 .btn-loading { @apply opacity-70 pointer-events-none; }

@@ -132,12 +132,12 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
       className: 'text-right',
       render: (sale) => (
         <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost" size="sm" onClick={() => handleView(sale)} className="p-2" title="Ver detalle">
+          <Button variant="ghost-primary" size="sm" onClick={() => handleView(sale)} className="p-2" title="Ver detalle">
             <Eye size={16} />
           </Button>
           {canVoid && (
-            <Button variant="ghost" size="sm" onClick={() => onVoid(sale.id)} className="p-2" title="Anular venta">
-              <Ban size={16} className="text-danger" />
+            <Button variant="ghost-danger" size="sm" onClick={() => onVoid(sale.id)} className="p-2" title="Anular venta">
+              <Ban size={16} />
             </Button>
           )}
         </div>

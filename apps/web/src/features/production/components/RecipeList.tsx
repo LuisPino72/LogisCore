@@ -104,18 +104,18 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                     </Button>
                   )}
                   <Button
-                    variant="ghost"
+                    variant="ghost-primary"
                     size="sm"
                     onClick={() => onEdit(recipe)}
-                    className="p-2 min-h-[44px] min-w-[44px] hover:bg-primary/10 hover:text-primary"
+                    className="p-2 min-h-[44px] min-w-[44px]"
                   >
                     <Edit3 size={16} />
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="ghost-danger"
                     size="sm"
                     onClick={() => setConfirmDelete(recipe)}
-                    className="p-2 text-danger hover:text-danger hover:bg-danger/10 min-h-[44px] min-w-[44px]"
+                    className="p-2 min-h-[44px] min-w-[44px]"
                   >
                     <Trash2 size={16} />
                   </Button>

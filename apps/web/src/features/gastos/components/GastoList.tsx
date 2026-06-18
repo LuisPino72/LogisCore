@@ -98,7 +98,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
       render: (g) => (
         <div className="flex items-center justify-end gap-1">
           <Button
-            variant="ghost"
+            variant="ghost-success"
             size="sm"
             disabled={g.status !== 'pending'}
             onClick={() => setConfirmPayTarget({ id: g.id, category: g.category, amountUsd: g.amountUsd })}
@@ -107,7 +107,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
             <CheckCircle size="16" />
           </Button>
           <Button
-            variant="ghost"
+            variant="ghost-danger"
             size="sm"
             disabled={!isOwner || g.status === 'paid'}
             onClick={() => setDeleteTarget({ id: g.id, category: g.category })}
@@ -285,9 +285,9 @@ function MobileCard({
       {/* Botones de acción */}
       <div className="flex items-stretch border-t border-border">
         <Button
-          variant="ghost"
+          variant="ghost-success"
           disabled={!isPending}
-          className="flex-1 rounded-none text-success hover:bg-success/10 hover:text-success relative overflow-hidden group"
+          className="flex-1 rounded-none relative overflow-hidden group"
           onClick={() => onPay({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
         >
           <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -295,9 +295,9 @@ function MobileCard({
           <span className="relative z-10">Pagar</span>
         </Button>
         <Button
-          variant="ghost"
+          variant="ghost-danger"
           disabled={!isOwner || gasto.status === 'paid'}
-          className="flex-1 rounded-none border-l border-border text-text-secondary hover:text-danger hover:bg-danger/5"
+          className="flex-1 rounded-none border-l border-border"
           onClick={() => onDelete({ id: gasto.id, category: gasto.category })}
         >
           <Trash2 size={14} />

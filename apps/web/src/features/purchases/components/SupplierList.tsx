@@ -84,10 +84,10 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
             </div>
             {isOwner && (
               <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8" title="Editar">
+                <Button variant="ghost-primary" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8" title="Editar">
                   <Pencil size={14} />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => onDelete(s.id, s.name)} className="p-1.5 min-w-8 min-h-8 text-danger" title="Eliminar">
+                <Button variant="ghost-danger" size="sm" onClick={() => onDelete(s.id, s.name)} className="p-1.5 min-w-8 min-h-8" title="Eliminar">
                   <Trash2 size={14} />
                 </Button>
               </div>
