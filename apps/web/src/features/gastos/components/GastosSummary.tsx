@@ -42,7 +42,7 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-warning shrink-0 expense-badge-pending" />
+            <span className="w-2.5 h-2.5 rounded-full bg-warning shrink-0 ring-2 ring-warning/20 expense-badge-pending" />
             <div>
               <p className="text-xs text-text-secondary">Pendientes</p>
               <p className="text-sm sm:text-base font-semibold text-gray-900">
@@ -52,7 +52,7 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-success shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-success shrink-0 ring-2 ring-success/20" />
             <div>
               <p className="text-xs text-text-secondary">Pagados</p>
               <p className="text-sm sm:text-base font-semibold text-gray-900">

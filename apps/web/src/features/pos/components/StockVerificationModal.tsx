@@ -273,8 +273,8 @@ export function StockVerificationModal({
                       <p className="font-medium text-sm leading-tight truncate">{item.productName}</p>
                       <p className="text-xs text-gray-600 mt-0.5">
                         {item.soldToday > 0 && `Vendido: ${item.soldToday} ${unitsLabel(item.unit)}`}
-                        {item.isLowStock && !item.isZeroStock && <span className="text-warning ml-1">(bajo stock)</span>}
-                        {item.isZeroStock && <span className="text-danger ml-1">(agotado)</span>}
+                        {item.isLowStock && !item.isZeroStock && <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-warning/10 text-warning px-1.5 py-0.5 rounded-full ml-1">Bajo stock</span>}
+                        {item.isZeroStock && <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-danger/10 text-danger px-1.5 py-0.5 rounded-full ml-1">Agotado</span>}
                       </p>
                     </div>
                     <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${diff > 0 ? 'bg-success/10 text-success' : diff < 0 ? 'bg-danger/10 text-danger' : 'bg-gray-100 text-gray-400'}`}>

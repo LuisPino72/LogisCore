@@ -1,5 +1,5 @@
 import { Package, Plus, Minus } from 'lucide-react';
-import { Button, Modal, Input, SearchableSelect } from '../../../common/components';
+import { Button, Modal, Input, SearchableSelect, Alert } from '../../../common/components';
 import type { AdjustmentReason, Product } from '../types';
 
 const REASON_OPTIONS: { value: AdjustmentReason; label: string }[] = [
@@ -154,10 +154,10 @@ export function StockAdjustmentModal({
         )}
 
         {!adjHasCost && (
-          <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 space-y-2">
-            <p className="text-xs text-warning-dark font-medium">
-              ⚠️ Este producto no tiene costo registrado. Los ajustes se registrarán con costo <strong>$0 por unidad</strong>.
-            </p>
+          <div className="space-y-2">
+            <Alert variant="warning" className="text-xs">
+              Este producto no tiene costo registrado. Los ajustes se registrarán con costo <strong>$0 por unidad</strong>.
+            </Alert>
             {!adjShowCostInput && (
               <Button variant="outline" size="sm" onClick={() => onSetShowCostInput(true)}>
                 Agregar costo total ($)

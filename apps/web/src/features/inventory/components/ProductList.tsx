@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Package, Trash2, Plus, AlertTriangle, Edit3, Layers, Settings, ClipboardCheck, DollarSign } from 'lucide-react';
-import { Button, Badge, DataTable, EmptyState, ImageWithFallback, SearchableSelect, Modal } from '../../../common/components';
+import { Button, Badge, DataTable, EmptyState, ImageWithFallback, SearchableSelect, Modal, Tooltip } from '../../../common/components';
 import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
@@ -147,18 +147,26 @@ function ProductActions({ product, bulkMode, isOwner, isOnline, selectedForBulk,
 
   return (
     <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:justify-end sm:gap-0 sm:flex-nowrap max-w-[120px] sm:max-w-none">
-      <Button variant="ghost-primary" size="sm" onClick={() => onEdit(product)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Editar" disabled={!isOnline}>
-        <Edit3 size={15} />
-      </Button>
-      <Button variant="ghost-danger" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Eliminar" disabled={!isOnline}>
-        <Trash2 size={15} />
-      </Button>
-      <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Ajustar stock" disabled={!isOnline}>
-        <Settings size={15} />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" title="Lotes">
-        <Layers size={15} />
-      </Button>
+      <Tooltip content="Editar producto" variant="help">
+        <Button variant="ghost-primary" size="sm" onClick={() => onEdit(product)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Editar" disabled={!isOnline}>
+          <Edit3 size={15} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Eliminar producto" variant="help">
+        <Button variant="ghost-danger" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Eliminar" disabled={!isOnline}>
+          <Trash2 size={15} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Ajustar stock" variant="help">
+        <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Ajustar stock" disabled={!isOnline}>
+          <Settings size={15} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Ver lotes" variant="help">
+        <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Lotes">
+          <Layers size={15} />
+        </Button>
+      </Tooltip>
     </div>
   );
 }
@@ -416,6 +424,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         header: 'Acciones',
         width: '0.8fr',
         align: 'center',
+        className: 'overflow-visible',
         render: (product) => (
           <ProductActions
             product={product}
@@ -552,14 +561,16 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               </Button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => setBulkMode(true)}
-              className="shrink-0 px-4 py-2.5 min-h-11 rounded-full text-xs font-medium border border-primary text-primary hover:bg-primary/5 transition-all flex items-center gap-1.5"
-            >
-              <ClipboardCheck size={13} />
-              Modo conteo
-            </button>
+            <Tooltip content="Selecciona varios productos." variant="help">
+              <button
+                type="button"
+                onClick={() => setBulkMode(true)}
+                className="shrink-0 px-4 py-2.5 min-h-11 rounded-full text-xs font-medium border border-primary text-primary hover:bg-primary/5 transition-all flex items-center gap-1.5"
+              >
+                <ClipboardCheck size={13} />
+                Modo conteo
+              </button>
+            </Tooltip>
           )}
         </div>
       )}
@@ -568,9 +579,14 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-text-secondary">{filteredByStock.length} producto{filteredByStock.length !== 1 ? 's' : ''}</p>
           {totalLowStock > 0 && (
-            <span className="text-xs font-medium text-danger bg-danger/10 px-2 py-0.5 rounded-full">
+            <button
+              type="button"
+              onClick={() => setStockFilter('low_stock')}
+              className="inline-flex items-center gap-1 text-xs font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full hover:bg-warning/20 transition-colors cursor-pointer"
+            >
+              <AlertTriangle size={12} />
               {totalLowStock} con stock bajo
-            </span>
+            </button>
           )}
         </div>
       )}
@@ -663,16 +679,16 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                       </button>
                     ) : (
                       <>
-                        <Button variant="ghost-primary" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Editar" disabled={!isOnline}>
+                        <Button variant="ghost-primary" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Editar" disabled={!isOnline}>
                           <Edit3 size={15} />
                         </Button>
-                        <Button variant="ghost-danger" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Eliminar" disabled={!isOnline}>
+                        <Button variant="ghost-danger" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Eliminar" disabled={!isOnline}>
                           <Trash2 size={15} />
                         </Button>
-                        <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Ajustar stock" disabled={!isOnline}>
+                        <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Ajustar stock" disabled={!isOnline}>
                           <Settings size={15} />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" title="Lotes">
+                        <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Lotes">
                           <Layers size={15} />
                         </Button>
                       </>

@@ -79,8 +79,8 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
       header: 'Recurrente',
       align: 'center',
       render: (g) => g.isRecurring ? (
-        <span className="inline-flex items-center gap-1 text-xs text-accent font-medium">
-          <RotateCcw size={14} />
+        <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">
+          <RotateCcw size={10} />
           {g.recurrenceType === 'yearly' ? 'Anual' : 'Mensual'}
         </span>
       ) : <span className="text-xs text-text-secondary">—</span>,
@@ -102,7 +102,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
             size="sm"
             disabled={g.status !== 'pending'}
             onClick={() => setConfirmPayTarget({ id: g.id, category: g.category, amountUsd: g.amountUsd })}
-            title="Marcar pagado"
+            aria-label="Marcar pagado"
           >
             <CheckCircle size="16" />
           </Button>
@@ -111,7 +111,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
             size="sm"
             disabled={!isOwner || g.status === 'paid'}
             onClick={() => setDeleteTarget({ id: g.id, category: g.category })}
-            title="Eliminar"
+            aria-label="Eliminar"
           >
             <Trash2 size="16" />
           </Button>

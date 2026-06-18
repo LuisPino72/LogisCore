@@ -84,9 +84,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                       Rendimiento: {recipe.yieldQuantity} {recipe.yieldUnit}
                     </span>
                     {recipe.wastePct > 0 && (
-                      <span className="flex items-center gap-1 text-amber-600">
-                        · Merma: {recipe.wastePct}%
-                      </span>
+                      <span className="inline-flex items-center text-[10px] font-medium bg-warning/10 text-warning px-1.5 py-0.5 rounded-full">Merma {recipe.wastePct}%</span>
                     )}
                   </div>
                 </div>

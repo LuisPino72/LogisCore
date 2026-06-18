@@ -97,7 +97,8 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
         <div className="flex flex-col flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-800 wrap-break-word">{item.name}</p>
           {item.presentationName && (
-            <span className="text-xs text-text-muted">
+            <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium text-[10px]">Presentación</span>
               {item.presentationName}
               {item.unitMultiplier > 1 && (
                 <span className="ml-1 text-text-secondary font-medium">

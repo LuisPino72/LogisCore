@@ -244,7 +244,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                 ))}
                 {order.items.length > 3 && (
                   <div className="text-xs text-text-secondary text-center pt-1 border-t border-gray-100/80 mt-1 font-medium">
-                    +{order.items.length - 3} artículos más
+                    <span className="inline-flex items-center text-[10px] font-medium bg-info/10 text-info px-1.5 py-0.5 rounded-full">+{order.items.length - 3} más</span>
                   </div>
                 )}
               </div>
@@ -258,7 +258,7 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                           <CheckCircle size={14} />
                           <span className="ml-1">Confirmar</span>
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0" disabled={!isOnline} aria-label="Editar orden">
                           <Pencil size={14} />
                         </Button>
                       </>
@@ -270,12 +270,12 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                       </Button>
                     )}
                     {(order.status === 'draft' || order.status === 'confirmed') && (
-                      <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger" disabled={!isOnline}>
+                      <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger" disabled={!isOnline} aria-label="Cancelar orden">
                         <XCircle size={14} />
                       </Button>
                     )}
                     {order.status === 'cancelled' && (
-                      <Button variant="ghost" size="sm" onClick={() => onDeleteOrder(order.id, order.supplierName ?? '')} className="text-danger" disabled={!isOnline}>
+                        <Button variant="ghost" size="sm" onClick={() => onDeleteOrder(order.id, order.supplierName ?? '')} className="text-danger" disabled={!isOnline} aria-label="Eliminar orden">
                         <Trash2 size={14} />
                         <span className="ml-1">Eliminar</span>
                       </Button>

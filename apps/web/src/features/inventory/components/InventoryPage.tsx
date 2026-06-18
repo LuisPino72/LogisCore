@@ -342,7 +342,9 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               </p>
               {totalLowStock > 0 && activeTab === 'productos' && (
                 <div className="mt-0.5">
-                  <LowStockBadge count={totalLowStock} onClick={() => setShowLowStockModal(true)} />
+                  <Tooltip content="Ver productos con stock bajo" variant="help">
+                    <LowStockBadge count={totalLowStock} onClick={() => setShowLowStockModal(true)} />
+                  </Tooltip>
                 </div>
               )}
             </div>
@@ -378,6 +380,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           >
             <Package size={18} />
             Productos
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">{products.length}</span>
           </button>
         </Tooltip>
         <Tooltip content="Organiza productos por categorías" position="bottom">
@@ -392,6 +395,7 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
           >
             <ListTree size={18} />
             Categorías
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">{categories.length}</span>
           </button>
         </Tooltip>
         <Tooltip content="Movimientos y ajustes de stock" position="bottom">

@@ -69,6 +69,7 @@ export function UserSection({
     {
       key: 'actions',
       header: 'Acciones',
+      className: 'overflow-visible',
       render: (u) => (
         <div className="flex gap-1 items-center">
           {u.role === 'owner' && <Badge variant="info">Propietario</Badge>}

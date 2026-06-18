@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Button, Badge, DataTable, EmptyState, Skeleton, DatePicker, SaleDetailModal } from '../../../common/components';
+import { Button, Badge, DataTable, EmptyState, Skeleton, DatePicker, SaleDetailModal, Tooltip } from '../../../common/components';
 import { Eye, Ban, Calendar } from 'lucide-react';
 import { useDebounce } from '../../../common/hooks/useDebounce';
 import { EventBus } from '@logiscore/core';
@@ -129,16 +129,20 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
     {
       key: 'actions',
       header: 'Acciones',
-      className: 'text-right',
+      className: 'text-right overflow-visible',
       render: (sale) => (
         <div className="flex items-center justify-end gap-1">
-          <Button variant="ghost-primary" size="sm" onClick={() => handleView(sale)} className="p-2" title="Ver detalle">
-            <Eye size={16} />
-          </Button>
-          {canVoid && (
-            <Button variant="ghost-danger" size="sm" onClick={() => onVoid(sale.id)} className="p-2" title="Anular venta">
-              <Ban size={16} />
+          <Tooltip content="Ver detalle" variant="help">
+            <Button variant="ghost-primary" size="sm" onClick={() => handleView(sale)} className="p-2" aria-label="Ver detalle">
+              <Eye size={16} />
             </Button>
+          </Tooltip>
+          {canVoid && (
+            <Tooltip content="Anular venta" variant="help">
+              <Button variant="ghost-danger" size="sm" onClick={() => onVoid(sale.id)} className="p-2" aria-label="Anular venta">
+                <Ban size={16} />
+              </Button>
+            </Tooltip>
           )}
         </div>
       ),

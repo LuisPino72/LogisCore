@@ -162,7 +162,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
                   <p className="text-xs text-gray-500 wrap-break-word">
                     Rendimiento por lote: {recipe.yieldQuantity} {recipe.yieldUnit}
                     {recipe.wastePct > 0 && (
-                      <span className="ml-1 text-warning">· Merma: {recipe.wastePct}%</span>
+                      <span className="inline-flex items-center text-[10px] font-medium bg-warning/10 text-warning px-1.5 py-0.5 rounded-full ml-1">Merma {recipe.wastePct}%</span>
                     )}
                   </p>
                 </div>

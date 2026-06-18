@@ -62,6 +62,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
                 icon={<Trash2 size={16} />}
                 onClick={(e) => { e.stopPropagation(); setDeleteTarget(cart); }}
                 className="min-w-11 min-h-11"
+                aria-label="Eliminar venta en cola"
               />
             </div>
           );

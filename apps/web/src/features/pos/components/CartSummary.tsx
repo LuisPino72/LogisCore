@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Input } from '../../../common/components';
-import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info } from 'lucide-react';
+import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info, Lock } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals } from '../../../specs/pos';
 import { IGTF_RATE } from '@logiscore/shared';
@@ -107,14 +107,14 @@ export function CartSummary({
 
       {paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && (
         <div className="flex justify-between min-w-0 flex-wrap text-sm text-gray-600">
-          <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
+          <span className="flex items-center gap-1.5">IGTF <span className="text-[10px] bg-info/10 text-info px-1.5 py-0.5 rounded-full font-medium">{(IGTF_RATE * 100).toFixed(0)}%</span></span>
           <span className="min-w-0 text-right">{formatUsd(igtfUsd)} / {formatBs(igtfBs)}</span>
         </div>
       )}
 
       {ivaBase > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
-          <span>IVA (16%)</span>
+          <span className="flex items-center gap-1.5">IVA <span className="text-[10px] bg-info/10 text-info px-1.5 py-0.5 rounded-full font-medium">16%</span></span>
           <span>{formatUsd(ivaUsd)} / {formatBs(ivaBs)}</span>
         </div>
       )}
@@ -187,7 +187,7 @@ export function CartSummary({
             type="button"
             onClick={onClearCustomer}
             className="p-1.5 rounded-md hover:bg-danger/10 transition-colors text-gray-800 hover:text-danger flex items-center justify-center shrink-0"
-            title="Quitar cliente"
+            aria-label="Quitar cliente"
           >
             <X size={14} />
           </button>
@@ -328,13 +328,13 @@ export function CartSummary({
           Pausar
         </Button>
         <Button
-          variant="primary"
+          variant={isCreditSale ? 'ghost-danger' : isOpen ? 'primary' : 'ghost'}
           className="flex-2 min-h-11"
           disabled={!isOpen || items.length === 0 || !paymentMethod || exchangeRateBs <= 0 || creditExceeds}
           loading={loading}
           onClick={onPay}
         >
-          <ShoppingCart size={16} />
+          {isCreditSale ? <CreditCard size={16} /> : isOpen ? <ShoppingCart size={16} /> : <Lock size={16} />}
           {isCreditSale ? 'Fiado' : isOpen ? 'Pagar' : 'Caja cerrada'}
         </Button>
       </div>

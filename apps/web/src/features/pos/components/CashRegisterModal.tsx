@@ -146,7 +146,7 @@ export function CashRegisterModal({
                 {differencePreview.isZero ? (
                   <span>Cuadre exacto: {formatBs(0)} (diferencia ≤ {MAX_CENTS_DIFFERENCE} Bs está dentro del margen aceptable)</span>
                 ) : (
-                  <span>Diferencia: {differencePreview.diff > 0 ? '+' : ''}{formatBs(differencePreview.diff)}</span>
+                  <><span>Diferencia:</span> <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full ${differencePreview.diff >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>{differencePreview.diff >= 0 ? 'Sobrante' : 'Faltante'} {formatBs(differencePreview.diff)}</span></>
                 )}
               </div>
             )}

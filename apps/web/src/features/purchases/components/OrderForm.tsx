@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Truck, Package, FileText, DollarSign, History } from 'lucide-react';
-import { Button, Input, Modal, SearchableSelect } from '../../../common/components';
+import { Alert, Button, Input, Modal, SearchableSelect } from '../../../common/components';
 import { usePurchaseStore } from '../stores/purchaseStore';
 import type { Product, Presentation } from '../../inventory/types';
 import type { Supplier, CreatePurchaseOrderInput, PurchaseOrderWithItems } from '../../../specs/purchases';
@@ -420,9 +420,9 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
         )}
 
         {duplicateWarning && (
-          <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+          <Alert variant="warning" className="text-xs">
             {duplicateWarning}
-          </div>
+          </Alert>
         )}
 
         <div className="flex justify-between items-center bg-linear-to-r from-primary/5 to-primary/10 border border-primary/15 p-3 rounded-lg total-glow">

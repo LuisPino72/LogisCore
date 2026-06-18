@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, EmptyState, Spinner, Pagination, Button } from '../../../common/components';
-import { History } from 'lucide-react';
+import { History, TrendingUp, TrendingDown } from 'lucide-react';
 import { purchaseService } from '../services/purchaseService';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -112,7 +112,18 @@ export function PriceHistoryModal({ supplierId, productId, productName, tenantId
                         })}
                       </td>
                       <td className="py-2 px-2 text-right text-gray-700">{entry.quantity}</td>
-                      <td className="py-2 px-2 text-right font-medium text-gray-900">{formatUsd(entry.costPerUnit)}</td>
+                      <td className="py-2 px-2 text-right font-medium text-gray-900">
+                        <span className="inline-flex items-center gap-1">
+                          {formatUsd(entry.costPerUnit)}
+                          {i > 0 && pageData[i - 1] && (
+                            entry.costPerUnit > pageData[i - 1].costPerUnit
+                              ? <TrendingUp size={12} className="text-danger" />
+                              : entry.costPerUnit < pageData[i - 1].costPerUnit
+                                ? <TrendingDown size={12} className="text-success" />
+                                : null
+                          )}
+                        </span>
+                      </td>
                       <td className="py-2 px-2 text-right text-gray-600">{formatUsd(entry.totalUsd)}</td>
                     </tr>
                   ))}
@@ -136,7 +147,15 @@ export function PriceHistoryModal({ supplierId, productId, productName, tenantId
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-text-secondary">Cant: {entry.quantity}</span>
-                    <span className="text-text-secondary">Unit: {formatUsd(entry.costPerUnit)}</span>
+                    <span className="text-text-secondary inline-flex items-center gap-1">Unit: {formatUsd(entry.costPerUnit)}
+                      {i > 0 && pageData[i - 1] && (
+                        entry.costPerUnit > pageData[i - 1].costPerUnit
+                          ? <TrendingUp size={12} className="text-danger" />
+                          : entry.costPerUnit < pageData[i - 1].costPerUnit
+                            ? <TrendingDown size={12} className="text-success" />
+                            : null
+                      )}
+                    </span>
                   </div>
                 </div>
               ))}

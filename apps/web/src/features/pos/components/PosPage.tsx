@@ -443,7 +443,9 @@ export function PosPage({ tenantId }: PosPageProps) {
     <div className="flex flex-row h-full w-full min-w-0">
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-          <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} disabled={!isOnline} />
+          <Tooltip content={isOnline ? (isOpen ? 'Haz click para cerrar.' : 'Haz click para abrir.') : 'Necesitas internet para abrir o cerrar caja'} position="bottom">
+            <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} disabled={!isOnline} />
+          </Tooltip>
           <Tooltip content="Escanear código de barras" position="bottom">
             <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-11 min-h-11">
               <Scan size={18} />
