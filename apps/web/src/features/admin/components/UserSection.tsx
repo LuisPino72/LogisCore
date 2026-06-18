@@ -74,7 +74,7 @@ export function UserSection({
           {u.role === 'owner' && <Badge variant="info">Propietario</Badge>}
           <Tooltip content="Restablecer contraseña" position="top">
             <Button
-              variant="ghost"
+              variant="ghost-primary"
               size="sm"
               className="min-h-11 admin-ripple"
               onClick={() => setResetTarget({ userId: u.userId, email: u.email ?? u.id, name: u.name ?? u.email ?? u.id })}
@@ -85,7 +85,7 @@ export function UserSection({
           {u.role !== 'owner' && (
             <Tooltip content="Eliminar empleado" position="top">
               <Button
-                variant="danger"
+                variant="ghost-danger"
                 size="sm"
                 className="min-h-11 admin-ripple"
                 onClick={() => setDeleteTarget({ id: u.id, name: u.name })}

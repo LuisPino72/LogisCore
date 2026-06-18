@@ -89,7 +89,7 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
   };
 
   const activeRecipes = recipes.filter((r) => r.isActive).length;
-  const pendingOrders = productionOrders.filter((o) => o.status === 'confirmed').length;
+  const batchRecipes = recipes.filter((r) => r.isActive && r.mode === 'batch').length;
   const completedOrders = productionOrders.filter((o) => o.status === 'done').length;
 
   return (
@@ -139,11 +139,11 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
                 {activeRecipes}
               </span>
             )}
-            {tab.id === 'produce' && pendingOrders > 0 && (
+            {tab.id === 'produce' && batchRecipes > 0 && (
               <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
                 activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'
               }`}>
-                {pendingOrders}
+                {batchRecipes}
               </span>
             )}
             {tab.id === 'history' && completedOrders > 0 && (

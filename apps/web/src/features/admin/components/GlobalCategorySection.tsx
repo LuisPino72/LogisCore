@@ -56,12 +56,12 @@ export function GlobalCategorySection({
       header: 'Acciones',
       render: (c: GlobalCategory) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" className="min-h-11" onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
+          <Button variant="ghost-accent" size="sm" className="min-h-11" onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
             <Edit2 size={16} />
-            <span className="hidden sm:inline">Editar</span>
+            <span className="hidden sm:inline"></span>
           </Button>
-          <Button variant="ghost" size="sm" className="min-h-11" onClick={() => setDeleteTarget(c)}>
-            <Trash2 size={16} className="text-gray-400 hover:text-danger" />
+          <Button variant="ghost-danger" size="sm" className="min-h-11" onClick={() => setDeleteTarget(c)}>
+            <Trash2 size={16} />
           </Button>
         </div>
       ),
