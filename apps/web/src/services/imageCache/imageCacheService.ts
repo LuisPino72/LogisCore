@@ -28,7 +28,10 @@ async function cacheInBg(url: string): Promise<void> {
     const cache = await caches.open(CACHE_NAME);
     const existing = await cache.match(url);
     if (existing) return;
-    await cache.add(url);
+    const response = await fetch(url, { mode: 'cors' });
+    if (response.ok) {
+      await cache.put(url, response);
+    }
   } catch {
     // silent
   }
