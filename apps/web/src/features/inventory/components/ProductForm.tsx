@@ -456,12 +456,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
 
        {isEditing && isRawMaterialEdit && (
          <div className="grid grid-cols-1 gap-3">
-           <div className="input-wrapper">
-             <label className="input-label">
-               Stock mínimo (alerta)
-               {editProduct?.unit === 'kg' && ' (Kg)'}
-               {editProduct?.unit === 'lt' && ' (Lt)'}
-             </label>
+            <div className="input-wrapper">
+              <label className="input-label">
+                Stock mínimo (alerta)
+                {editProduct?.unit === 'kg' && ' (Kg)'}
+                {editProduct?.unit === 'lt' && ' (Lt)'}
+                {editProduct?.unit === 'm' && ' (m)'}
+              </label>
               <Input
                 sanitize="number"
                 decimals={0}
@@ -491,12 +492,13 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 inputMode="decimal"
               />
            </div>
-           <div className="input-wrapper">
-             <label className="input-label">
-               Stock mínimo (alerta)
-               {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
-               {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
-             </label>
+            <div className="input-wrapper">
+              <label className="input-label">
+                Stock mínimo (alerta)
+                {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
+                {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
+                {editProduct?.isWeighted && editProduct?.unit === 'm' && ' (m)'}
+              </label>
               <Input
                 sanitize="number"
                 decimals={0}
@@ -588,6 +590,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 Stock inicial
                 {formData.unit === 'kg' && ' (Kg)'}
                 {formData.unit === 'lt' && ' (Lt)'}
+                {formData.unit === 'm' && ' (m)'}
               </label>
               <Input
                 sanitize="number"
@@ -604,6 +607,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <p className="text-xs text-gray-600 mt-0.5">
                 {formData.unit === 'kg' && 'Cantidad inicial en kilogramos'}
                 {formData.unit === 'lt' && 'Cantidad inicial en litros'}
+                {formData.unit === 'm' && 'Cantidad inicial en metros'}
                 {formData.unit === 'unidad' && 'Cantidad inicial en unidades'}
               </p>
             </div>
@@ -613,6 +617,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 Stock mínimo (alerta)
                 {formData.unit === 'kg' && ' (Kg)'}
                 {formData.unit === 'lt' && ' (Lt)'}
+                {formData.unit === 'm' && ' (m)'}
               </label>
               <Input
                 sanitize="number"
@@ -964,6 +969,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             Stock mínimo (alerta)
             {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
             {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
+            {editProduct?.isWeighted && editProduct?.unit === 'm' && ' (m)'}
           </label>
           <Input
             sanitize="number"

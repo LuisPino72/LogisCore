@@ -81,10 +81,10 @@ export function useStockAdjustment({ products, onAdjustStock, onSuccess }: UseSt
 
     if (adjMode === 'restar') {
       if (product) {
-        const maxStock = product.unit === 'kg' || product.unit === 'lt'
+        const maxStock = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
           ? (product.stock / 1000) : product.stock;
         if (rawQty > maxStock) {
-          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : 'unidades';
+          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : 'unidades';
           setAdjError(`No puedes restar más de ${maxStock} ${unitLabel} (stock actual)`);
           return;
         }
