@@ -624,6 +624,13 @@ const App = () => {
     return () => sessionGuard.stopHeartbeat();
   }, [authStatus, session?.role]);
 
+  useEffect(() => {
+    const sub = EventBus.on(SystemEvents.USER_LOGOUT, () => {
+      useAuthStore.getState().clearSession();
+    });
+    return () => EventBus.off(sub);
+  }, []);
+
   if (isLoading) return <LoadingScreen />;
   if (isLoggingOut) return <LoggingOutScreen />;
   if (error) return <ErrorScreen message={error} />;
