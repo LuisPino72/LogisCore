@@ -541,21 +541,23 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 const unit = e.target.value;
                 setField('unit', unit);
                 if (creationType === 'raw_material') {
-                  // Materia prima pesada (kg/lt) SÍ necesita isWeighted para conversión stock
-                  setField('isWeighted', unit === 'kg' || unit === 'lt');
+                  // Materia prima pesada (kg/lt/m) SÍ necesita isWeighted para conversión stock
+                  setField('isWeighted', unit === 'kg' || unit === 'lt' || unit === 'm');
                 } else {
-                  setField('isWeighted', unit === 'kg' || unit === 'lt');
-                  setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : 'unidad');
+                  setField('isWeighted', unit === 'kg' || unit === 'lt' || unit === 'm');
+                  setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : unit === 'm' ? 'pesable_m' : 'unidad');
                 }
               }}
             >
               <option value="kg">Kilogramos (Kg)</option>
               <option value="lt">Litros (Lt)</option>
+              <option value="m">Metros (m)</option>
               <option value="unidad">Unidad</option>
             </Select>
             <p className="text-xs text-gray-600 mt-0.5">
               {formData.unit === 'kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
               {formData.unit === 'lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
+              {formData.unit === 'm' && 'Se guardará en milímetros (Ej: 1.5 m = 1500 mm)'}
               {formData.unit === 'unidad' && 'Se guarda como unidades enteras'}
             </p>
           </div>
@@ -674,10 +676,11 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   <label className="input-label">Unidad de medida</label>
                   <Select
                     value={formData.productType}
-                    onChange={(e) => setField('productType', e.target.value as 'unidad' | 'pesable_kg' | 'pesable_lt')}
+                    onChange={(e) => setField('productType', e.target.value as 'unidad' | 'pesable_kg' | 'pesable_lt' | 'pesable_m')}
                   >
                     <option value="pesable_kg">Kilogramos (Kg)</option>
                     <option value="pesable_lt">Litros (Lt)</option>
+                    <option value="pesable_m">Metros (m)</option>
                   </Select>
                 </div>
                 <div className="input-wrapper">
@@ -734,6 +737,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   Stock inicial (Cantidad)
                   {formData.productType === 'pesable_kg' && ' (Kg)'}
                   {formData.productType === 'pesable_lt' && ' (Lt)'}
+                  {formData.productType === 'pesable_m' && ' (m)'}
                 </label>
                 <Input
                   sanitize="number"
