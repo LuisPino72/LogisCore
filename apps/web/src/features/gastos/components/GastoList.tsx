@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Receipt, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
-import { Badge, Button, Card, EmptyState, Modal, DataTable, type Column } from '@/common/components';
+import { Badge, Button, Card, Checkbox, EmptyState, Modal, DataTable, type Column } from '@/common/components';
+import { cn } from '@/lib/utils';
 import { formatUsd } from '@/lib/formatBs';
 import { formatDate } from '../../../lib/formatDate';
 import { useGastosStore } from '../stores/gastosStore';
@@ -24,7 +25,16 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warni
 export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }: GastoListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
   const [confirmPayTarget, setConfirmPayTarget] = useState<{ id: string; category: string; amountUsd: number } | null>(null);
+  const [exitingId, setExitingId] = useState<string | null>(null);
   const { selectedIds, toggleSelect } = useGastosStore();
+
+  const handleDeleteWithAnimation = (id: string) => {
+    setExitingId(id);
+    setTimeout(() => {
+      onDelete(id);
+      setExitingId(null);
+    }, 200);
+  };
 
   const sorted = useMemo(
     () => [...gastos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
@@ -37,11 +47,9 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
       header: '',
       width: '40px',
       render: (g) => g.status === 'pending' ? (
-        <input
-          type="checkbox"
+        <Checkbox
           checked={selectedIds.includes(g.id)}
           onChange={() => toggleSelect(g.id)}
-          className="rounded border-gray-300 text-primary focus:ring-primary"
         />
       ) : null,
     },
@@ -147,6 +155,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
             onPay={setConfirmPayTarget}
             isSelected={selectedIds.includes(gasto.id)}
             onToggleSelect={toggleSelect}
+            exitingId={exitingId}
           />
         ))}
       </div>
@@ -165,7 +174,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
               <Button variant="ghost" fullWidth onClick={() => setDeleteTarget(null)}>
                 Cancelar
               </Button>
-              <Button variant="danger" fullWidth onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }}>
+              <Button variant="danger" fullWidth onClick={() => { handleDeleteWithAnimation(deleteTarget.id); setDeleteTarget(null); }}>
                 Eliminar
               </Button>
             </div>
@@ -208,6 +217,7 @@ function MobileCard({
   onPay,
   isSelected,
   onToggleSelect,
+  exitingId,
 }: {
   gasto: Gasto;
   isOwner: boolean;
@@ -215,21 +225,20 @@ function MobileCard({
   onPay: (t: { id: string; category: string; amountUsd: number }) => void;
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
+  exitingId: string | null;
 }) {
   const status = STATUS_CONFIG[gasto.status] ?? STATUS_CONFIG.pending;
   const isPending = gasto.status === 'pending';
 
   return (
-    <Card className="overflow-hidden expense-card-hover">
+    <Card className={cn("overflow-hidden expense-card-hover", exitingId === gasto.id && "animate-cart-remove")}>
       {/* Monto destacado */}
       <div className="text-center pt-5 pb-3 px-4 relative">
         {isPending && (
           <label className="absolute top-2 right-2 w-11 h-11 flex items-center justify-center cursor-pointer">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={isSelected}
               onChange={() => onToggleSelect(gasto.id)}
-              className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
             />
           </label>
         )}
@@ -271,25 +280,25 @@ function MobileCard({
       {/* Botones de acción */}
       <div className="flex items-stretch border-t border-border">
         {isPending && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            className="flex-1 rounded-none text-success hover:bg-success/10 hover:text-success relative overflow-hidden group"
             onClick={() => onPay({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 min-h-11 text-xs font-semibold text-success bg-success/6 hover:bg-success/10 active:scale-[0.98] transition-all duration-150 relative overflow-hidden group"
           >
             <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             <CheckCircle size={15} className="relative z-10" />
             <span className="relative z-10">Pagar</span>
-          </button>
+          </Button>
         )}
         {isOwner && gasto.status !== 'paid' && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            className="flex-1 rounded-none border-l border-border text-text-secondary hover:text-danger hover:bg-danger/5"
             onClick={() => onDelete({ id: gasto.id, category: gasto.category })}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 min-h-11 text-xs font-medium text-text-secondary hover:text-danger hover:bg-danger/4 active:scale-[0.98] transition-all duration-150 border-l border-border"
           >
             <Trash2 size={14} />
             <span className="hidden min-[360px]:inline">Eliminar</span>
-          </button>
+          </Button>
         )}
         {gasto.status === 'paid' && (
           <div className="flex-1 flex items-center justify-center py-3 min-h-11 text-xs text-text-muted">

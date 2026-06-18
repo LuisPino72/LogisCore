@@ -130,7 +130,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
       <div className="p-3 sm:p-6 max-w-6xl mx-auto">
         <Card>
           <div className="p-8 text-center text-text-secondary">
-            <Receipt size={48} className="mx-auto mb-3 opacity-40" />
+            <Receipt size={48} className="mx-auto mb-3 opacity-40 expense-empty-icon" />
             <p className="text-sm font-medium">Selecciona un negocio para gestionar gastos</p>
           </div>
         </Card>
@@ -158,30 +158,24 @@ export function GastosPage({ tenantId }: GastosPageProps) {
       </div>
 
       <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
-        <div className={activeTab === 'gastos' ? 'expense-tab-active' : ''}>
-          <button
-            type="button"
-            className={`flex items-center gap-2 px-4 py-2.5 min-h-11 text-sm font-title font-medium rounded-lg transition-all duration-200 active:scale-[0.98] ${
-              activeTab === 'gastos' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
-            }`}
-            onClick={() => setActiveTab('gastos')}
-          >
-            <Receipt size={18} />
-            Gastos
-          </button>
-        </div>
-        <div className={activeTab === 'recurrentes' ? 'expense-tab-active' : ''}>
-          <button
-            type="button"
-            className={`flex items-center gap-2 px-4 py-2.5 min-h-11 text-sm font-title font-medium rounded-lg transition-all duration-200 active:scale-[0.98] ${
-              activeTab === 'recurrentes' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
-            }`}
-            onClick={() => setActiveTab('recurrentes')}
-          >
-            <RotateCcw size={18} />
-            Recurrentes
-          </button>
-        </div>
+        <Button
+          variant={activeTab === 'gastos' ? 'primary' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('gastos')}
+          className={activeTab === 'gastos' ? 'expense-tab-active' : ''}
+        >
+          <Receipt size={18} />
+          <span className="ml-1">Gastos</span>
+        </Button>
+        <Button
+          variant={activeTab === 'recurrentes' ? 'primary' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('recurrentes')}
+          className={activeTab === 'recurrentes' ? 'expense-tab-active' : ''}
+        >
+          <RotateCcw size={18} />
+          <span className="ml-1">Recurrentes</span>
+        </Button>
       </div>
 
       <GastosSummary gastos={monthlyGastos} />

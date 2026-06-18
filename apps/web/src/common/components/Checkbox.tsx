@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
 interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
   className?: string;
 }
 
@@ -19,7 +19,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({
         className="checkbox" 
         {...props} 
       />
-      <span className="checkbox-label">{label}</span>
+      {label && <span className="checkbox-label">{label}</span>}
     </label>
   );
 });
