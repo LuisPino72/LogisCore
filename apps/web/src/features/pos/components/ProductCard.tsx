@@ -28,7 +28,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
     : product.stock.toString();
 
   const stockInDisplay = product.isWeighted
-    ? (product.unit === 'kg' || product.unit === 'lt' ? product.stock / 1000 : product.stock)
+    ? (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm' ? product.stock / 1000 : product.stock)
     : product.stock;
   const isLowStock = stockInDisplay <= (product.stockMin ?? 5);
   const isOutOfStock = stockInDisplay <= 0 && !hasAssemblyRecipe;

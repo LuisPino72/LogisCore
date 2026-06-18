@@ -4,7 +4,7 @@ import { Card, Badge, Spinner, EmptyState } from '@/common/components';
 import { formatDate } from '../../../lib/formatDate';
 import { inventoryService } from '../services/inventoryService';
 import type { ActiveLot } from '../types';
-import { gramsToKg, mlToLt } from '../types';
+import { gramsToKg, mlToLt, mmToM } from '../types';
 
 interface ProductLotsProps {
   productId: string;
@@ -15,12 +15,14 @@ interface ProductLotsProps {
 function displayQty(value: number, unit?: string): string {
   if (unit === 'kg') return gramsToKg(value).toFixed(2);
   if (unit === 'lt') return mlToLt(value).toFixed(2);
+  if (unit === 'm') return mmToM(value).toFixed(2);
   return value.toString();
 }
 
 function unitLabel(unit?: string): string {
   if (unit === 'kg') return 'Kg';
   if (unit === 'lt') return 'Lt';
+  if (unit === 'm') return 'm';
   return '';
 }
 
@@ -125,7 +127,7 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
                   <p className="text-text-secondary">Costo unitario</p>
                   <p className="font-semibold text-gray-800">
                     {typeof lot.costUsdPerUnit === 'number' && lot.costUsdPerUnit > 0
-                      ? `$${(unit === 'kg' || unit === 'lt' ? lot.costUsdPerUnit * 1000 : lot.costUsdPerUnit).toFixed(4)}`
+                      ? `$${(unit === 'kg' || unit === 'lt' || unit === 'm' ? lot.costUsdPerUnit * 1000 : lot.costUsdPerUnit).toFixed(4)}`
                       : '-'}
                   </p>
                 </div>

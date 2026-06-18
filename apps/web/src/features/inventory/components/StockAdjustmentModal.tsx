@@ -42,6 +42,7 @@ export function StockAdjustmentModal({
   const displayStockValue = product ? (() => {
     if (product.unit === 'kg') return (product.stock / 1000).toFixed(2);
     if (product.unit === 'lt') return (product.stock / 1000).toFixed(2);
+    if (product.unit === 'm') return (product.stock / 1000).toFixed(2);
     return product.stock.toString();
   })() : '';
   const unitLabel = product?.unit === 'kg' ? 'Kg' : product?.unit === 'lt' ? 'Lt' : '';

@@ -753,6 +753,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 <p className="text-xs text-gray-600 mt-0.5">
                   {formData.productType === 'pesable_kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
                   {formData.productType === 'pesable_lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
+                  {formData.productType === 'pesable_m' && 'Se guardará en milímetros (Ej: 1.5 m = 1500 mm)'}
                 </p>
               </div>
 
@@ -761,6 +762,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   Stock mínimo (alerta)
                   {formData.productType === 'pesable_kg' && ' (Kg)'}
                   {formData.productType === 'pesable_lt' && ' (Lt)'}
+                  {formData.productType === 'pesable_m' && ' (m)'}
                 </label>
                 <Input
                   sanitize="number"

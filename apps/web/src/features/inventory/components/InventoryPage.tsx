@@ -120,10 +120,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     if (bulkAdjMode === 'restar') {
       const exceedsProducts: string[] = [];
       for (const product of bulkProducts) {
-        const maxStock = product.unit === 'kg' || product.unit === 'lt'
+        const maxStock = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
           ? (product.stock / 1000) : product.stock;
         if (rawQty > maxStock) {
-          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : 'unidades';
+          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : 'unidades';
           exceedsProducts.push(`"${product.name}" (max: ${maxStock} ${unitLabel})`);
         }
       }
@@ -585,15 +585,15 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 </p>
                 <div className="space-y-1.5">
                   {bulkProducts.map(p => {
-                    const displayStock = p.unit === 'kg' || p.unit === 'lt'
+                    const displayStock = p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm'
                       ? (p.stock / 1000).toFixed(2)
                       : p.stock.toString();
-                    const unitLabel = p.unit === 'kg' ? 'Kg' : p.unit === 'lt' ? 'Lt' : 'un';
+                    const unitLabel = p.unit === 'kg' ? 'Kg' : p.unit === 'lt' ? 'Lt' : p.unit === 'm' ? 'm' : 'un';
                     const currentQty = hasValidQty ? rawQty : 0;
                     const newStock = bulkAdjMode === 'restar'
-                      ? p.stock - (p.unit === 'kg' || p.unit === 'lt' ? currentQty * 1000 : currentQty)
-                      : p.stock + (p.unit === 'kg' || p.unit === 'lt' ? currentQty * 1000 : currentQty);
-                    const newDisplay = p.unit === 'kg' || p.unit === 'lt'
+                      ? p.stock - (p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm' ? currentQty * 1000 : currentQty)
+                      : p.stock + (p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm' ? currentQty * 1000 : currentQty);
+                    const newDisplay = p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm'
                       ? (newStock / 1000).toFixed(2)
                       : Math.round(newStock).toString();
                     const wouldGoNegative = bulkAdjMode === 'restar' && newStock < 0;
@@ -759,13 +759,13 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         >
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {lowStockProducts.map((product) => {
-              const displayStock_val = product.unit === 'kg' || product.unit === 'lt'
+              const displayStock_val = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
                 ? (product.stock / 1000).toFixed(2)
                 : product.stock.toString();
-              const displayMin = product.unit === 'kg' || product.unit === 'lt'
+              const displayMin = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
                 ? ((product.stockMin ?? 0) / 1000).toFixed(2)
                 : (product.stockMin ?? 0).toString();
-              const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : '';
+              const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : '';
               const isSelected = selectedForOrder.has(product.id);
               const isZero = product.stock <= 0;
 

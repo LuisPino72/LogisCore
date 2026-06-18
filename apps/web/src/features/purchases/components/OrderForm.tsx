@@ -41,7 +41,10 @@ const SectionDivider = ({ icon, title }: { icon: React.ReactNode; title: string 
 function getProductUnit(products: Product[], productId: string): string {
   const p = products.find((pr) => pr.id === productId);
   if (!p) return '';
-  return p.isWeighted ? (p.unit === 'lt' ? 'Lt' : 'Kg') : 'Und';
+  if (!p.isWeighted) return 'Und';
+  if (p.unit === 'lt') return 'Lt';
+  if (p.unit === 'm') return 'm';
+  return 'Kg';
 }
 
 function getProductSku(products: Product[], productId: string): string {

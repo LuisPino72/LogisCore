@@ -31,7 +31,7 @@ interface ProductListProps {
 }
 
 function getStockLabel(isWeighted: boolean, unit: string): string {
-  if (isWeighted) return unit === 'lt' ? 'Lt' : 'Kg';
+  if (isWeighted) return unit === 'lt' ? 'Lt' : unit === 'm' ? 'm' : 'Kg';
   return 'Total';
 }
 
@@ -69,14 +69,14 @@ function getStockBadgeContent(stock: number, unit: string, isWeighted: boolean):
 
 function getDisplayStockMin(product: { stockMin?: number; isWeighted: boolean; unit: string }): number | undefined {
   if (product.stockMin == null) return undefined;
-  if (product.isWeighted && (product.unit === 'kg' || product.unit === 'lt')) {
+  if (product.isWeighted && (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm')) {
     return product.stockMin / 1000;
   }
   return product.stockMin;
 }
 
 function applyStockFilter(stock: number, product: { stockMin?: number; isWeighted: boolean; unit: string }, filter: StockFilter): boolean {
-  const displayStock = product.isWeighted ? (product.unit === 'kg' || product.unit === 'lt' ? stock / 1000 : stock) : stock;
+  const displayStock = product.isWeighted ? (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm' ? stock / 1000 : stock) : stock;
   const threshold = getDisplayStockMin(product) ?? 5;
   switch (filter) {
     case 'all': return true;
@@ -87,7 +87,7 @@ function applyStockFilter(stock: number, product: { stockMin?: number; isWeighte
 }
 
 function getStockVariant(stock: number, product: { stockMin?: number; isWeighted: boolean; unit: string }): 'success' | 'warning' | 'danger' {
-  const displayStock = product.isWeighted && (product.unit === 'kg' || product.unit === 'lt')
+  const displayStock = product.isWeighted && (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm')
     ? stock / 1000
     : stock;
   const min = getDisplayStockMin(product);

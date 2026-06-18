@@ -140,6 +140,7 @@ export function StockVerificationModal({
   const unitsLabel = (unit: string): string => {
     if (unit === 'kg') return 'kg';
     if (unit === 'lt') return 'lt';
+    if (unit === 'm') return 'm';
     if (unit === 'gr') return 'gr';
     if (unit === 'und') return 'und';
     return unit;

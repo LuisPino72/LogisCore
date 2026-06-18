@@ -47,7 +47,11 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
   const getProductInfo = (productId: string) => {
     const p = products.get(productId);
     if (!p) return { isWeighted: false, unit: 'Und' };
-    if (p.isWeighted) return { isWeighted: true, unit: p.unit === 'lt' ? 'Lt' : 'Kg' };
+    if (p.isWeighted) {
+      if (p.unit === 'lt') return { isWeighted: true, unit: 'Lt' };
+      if (p.unit === 'm') return { isWeighted: true, unit: 'm' };
+      return { isWeighted: true, unit: 'Kg' };
+    }
     return { isWeighted: false, unit: 'Und' };
   };
 
