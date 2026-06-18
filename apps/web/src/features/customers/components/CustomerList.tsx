@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Users, Phone, MapPin, Pencil, Trash2, CreditCard, History, IdCard, Clock } from 'lucide-react';
+import { Users, Phone, MapPin, Pencil, Trash2, CreditCard, History, IdCard, Clock, AlertTriangle } from 'lucide-react';
 import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/components';
 import type { Customer } from '../../../specs/customers';
 import { getInitials, formatTimeAgo, formatPhone } from '../../../lib/utils';
+import { formatUsd } from '@/lib/formatBs';
 
 const PAGE_SIZE = 20;
 
@@ -71,6 +72,12 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                   <Badge variant="info" className="flex items-center gap-0.5 customer-badge">
                     <CreditCard size={10} />
                     <span>Con crédito</span>
+                  </Badge>
+                )}
+                {(c.balance ?? 0) > 0 && (
+                  <Badge variant="warning" className="flex items-center gap-0.5 customer-badge">
+                    <AlertTriangle size={10} />
+                    <span>Debe {formatUsd(c.balance)}</span>
                   </Badge>
                 )}
               </div>

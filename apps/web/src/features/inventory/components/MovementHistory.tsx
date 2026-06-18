@@ -29,6 +29,8 @@ function getTypeLabel(mov: InventoryMovement) {
     case 'sale': return 'Venta';
     case 'purchase': return 'Compra';
     case 'adjustment': return 'Ajuste';
+    case 'production_output': return 'Producción';
+    case 'production_consumption': return 'Consumo producción';
     default: return mov.type;
   }
 }
@@ -41,6 +43,10 @@ function getTypeConfig(type: string, quantity?: number) {
       return { lightColor: 'bg-danger/10', icon: ArrowDownLeft, iconClass: 'text-danger', badge: 'danger' as const };
     case 'purchase':
       return { lightColor: 'bg-success/10', icon: ArrowUpRight, iconClass: 'text-success', badge: 'success' as const };
+    case 'production_output':
+      return { lightColor: 'bg-success/10', icon: ArrowUpRight, iconClass: 'text-success', badge: 'success' as const };
+    case 'production_consumption':
+      return { lightColor: 'bg-danger/10', icon: ArrowDownLeft, iconClass: 'text-danger', badge: 'danger' as const };
     case 'adjustment':
       if (isAdjNeg) return { lightColor: 'bg-danger/10', icon: ArrowDownLeft, iconClass: 'text-danger', badge: 'danger' as const };
       if (isAdjPos) return { lightColor: 'bg-success/10', icon: ArrowUpRight, iconClass: 'text-success', badge: 'success' as const };
