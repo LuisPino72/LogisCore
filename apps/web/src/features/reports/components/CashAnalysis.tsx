@@ -94,7 +94,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
 
   return (
     <div className="space-y-3">
-      {data.map((reg) => {
+      {data.map((reg, index) => {
         const expected = reg.expectedClosingBs ?? 0;
         const expectedUsd = reg.expectedClosingUsd ?? 0;
         const opening = reg.openingBalanceBs;
@@ -105,7 +105,7 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
         const salesPct = Math.round((sales / maxVal) * 100);
 
         return (
-          <Card key={reg.registerId} className="overflow-hidden transition-shadow hover:shadow-md">
+          <Card key={reg.registerId} className="overflow-hidden transition-all duration-200 hover:shadow-md animate-report-stagger" style={{ animationDelay: `${index * 0.05}s` }}>
             <div className="p-3 sm:p-4 space-y-3">
               {/* Header: stacks on mobile, row on desktop */}
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">

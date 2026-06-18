@@ -3,27 +3,12 @@ import { Card } from '@/common/components';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { PaymentBreakdownData } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { PAYMENT_METHOD_COLORS } from '../chartTokens';
+import { ChartCenterLabel } from '@/common/components';
 
 interface PaymentBreakdownProps {
   data: PaymentBreakdownData[];
   loading: boolean;
-}
-
-function CustomCenterLabel({ totalBs }: { totalBs: number }) {
-  return (
-    <text
-      x="50%"
-      y="50%"
-      textAnchor="middle"
-      dominantBaseline="central"
-    >
-      <tspan x="50%" dy="-0.4em" className="fill-gray-700" style={{ fontSize: 13, fontWeight: 600 }}>Total</tspan>
-      <tspan x="50%" dy="1.4em" className="fill-gray-900" style={{ fontSize: 14, fontWeight: 800 }}>
-        {totalBs >= 1000 ? `${(totalBs / 1000).toFixed(1)}K` : totalBs.toFixed(0)}
-      </tspan>
-      <tspan x="50%" dy="1.3em" className="fill-gray-700" style={{ fontSize: 12, fontWeight: 500 }}>Bs</tspan>
-    </text>
-  );
 }
 
 export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
@@ -53,17 +38,10 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
     );
   }
 
-  const colors: Record<string, string> = {
-    efectivo_bs: '#0D9488',
-    pago_movil: '#3b82f6',
-    tarjeta_bs: '#8b5cf6',
-    efectivo_usd: '#F59E0B',
-  };
-
   const totalBs = data.reduce((s, d) => s + d.totalBs, 0);
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 animate-report-chart-reveal">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Métodos de Pago</h3>
       <div className="h-48 overflow-hidden" ref={containerRef}>
         {ready ? (
@@ -81,14 +59,14 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
               strokeWidth={2}
             >
               {data.map((entry) => (
-                <Cell key={entry.method} fill={colors[entry.method] ?? '#9ca3af'} />
+                <Cell key={entry.method} fill={PAYMENT_METHOD_COLORS[entry.method] ?? '#9ca3af'} />
               ))}
             </Pie>
             <Tooltip
               formatter={(value, name) => [formatBs(Number(value)), name]}
               contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
             />
-            <CustomCenterLabel totalBs={totalBs} />
+            <ChartCenterLabel totalBs={totalBs} />
           </PieChart>
         </ResponsiveContainer>
         ) : <div className="h-48 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded-full" /></div>}
@@ -96,10 +74,10 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
         {data.map((d) => (
-          <div key={d.method} className="flex items-center gap-2 text-xs p-2.5 rounded-lg bg-gray-50">
+          <div key={d.method} className="flex items-center gap-2 text-xs p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
             <span
               className="w-3 h-3 rounded-full shrink-0"
-              style={{ backgroundColor: colors[d.method] ?? '#9ca3af' }}
+              style={{ backgroundColor: PAYMENT_METHOD_COLORS[d.method] ?? '#9ca3af' }}
             />
             <div className="min-w-0 flex-1">
               <p className="font-medium text-gray-700 wrap-break-word">{d.label}</p>
@@ -116,4 +94,3 @@ export function PaymentBreakdown({ data, loading }: PaymentBreakdownProps) {
     </Card>
   );
 }
-

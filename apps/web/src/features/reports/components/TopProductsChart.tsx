@@ -3,14 +3,12 @@ import { Card } from '@/common/components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { TopProductData } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { RANK_COLORS, TOP_PRODUCTS_CHART_COLORS } from '../chartTokens';
 
 interface TopProductsChartProps {
   data: TopProductData[];
   loading: boolean;
 }
-
-const RANK_COLORS = ['#f59e0b', '#94a3b8', '#cd7f32'];
-const CHART_COLORS = ['#0D9488', '#14B8A6', '#F59E0B', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#ec4899', '#6366f1'];
 
 export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   const [ready, containerRef] = useChartReady();
@@ -42,7 +40,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
   const topProfit = data[0]?.profitBs ?? 1;
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 animate-report-chart-reveal">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Top Productos por Ganancia</h3>
 
       <div className="hidden sm:block -mx-4 sm:mx-0 h-48 sm:h-64" ref={containerRef}>
@@ -59,7 +57,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
             />
             <Bar dataKey="profitBs" radius={[0, 4, 4, 0]}>
               {data.slice(0, 10).map((_, index) => (
-                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={TOP_PRODUCTS_CHART_COLORS[index % TOP_PRODUCTS_CHART_COLORS.length]} />
               ))}
             </Bar>
           </BarChart>
@@ -112,10 +110,10 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
               </div>
               <div className="h-1.5 sm:h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2 sm:mb-2">
                 <div
-                  className="h-full rounded-full transition-all duration-500"
+                  className="h-full rounded-full transition-all duration-500 animate-report-progress-fill"
                   style={{
                     width: `${pct}%`,
-                    backgroundColor: p.profitBs >= 0 ? CHART_COLORS[index % CHART_COLORS.length] : '#ef4444',
+                    backgroundColor: p.profitBs >= 0 ? TOP_PRODUCTS_CHART_COLORS[index % TOP_PRODUCTS_CHART_COLORS.length] : '#ef4444',
                   }}
                 />
               </div>
@@ -126,4 +124,3 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
     </Card>
   );
 }
-

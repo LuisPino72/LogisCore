@@ -1,5 +1,5 @@
-import { Card, Badge, Tooltip, EmptyState } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, ArrowUpRight, ChevronRight, BarChart3, Receipt, Wallet } from 'lucide-react';
+import { Card, Badge, Tooltip, EmptyState, KpiCard, KpiSkeleton } from '@/common/components';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, BarChart3, Receipt, Wallet } from 'lucide-react';
 import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
@@ -15,86 +15,6 @@ function formatDual(bs: number, usd: number): React.ReactNode {
       <span className="text-xs sm:text-lg font-bold text-gray-900 truncate">{formatBs(bs)}</span>
       <span className="text-xs sm:text-lg font-semibold text-gray-700 truncate">{formatUsd(usd)}</span>
     </div>
-  );
-}
-
-interface KpiCardProps {
-  label: string;
-  value: React.ReactNode;
-  subtitle?: React.ReactNode;
-  icon: React.ReactNode;
-  gradient: 'blue' | 'green' | 'amber' | 'red';
-  trend?: { value: number; positive: boolean };
-  onClick?: () => void;
-}
-
-function KpiCard({
-  label,
-  value,
-  subtitle,
-  icon,
-  gradient,
-  trend,
-  onClick,
-}: KpiCardProps) {
-  const gradients = {
-    blue: 'from-primary/5 to-primary/[0.02] border-primary/20',
-    green: 'from-success/5 to-success/[0.02] border-success/20',
-    amber: 'from-accent/5 to-accent/[0.02] border-accent/20',
-    red: 'from-danger/5 to-danger/[0.02] border-danger/20',
-  };
-
-  const iconBgs = {
-    blue: 'bg-primary/15 text-primary',
-    green: 'bg-success/15 text-success',
-    amber: 'bg-accent/15 text-accent',
-    red: 'bg-danger/15 text-danger',
-  };
-
-  return (
-    <Card
-      className={`relative p-3 sm:p-4 border bg-linear-to-br ${gradients[gradient]} transition-shadow ${onClick ? 'cursor-pointer hover:shadow-lg active:scale-[0.98]' : 'hover:shadow-md'}`}
-      interactive={!!onClick}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
-    >
-      <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1 sm:p-1.5 rounded-lg ${iconBgs[gradient]}`}>
-        {icon}
-      </div>
-      <div className="space-y-1 pr-8 sm:pr-10">
-        <p className="text-xs sm:text-sm font-medium text-gray-700 uppercase tracking-wide">{label}</p>
-        <div className="truncate">{value}</div>
-        {subtitle && <div className="text-xs sm:text-sm text-gray-700 truncate">{subtitle}</div>}
-        {trend && (
-          <div className={`flex items-center gap-1 text-xs sm:text-xs font-medium ${trend.positive ? 'text-success' : 'text-danger'}`}>
-            {trend.positive ? <ArrowUpRight size={10} className="sm:w-3 sm:h-3" /> : <TrendingDown size={10} className="sm:w-3 sm:h-3" />}
-            <span>{Math.abs(trend.value)}%</span>
-          </div>
-        )}
-      </div>
-      {onClick && (
-        <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 text-gray-600/40">
-          <ChevronRight size={14} />
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function KpiSkeleton() {
-  return (
-    <Card className="relative p-4 border bg-linear-to-br from-gray-50 to-gray-100/50">
-      <div className="absolute top-2 right-2 p-1.5 rounded-lg bg-gray-200">
-        <div className="skeleton h-4 w-4 rounded" />
-      </div>
-      <div className="space-y-2 pr-10">
-        <div className="skeleton h-3 w-20 rounded" />
-        <div className="skeleton h-6 w-28 rounded" />
-        <div className="skeleton h-3 w-16 rounded" />
-      </div>
-    </Card>
   );
 }
 
@@ -136,7 +56,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
         )}
       </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <KpiCard
           label="Ventas Totales"
           value={formatDual(data.totalSalesBs, data.totalSalesUsd)}
@@ -145,6 +65,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           gradient="blue"
           trend={data.salesVsYesterdayPercent !== undefined ? { value: data.salesVsYesterdayPercent, positive: data.salesVsYesterdayPercent >= 0 } : undefined}
           onClick={onKpiClick ? () => onKpiClick('ventas') : undefined}
+          animationDelay={0}
         />
         <KpiCard
           label="Ganancia Bruta"
@@ -153,41 +74,44 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           icon={<TrendingUp size={18} />}
           gradient={data.grossProfitBs >= 0 ? 'green' : 'red'}
           onClick={onKpiClick ? () => onKpiClick('ganancia') : undefined}
+          animationDelay={0.05}
         />
-         <KpiCard
-            label="Gasto Total"
-            value={formatDual(
-              data.totalCostBs + data.totalExpensesBs,
-              data.totalCostUsd + data.totalExpensesUsd,
-            )}
-            subtitle={
-              <div className="flex flex-col gap-0.5 text-xs sm:text-sm text-gray-700">
-                <div className="flex items-center gap-1">
-                  <Tooltip content="Suma del costo de adquisición de los productos vendidos (COGS).">
-                    <span className="underline decoration-dotted cursor-help">Costo compras</span>
-                  </Tooltip>
-                  <span>{formatUsd(data.totalCostUsd)}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Tooltip content="Gastos operativos, no vendibles y ajustes de inventario.">
-                    <span className="underline decoration-dotted cursor-help">Gastos operativos</span>
-                  </Tooltip>
-                  <span>{formatUsd(data.operatingExpensesUsd)}</span>
-                  <span className="text-text-tertiary">·</span>
-                  <span className="text-text-tertiary">Total {formatUsd(data.totalExpensesUsd)}</span>
-                </div>
+        <KpiCard
+          label="Gasto Total"
+          value={formatDual(
+            data.totalCostBs + data.totalExpensesBs,
+            data.totalCostUsd + data.totalExpensesUsd,
+          )}
+          subtitle={
+            <div className="flex flex-col gap-0.5 text-xs sm:text-sm text-gray-700">
+              <div className="flex items-center gap-1">
+                <Tooltip content="Suma del costo de adquisición de los productos vendidos (COGS).">
+                  <span className="underline decoration-dotted cursor-help">Costo compras</span>
+                </Tooltip>
+                <span>{formatUsd(data.totalCostUsd)}</span>
               </div>
-            }
-            icon={<DollarSign size={18} />}
-            gradient="amber"
-            onClick={onKpiClick ? () => onKpiClick('gastos') : undefined}
-          />
+              <div className="flex items-center gap-1">
+                <Tooltip content="Gastos operativos, no vendibles y ajustes de inventario.">
+                  <span className="underline decoration-dotted cursor-help">Gastos operativos</span>
+                </Tooltip>
+                <span>{formatUsd(data.operatingExpensesUsd)}</span>
+                <span className="text-text-tertiary">·</span>
+                <span className="text-text-tertiary">Total {formatUsd(data.totalExpensesUsd)}</span>
+              </div>
+            </div>
+          }
+          icon={<DollarSign size={18} />}
+          gradient="amber"
+          onClick={onKpiClick ? () => onKpiClick('gastos') : undefined}
+          animationDelay={0.1}
+        />
         <KpiCard
           label="Promedio de ventas"
           value={formatDual(data.averageTicketBs, data.averageTicketUsd)}
           icon={<DollarSign size={18} />}
           gradient="amber"
           onClick={onKpiClick ? () => onKpiClick('ticket') : undefined}
+          animationDelay={0.15}
         />
         <KpiCard
           label="Descuentos aplicados"
@@ -200,6 +124,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           icon={<DollarSign size={18} />}
           gradient="red"
           onClick={onKpiClick ? () => onKpiClick('descuentos') : undefined}
+          animationDelay={0.2}
         />
         <KpiCard
           label="IVA Acumulado"
@@ -207,6 +132,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           subtitle="Impuesto al Valor Agregado"
           icon={<Receipt size={18} />}
           gradient="blue"
+          animationDelay={0.25}
         />
         <KpiCard
           label="Pendiente por cobrar"
@@ -221,12 +147,13 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           }
           icon={<Wallet size={18} />}
           gradient="amber"
+          animationDelay={0.3}
         />
       </div>
 
       {data.topProductName && (
         <Card
-          className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20 transition-shadow hover:shadow-md active:scale-[0.98]"
+          className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-linear-to-r from-primary/5 to-primary/10 border-primary/20 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] animate-report-fade-in"
           interactive={!!onKpiClick}
           onClick={onKpiClick ? () => onKpiClick('topProducto') : undefined}
           role={onKpiClick ? 'button' : undefined}
@@ -241,10 +168,9 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           <Badge variant="info" className="shrink-0">
             #1
           </Badge>
-          {onKpiClick && <ChevronRight size={14} className="text-gray-600/40 shrink-0" />}
+          {onKpiClick && <span className="text-gray-600/40 shrink-0">›</span>}
         </Card>
       )}
     </div>
   );
 }
-

@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { DailyProfitPoint } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { CHART_COLORS } from '../chartTokens';
 
 interface ProfitChartProps {
   data: DailyProfitPoint[];
@@ -68,7 +69,7 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
   }));
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 animate-report-chart-reveal">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-3">Ganancias en el Tiempo</h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
@@ -105,12 +106,12 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
           <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
             <defs>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0D9488" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#0D9488" stopOpacity={0} />
+                <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#14B8A6" stopOpacity={0} />
+                <stop offset="5%" stopColor={CHART_COLORS.primaryLight} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_COLORS.primaryLight} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -125,9 +126,9 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
               wrapperStyle={{ fontSize: 11 }}
               formatter={(value) => (value === 'profitBs' ? 'Ganancia Bruta' : value === 'salesBs' ? 'Ventas' : 'Costo')}
             />
-            <Area type="monotone" dataKey="salesBs" stroke="#14B8A6" fillOpacity={1} fill="url(#colorSales)" strokeWidth={2} />
-            <Area type="monotone" dataKey="costBs" stroke="#ef4444" fillOpacity={1} fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
-            <Area type="monotone" dataKey="profitBs" stroke="#0D9488" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
+            <Area type="monotone" dataKey="salesBs" stroke={CHART_COLORS.primaryLight} fillOpacity={1} fill="url(#colorSales)" strokeWidth={2} />
+            <Area type="monotone" dataKey="costBs" stroke={CHART_COLORS.danger} fillOpacity={1} fill="transparent" strokeWidth={2} strokeDasharray="4 4" />
+            <Area type="monotone" dataKey="profitBs" stroke={CHART_COLORS.primary} fillOpacity={1} fill="url(#colorProfit)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
         ) : <div className="h-full flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}
@@ -135,4 +136,3 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
     </Card>
   );
 }
-

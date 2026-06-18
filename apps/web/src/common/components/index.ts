@@ -40,3 +40,6 @@ export { Pagination } from './Pagination';
 export { DrillDownModal } from './DrillDownModal';
 
 export { SaleDetailModal } from './SaleDetailModal';
+
+export { KpiCard, KpiSkeleton } from './KpiCard';
+export { ChartCenterLabel } from './ChartCenterLabel';

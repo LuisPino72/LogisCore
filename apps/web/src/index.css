@@ -1509,6 +1509,45 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   animation: expenseCardSlide 0.25s ease-out forwards;
 }
 
+/* ========================
+   REPORTS MODULE ANIMATIONS
+   ======================== */
+@keyframes reportFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reportStagger {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reportChartReveal {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes reportProgressFill {
+  from { width: 0%; }
+}
+
+.animate-report-fade-in {
+  animation: reportFadeIn 0.3s ease-out forwards;
+}
+
+.animate-report-stagger {
+  animation: reportStagger 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-report-chart-reveal {
+  animation: reportChartReveal 0.5s ease-out forwards;
+}
+
+.animate-report-progress-fill {
+  animation: reportProgressFill 0.8s ease-out forwards;
+}
+
 /* ───────────────────── PWA STANDALONE ───────────────────── */
 @media (display-mode: standalone) {
   .app-topbar {

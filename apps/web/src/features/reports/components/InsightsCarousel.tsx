@@ -133,7 +133,7 @@ export function InsightsCarousel({
         <span className="text-xs sm:text-xs text-gray-700 font-medium">{getValueLabel(active.slide)}</span>
       </div>
 
-      <div className="space-y-3 sm:space-y-2.5 min-h-[200px] sm:min-h-[220px]">
+      <div className="space-y-3 sm:space-y-2.5 min-h-[200px] sm:min-h-[220px] animate-report-fade-in" key={current}>
         {active.data.length === 0 ? (
           <p className="text-sm text-gray-600 py-6 text-center">{active.slide.emptyMessage}</p>
         ) : (

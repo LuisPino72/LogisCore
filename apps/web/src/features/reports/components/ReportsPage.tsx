@@ -548,38 +548,56 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       <div className="space-y-4 sm:space-y-6">
         <div className={`print-section ${activeTab !== 'summary' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-            <ExecutiveSummary data={summary} loading={loading} onKpiClick={openDrillDown} />
-            <ExpenseBreakdownChart data={expenseBreakdown} loading={loading} />
+            <div className="animate-report-fade-in">
+              <ExecutiveSummary data={summary} loading={loading} onKpiClick={openDrillDown} />
+            </div>
+            <div className="animate-report-fade-in">
+              <ExpenseBreakdownChart data={expenseBreakdown} loading={loading} />
+            </div>
           </Suspense>
         </div>
         <div className={`print-section ${activeTab !== 'profits' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-            <ProfitChart data={profitOverTime} loading={loading} />
+            <div className="animate-report-fade-in">
+              <ProfitChart data={profitOverTime} loading={loading} />
+            </div>
           </Suspense>
         </div>
         <div className={`print-section space-y-4 sm:space-y-6 ${activeTab !== 'products' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-            <InsightsCarousel
-              topCategories={topCategories}
-              worstCategories={worstCategories}
-              topProducts={topProducts}
-              worstProducts={worstProducts}
-              topByVolume={topByVolume}
-              loading={loading}
-            />
-            <TopProductsChart data={topProducts} loading={loading} />
-            <PaymentBreakdown data={paymentBreakdown} loading={loading} />
+            <div className="animate-report-fade-in">
+              <InsightsCarousel
+                topCategories={topCategories}
+                worstCategories={worstCategories}
+                topProducts={topProducts}
+                worstProducts={worstProducts}
+                topByVolume={topByVolume}
+                loading={loading}
+              />
+            </div>
+            <div className="animate-report-fade-in">
+              <TopProductsChart data={topProducts} loading={loading} />
+            </div>
+            <div className="animate-report-fade-in">
+              <PaymentBreakdown data={paymentBreakdown} loading={loading} />
+            </div>
           </Suspense>
         </div>
         <div className={`print-section ${activeTab !== 'cash' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-            <CashAnalysis data={cashAnalysis} loading={loading} />
+            <div className="animate-report-fade-in">
+              <CashAnalysis data={cashAnalysis} loading={loading} />
+            </div>
           </Suspense>
         </div>
         <div className={`print-section space-y-4 sm:space-y-6 ${activeTab !== 'more' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
-            <CustomersReport data={customersSummary} loading={loading} onKpiClick={openDrillDown} />
-            <ProductionReport data={productionSummary} loading={loading} onKpiClick={openDrillDown} />
+            <div className="animate-report-fade-in">
+              <CustomersReport data={customersSummary} loading={loading} onKpiClick={openDrillDown} />
+            </div>
+            <div className="animate-report-fade-in">
+              <ProductionReport data={productionSummary} loading={loading} onKpiClick={openDrillDown} />
+            </div>
           </Suspense>
         </div>
       </div>
