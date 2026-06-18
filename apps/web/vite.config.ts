@@ -10,7 +10,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['Sasa.png', 'Sasa con fondo.png'],
+      devOptions: {
+        enabled: true,
+      },
+      includeAssets: ['Sasa.png', 'apple-touch-icon.png', 'favicon.ico', 'favicon-16x16.png', 'favicon-32x32.png'],
       manifest: {
         name: 'Sasa ERP',
         short_name: 'Sasa',
@@ -22,19 +25,19 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/Sasa.png',
+            src: '/android-chrome-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/Sasa.png',
+            src: '/android-chrome-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/Sasa con fondo.png',
+            src: '/android-chrome-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
