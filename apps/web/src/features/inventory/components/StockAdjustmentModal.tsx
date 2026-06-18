@@ -45,7 +45,7 @@ export function StockAdjustmentModal({
     if (product.unit === 'm') return (product.stock / 1000).toFixed(2);
     return product.stock.toString();
   })() : '';
-  const unitLabel = product?.unit === 'kg' ? 'Kg' : product?.unit === 'lt' ? 'Lt' : '';
+  const unitLabel = product?.unit === 'kg' ? 'Kg' : product?.unit === 'lt' ? 'Lt' : product?.unit === 'm' ? 'm' : '';
 
   return (
     <Modal
