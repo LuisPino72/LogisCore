@@ -106,7 +106,6 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                   size="sm"
                   onClick={() => onViewHistory(c)}
                   className="p-1.5 min-w-11 min-h-11"
-                  title="Ver historial"
                 >
                   <History size={14} />
                 </Button>
@@ -119,7 +118,6 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                       size="sm"
                       onClick={() => onEdit(c)}
                       className="p-1.5 min-w-11 min-h-11"
-                      title="Editar"
                     >
                       <Pencil size={14} />
                     </Button>
@@ -130,7 +128,6 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                       size="sm"
                       onClick={() => onDelete(c.id, c.name)}
                       className="p-1.5 min-w-11 min-h-11"
-                      title="Eliminar"
                     >
                       <Trash2 size={14} />
                     </Button>

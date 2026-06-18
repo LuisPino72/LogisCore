@@ -227,7 +227,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     />
 
     {selectedIds.length > 0 && (
-      <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0))] sm:bottom-4 left-0 right-0 bg-white/90 backdrop-blur-sm border-t shadow-lg px-4 py-3 z-50 expense-batch-bar" style={{ left: 'var(--sidebar-actual, 0px)' }}>
+      <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0))] sm:bottom-4 left-0 right-0 bg-white/90 backdrop-blur-sm border-t shadow-lg px-4 py-3 z-50 expense-batch-bar" style={{ left: 'var(--sidebar-width-md, 0px)' }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 max-w-lg mx-auto">
           <span className="text-sm text-gray-600 text-center sm:text-left">{selectedIds.length} seleccionados</span>
           <div className="flex gap-2 justify-center sm:justify-end">

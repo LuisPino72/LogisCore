@@ -321,7 +321,7 @@ export const dashboardService = {
 
       const pendingExpenses = await db.expenses
         .where({ tenantId })
-        .filter((e) => !e.deletedAt && e.status === 'pending')
+        .filter((e) => !e.deletedAt && e.status === 'pending' && !e.isRecurring)
         .toArray();
       for (const exp of pendingExpenses) {
         tasks.push({

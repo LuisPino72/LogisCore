@@ -54,6 +54,56 @@ export function GlobalHistoryView({
 
   return (
     <>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 customer-kpi-grid">
+        <div className="rounded-xl border border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 p-3 customer-kpi-card">
+          <p className="text-xs text-text-secondary">Ventas con cliente</p>
+          <p className="text-lg font-bold text-primary">{filteredSales.length}</p>
+        </div>
+        <div className="rounded-xl border border-accent/20 bg-linear-to-br from-accent/5 to-accent/10 p-3 customer-kpi-card">
+          <p className="text-xs text-text-secondary">Total (Dólares)</p>
+          <p className="text-lg font-bold text-accent">{formatUsd(totalSpentUsd)}</p>
+        </div>
+        <div className="rounded-xl border border-info/20 bg-linear-to-br from-info/5 to-info/10 p-3 customer-kpi-card">
+          <p className="text-xs text-text-secondary">Clientes únicos</p>
+          <p className="text-lg font-bold text-info">{uniqueCustomers}</p>
+        </div>
+      </div>
+
+      {ranking.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <TrendingUp size={12} />
+            Top 5 clientes
+          </h4>
+          <div className="space-y-1.5 customer-stagger">
+            {ranking.map((c, i) => {
+              const topSpent = ranking[0]?.totalSpentUsd ?? 1;
+              const pct = topSpent > 0 ? Math.round((c.totalSpentUsd / topSpent) * 100) : 0;
+              return (
+                <div key={c.customerId} className="px-3 py-2 rounded-lg border border-gray-100 bg-white hover:shadow-sm hover:border-primary/20 transition-all duration-200">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`text-xs font-bold w-5 text-center shrink-0 ${i === 0 ? 'text-accent' : 'text-primary'}`}>
+                      {i + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900 min-w-0 flex-1 truncate">{c.customerName}</span>
+                  </div>
+                  <div className="flex items-center justify-between pl-7 mb-1">
+                    <p className="text-xs text-text-secondary">{c.purchaseCount} compras · ticket {formatUsd(c.averageTicketUsd)}</p>
+                    <p className="text-sm font-bold text-gray-900 shrink-0">{formatUsd(c.totalSpentUsd)}</p>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full progress-fill"
+                      style={{ width: `${pct}%`, background: i === 0 ? 'var(--color-primary)' : 'var(--color-accent)' }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
           <SearchInput
@@ -105,56 +155,6 @@ export function GlobalHistoryView({
           </Button>
         )}
       </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 customer-kpi-grid">
-        <div className="rounded-xl border border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 p-3 customer-kpi-card">
-          <p className="text-xs text-text-secondary">Ventas con cliente</p>
-          <p className="text-lg font-bold text-primary">{filteredSales.length}</p>
-        </div>
-        <div className="rounded-xl border border-accent/20 bg-linear-to-br from-accent/5 to-accent/10 p-3 customer-kpi-card">
-          <p className="text-xs text-text-secondary">Total (Dólares)</p>
-          <p className="text-lg font-bold text-accent">{formatUsd(totalSpentUsd)}</p>
-        </div>
-        <div className="rounded-xl border border-info/20 bg-linear-to-br from-info/5 to-info/10 p-3 customer-kpi-card">
-          <p className="text-xs text-text-secondary">Clientes únicos</p>
-          <p className="text-lg font-bold text-info">{uniqueCustomers}</p>
-        </div>
-      </div>
-
-      {ranking.length > 0 && (
-        <div>
-          <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <TrendingUp size={12} />
-            Top 5 clientes
-          </h4>
-          <div className="space-y-1.5 customer-stagger">
-            {ranking.map((c, i) => {
-              const topSpent = ranking[0]?.totalSpentUsd ?? 1;
-              const pct = topSpent > 0 ? Math.round((c.totalSpentUsd / topSpent) * 100) : 0;
-              return (
-                <div key={c.customerId} className="px-3 py-2 rounded-lg border border-gray-100 bg-white hover:shadow-sm hover:border-primary/20 transition-all duration-200">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`text-xs font-bold w-5 text-center shrink-0 ${i === 0 ? 'text-accent' : 'text-primary'}`}>
-                      {i + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900 min-w-0 flex-1 truncate">{c.customerName}</span>
-                  </div>
-                  <div className="flex items-center justify-between pl-7 mb-1">
-                    <p className="text-xs text-text-secondary">{c.purchaseCount} compras · ticket {formatUsd(c.averageTicketUsd)}</p>
-                    <p className="text-sm font-bold text-gray-900 shrink-0">{formatUsd(c.totalSpentUsd)}</p>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full progress-fill"
-                      style={{ width: `${pct}%`, background: i === 0 ? 'var(--color-primary)' : 'var(--color-accent)' }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       <div>
         <h4 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
