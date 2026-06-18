@@ -121,7 +121,7 @@ export function AdminPanelPage() {
     return (
       <Card>
         <EmptyState
-          icon={<Building2 size={32} />}
+          icon={<Building2 size={32} className="admin-empty-icon" />}
           title="No se pudieron cargar los datos. Desliza hacia abajo para recargar."
           description={error}
         />
@@ -165,69 +165,81 @@ export function AdminPanelPage() {
 
       <div className="p-4 sm:p-6 pb-20 sm:pb-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 admin-stagger">
         {activeSheet === 'tenants' && (
-          <TenantSection
-            tenants={tenants}
-            filteredTenants={filteredTenants}
-            filters={filters}
-            setSearch={setSearch}
-            setStatus={setStatus}
-            setPlan={setPlan}
-            onSelectTenant={handleSelectTenant}
-            createTenant={createTenant}
-            updateTenant={updateTenant}
-            softDeleteTenant={softDeleteTenant}
-            hardDeleteTenant={hardDeleteTenant}
-            restoreTenant={restoreTenant}
-            addEmployee={addEmployee}
-            fetchAnalytics={fetchAnalytics}
-            analytics={analytics}
-            showCreateModal={showCreateModal}
-            onCloseCreateModal={() => setShowCreateModal(false)}
-          />
+          <div className="admin-section-reveal">
+            <TenantSection
+              tenants={tenants}
+              filteredTenants={filteredTenants}
+              filters={filters}
+              setSearch={setSearch}
+              setStatus={setStatus}
+              setPlan={setPlan}
+              onSelectTenant={handleSelectTenant}
+              createTenant={createTenant}
+              updateTenant={updateTenant}
+              softDeleteTenant={softDeleteTenant}
+              hardDeleteTenant={hardDeleteTenant}
+              restoreTenant={restoreTenant}
+              addEmployee={addEmployee}
+              fetchAnalytics={fetchAnalytics}
+              analytics={analytics}
+              showCreateModal={showCreateModal}
+              onCloseCreateModal={() => setShowCreateModal(false)}
+            />
+          </div>
         )}
 
         {activeSheet === 'users' && (
-          <UserSection
-            users={users}
-            selectedTenantId={selectedTenantId}
-            selectedTenantName={selectedTenantName}
-            addEmployee={addEmployee}
-            removeEmployee={removeEmployee}
-            resetPassword={resetPassword}
-            showAddEmployeeModal={showAddEmployeeModal}
-            onCloseAddEmployeeModal={() => setShowAddEmployeeModal(false)}
-          />
+          <div className="admin-section-reveal">
+            <UserSection
+              users={users}
+              selectedTenantId={selectedTenantId}
+              selectedTenantName={selectedTenantName}
+              addEmployee={addEmployee}
+              removeEmployee={removeEmployee}
+              resetPassword={resetPassword}
+              showAddEmployeeModal={showAddEmployeeModal}
+              onCloseAddEmployeeModal={() => setShowAddEmployeeModal(false)}
+            />
+          </div>
         )}
 
         {activeSheet === 'all-users' && (
-          <AllUsersSection
-            allUsers={paginatedAllUsers}
-            page={allUserPage}
-            totalPages={allUserTotalPages}
-            onPageChange={setAllUserPage}
-          />
+          <div className="admin-section-reveal">
+            <AllUsersSection
+              allUsers={paginatedAllUsers}
+              page={allUserPage}
+              totalPages={allUserTotalPages}
+              onPageChange={setAllUserPage}
+            />
+          </div>
         )}
 
         {activeSheet === 'subscriptions' && (
-          <SubscriptionSection
-            subscriptions={subscriptions}
-            onRenew={renewSubscription}
-          />
+          <div className="admin-section-reveal">
+            <SubscriptionSection
+              subscriptions={subscriptions}
+              onRenew={renewSubscription}
+            />
+          </div>
         )}
 
         {activeSheet === 'global-categories' && (
-          <GlobalCategorySection
-            globalCategories={globalCategories}
-            createGlobalCategory={createGlobalCategory}
-            updateGlobalCategory={updateGlobalCategory}
-            deleteGlobalCategory={deleteGlobalCategory}
-            showCreateModal={showCreateGlobalCatModal}
-            onCloseCreateModal={() => setShowCreateGlobalCatModal(false)}
-          />
+          <div className="admin-section-reveal">
+            <GlobalCategorySection
+              globalCategories={globalCategories}
+              createGlobalCategory={createGlobalCategory}
+              updateGlobalCategory={updateGlobalCategory}
+              deleteGlobalCategory={deleteGlobalCategory}
+              showCreateModal={showCreateGlobalCatModal}
+              onCloseCreateModal={() => setShowCreateGlobalCatModal(false)}
+            />
+          </div>
         )}
 
         {activeSheet === 'audit' && (
-          <AuditSection />
+          <div className="admin-section-reveal">
+            <AuditSection />
+          </div>
         )}
       </div>
 

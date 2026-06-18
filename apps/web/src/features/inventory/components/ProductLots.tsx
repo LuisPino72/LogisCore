@@ -70,7 +70,7 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 inventory-stagger">
       {lots.map((lot, index) => {
         const consumed = lot.quantityAdded - lot.remainingQuantity;
         const pct = lot.quantityAdded > 0 ? Math.round((consumed / lot.quantityAdded) * 100) : 0;

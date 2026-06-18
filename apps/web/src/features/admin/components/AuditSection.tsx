@@ -362,13 +362,13 @@ export function AuditSection() {
               placeholder="Buscar eventos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 min-w-40"
+              className="flex-1 min-w-40 admin-field"
             />
           )}
           <Select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as DateRange)}
-            className="w-36"
+            className="w-36 admin-field"
           >
             {DATE_RANGES.map((dr) => (
               <option key={dr.value} value={dr.value}>{dr.label}</option>
@@ -377,7 +377,7 @@ export function AuditSection() {
           <Select
             value={moduleFilter}
             onChange={(e) => setModuleFilter(e.target.value)}
-            className="w-36"
+            className="w-36 admin-field"
           >
             {MODULE_OPTIONS.map((m) => (
               <option key={m.value} value={m.value}>{m.label}</option>
@@ -388,7 +388,7 @@ export function AuditSection() {
               <Select
                 value={severityFilter}
                 onChange={(e) => setSeverityFilter(e.target.value)}
-                className="w-36"
+                className="w-36 admin-field"
               >
                 <option value="all">Todas las severidades</option>
                 <option value="INFO">INFO</option>
@@ -398,14 +398,14 @@ export function AuditSection() {
                 placeholder="Buscar por usuario..."
                 value={userFilter}
                 onChange={(e) => setUserFilter(e.target.value)}
-                className="flex-1 min-w-40"
+                className="flex-1 min-w-40 admin-field"
               />
               <SearchableSelect
                 value={tenantFilter}
                 onChange={setTenantFilter}
                 options={tenantOptions}
                 placeholder="Todos los tenants"
-                className="flex-1 min-w-40"
+                className="flex-1 min-w-40 admin-field"
               />
             </>
           )}

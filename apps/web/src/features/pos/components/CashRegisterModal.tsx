@@ -85,7 +85,7 @@ export function CashRegisterModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={mode === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 animate-slide-down">
         {mode === 'open' ? (
           <>
             {exchangeRate && (
@@ -138,7 +138,7 @@ export function CashRegisterModal({
               placeholder="0.00"
             />
             {differencePreview && (
-              <div className={`text-sm rounded-md px-3 py-2 ${
+              <div className={`animate-count-pop text-sm rounded-md px-3 py-2 ${
                 differencePreview.isZero
                   ? 'bg-green-50 text-green-700'
                   : 'bg-red-50 text-red-700'
@@ -168,6 +168,7 @@ export function CashRegisterModal({
             onClick={mode === 'open' ? handleOpen : handleClose}
             loading={loading}
             disabled={disabled}
+            className="active:scale-[0.98]"
             title={disabled ? 'Necesitas internet para realizar esta acción' : undefined}
           >
             {mode === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}

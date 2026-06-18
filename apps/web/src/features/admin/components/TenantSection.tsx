@@ -167,12 +167,12 @@ export function TenantSection({
       render: (t) => (
         <div className="flex flex-row flex-wrap gap-1 items-center">
           <Tooltip content="Ir al local" position="top">
-            <Button variant="ghost" size="sm" className="min-h-11" onClick={() => handleNavigateTenant(t.slug)}>
+            <Button variant="ghost" size="sm" className="min-h-11 admin-ripple" onClick={() => handleNavigateTenant(t.slug)}>
               <Eye size={16} />
             </Button>
           </Tooltip>
           <Tooltip content="Editar local" position="top">
-            <Button variant="ghost" size="sm" className="min-h-11" onClick={() => setEditTarget(t)}>
+            <Button variant="ghost" size="sm" className="min-h-11 admin-ripple" onClick={() => setEditTarget(t)}>
               <Edit2 size={16} />
               <span className="hidden sm:inline">Editar</span>
             </Button>
@@ -218,12 +218,12 @@ export function TenantSection({
               maxLength={15}
               value={filters.search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-50"
+              className="flex-1 min-w-50 admin-field"
             />
             <Select
               value={filters.status}
               onChange={(e) => setStatus(e.target.value as 'all' | 'active' | 'inactive')}
-              className="w-32.5"
+              className="w-32.5 admin-field"
             >
               <option value="all">Todos</option>
               <option value="active">Activos</option>
@@ -232,7 +232,7 @@ export function TenantSection({
             <Select
               value={filters.plan}
               onChange={(e) => setPlan(e.target.value)}
-              className="w-32.5"
+              className="w-32.5 admin-field"
             >
               <option value="all">Todos</option>
               <option value="basico">Básico</option>

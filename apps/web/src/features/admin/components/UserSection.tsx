@@ -76,7 +76,7 @@ export function UserSection({
             <Button
               variant="ghost"
               size="sm"
-              className="min-h-11"
+              className="min-h-11 admin-ripple"
               onClick={() => setResetTarget({ userId: u.userId, email: u.email ?? u.id, name: u.name ?? u.email ?? u.id })}
             >
               <KeyRound size={16} />
@@ -87,7 +87,7 @@ export function UserSection({
               <Button
                 variant="danger"
                 size="sm"
-                className="min-h-11"
+                className="min-h-11 admin-ripple"
                 onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
               >
                 <Trash2 size={16} />

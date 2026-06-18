@@ -8,7 +8,7 @@ interface GastoFiltersProps {
 
 export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-2">
+    <div className="flex flex-col sm:flex-row gap-2 animate-slide-down">
       <div className="flex-1">
         <SearchInput
           placeholder="Buscar gasto"
@@ -16,6 +16,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
           onChange={(e) => onChange({ search: e.target.value })}
           onClear={() => onChange({ search: '' })}
           aria-label="Buscar gasto"
+          className="transition-all duration-200 hover:border-primary/30"
         />
       </div>
       <div className="w-full sm:w-40">
@@ -30,6 +31,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
           ]}
           hideSearch={EXPENSE_CATEGORIES.length <= 10}
           aria-label="Categoría"
+          className="transition-all duration-200 hover:border-primary/30"
         />
       </div>
       <div className="w-full sm:w-40">
@@ -38,6 +40,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
           value={filters.month ?? ''}
           onChange={(e) => onChange({ month: e.target.value })}
           aria-label="Mes"
+          className="transition-all duration-200 hover:border-primary/30"
         />
       </div>
       <div className="w-full sm:w-36">
@@ -52,6 +55,7 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
           ]}
           hideSearch
           aria-label="Estado"
+          className="transition-all duration-200 hover:border-primary/30"
         />
       </div>
     </div>

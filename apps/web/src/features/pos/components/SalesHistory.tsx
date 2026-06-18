@@ -225,7 +225,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
           />
         </div>
       ) : (
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto animate-card-in">
           <DataTable
             columns={columns}
             data={sales}

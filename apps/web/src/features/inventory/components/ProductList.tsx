@@ -35,6 +35,32 @@ function getStockLabel(isWeighted: boolean, unit: string): string {
   return 'Total';
 }
 
+type ProductBadgeType = 'vendible' | 'no-vendible' | 'pesable' | 'materia-prima' | 'variantes';
+
+const PRODUCT_BADGE_STYLES: Record<ProductBadgeType, string> = {
+  vendible: 'text-green-700 bg-green-50',
+  'no-vendible': 'text-orange-700 bg-orange-50',
+  pesable: 'text-teal-700 bg-teal-50',
+  'materia-prima': 'text-amber-700 bg-amber-50',
+  variantes: 'text-primary bg-primary/10',
+};
+
+const PRODUCT_BADGE_LABELS: Record<ProductBadgeType, string> = {
+  vendible: 'Vendible',
+  'no-vendible': 'No vendible',
+  pesable: 'Pesable',
+  'materia-prima': 'Materia prima',
+  variantes: 'Variantes',
+};
+
+function ProductBadge({ type, className = '' }: { type: ProductBadgeType; className?: string }) {
+  return (
+    <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap ${PRODUCT_BADGE_STYLES[type]} ${className}`}>
+      {PRODUCT_BADGE_LABELS[type]}
+    </span>
+  );
+}
+
 function getStockBadgeContent(stock: number, unit: string, isWeighted: boolean): string {
   const display = displayStock(stock, unit);
   const label = getStockLabel(isWeighted, unit);
@@ -279,30 +305,30 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               <span className="font-medium text-gray-900">{product.name}</span>
               {productIdsWithVariants.has(product.id) && (
                 <span
-                  className="hidden md:inline-flex text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors badge-bounce"
+                  className="hidden md:inline-flex cursor-pointer hover:bg-primary/20 transition-colors badge-bounce"
                   onClick={(e) => { e.stopPropagation(); openVariantModal(product.id); }}
                 >
-                  Variantes
+                  <ProductBadge type="variantes" />
                 </span>
               )}
               {!product.isSellable && (
-                <span className="hidden md:inline-flex text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  No vendible
+                <span className="hidden md:inline-flex">
+                  <ProductBadge type="no-vendible" />
                 </span>
               )}
               {product.isSellable && !product.isWeighted && product.productType !== 'materia_prima' && (
-                <span className="hidden md:inline-flex text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  Vendible
+                <span className="hidden md:inline-flex">
+                  <ProductBadge type="vendible" />
                 </span>
               )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
-                <span className="hidden md:inline-flex text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  Pesable
+                <span className="hidden md:inline-flex">
+                  <ProductBadge type="pesable" />
                 </span>
               )}
               {product.productType === 'materia_prima' && (
-                <span className="hidden md:inline-flex text-xs font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  Materia prima
+                <span className="hidden md:inline-flex">
+                  <ProductBadge type="materia-prima" />
                 </span>
               )}
             </div>
@@ -310,39 +336,31 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               {productIdsWithVariants.has(product.id) && (
                 <div className="flex md:hidden mt-1">
                   <span
-                    className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="cursor-pointer hover:bg-primary/20 transition-colors"
                     onClick={() => openVariantModal(product.id)}
                   >
-                    Variantes
+                    <ProductBadge type="variantes" />
                   </span>
                 </div>
               )}
               {!product.isSellable && (
                 <div className="flex md:hidden mt-1">
-                  <span className="text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    No vendible
-                  </span>
+                  <ProductBadge type="no-vendible" />
                 </div>
               )}
               {product.isSellable && !product.isWeighted && product.productType !== 'materia_prima' && (
                 <div className="flex md:hidden mt-1">
-                  <span className="text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    Vendible
-                  </span>
+                  <ProductBadge type="vendible" />
                 </div>
               )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
                 <div className="flex md:hidden mt-1">
-                  <span className="text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    Pesable
-                  </span>
+                  <ProductBadge type="pesable" />
                 </div>
               )}
               {product.productType === 'materia_prima' && (
                 <div className="flex md:hidden mt-1">
-                  <span className="text-xs font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    Materia prima
-                  </span>
+                  <ProductBadge type="materia-prima" />
                 </div>
               )}
           </div>
@@ -558,6 +576,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
       )}
 
       <DataTable
+        className="inventory-stagger"
         columns={columns}
         data={filteredByStock}
         keyExtractor={(p: Product) => p.id}
@@ -586,26 +605,20 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               </div>
               {productIdsWithVariants.has(product.id) && (
                 <span
-                  className="text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors"
+                  className="cursor-pointer hover:bg-primary/20 transition-colors"
                   onClick={() => openVariantModal(product.id)}
                 >
-                  Variantes
+                  <ProductBadge type="variantes" />
                 </span>
               )}
               {!product.isSellable && (
-                <span className="text-xs font-medium text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  No vendible
-                </span>
+                <ProductBadge type="no-vendible" />
               )}
               {product.isSellable && !product.isWeighted && product.productType !== 'materia_prima' && (
-                <span className="text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  Vendible
-                </span>
+                <ProductBadge type="vendible" />
               )}
               {product.isWeighted && product.productType !== 'materia_prima' && (
-                <span className="text-xs font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  Pesable
-                </span>
+                <ProductBadge type="pesable" />
               )}
               <div className="mt-1 text-xs text-gray-600 space-y-1 flex flex-col items-center">
                 {product.productType !== 'materia_prima' && (

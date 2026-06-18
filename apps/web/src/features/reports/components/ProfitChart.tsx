@@ -1,6 +1,6 @@
 import { useChartReady } from '@/hooks/useChartReady';
-import { Card } from '@/common/components';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { Card, KpiCard } from '@/common/components';
+import { TrendingUp, TrendingDown, ShoppingCart, Receipt, Hash } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { DailyProfitPoint } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
@@ -73,22 +73,34 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
       <h3 className="text-sm font-title font-bold text-gray-900 mb-3">Ganancias en el Tiempo</h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
-        <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <p className="text-xs sm:text-sm text-gray-700">Ganancia Total</p>
-          <div className="truncate">{formatDual(totalProfit, totalProfitUsd, 'text-primary')}</div>
-        </div>
-        <div className="p-2 sm:p-3 rounded-lg bg-primary/3 border border-primary/10">
-          <p className="text-xs sm:text-sm text-gray-700">Ventas Totales</p>
-          <div className="truncate">{formatDual(totalSales, totalSalesUsd, 'text-primary-dark')}</div>
-        </div>
-        <div className="p-2 sm:p-3 rounded-lg bg-danger/5 border border-danger/20">
-          <p className="text-xs sm:text-sm text-gray-700">Gasto Total</p>
-          <div className="truncate">{formatDual(totalCost, totalCostUsd, 'text-danger')}</div>
-        </div>
-        <div className="p-2 sm:p-3 rounded-lg bg-accent/5 border border-accent/20">
-          <p className="text-xs sm:text-sm text-gray-700">Transacciones</p>
-          <p className="text-xs sm:text-base font-bold text-accent-dark truncate">{totalTransactions}</p>
-        </div>
+        <KpiCard
+          label="Ganancia Total"
+          value={formatDual(totalProfit, totalProfitUsd, 'text-primary')}
+          icon={<TrendingUp size={14} className="sm:w-4 sm:h-4" />}
+          gradient="blue"
+          animationDelay={0}
+        />
+        <KpiCard
+          label="Ventas Totales"
+          value={formatDual(totalSales, totalSalesUsd, 'text-primary-dark')}
+          icon={<ShoppingCart size={14} className="sm:w-4 sm:h-4" />}
+          gradient="green"
+          animationDelay={0.05}
+        />
+        <KpiCard
+          label="Gasto Total"
+          value={formatDual(totalCost, totalCostUsd, 'text-danger')}
+          icon={<Receipt size={14} className="sm:w-4 sm:h-4" />}
+          gradient="red"
+          animationDelay={0.1}
+        />
+        <KpiCard
+          label="Transacciones"
+          value={totalTransactions}
+          icon={<Hash size={14} className="sm:w-4 sm:h-4" />}
+          gradient="amber"
+          animationDelay={0.15}
+        />
       </div>
 
       {data.length >= 2 && (

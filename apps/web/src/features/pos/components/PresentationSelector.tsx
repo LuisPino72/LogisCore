@@ -31,10 +31,10 @@ export function PresentationSelector({
       onClose={onClose}
       title={product?.name ?? 'Seleccionar presentación'}
     >
-      <div className="space-y-2 pt-2">
+      <div className="space-y-2 pt-2 animate-slide-down">
         {sorted.length === 0 ? (
           <p className="text-sm text-gray-600 text-center py-4">No hay presentaciones disponibles para este producto.</p>
-        ) : sorted.map((pres) => {
+        ) : sorted.map((pres, index) => {
           let stockDisplay = '—';
           let hasStock = true;
 
@@ -51,6 +51,7 @@ export function PresentationSelector({
               type="button"
               disabled={!hasStock}
               title={!hasStock ? 'Sin stock disponible' : undefined}
+              style={{ animationDelay: `${index * 0.05}s` }}
               onClick={() => {
                 if (product) {
                   if (!pres.id) return;
@@ -63,7 +64,7 @@ export function PresentationSelector({
                   onClose();
                 }
               }}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all min-h-14 ${
+              className={`animate-card-in w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all min-h-14 ${
                 hasStock
                   ? 'bg-white border-border hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.98]'
                   : 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'

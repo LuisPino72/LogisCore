@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { CheckCircle, Package, Truck } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Package, Truck } from 'lucide-react';
 import { Button, Input, Modal } from '../../../common/components';
 import { usePurchaseStore } from '../stores/purchaseStore';
 import type { PurchaseOrderWithItems } from '../../../specs/purchases';
@@ -27,6 +27,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
   });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showReceiveAllConfirm, setShowReceiveAllConfirm] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,15 +60,16 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
     setQuantities({ ...quantities, [itemId]: Math.max(0, Math.min(rounded, pending)) });
   };
 
+  const pendingItemCount = order.items.filter((i) => (i.quantity - i.receivedQuantity) > 0).length;
+
   const receiveAll = () => {
-    const pendingItems = order.items.filter((i) => (i.quantity - i.receivedQuantity) > 0);
-    if (!window.confirm(`Marcar ${pendingItems.length} item(s) como recibido(s) completamente?`)) return;
     const next: Record<string, number> = {};
     for (const item of order.items) {
       const pending = item.quantity - item.receivedQuantity;
       next[item.id] = pending > 0 ? pending : 0;
     }
     setQuantities(next);
+    setShowReceiveAllConfirm(false);
   };
 
   const canReceive = order.items.some((i) => (i.quantity - i.receivedQuantity) > 0);
@@ -117,6 +119,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
   }).length;
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
@@ -227,7 +230,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
         {canReceive && (
           <button
             type="button"
-            onClick={receiveAll}
+            onClick={() => setShowReceiveAllConfirm(true)}
             className="w-full text-sm text-primary font-semibold py-3 rounded-lg border border-primary/20 bg-linear-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 transition-all duration-200 min-h-11 hover:shadow-sm active:scale-[0.98]"
           >
             <Package size={14} className="inline mr-1.5 -mt-0.5" />
@@ -242,5 +245,33 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
         )}
       </div>
     </Modal>
+
+    <Modal
+      isOpen={showReceiveAllConfirm}
+      onClose={() => setShowReceiveAllConfirm(false)}
+      title="¿Recibir todo?"
+      size="sm"
+      footer={
+        <div className="flex gap-2 w-full">
+          <Button variant="secondary" fullWidth onClick={() => setShowReceiveAllConfirm(false)}>
+            Cancelar
+          </Button>
+          <Button variant="primary" fullWidth onClick={receiveAll}>
+            <CheckCircle size={16} />
+            <span className="ml-1">Confirmar</span>
+          </Button>
+        </div>
+      }
+    >
+      <div className="flex flex-col items-center gap-3 pt-2">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-primary/20 bg-primary/10">
+          <AlertTriangle size={24} className="text-primary" />
+        </div>
+        <p className="text-sm text-gray-600 text-center">
+          Se marcarán <strong>{pendingItemCount} item(s)</strong> como recibido(s) completamente.
+        </p>
+      </div>
+    </Modal>
+    </>
   );
 }

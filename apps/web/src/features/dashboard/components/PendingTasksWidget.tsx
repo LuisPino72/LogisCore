@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, ShoppingCart, DollarSign, Clock, ArrowRight, CheckCircle } from 'lucide-react';
+import { EmptyState } from '../../../common/components';
 import type { PendingTask } from '../types';
 
 interface PendingTasksWidgetProps {
@@ -49,10 +50,11 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
           <Clock size={18} />
           <span>Tareas pendientes</span>
         </div>
-        <div className="pending-tasks-empty">
-          <CheckCircle size={18} />
-          <span>Todo listo. No hay tareas pendientes.</span>
-        </div>
+        <EmptyState
+          icon={<CheckCircle size={40} />}
+          title="Todo listo"
+          description="No hay tareas pendientes."
+        />
       </div>
     );
   }

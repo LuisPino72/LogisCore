@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChefHat, Plus, Trash2, AlertTriangle, Info, ChevronDown, ChevronUp, Package, ArrowLeft, ArrowRight, Check, Lock } from 'lucide-react';
-import { Button, Card, Modal, Input, SearchableSelect, Spinner } from '../../../common/components';
+import { Button, Card, Modal, Input, SearchableSelect, Select, Spinner } from '../../../common/components';
 import { useRecipeForm } from '../hooks/useRecipeForm';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
@@ -284,18 +284,15 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                             error={errors[`line_${index}_quantity`]}
                           />
                           <div>
-                            <select
+                            <Select
                               value={line.unit}
                               onChange={(e) => updateLine(index, 'unit', e.target.value)}
-                              className={`input w-full ${errors[`line_${index}_unit`] ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
+                              error={errors[`line_${index}_unit`]}
                             >
                               {getUnitOptions(line.productId).map((opt) => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                               ))}
-                            </select>
-                            {errors[`line_${index}_unit`] && (
-                              <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_unit`]}</p>
-                            )}
+                            </Select>
                           </div>
                         </div>
                         <div className="flex justify-center pt-1">
@@ -667,18 +664,15 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                         error={errors[`line_${index}_quantity`]}
                       />
                       <div>
-                        <select
+                        <Select
                           value={line.unit}
                           onChange={(e) => updateLine(index, 'unit', e.target.value)}
-                          className={`input w-full ${errors[`line_${index}_unit`] ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
+                          error={errors[`line_${index}_unit`]}
                         >
                           {getUnitOptions(line.productId).map((opt) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                           ))}
-                        </select>
-                        {errors[`line_${index}_unit`] && (
-                          <p className="text-xs text-danger mt-1 wrap-break-word">{errors[`line_${index}_unit`]}</p>
-                        )}
+                        </Select>
                       </div>
                     </div>
                     <div className="flex justify-center pt-1">
@@ -799,17 +793,16 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
 
             {form.mode === 'batch' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
-                <select
+                <Select
+                  label="Unidad"
                   value={form.yieldUnit}
                   onChange={(e) => updateField('yieldUnit', e.target.value)}
-                  className="input w-full"
+                  error={errors.yieldUnit}
                 >
                   <option value="unidad">Unidad</option>
                   <option value="kg">Kg</option>
                   <option value="lt">Litro</option>
-                </select>
-                {errors.yieldUnit && <p className="text-xs text-danger mt-1 wrap-break-word">{errors.yieldUnit}</p>}
+                </Select>
               </div>
             )}
 

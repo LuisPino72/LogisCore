@@ -127,8 +127,8 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
         title="Nuevo gasto"
         footer={
           <div className="flex gap-3 w-full">
-            <Button variant="ghost" fullWidth onClick={handleClose}>Cancelar</Button>
-            <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
+            <Button variant="ghost" fullWidth onClick={handleClose} className="active:scale-[0.98] transition-all duration-200">Cancelar</Button>
+            <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting} className="active:scale-[0.98] transition-all duration-200">
               {submitting ? 'Guardando...' : 'Crear gasto'}
             </Button>
           </div>
@@ -146,6 +146,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
                 placeholder="Seleccionar categoría"
                 searchPlaceholder="Buscar categoría..."
                 options={UI_EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat }))}
+                className="transition-all duration-200 hover:border-primary/30"
               />
             </div>
             {fieldErrors.category && (
@@ -165,6 +166,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
             onChange={(e) => { setAmountUsd(e.target.value); setFieldErrors((prev) => { const next = { ...prev }; delete next.amountUsd; return next; }); }}
             error={fieldErrors.amountUsd}
             validation={{ required: true, min: 0.01, max: 99999 }}
+            className="transition-all duration-200 hover:border-primary/30"
           />
 
           {currentRate > 0 && (
@@ -189,6 +191,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
             onChange={(e) => setDescription(e.target.value)}
             validation={{ maxLength: 35 }}
             autoResize
+            className="transition-all duration-200 hover:border-primary/30"
           />
 
           <div className="flex items-center justify-between pt-2">
@@ -205,7 +208,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
                 label="Frecuencia"
                 value={recurrenceType}
                 onChange={(e) => setRecurrenceType(e.target.value as 'monthly' | 'yearly')}
-                className="max-w-full sm:max-w-xs"
+                className="max-w-full sm:max-w-xs transition-all duration-200 hover:border-primary/30"
               >
                 <option value="monthly">Mensual</option>
                 <option value="yearly">Anual</option>
@@ -228,10 +231,10 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
             Tienes cambios sin guardar. ¿Seguro que quieres salir?
           </p>
           <div className="flex gap-3 w-full pt-1">
-            <Button variant="ghost" fullWidth onClick={() => setConfirmClose(false)}>
+            <Button variant="ghost" fullWidth onClick={() => setConfirmClose(false)} className="active:scale-[0.98] transition-all duration-200">
               Seguir editando
             </Button>
-            <Button variant="danger" fullWidth onClick={handleConfirmClose}>
+            <Button variant="danger" fullWidth onClick={handleConfirmClose} className="active:scale-[0.98] transition-all duration-200">
               Descartar
             </Button>
           </div>

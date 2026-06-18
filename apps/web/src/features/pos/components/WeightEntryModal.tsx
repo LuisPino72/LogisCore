@@ -39,7 +39,7 @@ export function WeightEntryModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Agregar producto pesable">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 animate-slide-down">
         <p className="text-sm text-gray-600">
           {product.name} ({product.sku})
         </p>
@@ -67,7 +67,7 @@ export function WeightEntryModal({
               type="button"
               onClick={() => { setError(''); onQuantityChange(String(preset)); }}
               className={cn(
-                'min-w-[48px] min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                'min-w-[48px] min-h-11 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors active:scale-[0.98]',
                 parseFloat(quantity) === preset
                   ? 'bg-primary/10 text-primary border border-primary'
                   : 'bg-surface-alt text-gray-600 border border-border hover:bg-gray-100',
@@ -79,7 +79,7 @@ export function WeightEntryModal({
         </div>
 
         {quantity && parseFloat(quantity) > 0 && (
-          <div className="text-sm text-gray-600 bg-surface-alt rounded-lg p-2">
+          <div className="animate-count-pop text-sm text-gray-600 bg-surface-alt rounded-lg p-2">
             Total: {formatUsd(parseFloat(quantity) * product.priceUsd)}
           </div>
         )}

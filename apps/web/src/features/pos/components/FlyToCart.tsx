@@ -16,7 +16,7 @@ export const FlyToCart = () => {
   useEffect(() => {
     const sub = EventBus.on('CART.ADD_ANIMATION', (payload: unknown) => {
       const { fromX, fromY, imageUrl } = payload as { fromX: number; fromY: number; imageUrl: string };
-      const badge = document.querySelector('.cart-badge');
+      const badge = document.querySelector('[data-cart-badge]');
       if (!badge) return;
 
       const rect = badge.getBoundingClientRect();

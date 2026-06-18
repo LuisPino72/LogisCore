@@ -1,4 +1,4 @@
-import { Card, Spinner, EmptyState, KpiCard } from '@/common/components';
+import { Card, EmptyState, KpiCard, KpiSkeleton } from '@/common/components';
 import { ChefHat, Package, AlertTriangle, TrendingUp, Hash, DollarSign } from 'lucide-react';
 import type { ProductionSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatUsd } from '@/lib/formatBs';
@@ -12,8 +12,10 @@ interface ProductionReportProps {
 export function ProductionReport({ data, loading, onKpiClick }: ProductionReportProps) {
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <Spinner size="sm" />
+      <div className="grid grid-cols-1 min-[380px]:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+        <KpiSkeleton />
+        <KpiSkeleton />
+        <KpiSkeleton />
       </div>
     );
   }
@@ -31,7 +33,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="space-y-3 sm:space-y-4 animate-report-fade-in">
       <h3 className="text-xs sm:text-sm font-semibold text-gray-700 flex items-center gap-2">
         <ChefHat size={16} className="text-primary" />
         Producción

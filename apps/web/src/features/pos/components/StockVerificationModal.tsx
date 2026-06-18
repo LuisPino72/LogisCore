@@ -254,7 +254,7 @@ export function StockVerificationModal({
           <Button variant="primary" onClick={onComplete}>Continuar</Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-slide-down">
           <p className="text-sm text-gray-500">
             Verifica el stock físico de {items.length} producto{items.length > 1 ? 's' : ''}.
             {pendingChanges > 0 && (
@@ -263,10 +263,10 @@ export function StockVerificationModal({
           </p>
 
           <div className="space-y-3">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const diff = getDifference(item);
               return (
-                <div key={item.productId} className="bg-surface-alt rounded-lg p-3 space-y-2 border border-border">
+                <div key={item.productId} style={{ animationDelay: `${index * 0.05}s` }} className="animate-card-in bg-surface-alt rounded-lg p-3 space-y-2 border border-border">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm leading-tight truncate">{item.productName}</p>

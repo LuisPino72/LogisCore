@@ -273,7 +273,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
       )}
 
       {selectedProductId && visibleMovements.length > 0 && (
-        <div className="space-y-0">
+        <div className="space-y-0 inventory-stagger">
           {visibleMovements.map((mov) => (
             <div key={mov.id} className="border-b border-gray-100 last:border-b-0">
               {renderTimelineCard(mov)}

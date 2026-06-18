@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Modal } from '../../../common/components';
-import { Badge } from '../../../common/components';
-import { Spinner } from '../../../common/components';
+import { Modal, Badge, Spinner, Tabs } from '../../../common/components';
+import type { Tab } from '../../../common/components';
 import { formatUsd } from '@/lib/formatBs';
 import { useProductionStore } from '../stores/productionStore';
 import type { ProductionOrder } from '../types';
@@ -122,26 +121,19 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
           <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
         </div>
 
-        {/* Tab bar */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          {(['resumen', 'ingredientes', 'movimientos'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
-                activeTab === tab
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab === 'resumen' ? 'Resumen' : tab === 'ingredientes' ? `Ingredientes (${details?.ingredientCosts?.length || 0})` : `Movimientos (${movements.length})`}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          tabs={[
+            { key: 'resumen', label: 'Resumen' },
+            { key: 'ingredientes', label: 'Ingredientes', badge: details?.ingredientCosts?.length || 0 },
+            { key: 'movimientos', label: 'Movimientos', badge: movements.length },
+          ] as Tab[]}
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as 'resumen' | 'ingredientes' | 'movimientos')}
+        />
 
         {/* Tab content */}
         {activeTab === 'resumen' && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-tab-fade">
             {/* Resumen de producción */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-primary stat-card-glow">
@@ -220,9 +212,9 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
         )}
 
         {activeTab === 'ingredientes' && details?.ingredientCosts && details.ingredientCosts.length > 0 && (
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-gray-50 rounded-lg p-3 animate-tab-fade">
             <h5 className="text-sm font-medium text-gray-700 mb-2">Ingredientes Consumidos</h5>
-            <div className="sm:hidden space-y-2">
+            <div className="sm:hidden space-y-2 recipe-stagger">
               {details.ingredientCosts.map((ing, idx) => (
                 <div key={idx} className="bg-white rounded-lg p-3 border border-gray-100 space-y-1">
                   <div className="flex justify-between items-start">
@@ -262,9 +254,9 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
         )}
 
         {activeTab === 'movimientos' && movements.length > 0 && (
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-gray-50 rounded-lg p-3 animate-tab-fade">
             <h5 className="text-sm font-medium text-gray-700 mb-2">Movimientos de Inventario</h5>
-            <div className="sm:hidden space-y-2">
+            <div className="sm:hidden space-y-2 recipe-stagger">
               {movements.map((m, idx) => (
                 <div key={idx} className={`bg-white rounded-lg p-3 border border-gray-100 space-y-1 border-l-[3px] ${m.type === 'production_output' ? 'border-l-success' : 'border-l-danger'}`}>
                   <div className="flex justify-between items-start">

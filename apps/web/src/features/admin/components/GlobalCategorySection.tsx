@@ -86,37 +86,13 @@ export function GlobalCategorySection({
           />
         </div>
         <div className="p-4 pt-0">
-          <div className="hidden sm:block">
-            <DataTable
-              columns={columns}
-              data={paginated}
-              emptyMessage={search ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas. Crea la primera para que esté disponible en todos los nuevos locales.'}
-              keyExtractor={(c: GlobalCategory) => c.id}
-            />
-          </div>
-          <div className="sm:hidden space-y-2 admin-stagger">
-            {paginated.length === 0 ? (
-              <p className="text-center text-sm text-text-secondary py-8">{search ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas. Crea la primera para que esté disponible en todos los nuevos locales.'}</p>
-            ) : (
-              paginated.map((c) => (
-                <div key={c.id} className="flex flex-col gap-2 px-3 py-3 rounded-lg border border-gray-100 bg-white admin-card-hover">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 wrap-break-word">{c.name}</p>
-                    <p className="text-xs text-text-secondary">{new Date(c.createdAt).toLocaleDateString('es-ES')}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" className="min-h-11" fullWidth onClick={() => setFormModal({ isOpen: true, categoryId: c.id, initialName: c.name })}>
-                      <span className="hidden sm:inline">Editar</span>
-                      <span className="sm:hidden">✎</span>
-                    </Button>
-                    <Button variant="ghost" size="sm" className="min-h-11" fullWidth onClick={() => setDeleteTarget(c)}>
-                      <Trash2 size={16} className="text-gray-400" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <DataTable
+            columns={columns}
+            data={paginated}
+            emptyMessage={search ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas. Crea la primera para que esté disponible en todos los nuevos locales.'}
+            keyExtractor={(c: GlobalCategory) => c.id}
+            renderCardOnMobile
+          />
           {totalPages > 1 && (
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           )}

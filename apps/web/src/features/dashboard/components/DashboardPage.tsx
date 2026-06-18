@@ -144,7 +144,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
         {/* Productos más vendidos */}
         <div className="dashboard-card-entrance" style={{ animationDelay: '0.05s' }}>
-          <Card>
+          <Card interactive>
             <div className="p-4 sm:p-5">
               <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -220,7 +220,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
         {/* Stock bajo */}
         <div className="dashboard-card-entrance" style={{ animationDelay: '0.15s' }}>
-          <Card>
+          <Card interactive>
             <div className="p-4 sm:p-5">
               <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
