@@ -97,14 +97,14 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
     >
       <div className="space-y-4">
         {/* Header card */}
-        <div className="p-4 rounded-xl bg-linear-to-br from-primary/5 to-primary/10 border border-primary/20">
+        <div className="customer-header-card p-4 rounded-xl bg-linear-to-br from-primary/10 via-primary/5 to-accent/5 border border-primary/30">
           {/* Fila 1: Icono izquierda + Crédito derecha */}
           <div className="flex items-start justify-between mb-3">
-            <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm ring-1 ring-primary/10">
+            <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-lg shadow-primary/20 ring-1 ring-primary/10 customer-avatar">
               <Users size={28} className="text-primary" />
             </div>
             {(customer.creditLimit ?? 0) > 0 && (
-              <Badge variant="info" className="shrink-0">
+              <Badge variant="info" className="shrink-0 customer-badge">
                 Crédito: {formatUsd(customer.creditLimit ?? 0)}
               </Badge>
             )}
@@ -113,12 +113,12 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
           <h3 className="text-lg font-bold text-gray-900 break-words">{customer.name}</h3>
           {/* Fila 3: Badges */}
           <div className="flex flex-wrap gap-2 mt-2">
-            <Badge variant="neutral" className="text-xs">
+            <Badge variant="neutral" className="text-xs customer-badge">
               <Calendar className="h-3 w-3 mr-1 inline" />
               Miembro desde {new Date(customer.createdAt).toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })}
             </Badge>
             {stats?.lastPurchaseAt && (
-              <Badge variant="info" className="text-xs">
+              <Badge variant="info" className="text-xs customer-badge">
                 <ShoppingBag className="h-3 w-3 mr-1 inline" />
                 Última compra: {formatTimeAgo(stats.lastPurchaseAt)}
               </Badge>
@@ -180,19 +180,19 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
           </h4>
           {stats ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-              <div className="rounded-xl border border-primary/20 bg-linear-to-br from-primary/5 to-primary/10 p-3 text-center">
+              <div className="customer-kpi-card rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 to-primary/20 p-3 text-center shadow-sm shadow-primary/10">
                 <DollarSign size={16} className="text-primary mx-auto mb-1" />
                 <p className="text-xs text-text-secondary">Total gastado</p>
                 <p className="text-base sm:text-lg font-bold text-primary">{formatUsd(stats.totalSpentUsd)}</p>
                 <p className="text-xs text-text-secondary">{formatBs(stats.totalSpentBs)}</p>
               </div>
-              <div className="rounded-xl border border-info/20 bg-linear-to-br from-info/5 to-info/10 p-3 text-center">
+              <div className="customer-kpi-card rounded-xl border border-info/20 bg-linear-to-br from-info/10 to-info/20 p-3 text-center shadow-sm shadow-info/10">
                 <ShoppingBag size={16} className="text-info mx-auto mb-1" />
                 <p className="text-xs text-text-secondary">Compras</p>
                 <p className="text-base sm:text-lg font-bold text-info">{stats.purchaseCount}</p>
                 <p className="text-xs text-text-secondary">transacciones</p>
               </div>
-              <div className="rounded-xl border border-accent/20 bg-linear-to-br from-accent/5 to-accent/10 p-3 text-center">
+              <div className="customer-kpi-card rounded-xl border border-accent/20 bg-linear-to-br from-accent/10 to-accent/20 p-3 text-center shadow-sm shadow-accent/10">
                 <TrendingUp size={16} className="text-accent mx-auto mb-1" />
                 <p className="text-xs text-text-secondary">Ticket promedio</p>
                 <p className="text-base sm:text-lg font-bold text-accent">{formatUsd(stats.averageTicketUsd)}</p>
@@ -225,12 +225,12 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
             />
           ) : (
             <>
-              <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              <div className="space-y-1.5 max-h-64 overflow-y-auto customer-stagger">
                 {history.map((sale) => (
                   <div
                     key={sale.id}
                     onClick={() => setSelectedSaleId(sale.id)}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    className="customer-item-hover flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 bg-white hover:bg-gray-50/50 transition-colors cursor-pointer"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-gray-500">

@@ -117,13 +117,13 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
           {loading && customers.length === 0 ? (
             <div className="flex justify-center py-6"><Spinner size="sm" /></div>
           ) : (
-            <div className="max-h-64 overflow-y-auto space-y-1">
+            <div className="max-h-64 overflow-y-auto space-y-1 customer-stagger">
               <button
                 type="button"
                 onClick={() => handleSelect(null)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
+                className={`customer-item-hover w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
                   !selectedCustomerId
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm shadow-primary/20'
                     : 'border-gray-200 bg-white hover:bg-gray-50'
                 }`}
               >
@@ -149,13 +149,13 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
                     key={c.id}
                     type="button"
                     onClick={() => handleSelect(c)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
+                    className={`customer-item-hover active:scale-[0.98] w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
                       selectedCustomerId === c.id
                         ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                         : 'border-gray-200 bg-white hover:bg-gray-50'
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/20">
                       <User size={16} className="text-primary" />
                     </div>
                     <div className="flex-1 text-left min-w-0">
@@ -179,6 +179,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
             fullWidth
             onClick={() => setShowCreateForm(true)}
             disabled={loading}
+            className="shadow-sm hover:shadow-md transition-shadow"
           >
             <UserPlus size={14} />
             Crear nuevo cliente
@@ -189,7 +190,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
           <button
             type="button"
             onClick={() => setShowCreateForm(false)}
-            className="text-xs text-primary hover:text-primary-dark min-h-11 py-2 px-3 inline-flex items-center"
+            className="text-xs text-primary hover:text-primary-dark min-h-11 py-2 px-3 inline-flex items-center hover:translate-x-[-2px] transition-transform"
           >
             ← Volver a la lista
           </button>

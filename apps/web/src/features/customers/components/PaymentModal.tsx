@@ -150,12 +150,12 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
     >
       <div className="space-y-4">
         {/* Customer Info */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+        <div className="flex items-center justify-between p-3 rounded-xl bg-linear-to-br from-amber-50 to-amber-100/50 border border-amber-200 shadow-sm animate-fade-in">
           <div>
             <p className="text-sm font-medium text-gray-900">{customer.name}</p>
             <p className="text-xs text-gray-500">Deuda total: {formatUsd(customer.balance)}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={handlePayAll} className="min-h-11">
+          <Button variant="ghost" size="sm" onClick={handlePayAll} className="min-h-11 hover:shadow-md transition-shadow">
             Pagar todo
           </Button>
         </div>
@@ -166,13 +166,13 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
               Seleccionar venta
             </label>
-            <div className="space-y-1.5 max-h-32 overflow-y-auto">
+            <div className="space-y-1.5 max-h-32 overflow-y-auto customer-stagger">
               {pendingSales.map((sale) => (
                 <button
                   key={sale.id}
                   type="button"
                   onClick={() => setSelectedSaleId(sale.id)}
-                  className={`w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all ${
+                  className={`customer-item-hover w-full flex items-center justify-between p-2 rounded-lg border text-left transition-all ${
                     selectedSaleId === sale.id
                       ? 'border-amber-500 bg-amber-50 ring-1 ring-amber-500/30'
                       : 'border-gray-200 hover:border-gray-300'
@@ -207,7 +207,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
             onChange={(e) => { setAmountUsd(e.target.value); setError(''); }}
             error={error && (!amountUsd || parseFloat(amountUsd) <= 0) ? error : undefined}
             validation={{ required: true, min: 0.01, max: customer.balance }}
-            className="text-lg font-bold"
+            className="text-lg font-bold focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
             autoFocus
             inputMode="decimal"
             autoComplete="off"
@@ -224,22 +224,22 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
             Método de pago
           </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {collectionMethods.map((m) => {
-              const meta = METADATA_PAGOS[m];
-              const Icon = PAYMENT_ICONS[m];
-              const selected = paymentMethod === m;
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setPaymentMethod(m)}
-                  className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
-                    selected
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-sm ring-1 ring-amber-600/30'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-700'
-                  }`}
-                >
+              <div className="grid grid-cols-2 gap-1.5 customer-stagger">
+                {collectionMethods.map((m) => {
+                  const meta = METADATA_PAGOS[m];
+                  const Icon = PAYMENT_ICONS[m];
+                  const selected = paymentMethod === m;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setPaymentMethod(m)}
+                      className={`customer-payment-btn flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
+                        selected
+                          ? 'bg-linear-to-br from-amber-500 to-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20 ring-1 ring-amber-600/30'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-700'
+                      }`}
+                    >
                   <Icon size={14} />
                   {meta.label}
                 </button>

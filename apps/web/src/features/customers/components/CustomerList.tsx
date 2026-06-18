@@ -34,7 +34,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="skeleton h-16 rounded-xl" />
+          <div key={i} className="customer-skeleton h-16 rounded-xl" />
         ))}
       </div>
     );
@@ -51,7 +51,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 customer-stagger">
       {pagedCustomers.map((c) => {
         const initials = getInitials(c.name);
         const hasCredit = (c.creditLimit ?? 0) > 0;
@@ -59,16 +59,16 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
         return (
           <div
             key={c.id}
-            className="flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-xl border border-gray-100 bg-white sm:hover:shadow-sm sm:hover:border-primary/20 sm:group transition-all duration-200 sm:hover:border-l-primary sm:hover:border-l-3"
+            className="customer-item-hover flex flex-col items-center gap-1.5 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5 rounded-xl border border-gray-100 bg-white sm:hover:shadow-sm sm:hover:border-primary/20 sm:group transition-all duration-200 sm:hover:border-l-primary sm:hover:border-l-3"
           >
-            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 ring-1 ring-primary/10">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary/15 to-primary/5 flex items-center justify-center shrink-0 ring-2 ring-primary/20 customer-avatar">
               <span className="text-xs font-bold text-primary">{initials}</span>
             </div>
             <div className="min-w-0 flex-1 w-full text-center sm:text-left">
               <div className="flex items-center justify-center gap-2 sm:justify-start sm:flex-row flex-col">
                 <p className="text-sm font-semibold text-gray-900 wrap-break-word">{c.name}</p>
                 {hasCredit && (
-                  <Badge variant="info" className="flex items-center gap-0.5">
+                  <Badge variant="info" className="flex items-center gap-0.5 customer-badge">
                     <CreditCard size={10} />
                     <span>Con crédito</span>
                   </Badge>
@@ -99,7 +99,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                 )}
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <Tooltip content="Ver historial" position="top">
                 <Button
                   variant="ghost"

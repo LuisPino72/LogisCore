@@ -1228,6 +1228,162 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   flex-shrink: 0;
 }
 
+/* ───────────────────── CUSTOMER MODULE ───────────────────── */
+@keyframes customerCardSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes customerStatPop {
+  0% { opacity: 0; transform: scale(0.9); }
+  60% { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes customerHeaderGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(13, 148, 136, 0.15); }
+}
+
+@keyframes customerAvatarPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes customerFieldSlide {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes customerBadgePop {
+  0% { opacity: 0; transform: scale(0.7); }
+  60% { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes customerProgressFill {
+  from { width: 0%; }
+}
+
+@keyframes customerShimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.customer-stagger > * {
+  opacity: 0;
+  animation: customerCardSlide 0.25s ease-out forwards;
+}
+
+.customer-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.customer-stagger > *:nth-child(2) { animation-delay: 0.04s; }
+.customer-stagger > *:nth-child(3) { animation-delay: 0.06s; }
+.customer-stagger > *:nth-child(4) { animation-delay: 0.08s; }
+.customer-stagger > *:nth-child(5) { animation-delay: 0.1s; }
+.customer-stagger > *:nth-child(6) { animation-delay: 0.12s; }
+.customer-stagger > *:nth-child(7) { animation-delay: 0.14s; }
+.customer-stagger > *:nth-child(8) { animation-delay: 0.16s; }
+.customer-stagger > *:nth-child(9) { animation-delay: 0.18s; }
+.customer-stagger > *:nth-child(10) { animation-delay: 0.2s; }
+
+.customer-kpi-card {
+  animation: customerStatPop 0.3s ease-out forwards;
+}
+
+.customer-kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.customer-kpi-card:nth-child(2) { animation-delay: 0.1s; }
+.customer-kpi-card:nth-child(3) { animation-delay: 0.15s; }
+
+.customer-header-card {
+  animation: customerHeaderGlow 3s ease-in-out infinite;
+}
+
+.customer-header-card:hover {
+  box-shadow: 0 8px 25px -5px rgba(13, 148, 136, 0.2);
+}
+
+.customer-avatar {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.customer-avatar:hover {
+  animation: customerAvatarPulse 0.4s ease-in-out;
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15);
+}
+
+.customer-field {
+  animation: customerFieldSlide 0.2s ease-out forwards;
+}
+
+.customer-field:nth-child(1) { animation-delay: 0.03s; }
+.customer-field:nth-child(2) { animation-delay: 0.06s; }
+.customer-field:nth-child(3) { animation-delay: 0.09s; }
+.customer-field:nth-child(4) { animation-delay: 0.12s; }
+.customer-field:nth-child(5) { animation-delay: 0.15s; }
+.customer-field:nth-child(6) { animation-delay: 0.18s; }
+
+.customer-badge {
+  animation: customerBadgePop 0.25s ease-out forwards;
+}
+
+.customer-progress-bar {
+  animation: customerProgressFill 0.6s ease-out forwards;
+}
+
+.customer-item-hover {
+  transition: all 0.2s ease;
+}
+
+.customer-item-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  border-color: rgba(13, 148, 136, 0.2);
+}
+
+.customer-item-hover:active {
+  transform: scale(0.98);
+}
+
+.customer-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 0px, #e2e8f0 40px, #f1f5f9 80px);
+  background-size: 200px 100%;
+  animation: customerShimmer 1.5s infinite linear;
+}
+
+.customer-tab-active {
+  position: relative;
+}
+
+.customer-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: white;
+  border-radius: 9999px;
+  transition: width 0.2s ease;
+}
+
+.customer-tab-active:hover::after {
+  width: 60%;
+}
+
+.customer-payment-btn {
+  transition: all 0.15s ease;
+}
+
+.customer-payment-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+}
+
+.customer-payment-btn:active {
+  transform: scale(0.97);
+}
+
 /* ───────────────────── PWA STANDALONE ───────────────────── */
 @media (display-mode: standalone) {
   .app-topbar {

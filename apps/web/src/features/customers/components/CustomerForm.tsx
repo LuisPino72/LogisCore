@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Users, Phone, CreditCard, IdCard } from 'lucide-react';
 import { Button, Input, Modal, CedulaInput, Textarea } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
@@ -16,47 +16,42 @@ interface CustomerFormProps {
   editCustomer?: Customer | null;
 }
 
+const EMPTY_FORM = { name: '', cedula: '', phone: '', address: '', creditLimit: '', notes: '' };
+
 export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: CustomerFormProps) {
   const addToast = useToastStore((s) => s.addToast);
-  const [name, setName] = useState('');
-  const [cedula, setCedula] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [creditLimit, setCreditLimit] = useState('');
-  const [notes, setNotes] = useState('');
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setName(String(editCustomer?.name ?? ''));
-      setCedula(String(editCustomer?.cedula ?? ''));
-      setPhone(String(editCustomer?.phone ?? ''));
-      setAddress(String(editCustomer?.address ?? ''));
-      setCreditLimit(editCustomer?.creditLimit ? String(editCustomer.creditLimit) : '');
-      setNotes(String(editCustomer?.notes ?? ''));
+      setFormData({
+        name: String(editCustomer?.name ?? ''),
+        cedula: String(editCustomer?.cedula ?? ''),
+        phone: String(editCustomer?.phone ?? ''),
+        address: String(editCustomer?.address ?? ''),
+        creditLimit: editCustomer?.creditLimit ? String(editCustomer.creditLimit) : '',
+        notes: String(editCustomer?.notes ?? ''),
+      });
       setFieldErrors({});
     }
   }, [isOpen, editCustomer]);
 
-  const clearFieldError = (field: string) => {
+  const updateField = useCallback((field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => { const next = { ...prev }; delete next[field]; return next; });
-  };
+  }, []);
 
   const handleSubmit = async () => {
-    const creditLimitNum = creditLimit ? Number(creditLimit) : 0;
-    const nameStr = String(name);
-    const cedulaStr = String(cedula);
-    const phoneStr = String(phone);
-    const addressStr = String(address);
-    const notesStr = String(notes);
+    const creditLimitNum = formData.creditLimit ? Number(formData.creditLimit) : 0;
     const payload = {
-      name: nameStr.trim(),
-      cedula: cedulaStr.trim().toUpperCase() || undefined,
-      phone: phoneStr.trim() || undefined,
-      address: addressStr.trim() || undefined,
+      name: formData.name.trim(),
+      cedula: formData.cedula.trim().toUpperCase() || undefined,
+      phone: formData.phone.trim() || undefined,
+      address: formData.address.trim() || undefined,
       creditLimit: creditLimitNum,
-      notes: notesStr.trim() || undefined,
+      notes: formData.notes.trim() || undefined,
     };
     const parsed = CreateCustomerInputSchema.safeParse(payload);
     if (!parsed.success) {
@@ -74,12 +69,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
     setSubmitting(false);
     if (ok) {
       addToast({ type: 'success', message: editCustomer ? 'Cliente actualizado correctamente' : 'Cliente creado correctamente', duration: 3000 });
-      setName('');
-      setCedula('');
-      setPhone('');
-      setAddress('');
-      setCreditLimit('');
-      setNotes('');
+      setFormData(EMPTY_FORM);
       onClose();
     } else {
       setFieldErrors({ form: 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.' });
@@ -95,16 +85,16 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
       title={isEditing ? 'Editar cliente' : 'Nuevo cliente'}
       footer={
         <div className="flex gap-3 w-full">
-          <Button variant="ghost" fullWidth onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
+          <Button variant="ghost" fullWidth onClick={onClose} className="transition-transform hover:scale-[1.02] active:scale-[0.98]">Cancelar</Button>
+          <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting} className="shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all">
             {submitting ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear cliente'}
           </Button>
         </div>
       }
     >
       <div className="space-y-4">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-linear-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm animate-fade-in">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
             <Users size={20} className="text-primary" />
           </div>
           <div className="min-w-0">
@@ -117,80 +107,91 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
           </div>
         </div>
 
-        <Input
-          label={<span className="flex items-center gap-2"><Users size={14} className="text-text-muted" /> Nombre del cliente</span>}
-          placeholder="Ej: Juan Pérez"
-          value={name}
-          onChange={(e) => { setName(e.target.value); clearFieldError('name'); }}
-          error={fieldErrors.name}
-          validation={{ required: 'Ingresa el nombre del cliente', maxLength: 25 }}
-          inputClassName="text-sm"
-          autoComplete="name"
-        />
+        <div className="customer-field">
+          <Input
+            label={<span className="flex items-center gap-2 group"><Users size={14} className="text-text-muted group-hover:text-primary transition-colors" /> Nombre del cliente</span>}
+            placeholder="Ej: Juan Pérez"
+            value={formData.name}
+            onChange={(e) => updateField('name', e.target.value)}
+            error={fieldErrors.name}
+            validation={{ required: 'Ingresa el nombre del cliente', maxLength: 25 }}
+            inputClassName="text-sm"
+            autoComplete="name"
+          />
+        </div>
 
-        <CedulaInput
-          label={<span className="flex items-center gap-2"><IdCard size={14} className="text-text-muted" /> Cédula / RIF <span className="text-text-muted font-normal">(opcional)</span></span>}
-          value={cedula}
-          onChange={(val) => { setCedula(val); clearFieldError('cedula'); }}
-          error={fieldErrors.cedula}
-          hint="V/E/J/G/P + 6 a 8 dígitos. Facilita búsqueda."
-        />
+        <div className="customer-field">
+          <CedulaInput
+            label={<span className="flex items-center gap-2 group"><IdCard size={14} className="text-text-muted group-hover:text-primary transition-colors" /> Cédula / RIF <span className="text-text-muted font-normal">(opcional)</span></span>}
+            value={formData.cedula}
+            onChange={(val) => updateField('cedula', val)}
+            error={fieldErrors.cedula}
+            hint="V/E/J/G/P + 6 a 8 dígitos. Facilita búsqueda."
+          />
+        </div>
 
-        <Input
-          label={<span className="flex items-center gap-2"><Phone size={14} className="text-text-muted" /> Teléfono <span className="text-text-muted font-normal">(opcional)</span></span>}
-          placeholder="Ej: 0412-1234567"
-          value={formatPhone(phone)}
-          onChange={(e) => {
-            const formatted = formatPhone(e.target.value);
-            setPhone(unformatPhone(formatted));
-            clearFieldError('phone');
-          }}
-          error={fieldErrors.phone}
-          validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
-          hint="Formato: 0412-1234567"
-          inputClassName="text-sm"
-          inputMode="tel"
-          autoComplete="tel"
-        />
+        <div className="customer-field">
+          <Input
+            label={<span className="flex items-center gap-2 group"><Phone size={14} className="text-text-muted group-hover:text-primary transition-colors" /> Teléfono <span className="text-text-muted font-normal">(opcional)</span></span>}
+            placeholder="Ej: 0412-1234567"
+            value={formatPhone(formData.phone)}
+            onChange={(e) => {
+              const formatted = formatPhone(e.target.value);
+              updateField('phone', unformatPhone(formatted));
+            }}
+            error={fieldErrors.phone}
+            validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
+            hint="Formato: 0412-1234567"
+            inputClassName="text-sm"
+            inputMode="tel"
+            autoComplete="tel"
+          />
+        </div>
 
-        <Textarea
-          label="Dirección (opcional)"
-          value={address}
-          onChange={(e) => { setAddress(e.target.value); clearFieldError('address'); }}
-          placeholder="Ej: Calle 123, Caracas"
-          rows={2}
-          validation={{ maxLength: 30 }}
-          error={fieldErrors.address}
-          autoComplete="street-address"
-        />
+        <div className="customer-field">
+          <Textarea
+            label="Dirección (opcional)"
+            value={formData.address}
+            onChange={(e) => updateField('address', e.target.value)}
+            placeholder="Ej: Calle 123, Caracas"
+            rows={2}
+            validation={{ maxLength: 30 }}
+            error={fieldErrors.address}
+            autoComplete="street-address"
+          />
+        </div>
 
-        <Input
-          label={<span className="flex items-center gap-2"><CreditCard size={14} className="text-text-muted" /> Límite de crédito <span className="text-text-muted font-normal">(USD, opcional)</span></span>}
-          placeholder="Ej: 100"
-          value={creditLimit}
-          sanitize="currency"
-          onChange={(e) => { setCreditLimit(sanitizeValue(e.target.value, 'currency')); clearFieldError('creditLimit'); }}
-          error={fieldErrors.creditLimit}
-          validation={{ min: 0, max: 9999.99, maxLength: 10 }}
-          hint="Monto máximo de crédito que puede deber este cliente"
-          inputClassName="text-sm"
-          inputMode="decimal"
-          autoComplete="off"
-        />
+        <div className="customer-field">
+          <Input
+            label={<span className="flex items-center gap-2 group"><CreditCard size={14} className="text-text-muted group-hover:text-primary transition-colors" /> Límite de crédito <span className="text-text-muted font-normal">(USD, opcional)</span></span>}
+            placeholder="Ej: 100"
+            value={formData.creditLimit}
+            sanitize="currency"
+            onChange={(e) => updateField('creditLimit', sanitizeValue(e.target.value, 'currency'))}
+            error={fieldErrors.creditLimit}
+            validation={{ min: 0, max: 9999.99, maxLength: 10 }}
+            hint="Monto máximo de crédito que puede deber este cliente"
+            inputClassName="text-sm"
+            inputMode="decimal"
+            autoComplete="off"
+          />
+        </div>
 
-        <Textarea
-          label="Notas (opcional)"
-          value={notes}
-          onChange={(e) => { setNotes(e.target.value); clearFieldError('notes'); }}
-          placeholder="Ej: Prefiere empanadas los viernes"
-          rows={2}
-          validation={{ maxLength: 30 }}
-          error={fieldErrors.notes}
-          autoComplete="off"
-        />
+        <div className="customer-field">
+          <Textarea
+            label="Notas (opcional)"
+            value={formData.notes}
+            onChange={(e) => updateField('notes', e.target.value)}
+            placeholder="Ej: Prefiere empanadas los viernes"
+            rows={2}
+            validation={{ maxLength: 30 }}
+            error={fieldErrors.notes}
+            autoComplete="off"
+          />
+        </div>
 
         {fieldErrors.form && (
-          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
+          <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger animate-slide-down">
             {fieldErrors.form}
           </div>
         )}
