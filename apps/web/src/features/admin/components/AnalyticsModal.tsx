@@ -45,18 +45,18 @@ export function AnalyticsModal({ isOpen, onClose, tenantName, analytics, isLoadi
     <Modal isOpen={isOpen} onClose={onClose} title={`Analytics: ${tenantName}`}>
       <div className="space-y-4">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-8 admin-section-reveal">
             <Spinner size="lg" />
           </div>
         ) : analytics ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 admin-stagger">
             {analyticsCards.map((card) => {
               const Icon = card.icon;
               const value = card.getValue(analytics);
               return (
                 <div
                   key={card.key}
-                  className="rounded-xl border border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-md"
+                  className="rounded-xl border border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-md admin-card-hover"
                 >
                   <div className={`w-9 h-9 rounded-lg bg-linear-to-br ${card.gradient} flex items-center justify-center mb-2.5 shadow-sm`}>
                     <Icon size={18} className="text-white" />

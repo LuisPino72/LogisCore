@@ -5,6 +5,7 @@ import { Badge, Button, Card, DataTable, Pagination, Tooltip } from '../../../co
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
 import type { UserRole } from '../types';
+import { SectionHeader } from './SectionHeader';
 import { AddEmployeeModal } from './AddEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
@@ -100,19 +101,13 @@ export function UserSection({
 
   return (
     <>
-      <Card>
+      <Card className="admin-card-hover">
         <div className="p-4 pb-0">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <KeyRound size={20} className="text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-title font-bold text-gray-900">Usuarios</h2>
-              <p className="text-xs text-text-secondary">
-                {selectedTenantName} — {users.length} usuario{users.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
+          <SectionHeader
+            icon={<KeyRound size={20} className="text-primary" />}
+            title="Usuarios"
+            subtitle={`${selectedTenantName} — ${users.length} usuario${users.length !== 1 ? 's' : ''}`}
+          />
         </div>
         <div className="p-4 pt-0">
           <DataTable

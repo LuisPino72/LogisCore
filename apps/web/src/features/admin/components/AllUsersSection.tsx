@@ -2,6 +2,7 @@ import { Card, DataTable, Pagination } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import type { GlobalUser } from '../types';
 import { UsersRound } from 'lucide-react';
+import { SectionHeader } from './SectionHeader';
 
 interface AllUsersSectionProps {
   allUsers: GlobalUser[];
@@ -25,17 +26,13 @@ export function AllUsersSection({ allUsers, page, totalPages, onPageChange }: Al
   ];
 
   return (
-    <Card>
+    <Card className="admin-card-hover">
       <div className="p-4 pb-0">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <UsersRound size={20} className="text-primary" />
-          </div>
-          <div>
-            <h2 className="text-lg font-title font-bold text-gray-900">Todos los Usuarios</h2>
-            <p className="text-xs text-text-secondary">{allUsers.length} usuario{allUsers.length !== 1 ? 's' : ''} registrados</p>
-          </div>
-        </div>
+        <SectionHeader
+          icon={<UsersRound size={20} className="text-primary" />}
+          title="Todos los Usuarios"
+          subtitle={`${allUsers.length} usuario${allUsers.length !== 1 ? 's' : ''} registrados`}
+        />
       </div>
       <div className="p-4 pt-0">
         <DataTable

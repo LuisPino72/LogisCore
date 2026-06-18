@@ -7,6 +7,7 @@ import { useToastStore } from '../../../stores/toastStore';
 import type { GlobalCategory, CreateGlobalCategoryInput } from '../types';
 import type { Result, AppError } from '@logiscore/core';
 import { GlobalCategoryFormModal } from './GlobalCategoryFormModal';
+import { SectionHeader } from './SectionHeader';
 import { DeleteGlobalCategoryModal } from './DeleteGlobalCategoryModal';
 
 const PAGE_SIZE = 10;
@@ -69,17 +70,13 @@ export function GlobalCategorySection({
 
   return (
     <>
-      <Card>
+      <Card className="admin-card-hover">
         <div className="p-4 pb-0">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Tags size={20} className="text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-title font-bold text-gray-900">Categorías Globales</h2>
-              <p className="text-xs text-text-secondary">{globalCategories.length} categoría{globalCategories.length !== 1 ? 's' : ''}</p>
-            </div>
-          </div>
+          <SectionHeader
+            icon={<Tags size={20} className="text-primary" />}
+            title="Categorías Globales"
+            subtitle={`${globalCategories.length} categoría${globalCategories.length !== 1 ? 's' : ''}`}
+          />
           <SearchInput
             placeholder="Buscar categoría..."
             maxLength={15}
@@ -97,12 +94,12 @@ export function GlobalCategorySection({
               keyExtractor={(c: GlobalCategory) => c.id}
             />
           </div>
-          <div className="sm:hidden space-y-2">
+          <div className="sm:hidden space-y-2 admin-stagger">
             {paginated.length === 0 ? (
               <p className="text-center text-sm text-text-secondary py-8">{search ? 'No se encontraron categorías con ese nombre.' : 'No hay categorías globales definidas. Crea la primera para que esté disponible en todos los nuevos locales.'}</p>
             ) : (
               paginated.map((c) => (
-                <div key={c.id} className="flex flex-col gap-2 px-3 py-3 rounded-lg border border-gray-100 bg-white">
+                <div key={c.id} className="flex flex-col gap-2 px-3 py-3 rounded-lg border border-gray-100 bg-white admin-card-hover">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 wrap-break-word">{c.name}</p>
                     <p className="text-xs text-text-secondary">{new Date(c.createdAt).toLocaleDateString('es-ES')}</p>

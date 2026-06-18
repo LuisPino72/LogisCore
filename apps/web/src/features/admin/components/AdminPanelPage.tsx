@@ -5,6 +5,7 @@ import { useTenantFilters } from '../hooks/useTenantFilters';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { ArrowLeft, Building2, CreditCard, Plus, Shield, Store, Tags, UsersRound } from 'lucide-react';
 import { AppShell, BottomNav, Button, Card, EmptyState, Spinner, LogoutButton } from '../../../common/components';
+import './index.css';
 import { TenantSection } from './TenantSection';
 import { UserSection } from './UserSection';
 import { AllUsersSection } from './AllUsersSection';
@@ -111,7 +112,7 @@ export function AdminPanelPage() {
     return (
       <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-3">
         <Spinner size="lg" />
-        <p className="text-sm text-gray-600 animate-pulse">Cargando panel de administración...</p>
+        <p className="text-sm text-gray-600 animate-pulse admin-section-reveal">Cargando panel de administración...</p>
       </div>
     );
   }
@@ -132,7 +133,7 @@ export function AdminPanelPage() {
     <AppShell
       topBar={
         <div className="flex items-center gap-3 px-2 flex-wrap">
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg admin-header-glow">
             <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
               <Store size={16} className="text-primary" />
             </div>
@@ -149,10 +150,10 @@ export function AdminPanelPage() {
           <button
             key={tab.id}
             type="button"
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-colors active:scale-[0.98] ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-all active:scale-[0.98] ${
               activeSheet === tab.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-text-secondary hover:text-gray-700'
+                ? 'border-primary text-primary admin-tab-active'
+                : 'border-transparent text-text-secondary hover:text-gray-700 hover:border-gray-300'
             }`}
             onClick={() => setActiveSheet(tab.id)}
           >
@@ -162,7 +163,7 @@ export function AdminPanelPage() {
         ))}
       </div>
 
-      <div className="p-4 sm:p-6 pb-20 sm:pb-6 max-w-6xl mx-auto space-y-4 sm:space-y-6">
+      <div className="p-4 sm:p-6 pb-20 sm:pb-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 admin-stagger">
         {activeSheet === 'tenants' && (
           <TenantSection
             tenants={tenants}

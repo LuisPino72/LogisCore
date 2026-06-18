@@ -48,7 +48,7 @@ export function GlobalCategoryFormModal({ isOpen, onClose, categoryId, initialNa
       onClose={onClose}
       title={isEdit ? 'Editar categoría global' : 'Nueva categoría global'}
     >
-      <div className="space-y-4">
+      <div className="space-y-4 admin-section-reveal">
         <Input
           placeholder="Nombre de la categoría"
           value={name}

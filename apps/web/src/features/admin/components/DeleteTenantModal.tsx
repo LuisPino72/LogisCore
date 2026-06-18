@@ -66,6 +66,11 @@ export function DeleteTenantModal({ isOpen, onClose, tenant, onSoftDelete, onHar
     >
       {isHardDelete ? (
         <div className="space-y-4 animate-slide-down">
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
+              <span className="text-danger text-xl">⚠</span>
+            </div>
+          </div>
           <Alert variant="error">
             ¡ATENCIÓN! Esta acción <strong>NO se puede deshacer</strong>. Se borrarán <strong>todos los datos</strong> del local en cascada:
           </Alert>

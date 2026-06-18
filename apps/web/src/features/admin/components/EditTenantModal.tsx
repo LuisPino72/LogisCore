@@ -119,7 +119,7 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
       onClose={onClose}
       title="Editar local"
     >
-      <div className="space-y-4">
+      <div className="space-y-4 admin-section-reveal">
         <Input
           placeholder="Nombre"
           value={editForm.name}

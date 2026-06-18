@@ -138,7 +138,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         {/* Tenant section */}
-        <div className="space-y-2">
+        <div className="space-y-2 admin-section-reveal">
           <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Building2 size={16} className="text-primary" />
@@ -211,7 +211,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
         </div>
 
         {/* Owner section */}
-        <div className="space-y-2">
+        <div className="space-y-2 admin-section-reveal">
           <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
             <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
               <Shield size={16} className="text-accent" />
@@ -245,7 +245,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
         </div>
 
         {/* Employees section */}
-        <div className="space-y-2">
+        <div className="space-y-2 admin-section-reveal">
           <div className="flex items-center justify-between pb-2 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -264,7 +264,7 @@ export function CreateTenantModal({ isOpen, onClose, onCreateTenant }: CreateTen
             </Button>
           </div>
           {createForm.employees.map((emp, i) => (
-            <div key={i} className="rounded-lg bg-surface-alt border border-border p-3 space-y-2">
+            <div key={i} className="rounded-lg bg-surface-alt border border-border p-3 space-y-2 admin-field">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-text-secondary">Empleado #{i + 1}</span>
                 <Button variant="danger" size="sm" className="min-h-11" onClick={() => removeEmployeeRow(i)}>

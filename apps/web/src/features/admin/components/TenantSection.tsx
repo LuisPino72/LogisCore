@@ -30,6 +30,7 @@ import type {
   CreateTenantWithUsersInput,
   CreateTenantResponse,
 } from '../types';
+import { SectionHeader } from './SectionHeader';
 import { CreateTenantModal } from './CreateTenantModal';
 import { EditTenantModal } from './EditTenantModal';
 import { DeleteTenantModal } from './DeleteTenantModal';
@@ -204,20 +205,14 @@ export function TenantSection({
 
   return (
     <>
-      <Card>
+      <Card className="admin-card-hover">
         <div className="p-4 pb-0">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Building2 size={20} className="text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-title font-bold text-gray-900">Locales</h2>
-              <p className="text-xs text-text-secondary">
-                {tenants.length} local{tenants.length !== 1 ? 'es' : ''}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
+          <SectionHeader
+            icon={<Building2 size={20} className="text-primary" />}
+            title="Locales"
+            subtitle={`${tenants.length} local${tenants.length !== 1 ? 'es' : ''}`}
+          />
+          <div className="flex flex-wrap items-center gap-2 mb-4 admin-section-reveal">
             <SearchInput
               placeholder="Buscar local..."
               maxLength={15}

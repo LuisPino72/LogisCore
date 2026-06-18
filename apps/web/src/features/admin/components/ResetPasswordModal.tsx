@@ -58,7 +58,7 @@ export function ResetPasswordModal({ isOpen, onClose, userEmail, userName, userI
         </div>
       }
     >
-      <div className="space-y-4 animate-slide-down">
+      <div className="space-y-4 animate-slide-down admin-section-reveal">
         {error && <Alert variant="error">{error}</Alert>}
         <div className="bg-surface-alt rounded-lg p-3 text-sm space-y-1">
           <p><span className="font-medium text-gray-700">Email:</span> {userEmail}</p>

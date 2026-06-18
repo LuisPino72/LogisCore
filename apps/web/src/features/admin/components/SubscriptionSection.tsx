@@ -4,6 +4,7 @@ import { Badge, Button, Card, DataTable, Pagination } from '../../../common/comp
 import type { Column } from '../../../common/components/DataTable';
 import type { SubscriptionView } from '../types';
 import { RenewSubscriptionModal } from './RenewSubscriptionModal';
+import { SectionHeader } from './SectionHeader';
 
 const PAGE_SIZE = 10;
 
@@ -43,7 +44,7 @@ export function SubscriptionSection({ subscriptions, onRenew }: SubscriptionSect
         const variant = s.status === 'active'
           ? (s.daysRemaining <= 3 ? 'warning' : 'success')
           : 'danger';
-        return <Badge variant={variant}>{s.status === 'active' ? 'Activa' : 'Vencida'}</Badge>;
+        return <Badge variant={variant} className={s.daysRemaining <= 3 && s.status === 'active' ? 'admin-badge-pulse' : ''}>{s.status === 'active' ? 'Activa' : 'Vencida'}</Badge>;
       },
     },
     {
@@ -60,7 +61,7 @@ export function SubscriptionSection({ subscriptions, onRenew }: SubscriptionSect
             </span>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-500 admin-progress-bar"
                 style={{ width: `${pct}%`, backgroundColor: color }}
               />
             </div>
@@ -91,17 +92,13 @@ export function SubscriptionSection({ subscriptions, onRenew }: SubscriptionSect
 
   return (
     <>
-      <Card>
+      <Card className="admin-card-hover">
         <div className="p-4 pb-0">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-              <CreditCard size={20} className="text-accent" />
-            </div>
-            <div>
-              <h2 className="text-lg font-title font-bold text-gray-900">Suscripciones</h2>
-              <p className="text-xs text-text-secondary">{subscriptions.length} local{subscriptions.length !== 1 ? 'es' : ''}</p>
-            </div>
-          </div>
+          <SectionHeader
+            icon={<CreditCard size={20} className="text-accent" />}
+            title="Suscripciones"
+            subtitle={`${subscriptions.length} local${subscriptions.length !== 1 ? 'es' : ''}`}
+          />
         </div>
         <div className="p-4 pt-0">
           <DataTable

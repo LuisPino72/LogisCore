@@ -343,7 +343,7 @@ export function AuditSection() {
             aria-hidden
             className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle,rgba(13,148,136,0.06)_1px,transparent_1px)] bg-size-[16px_16px]"
           />
-          <div className="relative w-10 h-10 rounded-xl bg-primary/15 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
+          <div className="relative w-10 h-10 rounded-xl bg-primary/15 ring-1 ring-primary/20 flex items-center justify-center shrink-0 admin-header-glow">
             <Shield size={20} className="text-primary" />
           </div>
           <div className="relative min-w-0">
@@ -356,7 +356,7 @@ export function AuditSection() {
 
         <Tabs tabs={subTabs} activeKey={subTab} onChange={(k) => setSubTab(k as SubTab)} className="mb-4" />
 
-        <div className="flex flex-wrap items-center gap-2 mb-4 @md:flex-nowrap @md:flex-row">
+        <div className="flex flex-wrap items-center gap-2 mb-4 @md:flex-nowrap @md:flex-row admin-section-reveal">
           {subTab === 'audit' && (
             <SearchInput
               placeholder="Buscar eventos..."
@@ -414,7 +414,7 @@ export function AuditSection() {
 
       <div className="p-4 pt-0">
         {isLoading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-8 admin-section-reveal">
             <Spinner size="md" />
           </div>
         ) : subTab === 'audit' ? (
@@ -425,7 +425,7 @@ export function AuditSection() {
               emptyMessage="No hay eventos de auditoría para los filtros seleccionados."
               keyExtractor={(e) => String(e.id)}
               onRowClick={setSelectedEntry}
-              rowClassName={() => 'cursor-pointer hover:bg-gray-50'}
+              rowClassName={() => 'cursor-pointer hover:bg-gray-50 transition-colors'}
               renderCardOnMobile
             />
             {auditTotalPages > 1 && (
@@ -440,6 +440,7 @@ export function AuditSection() {
               emptyMessage="No hay eventos en outbox para los filtros seleccionados."
               keyExtractor={(e) => String(e.id)}
               renderCardOnMobile
+              rowClassName={() => 'transition-colors hover:bg-gray-50'}
             />
             {outboxTotalPages > 1 && (
               <Pagination page={outboxPage} totalPages={outboxTotalPages} onPageChange={setOutboxPage} />
@@ -460,7 +461,7 @@ export function AuditSection() {
               {severityBadge(selectedEntry.severity)}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm admin-section-reveal">
               <div>
                 <span className="text-gray-500">Fecha:</span>
                 <p className="font-mono">{formatDate(selectedEntry.createdAt)}</p>

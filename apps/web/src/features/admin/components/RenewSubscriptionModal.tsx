@@ -42,7 +42,7 @@ export function RenewSubscriptionModal({ isOpen, onClose, tenantName, expiresAt,
         </div>
       }
     >
-      <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
+      <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down admin-section-reveal">
         <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-primary/20 bg-primary/10">
           <RefreshCw size={24} className="text-primary" />
         </div>

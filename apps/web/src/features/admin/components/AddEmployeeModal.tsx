@@ -65,7 +65,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
       onClose={handleClose}
       title={`Agregar empleado a ${tenantName}`}
     >
-      <div className="space-y-4">
+      <div className="space-y-4 admin-section-reveal">
         <Input
           placeholder="Nombre"
           value={employee.name}
