@@ -227,7 +227,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
           />
 
           {fieldErrors.form && (
-            <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
+            <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger animate-slide-down">
               {fieldErrors.form}
             </div>
           )}

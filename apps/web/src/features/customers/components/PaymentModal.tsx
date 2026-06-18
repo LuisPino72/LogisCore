@@ -224,22 +224,22 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
           <label className="block text-xs font-medium text-gray-700 mb-1.5">
             Método de pago
           </label>
-              <div className="grid grid-cols-2 gap-1.5 customer-stagger">
-                {collectionMethods.map((m) => {
-                  const meta = METADATA_PAGOS[m];
-                  const Icon = PAYMENT_ICONS[m];
-                  const selected = paymentMethod === m;
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setPaymentMethod(m)}
-                      className={`customer-payment-btn flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
-                        selected
-                          ? 'bg-linear-to-br from-amber-500 to-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20 ring-1 ring-amber-600/30'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-700'
-                      }`}
-                    >
+          <div className="grid grid-cols-2 gap-1.5 customer-stagger">
+            {collectionMethods.map((m) => {
+              const meta = METADATA_PAGOS[m];
+              const Icon = PAYMENT_ICONS[m];
+              const selected = paymentMethod === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPaymentMethod(m)}
+                  className={`customer-payment-btn flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
+                    selected
+                      ? 'bg-linear-to-br from-amber-500 to-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20 ring-1 ring-amber-600/30'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-700'
+                  }`}
+                >
                   <Icon size={14} />
                   {meta.label}
                 </button>
