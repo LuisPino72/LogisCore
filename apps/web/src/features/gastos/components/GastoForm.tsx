@@ -168,7 +168,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
           />
 
           {currentRate > 0 && (
-            <div className="bg-accent/5 border border-accent/10 p-3 rounded-lg shadow-sm space-y-1">
+            <div className="bg-accent/5 border border-accent/10 p-3 rounded-lg shadow-sm space-y-1 animate-slide-down">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-text-secondary">Tasa del día</span>
                 <span className="text-xs font-semibold text-accent">Bs/{currentRate.toFixed(2)}</span>

@@ -231,7 +231,7 @@ function MobileCard({
   const isPending = gasto.status === 'pending';
 
   return (
-    <Card className={cn("overflow-hidden expense-card-hover", exitingId === gasto.id && "animate-cart-remove")}>
+    <Card className={cn("overflow-hidden expense-card-hover ripple-effect", exitingId === gasto.id && "animate-cart-remove")}>
       {/* Monto destacado */}
       <div className="text-center pt-5 pb-3 px-4 relative">
         {isPending && (

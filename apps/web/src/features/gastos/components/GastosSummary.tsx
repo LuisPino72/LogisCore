@@ -68,7 +68,7 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
         <div className="mt-2">
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-success rounded-full expense-summary-bar"
+              className="h-full bg-success rounded-full expense-summary-bar progress-shimmer"
               style={{ width: `${(summary.paidTotal / summary.total) * 100}%` }}
             />
           </div>
