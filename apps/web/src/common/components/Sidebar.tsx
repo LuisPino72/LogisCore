@@ -18,13 +18,14 @@ interface SidebarProps {
   modules: SidebarModule[];
   activeModule: string;
   onNavigate: (moduleId: string) => void;
+  onPrefetch?: (moduleId: string) => void;
   userEmail: string;
   onLogout?: () => void;
   footerSlot?: ReactNode;
 }
 
 export const Sidebar = memo(function Sidebar(props: SidebarProps) {
-  const { isOpen, expanded = false, onToggleExpanded, modules, activeModule, onNavigate, userEmail, onLogout, footerSlot } = props;
+  const { isOpen, expanded = false, onToggleExpanded, modules, activeModule, onNavigate, onPrefetch, userEmail, onLogout, footerSlot } = props;
   return (
     <>
       {expanded && (
@@ -107,6 +108,7 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
                       onToggleExpanded?.(false);
                     }
                   }}
+                  onPointerEnter={() => onPrefetch?.(mod.id)}
                   title={!expanded ? mod.label : undefined}
                 >
                   {isActive && (

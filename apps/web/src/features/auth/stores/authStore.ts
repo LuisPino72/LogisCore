@@ -17,6 +17,7 @@ interface AuthState {
   selectedTenantSlug: string | null;
   error: string | null;
   isLoggingIn: boolean;
+  isLoggingOut: boolean;
   loginError: string | null;
   fieldErrors: FieldErrors;
   loginAttempts: number;
@@ -25,6 +26,7 @@ interface AuthState {
   setLoading: () => void;
   setSession: (session: UserSession) => void;
   setSelectedTenantSlug: (slug: string | null) => void;
+  setLoggingOut: (value: boolean) => void;
   clearSession: (error?: string) => void;
   reset: () => void;
   login: (email: string, password: string) => Promise<void>;
@@ -37,6 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   selectedTenantSlug: null,
   error: null,
   isLoggingIn: false,
+  isLoggingOut: false,
   loginError: null,
   fieldErrors: {},
   loginAttempts: 0,
@@ -45,8 +48,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setLoading: () => set({ status: 'loading', error: null }),
   setSession: (session) => set({ status: 'authenticated', session, error: null }),
   setSelectedTenantSlug: (slug) => set({ selectedTenantSlug: slug }),
+  setLoggingOut: (value) => set({ isLoggingOut: value }),
   clearSession: (error) =>
-    set({ status: 'unauthenticated', session: null, selectedTenantSlug: null, error: error ?? null }),
+    set({ status: 'unauthenticated', session: null, selectedTenantSlug: null, error: error ?? null, isLoggingOut: false }),
   reset: () => set({ status: 'idle', session: null, selectedTenantSlug: null, error: null }),
 
   login: async (email, password) => {

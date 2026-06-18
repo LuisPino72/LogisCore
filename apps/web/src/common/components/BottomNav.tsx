@@ -7,6 +7,7 @@ export interface BottomNavItem {
   icon: ReactNode;
   badge?: number;
   onClick: () => void;
+  onPrefetch?: () => void;
 }
 
 interface BottomNavProps {
@@ -40,6 +41,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
               key={item.id}
               type="button"
               onClick={item.onClick}
+              onPointerEnter={item.onPrefetch}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0 rounded-lg px-0.5 py-1 transition-colors duration-200',

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
+import { useCallback, useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { useAuthStore } from './features/auth/stores/authStore';
@@ -8,6 +8,7 @@ import { hasPermission } from './features/auth/permissions/rolePermissions';
 import type { UserRole } from './features/auth/types';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { initDb, destroyDb } from './services/dexie/db';
+import { TenantTranslator } from './services/tenantTranslator';
 import { useTenantResolution } from './features/dashboard/hooks/useTenantResolution';
 import { logger } from './lib/logger';
 import { AppShell } from './common/components/AppShell';
@@ -62,6 +63,44 @@ const CustomersPage = lazy(() =>
   import('./features/customers').then((m) => ({ default: m.CustomersPage })),
 );
 
+// PERF-001: Pre-carga y prefetch de módulos
+const MODULE_IMPORTS: Record<string, () => Promise<unknown>> = {
+  dashboard: () => import('./features/dashboard'),
+  inventory: () => import('./features/inventory'),
+  pos: () => import('./features/pos'),
+  purchases: () => import('./features/purchases'),
+  gastos: () => import('./features/gastos'),
+  production: () => import('./features/production'),
+  customers: () => import('./features/customers'),
+  reports: () => import('./features/reports'),
+};
+
+const prefetchedModules = new Set<string>();
+
+export function prefetchModule(moduleId: string) {
+  if (prefetchedModules.has(moduleId)) return;
+  const importFn = MODULE_IMPORTS[moduleId];
+  if (importFn) {
+    prefetchedModules.add(moduleId);
+    importFn();
+  }
+}
+
+async function preloadAllModules(onProgress?: (loaded: number, total: number) => void) {
+  let loaded = 0;
+  const entries = Object.values(MODULE_IMPORTS);
+  const total = entries.length;
+  await Promise.allSettled(
+    entries.map(async (importFn) => {
+      try { await importFn(); } catch { /* chunk load error — retry on navigate */ }
+      loaded++;
+      onProgress?.(loaded, total);
+    }),
+  );
+  // Marcar todos como precargados
+  Object.keys(MODULE_IMPORTS).forEach((id) => prefetchedModules.add(id));
+}
+
 const ALL_MODULES: SidebarModule[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { id: 'inventory', label: 'Inventario', icon: <Package size={20} /> },
@@ -96,6 +135,27 @@ function LoadingScreen() {
   );
 }
 
+function SplashScreen({ progress }: { progress: number }) {
+  return (
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-6 animate-fade-in">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg">
+          <img src="/Sasa.png" alt="Sasa" className="h-10 w-10" />
+        </div>
+        <h1 className="font-title font-bold text-2xl text-primary">Sasa</h1>
+        <p className="text-gray-400 text-sm">Preparando módulos...</p>
+      </div>
+      <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-linear-to-r from-primary to-primary-dark rounded-full transition-all duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-gray-400 text-xs tabular-nums">{progress}%</p>
+    </div>
+  );
+}
+
 function ErrorScreen({ message }: { message: string }) {
   return (
     <div className="min-h-screen bg-surface p-8 flex flex-col items-center justify-center gap-4">
@@ -110,6 +170,15 @@ function ErrorScreen({ message }: { message: string }) {
           Reintentar
         </Button>
       </Card>
+    </div>
+  );
+}
+
+function LoggingOutScreen() {
+  return (
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-4 animate-fade-in">
+      <Spinner size="lg" />
+      <p className="text-gray-700 text-sm">Cerrando sesión...</p>
     </div>
   );
 }
@@ -230,8 +299,10 @@ function DashboardLayout() {
   );
 
   const handleLogout = useCallback(async () => {
+    useAuthStore.getState().setLoggingOut(true);
     const result = await authService.signOut();
     if (!result.ok) {
+      useAuthStore.getState().setLoggingOut(false);
       logger.error('Auth', 'Error al cerrar sesión', result.error.message);
     }
   }, []);
@@ -288,6 +359,7 @@ function DashboardLayout() {
             modules={sidebarModules}
             activeModule={activeModule}
             onNavigate={handleNavigate}
+            onPrefetch={prefetchModule}
             userEmail={session?.email ?? ''}
             onLogout={handleLogout}
               footerSlot={
@@ -443,10 +515,26 @@ function AppRoutes() {
     );
 
     subs.push(
-      EventBus.on(SystemEvents.ADMIN_NAVIGATE_TENANT, (payload: unknown) => {
+      EventBus.on(SystemEvents.ADMIN_NAVIGATE_TENANT, async (payload: unknown) => {
         const { tenantSlug } = payload as { tenantSlug: string };
         initDb(tenantSlug);
         useAuthStore.getState().setSelectedTenantSlug(tenantSlug);
+
+        // FIX-001: Resolver slug → UUID y actualizar session.tenantId para SyncEngine
+        try {
+          const tenantUuid = await TenantTranslator.slugToUuid(tenantSlug);
+          const currentSession = useAuthStore.getState().session;
+          if (currentSession) {
+            useAuthStore.getState().setSession({
+              ...currentSession,
+              tenantId: tenantUuid,
+              tenantSlug,
+            });
+          }
+        } catch (err) {
+          logger.error('Admin', 'No se pudo resolver tenant UUID', String(err));
+        }
+
         navigate('/dashboard');
       }),
     );
@@ -455,6 +543,17 @@ function AppRoutes() {
       EventBus.on(SystemEvents.ADMIN_EXIT_TENANT, () => {
         destroyDb();
         useAuthStore.getState().setSelectedTenantSlug(null);
+
+        // FIX-001: Limpiar tenantId de la sesión del admin
+        const currentSession = useAuthStore.getState().session;
+        if (currentSession) {
+          useAuthStore.getState().setSession({
+            ...currentSession,
+            tenantId: null,
+            tenantSlug: null,
+          });
+        }
+
         navigate('/admin');
       }),
     );
@@ -500,6 +599,21 @@ const App = () => {
   const error = useAuthStore((s) => s.error);
   const session = useAuthStore((s) => s.session);
   const authStatus = useAuthStore((s) => s.status);
+  const isLoggingOut = useAuthStore((s) => s.isLoggingOut);
+
+  // PERF-001: Estado de precarga de módulos
+  const [modulesReady, setModulesReady] = useState(false);
+  const [modulesProgress, setModulesProgress] = useState(0);
+  const preloadingRef = useRef(false);
+
+  useEffect(() => {
+    if (authStatus === 'authenticated' && !modulesReady && !preloadingRef.current) {
+      preloadingRef.current = true;
+      preloadAllModules((loaded, total) => {
+        setModulesProgress(Math.round((loaded / total) * 100));
+      }).then(() => setModulesReady(true));
+    }
+  }, [authStatus, modulesReady]);
 
   useEffect(() => {
     if (authStatus === 'authenticated' && session?.role !== 'admin') {
@@ -511,7 +625,13 @@ const App = () => {
   }, [authStatus, session?.role]);
 
   if (isLoading) return <LoadingScreen />;
+  if (isLoggingOut) return <LoggingOutScreen />;
   if (error) return <ErrorScreen message={error} />;
+
+  // PERF-001: Mostrar splash mientras se precargan módulos
+  if (authStatus === 'authenticated' && !modulesReady) {
+    return <SplashScreen progress={modulesProgress} />;
+  }
 
   return (
     <BrowserRouter>
