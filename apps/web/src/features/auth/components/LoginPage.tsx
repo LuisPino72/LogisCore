@@ -123,6 +123,7 @@ export function LoginPage() {
             onChange={(e) => { setEmail(e.target.value); clearLoginError(); }}
             error={fieldErrors.email}
             validation={{ required: 'Ingresa tu email', maxLength: 30 }}
+            hideAsterisk
             autoComplete="email"
             autoFocus
             inputClassName="input-glow"
@@ -136,6 +137,7 @@ export function LoginPage() {
             onChange={(e) => { setPassword(e.target.value); clearLoginError(); }}
             error={fieldErrors.password}
             validation={{ required: 'Ingresa tu contraseña', minLength: 8, maxLength: 14 }}
+            hideAsterisk
             iconRight={
               <button
                 type="button"

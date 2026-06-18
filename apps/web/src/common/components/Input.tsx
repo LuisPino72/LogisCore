@@ -19,6 +19,7 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
   allowNegative?: boolean;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   showPassword?: boolean;
+  hideAsterisk?: boolean;
 }
 
 function valueToDisplay(v: unknown, getSanitized: (s: string) => string): string {
@@ -44,6 +45,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   onChange,
   value,
   showPassword = false,
+  hideAsterisk = false,
   ...props
 }, ref) => {
   const [internalError, setInternalError] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
     props.onBlur?.(e);
   };
 
-  const hasRequired = validation?.required || props.required;
+  const hasRequired = !hideAsterisk && (validation?.required || props.required);
 
   const toggleVisibility = () => setVisible((v) => !v);
 
