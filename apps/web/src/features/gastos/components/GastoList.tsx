@@ -97,16 +97,24 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
       width: '100px',
       render: (g) => (
         <div className="flex items-center justify-end gap-1">
-          {g.status === 'pending' && (
-            <Button variant="ghost" size="sm" onClick={() => setConfirmPayTarget({ id: g.id, category: g.category, amountUsd: g.amountUsd })} title="Marcar pagado">
-              <CheckCircle size="16" />
-            </Button>
-          )}
-          {isOwner && g.status !== 'paid' && (
-            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: g.id, category: g.category })} title="Eliminar">
-              <Trash2 size="16" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={g.status !== 'pending'}
+            onClick={() => setConfirmPayTarget({ id: g.id, category: g.category, amountUsd: g.amountUsd })}
+            title="Marcar pagado"
+          >
+            <CheckCircle size="16" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!isOwner || g.status === 'paid'}
+            onClick={() => setDeleteTarget({ id: g.id, category: g.category })}
+            title="Eliminar"
+          >
+            <Trash2 size="16" />
+          </Button>
         </div>
       ),
     },
@@ -276,32 +284,25 @@ function MobileCard({
 
       {/* Botones de acción */}
       <div className="flex items-stretch border-t border-border">
-        {isPending && (
-          <Button
-            variant="ghost"
-            className="flex-1 rounded-none text-success hover:bg-success/10 hover:text-success relative overflow-hidden group"
-            onClick={() => onPay({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
-          >
-            <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-            <CheckCircle size={15} className="relative z-10" />
-            <span className="relative z-10">Pagar</span>
-          </Button>
-        )}
-        {isOwner && gasto.status !== 'paid' && (
-          <Button
-            variant="ghost"
-            className="flex-1 rounded-none border-l border-border text-text-secondary hover:text-danger hover:bg-danger/5"
-            onClick={() => onDelete({ id: gasto.id, category: gasto.category })}
-          >
-            <Trash2 size={14} />
-            <span className="hidden min-[360px]:inline">Eliminar</span>
-          </Button>
-        )}
-        {gasto.status === 'paid' && (
-          <div className="flex-1 flex items-center justify-center py-3 min-h-11 text-xs text-text-muted">
-            <span>Sin acciones</span>
-          </div>
-        )}
+        <Button
+          variant="ghost"
+          disabled={!isPending}
+          className="flex-1 rounded-none text-success hover:bg-success/10 hover:text-success relative overflow-hidden group"
+          onClick={() => onPay({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
+        >
+          <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+          <CheckCircle size={15} className="relative z-10" />
+          <span className="relative z-10">Pagar</span>
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={!isOwner || gasto.status === 'paid'}
+          className="flex-1 rounded-none border-l border-border text-text-secondary hover:text-danger hover:bg-danger/5"
+          onClick={() => onDelete({ id: gasto.id, category: gasto.category })}
+        >
+          <Trash2 size={14} />
+          <span className="hidden min-[360px]:inline">Eliminar</span>
+        </Button>
       </div>
     </Card>
   );

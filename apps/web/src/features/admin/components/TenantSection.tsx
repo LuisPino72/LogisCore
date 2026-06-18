@@ -174,7 +174,7 @@ export function TenantSection({
           <Tooltip content="Editar local" position="top">
             <Button variant="ghost" size="sm" className="min-h-11 admin-ripple" onClick={() => setEditTarget(t)}>
               <Edit2 size={16} />
-              <span className="hidden sm:inline">Editar</span>
+              <span className="hidden sm:inline"></span>
             </Button>
           </Tooltip>
           <Dropdown

@@ -99,7 +99,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                 )}
               </div>
             </div>
-            <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-1">
               <Tooltip content="Ver historial" position="top">
                 <Button
                   variant="ghost"
