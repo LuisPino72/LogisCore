@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Button, Input, Modal, Select, Textarea, Toggle, SearchableSelect } from '@/common/components';
+import { Alert, Button, Input, Modal, Select, Textarea, Toggle, SearchableSelect } from '@/common/components';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { CreateGastoInputSchema } from '../../../specs/gastos';
@@ -149,7 +149,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
               />
             </div>
             {fieldErrors.category && (
-              <p className="text-xs text-danger mt-1">{fieldErrors.category}</p>
+              <Alert variant="error" className="mt-1">{fieldErrors.category}</Alert>
             )}
           </div>
 
@@ -214,9 +214,7 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
           )}
 
           {fieldErrors.form && (
-            <div className="p-2 rounded-lg bg-danger/5 border border-danger/20 text-xs text-danger">
-              {fieldErrors.form}
-            </div>
+            <Alert variant="error">{fieldErrors.form}</Alert>
           )}
         </div>
       </Modal>

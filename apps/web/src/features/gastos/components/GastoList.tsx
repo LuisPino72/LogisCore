@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Receipt, Trash2, RotateCcw, CheckCircle } from 'lucide-react';
-import { Badge, Button, Card, EmptyState, Modal } from '@/common/components';
+import { Badge, Button, Card, EmptyState, Modal, DataTable, type Column } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
 import { formatDate } from '../../../lib/formatDate';
 import { useGastosStore } from '../stores/gastosStore';
@@ -24,15 +24,85 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warni
 export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }: GastoListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
   const [confirmPayTarget, setConfirmPayTarget] = useState<{ id: string; category: string; amountUsd: number } | null>(null);
-  const { selectedIds, toggleSelect, selectAll } = useGastosStore();
+  const { selectedIds, toggleSelect } = useGastosStore();
 
   const sorted = useMemo(
     () => [...gastos].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [gastos]
   );
 
-  const pendingIds = useMemo(() => sorted.filter((g) => g.status === 'pending').map((g) => g.id), [sorted]);
-  const allPendingSelected = pendingIds.length > 0 && pendingIds.every((id) => selectedIds.includes(id));
+  const columns: Column<Gasto>[] = useMemo(() => [
+    {
+      key: 'select',
+      header: '',
+      width: '40px',
+      render: (g) => g.status === 'pending' ? (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(g.id)}
+          onChange={() => toggleSelect(g.id)}
+          className="rounded border-gray-300 text-primary focus:ring-primary"
+        />
+      ) : null,
+    },
+    {
+      key: 'category',
+      header: 'Categoría',
+      render: (g) => <span className="font-medium text-gray-800">{getExpenseCategoryLabel(g.category)}</span>,
+    },
+    {
+      key: 'amountUsd',
+      header: 'Monto $',
+      align: 'right',
+      render: (g) => <span className="font-bold text-primary text-base">{formatUsd(g.amountUsd)}</span>,
+    },
+    {
+      key: 'date',
+      header: 'Fecha',
+      render: (g) => <span className="text-text-secondary whitespace-nowrap">{formatDate(g.date)}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Estado',
+      render: (g) => <StatusBadge status={g.status} />,
+    },
+    {
+      key: 'recurring',
+      header: 'Recurrente',
+      align: 'center',
+      render: (g) => g.isRecurring ? (
+        <span className="inline-flex items-center gap-1 text-xs text-accent font-medium">
+          <RotateCcw size={14} />
+          {g.recurrenceType === 'yearly' ? 'Anual' : 'Mensual'}
+        </span>
+      ) : <span className="text-xs text-text-secondary">—</span>,
+    },
+    {
+      key: 'description',
+      header: 'Descripción',
+      render: (g) => <span className="text-xs text-text-secondary truncate block max-w-[200px]">{g.description || '—'}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Acciones',
+      align: 'right',
+      width: '100px',
+      render: (g) => (
+        <div className="flex items-center justify-end gap-1">
+          {g.status === 'pending' && (
+            <Button variant="ghost" size="sm" onClick={() => setConfirmPayTarget({ id: g.id, category: g.category, amountUsd: g.amountUsd })} title="Marcar pagado">
+              <CheckCircle size="16" />
+            </Button>
+          )}
+          {isOwner && g.status !== 'paid' && (
+            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: g.id, category: g.category })} title="Eliminar">
+              <Trash2 size="16" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ], [selectedIds, toggleSelect, isOwner]);
 
   if (loading && gastos.length === 0) {
     return (
@@ -47,7 +117,7 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
   if (gastos.length === 0) {
     return (
       <EmptyState
-        icon={<Receipt size={32} />}
+        icon={<Receipt size={32} className="expense-empty-icon" />}
         title="Todavía no hay gastos"
         description="Lleva el control de tus gastos fijos y variables del negocio."
       />
@@ -57,96 +127,17 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
   return (
     <>
       {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs text-text-secondary uppercase tracking-wider">
-              <th className="py-3 px-3 font-semibold w-10">
-                <input
-                  type="checkbox"
-                  checked={allPendingSelected}
-                  onChange={() => allPendingSelected ? selectAll([]) : selectAll(pendingIds)}
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
-                />
-              </th>
-              <th className="py-3 px-3 font-semibold">Categoría</th>
-              <th className="py-3 px-3 font-semibold text-right">Monto $</th>
-              <th className="py-3 px-3 font-semibold">Fecha</th>
-              <th className="py-3 px-3 font-semibold">Estado</th>
-              <th className="py-3 px-3 font-semibold text-center">Recurrente</th>
-              <th className="py-3 px-3 font-semibold">Descripción</th>
-              <th className="py-3 px-3 font-semibold text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((gasto, idx) => (
-              <tr
-                key={gasto.id}
-                className={`border-b border-border/50 transition-colors hover:bg-primary/2 ${
-                  idx % 2 === 0 ? 'bg-white' : 'bg-surface-alt/30'
-                }`}
-              >
-                <td className="py-3 px-3">
-                  {gasto.status === 'pending' && (
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(gasto.id)}
-                      onChange={() => toggleSelect(gasto.id)}
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                  )}
-                </td>
-                <td className="py-3 px-3 font-medium text-gray-800">{getExpenseCategoryLabel(gasto.category)}</td>
-                <td className="py-3 px-3 text-right font-bold text-primary text-base">{formatUsd(gasto.amountUsd)}</td>
-                <td className="py-3 px-3 text-text-secondary whitespace-nowrap">{formatDate(gasto.date)}</td>
-                <td className="py-3 px-3">
-                  <StatusBadge status={gasto.status} />
-                </td>
-                <td className="py-3 px-3 text-center">
-                  {gasto.isRecurring ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-accent font-medium">
-                      <RotateCcw size={14} />
-                      {gasto.recurrenceType === 'yearly' ? 'Anual' : 'Mensual'}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-text-secondary">—</span>
-                  )}
-                </td>
-                <td className="py-3 px-3 max-w-[200px]">
-                  <span className="text-xs text-text-secondary truncate block">{gasto.description || '—'}</span>
-                </td>
-                <td className="py-3 px-3">
-                  <div className="flex items-center justify-end gap-1">
-                    {gasto.status === 'pending' && (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmPayTarget({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
-                        className="p-2 rounded-lg text-text-secondary hover:text-success hover:bg-success/5 transition-colors active:scale-90"
-                        title="Marcar pagado"
-                      >
-                        <CheckCircle size="16" />
-                      </button>
-                    )}
-                    {isOwner && gasto.status !== 'paid' && (
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTarget({ id: gasto.id, category: gasto.category })}
-                        className="p-2 rounded-lg text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors active:scale-90"
-                        title="Eliminar"
-                      >
-                        <Trash2 size="16" />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="hidden sm:block">
+        <DataTable
+          columns={columns}
+          data={sorted}
+          keyExtractor={(g) => g.id}
+          rowClassName={() => 'expense-table-row'}
+        />
       </div>
 
       {/* Mobile cards */}
-      <div className="sm:hidden grid grid-cols-1 gap-3">
+      <div className="sm:hidden grid grid-cols-1 gap-3 expense-stagger">
         {sorted.map((gasto) => (
           <MobileCard
             key={gasto.id}
@@ -229,7 +220,7 @@ function MobileCard({
   const isPending = gasto.status === 'pending';
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden expense-card-hover">
       {/* Monto destacado */}
       <div className="text-center pt-5 pb-3 px-4 relative">
         {isPending && (
@@ -249,17 +240,10 @@ function MobileCard({
 
       {/* Status badge */}
       <div className="flex justify-center pb-3 px-4">
-        <span
-          className={`
-            inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
-            ${gasto.status === 'paid' ? 'bg-success/10 text-success' : ''}
-            ${gasto.status === 'pending' ? 'bg-warning/10 text-warning' : ''}
-            ${gasto.status === 'cancelled' ? 'bg-danger/10 text-danger' : ''}
-          `}
-        >
+        <Badge variant={status.variant}>
           <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
           {status.label}
-        </span>
+        </Badge>
       </div>
 
       {/* Fecha + recurrente */}

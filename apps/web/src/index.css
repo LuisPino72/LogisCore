@@ -1384,6 +1384,131 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   transform: scale(0.97);
 }
 
+/* ───────────────────── GASTOS MODULE ───────────────────── */
+@keyframes expenseCardSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes expenseStatPop {
+  0% { opacity: 0; transform: scale(0.9); }
+  60% { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes expenseHeaderGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(13, 148, 136, 0.15); }
+}
+
+@keyframes expenseBadgePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.9; }
+}
+
+@keyframes expenseSummaryFill {
+  from { width: 0%; }
+}
+
+@keyframes expenseTabSlide {
+  from { width: 0; }
+  to { width: 60%; }
+}
+
+.expense-stagger > * {
+  opacity: 0;
+  animation: expenseCardSlide 0.25s ease-out forwards;
+}
+
+.expense-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.expense-stagger > *:nth-child(2) { animation-delay: 0.04s; }
+.expense-stagger > *:nth-child(3) { animation-delay: 0.06s; }
+.expense-stagger > *:nth-child(4) { animation-delay: 0.08s; }
+.expense-stagger > *:nth-child(5) { animation-delay: 0.1s; }
+.expense-stagger > *:nth-child(6) { animation-delay: 0.12s; }
+.expense-stagger > *:nth-child(7) { animation-delay: 0.14s; }
+.expense-stagger > *:nth-child(8) { animation-delay: 0.16s; }
+.expense-stagger > *:nth-child(9) { animation-delay: 0.18s; }
+.expense-stagger > *:nth-child(10) { animation-delay: 0.2s; }
+
+.expense-summary-card {
+  animation: expenseStatPop 0.3s ease-out forwards;
+}
+
+.expense-summary-total {
+  animation: expenseStatPop 0.4s ease-out 0.1s forwards;
+  opacity: 0;
+}
+
+.expense-summary-bar {
+  animation: expenseSummaryFill 0.6s ease-out 0.2s forwards;
+}
+
+.expense-header-glow {
+  animation: expenseHeaderGlow 3s ease-in-out infinite;
+}
+
+.expense-table-row {
+  transition: all 0.15s ease;
+}
+
+.expense-table-row:hover {
+  background-color: rgba(13, 148, 136, 0.04);
+  box-shadow: inset 3px 0 0 0 rgba(13, 148, 136, 0.3);
+}
+
+.expense-card-hover {
+  transition: all 0.2s ease;
+}
+
+.expense-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  border-color: rgba(13, 148, 136, 0.2);
+}
+
+.expense-card-hover:active {
+  transform: scale(0.98);
+}
+
+.expense-badge-pending {
+  animation: expenseBadgePulse 2s ease-in-out infinite;
+}
+
+.expense-empty-icon {
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+.expense-empty-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+}
+
+.expense-tab-active {
+  position: relative;
+}
+
+.expense-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: white;
+  border-radius: 9999px;
+  transition: width 0.2s ease;
+}
+
+.expense-tab-active:hover::after {
+  width: 60%;
+}
+
+.expense-batch-bar {
+  animation: expenseCardSlide 0.25s ease-out forwards;
+}
+
 /* ───────────────────── PWA STANDALONE ───────────────────── */
 @media (display-mode: standalone) {
   .app-topbar {

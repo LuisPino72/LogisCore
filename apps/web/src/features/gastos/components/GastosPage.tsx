@@ -143,7 +143,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-3 sm:space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 expense-header-glow">
             <Receipt size={18} className="text-primary" />
           </div>
           <div className="min-w-0">
@@ -158,26 +158,30 @@ export function GastosPage({ tenantId }: GastosPageProps) {
       </div>
 
       <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
-        <button
-          type="button"
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-11 text-sm font-title font-medium rounded-lg transition-all duration-200 active:scale-[0.98] ${
-            activeTab === 'gastos' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
-          }`}
-          onClick={() => setActiveTab('gastos')}
-        >
-          <Receipt size={18} />
-          Gastos
-        </button>
-        <button
-          type="button"
-          className={`flex items-center gap-2 px-4 py-2.5 min-h-11 text-sm font-title font-medium rounded-lg transition-all duration-200 active:scale-[0.98] ${
-            activeTab === 'recurrentes' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
-          }`}
-          onClick={() => setActiveTab('recurrentes')}
-        >
-          <RotateCcw size={18} />
-          Recurrentes
-        </button>
+        <div className={activeTab === 'gastos' ? 'expense-tab-active' : ''}>
+          <button
+            type="button"
+            className={`flex items-center gap-2 px-4 py-2.5 min-h-11 text-sm font-title font-medium rounded-lg transition-all duration-200 active:scale-[0.98] ${
+              activeTab === 'gastos' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveTab('gastos')}
+          >
+            <Receipt size={18} />
+            Gastos
+          </button>
+        </div>
+        <div className={activeTab === 'recurrentes' ? 'expense-tab-active' : ''}>
+          <button
+            type="button"
+            className={`flex items-center gap-2 px-4 py-2.5 min-h-11 text-sm font-title font-medium rounded-lg transition-all duration-200 active:scale-[0.98] ${
+              activeTab === 'recurrentes' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveTab('recurrentes')}
+          >
+            <RotateCcw size={18} />
+            Recurrentes
+          </button>
+        </div>
       </div>
 
       <GastosSummary gastos={monthlyGastos} />
@@ -229,7 +233,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     />
 
     {selectedIds.length > 0 && (
-      <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0))] sm:bottom-4 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 z-50" style={{ left: 'var(--sidebar-actual, 0px)' }}>
+      <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0))] sm:bottom-4 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 z-50 expense-batch-bar" style={{ left: 'var(--sidebar-actual, 0px)' }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 max-w-lg mx-auto">
           <span className="text-sm text-gray-600 text-center sm:text-left">{selectedIds.length} seleccionados</span>
           <div className="flex gap-2 justify-center sm:justify-end">
