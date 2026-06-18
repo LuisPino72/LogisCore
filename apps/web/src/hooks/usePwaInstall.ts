@@ -6,23 +6,58 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISSED_KEY = 'pwa_install_dismissed';
+const INSTALLED_KEY = 'pwa_installed';
+
+function safeGet(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function safeSet(key: string, value: string) {
+  try { localStorage.setItem(key, value); } catch { /* no storage */ }
+}
 
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => safeGet(INSTALLED_KEY) === 'true');
   const [dismissed, setDismissed] = useState(() => {
     try { return sessionStorage.getItem(DISMISSED_KEY) === 'true'; } catch { return false; }
   });
+  const [checkingInstalled, setCheckingInstalled] = useState(true);
 
   useEffect(() => {
-    // Check if already in standalone/installed mode
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      || (window.navigator as any).standalone === true;
-    if (isStandalone) {
-      setIsInstalled(true);
-      return;
-    }
+    let cancelled = false;
+
+    const detectInstalled = async () => {
+      if (safeGet(INSTALLED_KEY) === 'true') {
+        if (!cancelled) { setIsInstalled(true); setCheckingInstalled(false); }
+        return;
+      }
+
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+        || (window.navigator as any).standalone === true;
+      if (isStandalone) {
+        if (!cancelled) setIsInstalled(true);
+        safeSet(INSTALLED_KEY, 'true');
+        if (!cancelled) { setCheckingInstalled(false); }
+        return;
+      }
+
+      if ('getInstalledRelatedApps' in navigator) {
+        try {
+          const relatedApps = await (navigator as any).getInstalledRelatedApps();
+          if (relatedApps.length > 0) {
+            if (!cancelled) setIsInstalled(true);
+            safeSet(INSTALLED_KEY, 'true');
+            if (!cancelled) { setCheckingInstalled(false); }
+            return;
+          }
+        } catch { /* getInstalledRelatedApps not supported */ }
+      }
+
+      if (!cancelled) setCheckingInstalled(false);
+    };
+
+    detectInstalled();
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
@@ -32,12 +67,14 @@ export function usePwaInstall() {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      safeSet(INSTALLED_KEY, 'true');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
@@ -45,10 +82,17 @@ export function usePwaInstall() {
 
   const install = useCallback(async () => {
     if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        safeSet(INSTALLED_KEY, 'true');
+      }
+    } catch {
+      // prompt() can throw if app is already installed or prompt dismissed
       setIsInstalled(true);
+      safeSet(INSTALLED_KEY, 'true');
     }
     setDeferredPrompt(null);
   }, [deferredPrompt]);
@@ -64,7 +108,7 @@ export function usePwaInstall() {
     dismissed,
     install,
     dismiss,
-    // For iOS: no beforeinstallprompt, but not standalone
     showInstructions: !deferredPrompt && !isInstalled && !dismissed,
+    checkingInstalled,
   };
 }

@@ -1,17 +1,18 @@
 import { type FC, useState } from 'react';
-import { Download, X, Monitor, Smartphone } from 'lucide-react';
+import { Download, X, Smartphone } from 'lucide-react';
 import { usePwaInstall } from '../../../hooks/usePwaInstall';
 
 export const PwaInstallBanner: FC = () => {
-  const { isInstallable, isInstalled, dismissed, install, dismiss, showInstructions } = usePwaInstall();
+  const { isInstallable, isInstalled, dismissed, install, dismiss, showInstructions, checkingInstalled } = usePwaInstall();
   const [installing, setInstalling] = useState(false);
-
-  if (isInstalled) return null;
-  if (dismissed || (!isInstallable && !showInstructions)) return null;
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isDesktopChrome = !isMobile && !isIOS && /Chrome/i.test(navigator.userAgent) && !/Edg/i.test(navigator.userAgent);
+
+  if (!isMobile) return null;
+  if (checkingInstalled) return null;
+  if (isInstalled) return null;
+  if (dismissed || (!isInstallable && !showInstructions)) return null;
 
   const handleInstall = async () => {
     setInstalling(true);
@@ -54,17 +55,6 @@ export const PwaInstallBanner: FC = () => {
               <p className="text-xs text-gray-600 mt-0.5">
                 Instálala como una app nativa para acceso rápido y uso sin conexión.
               </p>
-            ) : isDesktopChrome ? (
-              <div className="mt-1.5 space-y-1">
-                <p className="text-xs text-gray-600">
-                  Haz clic en el ícono de <strong>instalar</strong> en la barra de direcciones, o ve a{' '}
-                  <strong>⋮ → Instalar Sasa ERP</strong>.
-                </p>
-                <div className="flex items-center gap-2 text-xs text-cyan-700">
-                  <Monitor size={12} className="shrink-0" />
-                  <span>⋮ Menú <span className="text-gray-400">→</span> Instalar Sasa ERP</span>
-                </div>
-              </div>
             ) : isIOS ? (
               <div className="mt-1.5 space-y-1">
                 <p className="text-xs text-gray-600">
