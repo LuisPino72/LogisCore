@@ -18,7 +18,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
       <Card className="p-4">
         <div className="space-y-3">
           <div className="skeleton h-5 w-48 rounded" />
-          <div className="skeleton h-48 sm:h-64 rounded-lg" />
+          <div className="skeleton h-64 sm:h-80 rounded-lg" />
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="skeleton h-8 rounded" />
@@ -43,13 +43,13 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
     <Card className="p-4 animate-report-chart-reveal">
       <h3 className="text-sm font-title font-bold text-gray-900 mb-4">Top Productos por Ganancia</h3>
 
-      <div className="hidden sm:block -mx-4 sm:mx-0 h-48 sm:h-64" ref={containerRef}>
+      <div className="hidden sm:block -mx-4 sm:mx-0 h-64 sm:h-80" ref={containerRef}>
         {ready ? (
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} key="chart-ready">
           <BarChart data={data.slice(0, 10)} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}K` : `${v}`} />
-            <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} stroke="#9ca3af" width={45} />
+            <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} stroke="#9ca3af" width={120} tickFormatter={(v: string) => v.length > 18 ? `${v.slice(0, 18)}…` : v} />
             <Tooltip
               formatter={(value) => [formatBs(Number(value)), 'Ganancia']}
               labelStyle={{ fontSize: 12 }}
@@ -62,7 +62,7 @@ export function TopProductsChart({ data, loading }: TopProductsChartProps) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        ) : <div className="h-48 sm:h-64 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}
+        ) : <div className="h-64 sm:h-80 flex items-center justify-center"><div className="skeleton h-40 w-40 rounded" /></div>}
       </div>
 
       <div className="mt-3 sm:mt-4 space-y-3 sm:space-y-2">

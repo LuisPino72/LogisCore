@@ -34,7 +34,7 @@ export function usePwaInstall() {
       }
 
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-        || (window.navigator as any).standalone === true;
+        || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
       if (isStandalone) {
         if (!cancelled) setIsInstalled(true);
         safeSet(INSTALLED_KEY, 'true');
@@ -44,7 +44,7 @@ export function usePwaInstall() {
 
       if ('getInstalledRelatedApps' in navigator) {
         try {
-          const relatedApps = await (navigator as any).getInstalledRelatedApps();
+          const relatedApps = await (navigator as Navigator & { getInstalledRelatedApps?: () => Promise<Array<Record<string, unknown>>> }).getInstalledRelatedApps?.() ?? [];
           if (relatedApps.length > 0) {
             if (!cancelled) setIsInstalled(true);
             safeSet(INSTALLED_KEY, 'true');
