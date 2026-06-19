@@ -1533,8 +1533,12 @@ export const reportsService = {
       const salesWithCustomer = sales.filter((s) => s.customerId);
       const totalSpentBs = salesWithCustomer.reduce((sum, s) => sum + (s.totalBs || 0), 0);
       const avgTicketBs = salesWithCustomer.length > 0 ? preciseRound(totalSpentBs / salesWithCustomer.length, 2) : 0;
-      const avgTicketUsd = salesWithCustomer.length > 0 && salesWithCustomer[0]?.exchangeRate
-        ? preciseRound(avgTicketBs / salesWithCustomer[0].exchangeRate, 2)
+      const totalUsdFromSales = salesWithCustomer.reduce((sum, s) => {
+        const rate = s.exchangeRate && s.exchangeRate > 0 ? s.exchangeRate : 1;
+        return sum + ((s.totalBs || 0) / rate);
+      }, 0);
+      const avgTicketUsd = salesWithCustomer.length > 0
+        ? preciseRound(totalUsdFromSales / salesWithCustomer.length, 2)
         : 0;
 
       // Retention rate
@@ -1547,7 +1551,8 @@ export const reportsService = {
         const customer = customers.find((c) => c.id === sale.customerId);
         if (customer) {
           const existing = customerSpending.get(customer.id) || { name: customer.name, total: 0 };
-          existing.total += sale.totalBs || 0;
+          const rate = sale.exchangeRate && sale.exchangeRate > 0 ? sale.exchangeRate : 1;
+          existing.total += (sale.totalBs || 0) / rate;
           customerSpending.set(customer.id, existing);
         }
       }
@@ -1567,8 +1572,8 @@ export const reportsService = {
         averageTicketUsd: avgTicketUsd,
         averageTicketBs: avgTicketBs,
         topCustomerName: topCustomer?.name,
-        topCustomerSpentUsd: topCustomer && salesWithCustomer[0]?.exchangeRate
-          ? preciseRound(topCustomer.total / salesWithCustomer[0].exchangeRate, 2)
+        topCustomerSpentUsd: topCustomer
+          ? preciseRound(topCustomer.total, 2)
           : undefined,
       });
     } catch (err) {
@@ -1600,9 +1605,9 @@ export const reportsService = {
       const customerStats = new Map<string, {
         purchaseCount: number;
         totalSpentBs: number;
+        totalSpentUsd: number;
         lastPurchaseAt: string | null;
         firstPurchaseAt: string | null;
-        exchangeRate: number;
       }>();
 
       for (const sale of sales) {
@@ -1610,19 +1615,20 @@ export const reportsService = {
         const existing = customerStats.get(sale.customerId) || {
           purchaseCount: 0,
           totalSpentBs: 0,
+          totalSpentUsd: 0,
           lastPurchaseAt: null,
           firstPurchaseAt: null,
-          exchangeRate: sale.exchangeRate || 1,
         };
         existing.purchaseCount++;
+        const rate = sale.exchangeRate && sale.exchangeRate > 0 ? sale.exchangeRate : 1;
         existing.totalSpentBs += sale.totalBs || 0;
+        existing.totalSpentUsd += (sale.totalBs || 0) / rate;
         if (!existing.lastPurchaseAt || sale.createdAt > existing.lastPurchaseAt) {
           existing.lastPurchaseAt = sale.createdAt;
         }
         if (!existing.firstPurchaseAt || sale.createdAt < existing.firstPurchaseAt) {
           existing.firstPurchaseAt = sale.createdAt;
         }
-        if (sale.exchangeRate > 0) existing.exchangeRate = sale.exchangeRate;
         customerStats.set(sale.customerId, existing);
       }
 
@@ -1636,10 +1642,10 @@ export const reportsService = {
           customerName: customer.name,
           cedula: customer.cedula,
           purchaseCount: stats.purchaseCount,
-          totalSpentUsd: stats.exchangeRate > 0 ? preciseRound(stats.totalSpentBs / stats.exchangeRate, 2) : 0,
+          totalSpentUsd: preciseRound(stats.totalSpentUsd, 2),
           totalSpentBs: preciseRound(stats.totalSpentBs, 2),
-          averageTicketUsd: stats.purchaseCount > 0 && stats.exchangeRate > 0
-            ? preciseRound(stats.totalSpentBs / stats.purchaseCount / stats.exchangeRate, 2)
+          averageTicketUsd: stats.purchaseCount > 0
+            ? preciseRound(stats.totalSpentUsd / stats.purchaseCount, 2)
             : 0,
           lastPurchaseAt: stats.lastPurchaseAt,
           firstPurchaseAt: stats.firstPurchaseAt,
