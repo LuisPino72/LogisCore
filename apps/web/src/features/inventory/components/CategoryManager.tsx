@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ListTree, Trash2, Edit3 } from 'lucide-react';
-import { Button, SearchInput, Input, Modal, EmptyState, Pagination } from '../../../common/components';
+import { Button, SearchInput, Input, Modal, EmptyState, Pagination, Tooltip } from '../../../common/components';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import type { Category, Product } from '../types';
 
@@ -131,12 +131,16 @@ export function CategoryManager({ categories, products, isOwner, onCreate, onUpd
               </span>
               {isOwner && (
                 <div className="flex gap-1">
-                  <Button variant="ghost-primary" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-11 min-h-11" title="Editar">
-                    <Edit3 size={14} />
-                  </Button>
-                  <Button variant="ghost-danger" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-11 min-h-11" title="Eliminar">
-                    <Trash2 size={14} />
-                  </Button>
+                  <Tooltip content="Editar" variant="help">
+                    <Button variant="ghost-primary" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-11 min-h-11">
+                      <Edit3 size={14} />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content="Eliminar" variant="danger">
+                    <Button variant="ghost-danger" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-11 min-h-11">
+                      <Trash2 size={14} />
+                    </Button>
+                  </Tooltip>
                 </div>
               )}
             </div>

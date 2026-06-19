@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Button, Badge, EmptyState, Spinner, Pagination, SaleDetailModal } from '../../../common/components';
+import { Modal, Button, Badge, EmptyState, Spinner, Pagination, SaleDetailModal, Tooltip } from '../../../common/components';
 import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, CreditCard, Calendar } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
 import { formatBs, formatUsd } from '@/lib/formatBs';
@@ -72,12 +72,12 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
               : digits.startsWith('0') ? `58${digits.slice(1)}`
               : `58${digits}`;
             return (
+              <Tooltip content="Abrir chat en WhatsApp" variant="help">
               <a
                 href={`https://wa.me/${waPhone}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1"
-                title="Abrir chat en WhatsApp"
                 aria-label="Abrir chat en WhatsApp con este cliente"
               >
               <Button variant="primary" className="w-full min-h-11" style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
@@ -87,6 +87,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
                 WhatsApp
               </Button>
             </a>
+            </Tooltip>
             );
           })()}
           <Button variant="ghost" className="flex-1" onClick={onClose}>

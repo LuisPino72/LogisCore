@@ -5,7 +5,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { PwaInstallBanner } from './PwaInstallBanner';
 import { PendingTasksWidget } from './PendingTasksWidget';
-import { EmptyState, Card, Badge } from '../../../common/components';
+import { EmptyState, Card, Badge, Tooltip } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
 import { formatUsd } from '../../../lib/formatBs';
@@ -256,14 +256,15 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                             <Badge variant={isZero ? 'danger' : 'warning'}>
                               {displayStock(p.stock, p.unit)} {p.unit}
                             </Badge>
-                            <button
-                              type="button"
-                              onClick={() => navigate('/purchases')}
-                              className="inline-flex items-center justify-center w-11 h-11 rounded-lg text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"
-                              title="Crear orden de compra"
-                            >
-                              <ShoppingCart size={16} />
-                            </button>
+                            <Tooltip content="Crear orden de compra" variant="help">
+                              <button
+                                type="button"
+                                onClick={() => navigate('/purchases')}
+                                className="inline-flex items-center justify-center w-11 h-11 rounded-lg text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"
+                              >
+                                <ShoppingCart size={16} />
+                              </button>
+                            </Tooltip>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">

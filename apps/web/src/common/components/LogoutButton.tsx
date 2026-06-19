@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { LogOut } from 'lucide-react';
 import { Button } from './Button';
+import { Tooltip } from './Tooltip';
 import { authService } from '../../features/auth/services/authService';
 import { useAuthStore } from '../../features/auth/stores/authStore';
 import { logger } from '../../lib/logger';
@@ -18,8 +19,10 @@ export function LogoutButton() {
   }, []);
 
   return (
-    <Button variant="ghost" size="sm" onClick={handleLogout} title="Cerrar sesión" loading={isLoggingOut}>
+    <Tooltip content="Cerrar sesión" variant="info">
+    <Button variant="ghost" size="sm" onClick={handleLogout} loading={isLoggingOut}>
       <LogOut size={18} />
     </Button>
+    </Tooltip>
   );
 }

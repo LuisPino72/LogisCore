@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Html5Qrcode as Html5QrcodeType } from 'html5-qrcode';
 import { Camera, CameraOff, RefreshCw } from 'lucide-react';
-import { Button } from '@/common/components';
+import { Button, Tooltip } from '@/common/components';
 import { hasCamera } from '@/lib/camera';
 
 interface BarcodeScannerModalProps {
@@ -140,13 +140,14 @@ export function BarcodeScannerModal({ isOpen, onClose, onScan }: BarcodeScannerM
             </div>
           )}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-3 z-10">
-            <button
-              onClick={switchCamera}
-              className="w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm"
-              title="Cambiar cámara"
-            >
-              <RefreshCw size={16} />
-            </button>
+            <Tooltip content="Cambiar cámara" variant="help">
+              <button
+                onClick={switchCamera}
+                className="w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center backdrop-blur-sm"
+              >
+                <RefreshCw size={16} />
+              </button>
+            </Tooltip>
           </div>
         </div>
 

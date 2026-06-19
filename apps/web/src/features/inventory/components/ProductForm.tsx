@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Button, Input, Modal, Checkbox, Select, SearchableSelect } from '../../../common/components';
+import { Button, Input, Modal, Checkbox, Select, SearchableSelect, Tooltip } from '../../../common/components';
 import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check, Camera, Image } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
@@ -445,12 +445,16 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             validation={{ required: true, maxLength: 18 }}
             inputClassName="text-sm"
           />
-          <Button variant="outline" size="sm" onClick={generateSku} className="shrink-0 px-3 min-h-11 text-xs" title="Generar SKU automático">
-            Auto
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowBarcodeScanner(true)} className="shrink-0 px-3 min-h-11" title="Escanear código de barras">
-            <Scan size={16} />
-          </Button>
+          <Tooltip content="Generar SKU automático" variant="help">
+            <Button variant="outline" size="sm" onClick={generateSku} className="shrink-0 px-3 min-h-11 text-xs">
+              Auto
+            </Button>
+          </Tooltip>
+          <Tooltip content="Escanear código de barras" variant="help">
+            <Button variant="outline" size="sm" onClick={() => setShowBarcodeScanner(true)} className="shrink-0 px-3 min-h-11">
+              <Scan size={16} />
+            </Button>
+          </Tooltip>
         </div>
       </div>
 

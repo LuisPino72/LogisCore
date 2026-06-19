@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Truck, Trash2, Phone, Pencil, ShoppingCart } from 'lucide-react';
-import { Button, Badge, EmptyState, Pagination } from '../../../common/components';
+import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/components';
 import type { Supplier } from '../../../specs/purchases';
 import { getInitials } from '../../../lib/utils';
 
@@ -84,12 +84,16 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
             </div>
             {isOwner && (
               <div className="flex gap-1">
-                <Button variant="ghost-primary" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8" title="Editar">
-                  <Pencil size={14} />
-                </Button>
-                <Button variant="ghost-danger" size="sm" onClick={() => onDelete(s.id, s.name)} className="p-1.5 min-w-8 min-h-8" title="Eliminar">
-                  <Trash2 size={14} />
-                </Button>
+                <Tooltip content="Editar" variant="help">
+                  <Button variant="ghost-primary" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8">
+                    <Pencil size={14} />
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Eliminar" variant="danger">
+                  <Button variant="ghost-danger" size="sm" onClick={() => onDelete(s.id, s.name)} className="p-1.5 min-w-8 min-h-8">
+                    <Trash2 size={14} />
+                  </Button>
+                </Tooltip>
               </div>
             )}
           </div>

@@ -2,6 +2,7 @@ import { memo, type ReactNode } from 'react';
 import { LogOut, Menu as MenuIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from './Button';
+import { Tooltip } from './Tooltip';
 
 export interface SidebarModule {
   id: string;
@@ -50,34 +51,36 @@ export const Sidebar = memo(function Sidebar(props: SidebarProps) {
 
           <div className="md:hidden flex items-center justify-center w-full h-full">
             {!expanded ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onToggleExpanded?.(true)}
-                aria-label="Abrir sidebar"
-                aria-controls="app-sidebar"
-                title="Abrir sidebar"
-                className="w-8 h-8 p-0"
-              >
-                <MenuIcon size={16} />
-              </Button>
+              <Tooltip content="Abrir sidebar" variant="info">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onToggleExpanded?.(true)}
+                  aria-label="Abrir sidebar"
+                  aria-controls="app-sidebar"
+                  className="w-8 h-8 p-0"
+                >
+                  <MenuIcon size={16} />
+                </Button>
+              </Tooltip>
             ) : (
               <div className="flex items-center gap-2.5 px-3 w-full h-full">
                 <div className="w-7 h-7 rounded-lg bg-linear-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm shrink-0">
                   <img src="/Sasa.png" alt="Sasa" className="h-4 w-4" />
                 </div>
                 <span className="flex-1 text-center font-title font-bold text-xl bg-linear-to-r from-primary-dark to-primary bg-clip-text text-transparent tracking-tight">Sasa</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onToggleExpanded?.(false)}
-                  aria-label="Cerrar sidebar"
-                  aria-controls="app-sidebar"
-                  title="Cerrar sidebar"
-                  className="w-8 h-8 p-0"
-                >
-                  <MenuIcon size={16} />
-                </Button>
+                <Tooltip content="Cerrar sidebar" variant="info">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onToggleExpanded?.(false)}
+                    aria-label="Cerrar sidebar"
+                    aria-controls="app-sidebar"
+                    className="w-8 h-8 p-0"
+                  >
+                    <MenuIcon size={16} />
+                  </Button>
+                </Tooltip>
               </div>
             )}
           </div>
