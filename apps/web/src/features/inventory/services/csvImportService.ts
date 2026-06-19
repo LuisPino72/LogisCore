@@ -574,8 +574,8 @@ export async function importProductsFromCsv(
           categoryId = defaultCat?.id ?? '';
         }
 
-        // Materia prima: precio forzado a 0.01 si no se proporciona
-        const finalPriceUsd = isMateriaPrima && precio <= 0 ? 0.01 : precio;
+        // MED-6: NO forzar $0.01 en materia prima — dejar precio real (0 si no tiene)
+        const finalPriceUsd = precio;
 
         const productInput = {
           name: nombre,
