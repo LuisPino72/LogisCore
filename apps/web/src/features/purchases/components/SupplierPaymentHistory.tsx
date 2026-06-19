@@ -45,7 +45,7 @@ export function SupplierPaymentHistory({ supplierId, tenantId }: SupplierPayment
     load();
   }, [supplierId, tenantId]);
 
-  if (loading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-12 rounded-lg" />)}</div>;
+  if (loading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-12 rounded-xl" />)}</div>;
 
   if (payments.length === 0) {
     return (
@@ -75,7 +75,7 @@ export function SupplierPaymentHistory({ supplierId, tenantId }: SupplierPayment
   return (
     <div className="space-y-2">
       {paged.map((p) => (
-        <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-white">
+        <div key={p.id} className="flex flex-col items-start gap-1.5 p-2.5 rounded-xl border border-border bg-white sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-gray-900">{formatUsd(p.amountUsd)}</span>

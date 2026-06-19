@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { Card, Badge, Tooltip, EmptyState, KpiCard, KpiSkeleton } from '@/common/components';
 import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, BarChart3, Receipt, Wallet, CreditCard } from 'lucide-react';
 import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
@@ -162,7 +163,7 @@ export function ExecutiveSummary({ data, loading, tenantId, onKpiClick }: Execut
         />
         <KpiCard
           label="Cuentas por Pagar"
-          value={<span className="text-xs sm:text-lg font-bold truncate" style={{ color: (pendingPayables || 0) > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>{formatUsd(pendingPayables ?? 0)}</span>}
+          value={<span className={cn("text-xs sm:text-lg font-bold truncate", (pendingPayables || 0) > 0 ? "text-danger" : "text-success")}>{formatUsd(pendingPayables ?? 0)}</span>}
           subtitle={pendingPayables !== null ? 'Total pendiente con proveedores' : 'Cargando...'}
           icon={<CreditCard size={18} />}
           gradient={(pendingPayables || 0) > 0 ? 'red' : 'green'}

@@ -93,7 +93,21 @@ export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenan
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Pagar a Proveedor">
+    <Modal isOpen={isOpen} onClose={onClose} title="Pagar a Proveedor"
+      footer={
+        <div className="flex gap-2 justify-end w-full">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={submitting || !selectedOrderId || !amountUsd || parseFloat(amountUsd) <= 0}
+          >
+            <DollarSign size={14} />
+            <span className="ml-1">{submitting ? 'Procesando...' : `Pagar ${formatUsd(parseFloat(amountUsd || '0'))}`}</span>
+          </Button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         {error && (
           <div className="text-sm text-danger bg-danger/10 rounded-lg p-2.5">{error}</div>
@@ -151,6 +165,7 @@ export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenan
                       value={amountUsd}
                       onChange={(e) => setAmountUsd(e.target.value)}
                       placeholder="0.00"
+                      inputClassName="text-sm"
                     />
                   </div>
                   <div className="flex items-end pb-1">
@@ -176,6 +191,7 @@ export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenan
                   onChange={(e) => setReference(e.target.value)}
                   placeholder="Nro. de referencia"
                   maxLength={50}
+                  inputClassName="text-sm"
                 />
 
                 <Input
@@ -184,21 +200,10 @@ export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenan
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Notas opcionales"
                   maxLength={200}
+                  inputClassName="text-sm"
                 />
               </div>
             )}
-
-            <div className="flex gap-2 justify-end border-t border-border pt-3">
-              <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-              <Button
-                variant="primary"
-                onClick={handleSubmit}
-                disabled={submitting || !selectedOrderId || !amountUsd || parseFloat(amountUsd) <= 0}
-              >
-                <DollarSign size={14} />
-                <span className="ml-1">{submitting ? 'Procesando...' : `Pagar ${formatUsd(parseFloat(amountUsd || '0'))}`}</span>
-              </Button>
-            </div>
           </>
         )}
       </div>
