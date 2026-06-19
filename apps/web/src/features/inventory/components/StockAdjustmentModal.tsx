@@ -180,10 +180,38 @@ export function StockAdjustmentModal({
               inputMode="decimal"
             />
             <p className="text-xs text-gray-600 mt-0.5">
-              Costo total de las unidades que entran (para ajustes positivos).
+              Costo total de las unidades que entran.
             </p>
           </div>
         )}
+
+        {adjMode === 'sumar' && adjShowCostInput && adjCostTotal && parseFloat(adjCostTotal) > 0 && adjQuantity && parseFloat(adjQuantity) > 0 && product && (() => {
+          const storageQty = product.isWeighted
+            ? parseFloat(adjQuantity) * 1000
+            : parseFloat(adjQuantity);
+          const costPerUnit = storageQty > 0 ? parseFloat(adjCostTotal) / storageQty : 0;
+          const prevCostStorage = product.isWeighted
+            ? (product.costPrice ?? 0) / 1000
+            : (product.costPrice ?? 0);
+          const newStock = product.stock + storageQty;
+          const totalCost = (product.stock * prevCostStorage) + (storageQty * costPerUnit);
+          const newCostStorage = newStock > 0 ? totalCost / newStock : costPerUnit;
+          const newCostPrice = product.isWeighted
+            ? newCostStorage * 1000
+            : newCostStorage;
+          const hasPrevCost = (product.costPrice ?? 0) > 0;
+          const unitLabel = product.unit === 'kg' ? '/kg' : product.unit === 'lt' ? '/lt' : product.unit === 'm' ? '/m' : '/und';
+
+          return (
+            <Alert variant="info" className="text-xs">
+              {hasPrevCost ? (
+                <>Este ajuste actualizará el costo promedio: <strong>${(product.costPrice ?? 0).toFixed(2)}{unitLabel}</strong> → <strong>${(Math.round(newCostPrice * 100) / 100).toFixed(2)}{unitLabel}</strong></>
+              ) : (
+                <>Se registrará un costo de <strong>${costPerUnit.toFixed(4)}</strong> por unidad de almacenamiento.</>
+              )}
+            </Alert>
+          );
+        })()}
       </div>
     </Modal>
   );

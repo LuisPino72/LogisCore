@@ -1187,8 +1187,6 @@ export const inventoryService = {
       let movementCostUsd: number | undefined;
 
       await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async (tx) => {
-        await db.products.update(input.productId, { stock: newStock });
- 
         if (storageQuantity > 0) {
           const lotId = generateId();
           const costPerUnit = input.costTotal != null && input.costTotal > 0
@@ -1214,11 +1212,31 @@ export const inventoryService = {
           };
           await db.inventoryLots.add(lot);
           movementCostUsd = costPerUnit > 0 ? preciseRound(Math.abs(storageQuantity) * costPerUnit, 2) : undefined;
+
+          const productForWac = await db.products.where({ id: input.productId }).first();
+          if (productForWac) {
+            const previousCostStorage = productForWac.isWeighted
+              ? (productForWac.costPrice ?? 0) / 1000
+              : (productForWac.costPrice ?? 0);
+
+            const totalLotCost = (previousStock * previousCostStorage) + (storageQuantity * costPerUnit);
+            const newCostPriceStorage = newStock > 0
+              ? preciseRound(totalLotCost / newStock, 4)
+              : costPerUnit;
+
+            const newCostPrice = productForWac.isWeighted
+              ? preciseRound(newCostPriceStorage * 1000, 4)
+              : newCostPriceStorage;
+
+            await db.products.update(input.productId, { stock: newStock, costPrice: newCostPrice });
+          }
         } else {
           const fifoResult = await this.consumeFifo(input.productId, Math.abs(storageQuantity), input.tenantId, tx);
           if (!fifoResult.ok) throw new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Stock insuficiente para completar el ajuste.');
           movementCostUsd = fifoResult.data.reduce((sum, c) => sum + ((c.costUsdPerUnit ?? 0) * c.quantity), 0);
           movementCostUsd = movementCostUsd > 0 ? preciseRound(movementCostUsd, 2) : undefined;
+
+          await db.products.update(input.productId, { stock: newStock });
         }
 
         const movement = {
