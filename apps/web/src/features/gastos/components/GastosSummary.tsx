@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DollarSign } from 'lucide-react';
-import { Card } from '@/common/components';
+import { Card, Checkbox } from '@/common/components';
 import { formatUsd } from '@/lib/formatBs';
 import type { Gasto } from '../types';
 
@@ -9,9 +9,14 @@ interface GastosSummaryProps {
 }
 
 export function GastosSummary({ gastos }: GastosSummaryProps) {
+  const [includeCompras, setIncludeCompras] = useState(false);
+
   const summary = useMemo(() => {
-    // MED-9: excluir COMPRA_INVENTARIO del resumen (es audit trail automático)
-    const filtered = gastos.filter((g) => g.category !== 'COMPRA_INVENTARIO');
+    // MED-9: excluir COMPRA_INVENTARIO por defecto; toggle opcional
+    const filtered = includeCompras
+      ? gastos
+      : gastos.filter((g) => g.category !== 'COMPRA_INVENTARIO');
+
     const total = filtered.reduce((sum, g) => sum + g.amountUsd, 0);
     const pending = filtered.filter((g) => g.status === 'pending');
     const paid = filtered.filter((g) => g.status === 'paid');
@@ -19,14 +24,20 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
     const pendingTotal = pending.reduce((sum, g) => sum + g.amountUsd, 0);
     const paidTotal = paid.reduce((sum, g) => sum + g.amountUsd, 0);
 
+    const comprasTotal = gastos
+      .filter((g) => g.category === 'COMPRA_INVENTARIO')
+      .reduce((sum, g) => sum + g.amountUsd, 0);
+
     return {
       total,
       pendingCount: pending.length,
       pendingTotal,
       paidCount: paid.length,
       paidTotal,
+      comprasTotal,
+      comprasCount: gastos.filter((g) => g.category === 'COMPRA_INVENTARIO').length,
     };
-  }, [gastos]);
+  }, [gastos, includeCompras]);
 
   return (
     <Card className="p-3 sm:p-4 expense-summary-card expense-card-hover">
@@ -64,6 +75,21 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
+        <Checkbox
+          checked={includeCompras}
+          onChange={(e) => setIncludeCompras(e.target.checked)}
+          className="expense-toggle-compras"
+        >
+          Incluir compras de inventario
+        </Checkbox>
+        {includeCompras && summary.comprasTotal > 0 && (
+          <span className="text-xs text-accent font-medium ml-auto">
+            + Compras: {formatUsd(summary.comprasTotal)} ({summary.comprasCount})
+          </span>
+        )}
       </div>
 
       {summary.total > 0 && (

@@ -32,6 +32,7 @@ export const EXPENSE_CATEGORY_COLORS: Record<string, string> = {
   robo: '#b91c1c',
   vencido: '#d97706',
   otros: '#6b7280',
+  compra_inventario: '#8b5cf6',
 };
 
 export const TOP_PRODUCTS_CHART_COLORS = [

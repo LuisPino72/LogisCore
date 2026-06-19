@@ -1342,11 +1342,33 @@ export const reportsService = {
         }
       }
 
-      // Operating expenses breakdown
-      // BACKLOG-106 [REPORTS-001]: Excluir COMPRA_INVENTARIO del desglose (el costo ya se refleja en COGS).
+      // MED-9: Compras de inventario — sección separada (audit trail, no operativo)
       const db = getDb();
       const startNorm = start.slice(0, 10);
       const endNorm = end.slice(0, 10);
+      const comprasInventario = await db.expenses
+        .where('[tenantId+date]')
+        .between([tenantId, startNorm], [tenantId, endNorm])
+        .filter((e) => !e.deletedAt && !e.isRecurring && e.status === 'paid' && e.category === 'COMPRA_INVENTARIO')
+        .toArray();
+
+      if (comprasInventario.length > 0) {
+        let totalUsd = 0;
+        let totalBs = 0;
+        for (const exp of comprasInventario) {
+          totalUsd += exp.amountUsd;
+          totalBs += exp.amountBs;
+        }
+        items.push({
+          type: 'compra_inventario',
+          label: 'Compras de Inventario',
+          amountBs: preciseRound(totalBs, 2),
+          amountUsd: preciseRound(totalUsd, 2),
+        });
+      }
+
+      // Operating expenses breakdown
+      // BACKLOG-106 [REPORTS-001]: Excluir COMPRA_INVENTARIO del desglose operativo (el costo ya se refleja en COGS + sección separada).
       const operatingExpenses = await db.expenses
         .where('[tenantId+date]')
         .between([tenantId, startNorm], [tenantId, endNorm])
