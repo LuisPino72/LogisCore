@@ -26,6 +26,7 @@ import { logger } from '../../../lib/logger';
 import { calculateConsumptionCost } from './costCalculator';
 import { requireRole } from '../../auth/services/roleGuard';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { unitToStorageType, convertToStorage } from '../../inventory/types';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
 
 /**
@@ -1101,39 +1102,45 @@ export const productionService = {
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
         }
 
-        // c. Create finished product lot
-        const finishedLotId = generateId();
-        const finishedLot = {
-          id: finishedLotId,
-          tenantId,
-          productId: recipe.productId,
-          quantityAdded: quantityTarget,
-          remainingQuantity: quantityTarget,
-          costUsdPerUnit: costPerProducedUnit,
-          createdAt: now,
-          updatedAt: now,
-          version: 1,
-        };
-        await db.inventoryLots.add(finishedLot);
-        await syncQueue.enqueue('inventory_lots', 'CREATE', finishedLotId, toSnake(finishedLot as unknown as Record<string, unknown>), tenantId);
-
-        // Update finished product stock + WAC
-        // PRODUCTION-003 [Paso-4]: Sincronizar product.costPrice con WAC tras producir.
-        // Consistente con receiveOrder en Compras (purchaseService.ts:583-601).
+        // c. Get finished product info
         const finishedProduct = await db.products.where({ id: recipe.productId, tenantId }).first();
         if (finishedProduct) {
+          // FUGA-2: Convertir quantityTarget (display units) a storage units
+          const storageType = unitToStorageType(finishedProduct.isWeighted, finishedProduct.unit);
+          const quantityTargetInStorage = convertToStorage(quantityTarget, storageType);
+          const costPerStorageUnit = quantityTargetInStorage > 0
+            ? preciseRound(totalIngredientCost / quantityTargetInStorage, 6)
+            : 0;
+
+          // d. Create finished product lot
+          const finishedLotId = generateId();
+          const finishedLot = {
+            id: finishedLotId,
+            tenantId,
+            productId: recipe.productId,
+            quantityAdded: quantityTargetInStorage,
+            remainingQuantity: quantityTargetInStorage,
+            costUsdPerUnit: costPerStorageUnit,
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
+          };
+          await db.inventoryLots.add(finishedLot);
+          await syncQueue.enqueue('inventory_lots', 'CREATE', finishedLotId, toSnake(finishedLot as unknown as Record<string, unknown>), tenantId);
+
+          // e. Update finished product stock + WAC
           const prevStock = finishedProduct.stock ?? 0;
           const prevCostPrice = finishedProduct.costPrice ?? 0;
-          const newStock = prevStock + quantityTarget;
+          const newStock = prevStock + quantityTargetInStorage;
           const previousValue = prevStock * prevCostPrice;
-          const newValue = quantityTarget * costPerProducedUnit;
+          const newValue = quantityTargetInStorage * costPerStorageUnit;
           const newWac = newStock > 0
             ? Math.round(((previousValue + newValue) / newStock) * 100) / 100
             : 0;
           await db.products.update(recipe.productId, { stock: newStock, costPrice: newWac });
           await syncQueue.enqueue('products', 'UPDATE', recipe.productId, toSnake({ ...finishedProduct, stock: newStock, costPrice: newWac } as unknown as Record<string, unknown>), tenantId);
 
-          // Create movement for finished product
+          // f. Create movement for finished product
           const finishedMovementId = generateId();
           const finishedMovement = {
             id: finishedMovementId,
@@ -1141,7 +1148,7 @@ export const productionService = {
             productId: recipe.productId,
             userId,
             type: 'production_output' as const,
-            quantity: quantityTarget,
+            quantity: quantityTargetInStorage,
             previousStock: prevStock,
             newStock,
             createdAt: now,
@@ -1244,10 +1251,13 @@ export const productionService = {
           // Revert finished product stock if it was produced
           const finishedProduct = await db.products.where({ id: order.productId, tenantId }).first();
           if (finishedProduct && order.quantityTarget > 0) {
+            // FUGA-2: Convertir order.quantityTarget (display units) a storage units antes de revertir
+            const storageType = unitToStorageType(finishedProduct.isWeighted, finishedProduct.unit);
+            const quantityTargetInStorage = convertToStorage(order.quantityTarget, storageType);
             const previousStock = finishedProduct.stock;
             // DINERO-013 (M3): revertir solo el stock que aún existe (no las unidades ya vendidas).
-            // quantityToRevert = min(stock actual, quantityTarget). Nunca resta de más.
-            const quantityToRevert = Math.min(previousStock, order.quantityTarget);
+            // quantityToRevert = min(stock actual, quantityTargetInStorage). Nunca resta de más.
+            const quantityToRevert = Math.min(previousStock, quantityTargetInStorage);
             const newStock = Math.max(0, previousStock - quantityToRevert);
             await db.products.update(order.productId, { stock: newStock });
             await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...finishedProduct, stock: newStock } as unknown as Record<string, unknown>), tenantId);

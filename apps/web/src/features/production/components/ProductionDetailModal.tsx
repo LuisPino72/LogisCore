@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal, Badge, Spinner, Tabs } from '../../../common/components';
 import type { Tab } from '../../../common/components';
 import { formatUsd } from '@/lib/formatBs';
 import { useProductionStore } from '../stores/productionStore';
+import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import type { ProductionOrder } from '../types';
 
 interface ProductionDetailModalProps {
@@ -54,6 +55,12 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
   }>>([]);
 
   const { getOrderDetails, getOrderInventoryMovements } = useProductionStore();
+
+  const products = useInventoryStore((s) => s.products);
+  const productUnit = useMemo(() => {
+    const p = products.find((p) => p.id === order.productId);
+    return p?.unit || 'unidades';
+  }, [products, order.productId]);
 
   useEffect(() => {
     if (!isOpen || !order) return;
@@ -115,7 +122,7 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
               {details?.recipeName || 'Receta'}
             </h4>
             <p className="text-sm text-gray-500">
-              {details?.batchCount} lote(s) — {details?.quantityTarget} unidades objetivo
+              {details?.batchCount} lote(s) — {details?.quantityTarget} {productUnit} objetivo
             </p>
           </div>
           <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
@@ -142,7 +149,7 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
               </div>
               <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-info stat-card-glow">
                 <p className="text-xs text-gray-500">Objetivo</p>
-                <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityTarget}</p>
+                <p className="text-lg font-semibold text-gray-900 overflow-hidden text-ellipsis">{order.quantityTarget} {productUnit}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-3 border-t-2 border-success stat-card-glow">
                 <p className="text-xs text-gray-500">Producido</p>

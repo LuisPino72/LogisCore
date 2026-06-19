@@ -4,6 +4,7 @@ import { History, Clock, CheckCircle2, XCircle, AlertCircle, Eye, Package, Hash 
 import type { Recipe, ProductionOrder } from '../types';
 import { ProductionDetailModal } from './ProductionDetailModal';
 import { useProductionStore } from '../stores/productionStore';
+import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 
 interface ProductionHistoryProps {
   orders: ProductionOrder[];
@@ -60,6 +61,15 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
     }
     return map;
   }, [recipes]);
+
+  const products = useInventoryStore((s) => s.products);
+  const productUnitMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of products) {
+      map.set(p.id, p.unit);
+    }
+    return map;
+  }, [products]);
 
   const totalPages = Math.ceil(orders.length / PAGE_SIZE);
   const paginatedOrders = useMemo(() => {
@@ -131,7 +141,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                   </span>
                   <span className="flex items-center gap-1">
                     <Hash size={11} className="text-gray-400" />
-                    {order.quantityTarget} unid.
+                    {order.quantityTarget} {productUnitMap.get(order.productId) || 'unid.'}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock size={11} className="text-gray-400" />
