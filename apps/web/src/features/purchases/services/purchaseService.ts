@@ -679,9 +679,7 @@ export const purchaseService = {
               ? convertToStorage(rec.receivedQuantity, unitToStorageType(product.isWeighted, product.unit))
               : rec.receivedQuantity;
 
-            const effectiveQty = item.unitMultiplier && item.unitMultiplier > 1
-              ? storageQty * item.unitMultiplier
-              : storageQty;
+            const effectiveQty = storageQty * (item.unitMultiplier ?? 1);
 
             const previousStock = product.stock;
             const newStock = previousStock + effectiveQty;
@@ -692,7 +690,7 @@ export const purchaseService = {
               : (product.costPrice ?? 0);
             // DINERO-002 (C2): dividir costUsdPerUnit por unitMultiplier para presentaciones (Caja×6, etc.)
             // costUsdPerUnit está en $/presentation-unit (caja); storage unit = unidad base (gramo, ml, und).
-            const divisor = (item.unitMultiplier && item.unitMultiplier > 1) ? item.unitMultiplier : 1;
+            const divisor = item.unitMultiplier ?? 1;
             const itemCostStorage = product.isWeighted
               ? ((item.costUsdPerUnit || 0) / divisor) / 1000
               : (item.costUsdPerUnit || 0) / divisor;
