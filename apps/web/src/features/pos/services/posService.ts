@@ -1858,14 +1858,14 @@ export const posService = {
       const filteredZeroStock = zeroStockRows.filter((p) => !assemblyIds.has(p.id));
 
       const productIds = new Set<string>();
-      if (soldResult.ok) for (const p of soldResult.data) productIds.add(p.productId);
-      if (lowStockResult.ok) for (const p of lowStockResult.data) productIds.add(p.id);
+      if (soldResult.ok) for (const p of soldResult.data) { if (!assemblyIds.has(p.productId)) productIds.add(p.productId); }
+      if (lowStockResult.ok) for (const p of lowStockResult.data) { if (!assemblyIds.has(p.id)) productIds.add(p.id); }
       for (const p of filteredZeroStock) productIds.add(p.id);
 
       if (productIds.size === 0) return success([]);
 
       const soldMap = new Map<string, number>();
-      if (soldResult.ok) for (const p of soldResult.data) soldMap.set(p.productId, p.quantity);
+      if (soldResult.ok) for (const p of soldResult.data) { if (!assemblyIds.has(p.productId)) soldMap.set(p.productId, p.quantity); }
 
       const lowStockIds = new Set<string>();
       if (lowStockResult.ok) for (const p of lowStockResult.data) lowStockIds.add(p.id);

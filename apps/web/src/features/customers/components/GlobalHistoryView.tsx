@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Calendar, TrendingUp } from 'lucide-react';
-import { Button, EmptyState, SearchInput, DatePicker } from '../../../common/components';
+import { Button, EmptyState, SearchInput, DatePicker, SaleDetailModal } from '../../../common/components';
 import type { Customer } from '../../../specs/customers';
 import type { Sale } from '../../pos/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface GlobalHistoryViewProps {
+  tenantId: string | null;
   startDate: string;
   endDate: string;
   setStartDate: (v: string) => void;
@@ -20,10 +21,12 @@ interface GlobalHistoryViewProps {
 }
 
 export function GlobalHistoryView({
+  tenantId,
   startDate, endDate, setStartDate, setEndDate,
   searchQuery, setSearchQuery, sales, loading, customers,
   ranking, rankingLoading,
 }: GlobalHistoryViewProps) {
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const customerMap = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
   const filteredSales = useMemo(() => {
     let r = sales;
@@ -179,6 +182,7 @@ export function GlobalHistoryView({
               return (
                 <div
                   key={sale.id}
+                  onClick={() => setSelectedSaleId(sale.id)}
                   className="px-3 py-2.5 rounded-lg border border-gray-100 bg-white hover:bg-gray-50/50 hover:shadow-sm hover:border-primary/10 transition-all duration-200 cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -207,6 +211,15 @@ export function GlobalHistoryView({
           </div>
         )}
       </div>
+
+      {tenantId && (
+        <SaleDetailModal
+          saleId={selectedSaleId}
+          tenantId={tenantId}
+          isOpen={!!selectedSaleId}
+          onClose={() => setSelectedSaleId(null)}
+        />
+      )}
     </>
   );
 }

@@ -36,7 +36,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   status: 'idle',
   session: null,
-  selectedTenantSlug: null,
+  selectedTenantSlug: typeof window !== 'undefined' ? localStorage.getItem('selectedTenantSlug') : null,
   error: null,
   isLoggingIn: false,
   isLoggingOut: false,
@@ -47,11 +47,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setLoading: () => set({ status: 'loading', error: null }),
   setSession: (session) => set({ status: 'authenticated', session, error: null }),
-  setSelectedTenantSlug: (slug) => set({ selectedTenantSlug: slug }),
+  setSelectedTenantSlug: (slug) => {
+    if (slug) localStorage.setItem('selectedTenantSlug', slug);
+    else localStorage.removeItem('selectedTenantSlug');
+    set({ selectedTenantSlug: slug });
+  },
   setLoggingOut: (value) => set({ isLoggingOut: value }),
-  clearSession: (error) =>
-    set({ status: 'unauthenticated', session: null, selectedTenantSlug: null, error: error ?? null, isLoggingOut: false }),
-  reset: () => set({ status: 'idle', session: null, selectedTenantSlug: null, error: null }),
+  clearSession: (error) => {
+    localStorage.removeItem('selectedTenantSlug');
+    set({ status: 'unauthenticated', session: null, selectedTenantSlug: null, error: error ?? null, isLoggingOut: false });
+  },
+  reset: () => {
+    localStorage.removeItem('selectedTenantSlug');
+    set({ status: 'idle', session: null, selectedTenantSlug: null, error: null });
+  },
 
   login: async (email, password) => {
     if (get().isLoggingIn) return;

@@ -40,7 +40,7 @@ export function PresentationSelector({
 
           if (product) {
             const perUnit = pres.unitMultiplier || 1;
-            const available = Math.round(product.stock / perUnit);
+            const available = Math.floor(product.stock / perUnit);
             stockDisplay = `${available} und.`;
             hasStock = available > 0;
           }

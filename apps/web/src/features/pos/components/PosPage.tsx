@@ -778,6 +778,11 @@ export function PosPage({ tenantId }: PosPageProps) {
           const added = await addToCart(_product, 1, selection);
           if (added) {
             addToast({ type: 'success', message: `${_product.name} agregado`, duration: 1500 });
+          } else {
+            const error = usePosStore.getState().error;
+            if (error) {
+              addToast({ type: 'warning', message: error, duration: 3000 });
+            }
           }
         }}
       />

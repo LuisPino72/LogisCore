@@ -183,6 +183,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
         {activeTab === 'historial-global' && (
           <div key="historial-global" className="p-4 space-y-4 animate-fade-in">
             <GlobalHistoryView
+              tenantId={tenantId}
               startDate={startDate}
               endDate={endDate}
               setStartDate={setStartDate}
