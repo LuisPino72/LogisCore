@@ -485,7 +485,7 @@ export const customerService = {
       const db = getDb();
       const sales = await db.sales
         .where({ tenantId, customerId })
-        .filter((s) => !s.deletedAt && s.status === 'completed')
+        .filter((s) => !s.deletedAt && s.status === 'completed' && (!s.isCreditSale || !!s.creditCollected))
         .toArray();
 
       if (sales.length === 0) {
@@ -537,7 +537,7 @@ export const customerService = {
       const db = getDb();
       const sales = await db.sales
         .where({ tenantId })
-        .filter((s) => !s.deletedAt && s.status === 'completed' && s.customerId != null)
+        .filter((s) => !s.deletedAt && s.status === 'completed' && s.customerId != null && (!s.isCreditSale || !!s.creditCollected))
         .toArray();
 
       const customerMap = new Map<string, { totalBs: number; totalUsd: number; count: number; lastPurchaseAt: string }>();

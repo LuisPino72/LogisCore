@@ -1516,7 +1516,7 @@ export const reportsService = {
       // Get sales in period
       const sales = await db.sales
         .where({ tenantId })
-        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end)
+        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end && (!s.isCreditSale || !!s.creditCollected))
         .toArray();
 
       // Get customers who bought in period
@@ -1598,7 +1598,7 @@ export const reportsService = {
 
       const sales = await db.sales
         .where({ tenantId })
-        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end && !!s.customerId)
+        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end && !!s.customerId && (!s.isCreditSale || !!s.creditCollected))
         .toArray();
 
       // Group sales by customer
