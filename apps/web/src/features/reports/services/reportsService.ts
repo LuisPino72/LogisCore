@@ -458,11 +458,9 @@ export const reportsService = {
         })(),
         (async () => {
           const db = getDb();
-          const startNorm = start.slice(0, 10);
-          const endNorm = end.slice(0, 10);
           return db.creditPayments
             .where({ tenantId })
-            .filter((cp) => cp.createdAt >= startNorm && cp.createdAt <= endNorm)
+            .filter((cp) => cp.createdAt >= start && cp.createdAt <= end)
             .toArray();
         })(),
       ]);
