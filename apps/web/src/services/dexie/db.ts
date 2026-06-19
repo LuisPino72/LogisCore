@@ -485,6 +485,10 @@ export class LogisCoreDB extends Dexie {
     this.version(24).stores({});
     // FUGA-1: v25 — add collectedDebtBs to cashRegisters (no index needed, default 0)
     this.version(25).stores({});
+    // MED-4: v26 — add productionOrderId index to inventoryMovements
+    this.version(26).stores({
+      inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt], productionOrderId',
+    });
   }
 }
 

@@ -6,6 +6,7 @@ import { getDb } from '@/services/dexie/db';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 interface RecipeLineInput {
+  id?: string;
   productId: string;
   productName?: string;
   quantity: number;
@@ -601,6 +602,7 @@ export function useRecipeForm() {
       wastePct: form.wastePct,
       notes: form.notes || undefined,
       lines: form.lines.map((line) => ({
+        ...(line.id ? { id: line.id } : {}),
         productId: line.productId,
         quantity: line.quantity,
         unit: line.unit,

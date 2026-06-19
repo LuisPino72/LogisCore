@@ -90,6 +90,17 @@ export const CreateRecipeInputSchema = z.object({
 
 export type CreateRecipeInput = z.infer<typeof CreateRecipeInputSchema>;
 
+// MED-5: UpdateRecipeLineInputSchema con id opcional para distinguir
+// líneas existentes de nuevas en updateRecipe
+export const UpdateRecipeLineInputSchema = z.object({
+  id: z.string().uuid().optional(),
+  productId: z.string().uuid('Selecciona un ingrediente'),
+  quantity: z.number().positive('La cantidad debe ser mayor a 0').max(1_000_000, 'La cantidad no puede ser mayor a 1,000,000'),
+  unit: z.string().min(1, 'Selecciona una unidad'),
+});
+
+export type UpdateRecipeLineInput = z.infer<typeof UpdateRecipeLineInputSchema>;
+
 // ===== Update Recipe Input =====
 
 export const UpdateRecipeInputSchema = z.object({
@@ -99,7 +110,7 @@ export const UpdateRecipeInputSchema = z.object({
   wastePct: z.number().min(0).max(100).optional(),
   isActive: z.boolean().optional(),
   notes: z.string().max(25).optional(),
-  lines: z.array(CreateRecipeLineInputSchema).optional(),
+  lines: z.array(UpdateRecipeLineInputSchema).optional(),
 });
 
 export type UpdateRecipeInput = z.infer<typeof UpdateRecipeInputSchema>;

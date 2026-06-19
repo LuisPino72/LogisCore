@@ -550,36 +550,33 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
     }
 
-    // C6: Validate ingredients BEFORE transaction
+    // MED-5: Validate ALL ingredients BEFORE transaction (removed !lineRaw.id guard)
     if (input.lines) {
       for (const line of input.lines) {
-        const lineRaw = line as Record<string, unknown>;
-        if (!lineRaw.id) {
-          const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
-          if (!ingredient || ingredient.deletedAt) {
-            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado. Verifica los productos de la receta.'));
+        const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
+        if (!ingredient || ingredient.deletedAt) {
+          return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado. Verifica los productos de la receta.'));
+        }
+        // PRODUCTION-001-003: Permitir producto_terminado SI tiene receta activa
+        if (ingredient.productType === 'producto_terminado') {
+          const hasSubRecipe = await db.recipes
+            .where({ productId: ingredient.id })
+            .filter((r) => !r.deletedAt && r.isActive)
+            .first();
+          if (!hasSubRecipe) {
+            return failure(new AppError(ProductionErrors.SUB_RECIPE_NOT_FOUND, `"${ingredient.name}" es un producto terminado sin receta activa.`));
           }
-          // PRODUCTION-001-003: Permitir producto_terminado SI tiene receta activa
-          if (ingredient.productType === 'producto_terminado') {
-            const hasSubRecipe = await db.recipes
-              .where({ productId: ingredient.id })
-              .filter((r) => !r.deletedAt && r.isActive)
-              .first();
-            if (!hasSubRecipe) {
-              return failure(new AppError(ProductionErrors.SUB_RECIPE_NOT_FOUND, `"${ingredient.name}" es un producto terminado sin receta activa.`));
-            }
-            continue;
-          }
-          if (ingredient.stock <= 0) {
-            return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
-          }
-          const needed = recipeQtyToStorageBase(line.quantity, line.unit, ingredient.unit);
-          if (needed > ingredient.stock) {
-            return failure(new AppError(
-              ProductionErrors.RECIPE_INGREDIENT_EXCEEDS_STOCK,
-              `"${ingredient.name}" tiene ${ingredient.stock} ${ingredient.unit} pero la receta pide ${line.quantity} ${line.unit}. Reduce la cantidad de la receta, o si el stock real es distinto al del sistema, ve a Ajustes para corregirlo.`,
-            ));
-          }
+          continue;
+        }
+        if (ingredient.stock <= 0) {
+          return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NO_STOCK, `"${ingredient.name}" no tiene stock. Agrega stock al producto antes de usarlo como ingrediente.`));
+        }
+        const needed = recipeQtyToStorageBase(line.quantity, line.unit, ingredient.unit);
+        if (needed > ingredient.stock) {
+          return failure(new AppError(
+            ProductionErrors.RECIPE_INGREDIENT_EXCEEDS_STOCK,
+            `"${ingredient.name}" tiene ${ingredient.stock} ${ingredient.unit} pero la receta pide ${line.quantity} ${line.unit}. Reduce la cantidad de la receta, o si el stock real es distinto al del sistema, ve a Ajustes para corregirlo.`,
+          ));
         }
       }
     }
@@ -1150,6 +1147,7 @@ export const productionService = {
             quantity: quantityTargetInStorage,
             previousStock: prevStock,
             newStock,
+            productionOrderId: orderId,
             createdAt: now,
           };
           await db.inventoryMovements.add(finishedMovement);
@@ -1715,25 +1713,29 @@ export const productionService = {
         return failure(new AppError(ProductionErrors.ORDER_NOT_FOUND, 'Orden de producción no encontrada.'));
       }
 
-      // Buscar movimientos de inventario del producto terminado (production_output)
-      // y de ingredientes (adjustment con reasonType consumo_interno) alrededor de la fecha de la orden
-      // BUG-PROD-003: Movements are timestamped at order creation time (createdAt),
-      // not completion time. Always use createdAt for the time window.
-      const orderDate = order.createdAt;
-      const startDate = new Date(new Date(orderDate).getTime() - 60000).toISOString(); // 1 min antes
-      const endDate = new Date(new Date(orderDate).getTime() + 60000).toISOString(); // 1 min después
-
-      const movements = await db.inventoryMovements
-        .where({ tenantId })
-        .filter((m) => {
-          if (m.createdAt < startDate || m.createdAt > endDate) return false;
-          // Movimientos del producto terminado (production_output)
-          if (m.productId === order.productId && m.type === 'production_output') return true;
-          // Movimientos de ingredientes (consumo_interno)
-          if (m.type === 'adjustment' && m.reasonType === 'consumo_interno') return true;
-          return false;
-        })
+      // Buscar movimientos de inventario usando productionOrderId FK,
+      // con fallback a ventana temporal de 60s para órdenes legacy (pre-FUGA-3)
+      // MED-4: la FK es más precisa que la ventana temporal que entremezclaba órdenes cercanas
+      let movements = await db.inventoryMovements
+        .where({ productionOrderId: orderId })
         .toArray();
+
+      // Fallback: si no hay movimientos con FK, usar ventana temporal (órdenes legacy)
+      if (movements.length === 0) {
+        const orderDate = order.createdAt;
+        const startDate = new Date(new Date(orderDate).getTime() - 60000).toISOString();
+        const endDate = new Date(new Date(orderDate).getTime() + 60000).toISOString();
+
+        movements = await db.inventoryMovements
+          .where({ tenantId })
+          .filter((m) => {
+            if (m.createdAt < startDate || m.createdAt > endDate) return false;
+            if (m.productId === order.productId && m.type === 'production_output') return true;
+            if (m.type === 'adjustment' && m.reasonType === 'consumo_interno') return true;
+            return false;
+          })
+          .toArray();
+      }
 
       const result = [];
       for (const m of movements) {

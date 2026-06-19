@@ -97,6 +97,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           updateField('wastePct', data.recipe.wastePct);
           updateField('notes', data.recipe.notes || '');
           const lines = data.lines.map((l) => ({
+            id: l.id,
             productId: l.productId,
             quantity: l.quantity,
             unit: l.unit,
