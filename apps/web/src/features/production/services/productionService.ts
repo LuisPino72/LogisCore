@@ -881,15 +881,12 @@ export const productionService = {
         const neededInStorage = product
           ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
           : line.quantity * wasteMultiplier;
-        if (product && product.costPrice != null && product.costPrice > 0) {
-          // El costPrice del producto está en $/display_unit (kg/lt/unidad).
-          // Para pesables, dividir entre 1000 para obtener $/g o $/ml (storage unit).
-          const costPerStorageUnit = product.isWeighted
-            ? product.costPrice / 1000
-            : product.costPrice;
-          totalCost += neededInStorage * costPerStorageUnit;
-        } else if (product) {
-          // PRODUCTION-003 [Paso-5]: ingrediente sin costo -> warning no bloqueante.
+        const needed = Math.ceil(neededInStorage);
+        // MED-3: calculateRecipeCost usa FIFO real (calculateConsumptionCost) en vez de WAC (costPrice).
+        const ccResult = await calculateConsumptionCost(line.productId, needed);
+        if (!ccResult.ok) return ccResult;
+        totalCost += ccResult.data.totalCost;
+        if (ccResult.data.totalCost === 0 && product) {
           warningsSet.add(`${product.name} no tiene costo registrado`);
         }
       }
