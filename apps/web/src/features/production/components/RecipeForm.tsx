@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChefHat, Plus, Trash2, AlertTriangle, Info, ChevronDown, ChevronUp, Package, ArrowLeft, ArrowRight, Check, Lock } from 'lucide-react';
-import { Button, Card, Modal, Input, SearchableSelect, Select, Spinner } from '../../../common/components';
+import { Button, Card, Modal, Input, SearchableSelect, Select, Spinner, Tooltip } from '../../../common/components';
 import { useRecipeForm } from '../hooks/useRecipeForm';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
@@ -296,14 +296,16 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                           </div>
                         </div>
                         <div className="flex justify-center pt-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeLine(index)}
-                            className="text-danger hover:text-danger p-2 min-h-[48px] min-w-[48px]"
-                          >
-                            <Trash2 size={20} />
-                          </Button>
+                          <Tooltip content="Eliminar ingrediente" variant="help">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeLine(index)}
+                              className="text-danger hover:text-danger p-2 min-h-[48px] min-w-[48px]"
+                            >
+                              <Trash2 size={20} />
+                            </Button>
+                          </Tooltip>
                         </div>
                       </Card>
                     );
@@ -676,14 +678,16 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                       </div>
                     </div>
                     <div className="flex justify-center pt-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeLine(index)}
-                        className="text-danger hover:text-danger p-2 min-h-[48px] min-w-[48px]"
-                      >
-                        <Trash2 size={20} />
-                      </Button>
+                      <Tooltip content="Eliminar ingrediente" variant="help">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeLine(index)}
+                          className="text-danger hover:text-danger p-2 min-h-[48px] min-w-[48px]"
+                        >
+                          <Trash2 size={20} />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </Card>
                 );

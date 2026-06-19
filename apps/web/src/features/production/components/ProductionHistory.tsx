@@ -140,28 +140,28 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0 self-start flex-wrap">
-                <Button
-                  variant="ghost-primary"
-                  size="sm"
-                  onClick={() => setSelectedOrder(order)}
-                  className="min-h-[44px]"
-                  aria-label="Ver detalles"
-                >
-                  <Eye size={14} className="mr-1" />
-                  Ver Detalles
-                </Button>
-                {canCancel && (
                   <Button
-                    variant="ghost-danger"
+                    variant="ghost-primary"
                     size="sm"
-                    onClick={() => onCancel(order.id)}
-                    disabled={isCancelling}
+                    onClick={() => setSelectedOrder(order)}
                     className="min-h-[44px]"
-                    aria-label="Cancelar orden"
+                    aria-label="Ver detalles"
                   >
-                    <XCircle size={14} className="mr-1" />
-                    {isCancelling ? 'Cancelando...' : 'Cancelar'}
+                    <Eye size={14} className="mr-1" />
+                    Ver Detalles
                   </Button>
+                {canCancel && (
+                    <Button
+                      variant="ghost-danger"
+                      size="sm"
+                      onClick={() => onCancel(order.id)}
+                      disabled={isCancelling}
+                      className="min-h-[44px]"
+                      aria-label="Cancelar orden"
+                    >
+                      <XCircle size={14} className="mr-1" />
+                      {isCancelling ? 'Cancelando...' : 'Cancelar'}
+                    </Button>
                 )}
               </div>
             </div>

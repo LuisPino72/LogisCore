@@ -1099,7 +1099,15 @@ export const inventoryService = {
         }
       }
 
-      return success(rows.map((r) => toCategory(r as unknown as Record<string, unknown>)));
+      const seenNames = new Set<string>();
+      const deduped = rows.filter((r) => {
+        const key = (r.name ?? '').toLowerCase().trim();
+        if (!key || seenNames.has(key)) return false;
+        seenNames.add(key);
+        return true;
+      });
+
+      return success(deduped.map((r) => toCategory(r as unknown as Record<string, unknown>)));
     } catch (err) {
       logger.error(INVENTORY_MODULE, 'Error en getCategories:', err);
       return failure(new AppError(InventoryErrors.CATEGORY_LIST_FAILED, 'Error al listar categorías.'));

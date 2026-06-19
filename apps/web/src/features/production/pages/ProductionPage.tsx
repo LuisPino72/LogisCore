@@ -106,15 +106,15 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
           </div>
         </div>
         {activeTab === 'recipes' && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleCreateRecipe}
-            className="flex items-center gap-1"
-          >
-            <Plus size={16} />
-            <span className="hidden sm:inline">Nueva Receta</span>
-          </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleCreateRecipe}
+              className="flex items-center gap-1"
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">Nueva Receta</span>
+            </Button>
         )}
       </div>
 
