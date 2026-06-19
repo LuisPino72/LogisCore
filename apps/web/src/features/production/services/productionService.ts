@@ -1806,9 +1806,12 @@ async function consumeFifoInternal(
   quantity: number,
   tenantId: string,
 ): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
+  if (!tenantId) {
+    return failure(new AppError('TENANT_REQUIRED', 'No hay tenant en sesión.'));
+  }
   const db = getDb();
   const lots = await db.inventoryLots
-    .where({ productId })
+    .where({ tenantId, productId })
     .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
     .sortBy('createdAt');
 

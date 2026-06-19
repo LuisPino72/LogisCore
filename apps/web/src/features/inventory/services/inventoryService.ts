@@ -796,7 +796,7 @@ export const inventoryService = {
     }
 
     const activeLots = await db.inventoryLots
-      .where({ productId: id })
+      .where({ tenantId, productId: id })
       .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
       .count();
     if (activeLots > 0) {
@@ -1194,7 +1194,7 @@ export const inventoryService = {
             ? preciseRound(input.costTotal / Math.abs(storageQuantity), 4)
             : await (async (): Promise<number> => {
                 const lots = await db.inventoryLots
-                  .where({ productId: input.productId })
+                  .where({ tenantId: input.tenantId, productId: input.productId })
                   .filter((l) => l.costUsdPerUnit !== undefined && l.costUsdPerUnit! > 0)
                   .sortBy('createdAt');
                 return lots.length > 0 ? (lots[lots.length - 1].costUsdPerUnit ?? 0) : 0;
@@ -1293,7 +1293,7 @@ export const inventoryService = {
     }
 
     const lots = await db.inventoryLots
-      .where({ productId })
+      .where({ productId, tenantId: session.tenantId })
       .filter((l) => l.remainingQuantity > 0)
       .sortBy('createdAt');
 
