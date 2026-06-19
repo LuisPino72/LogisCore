@@ -22,7 +22,7 @@ export interface DexieProductPresentation {
   name: string;
   priceUsd: number;
   unitMultiplier: number;
-  stockType: 'shared' | 'independent';
+  stockType: 'shared';
   barcode?: string | null;
   sortOrder: number;
   createdAt?: string | null;

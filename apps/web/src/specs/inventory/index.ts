@@ -55,7 +55,7 @@ export const PresentationSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(100),
   priceUsd: z.number().positive('Precio debe ser mayor a 0'),
   unitMultiplier: z.number().positive('El multiplicador debe ser mayor a 0').default(1),
-  stockType: z.enum(['shared', 'independent']),
+  stockType: z.literal('shared'),
   barcode: z.string().max(50).nullable().optional(),
   sortOrder: z.number().int().default(0),
   createdAt: z.string().nullable().optional(),
