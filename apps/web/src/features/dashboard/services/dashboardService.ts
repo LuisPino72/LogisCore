@@ -14,9 +14,9 @@ import { inventoryService } from '../../inventory/services/inventoryService';
 const CACHE_SUB_KEY = (tenantId: string) => `logiscore_cached_subscription:${tenantId}`;
 const CACHE_EMP_KEY = (tenantId: string) => `logiscore_cached_employee_count:${tenantId}`;
 
-function calcItemCost(quantity: number, costUsdPerUnit: number | undefined): number {
+function calcItemCost(quantity: number, costUsdPerUnit: number | undefined, unitMultiplier: number = 1): number {
   if (!costUsdPerUnit || costUsdPerUnit <= 0) return 0;
-  return quantity * costUsdPerUnit;
+  return quantity * unitMultiplier * costUsdPerUnit;
 }
 
 async function cacheTenantInfo(tenantId: string, info: TenantInfoResponse): Promise<void> {
@@ -255,7 +255,7 @@ export const dashboardService = {
           let totalEarnings = 0;
           for (const item of items) {
             const revenue = item.totalPriceUsd;
-            const cost = calcItemCost(item.quantity, item.costUsdPerUnit);
+            const cost = calcItemCost(item.quantity, item.costUsdPerUnit, item.unitMultiplier);
             totalEarnings += revenue - cost;
           }
           return success(preciseRound(totalEarnings, 2));

@@ -518,7 +518,7 @@ export const posService = {
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     // Identificar items assembly vs normales
-    const assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string }> = [];
+    const assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string; unitMultiplier?: number }> = [];
     const normalItems: typeof items = [];
 
     for (const item of items) {
@@ -534,6 +534,7 @@ export const posService = {
           productName: item.name,
           presentationId: item.presentationId,
           presentationName: item.presentationName,
+          unitMultiplier: item.unitMultiplier ?? 1,
         });
       } else {
         normalItems.push(item);
@@ -781,9 +782,10 @@ export const posService = {
 
         // Crear saleItems para items assembly (consumo de ingredientes dentro de transacción) // AUDIT-FLOW-2-001
         for (const assemblyItem of assemblyItems) {
+          const scaledQuantity = assemblyItem.quantity * (assemblyItem.unitMultiplier ?? 1);
           const result = await productionService.consumeForAssembly(
             assemblyItem.productId,
-            assemblyItem.quantity,
+            scaledQuantity,
             tenantId,
             userId,
             { allowOverride: input.allowOverride }
@@ -818,7 +820,7 @@ export const posService = {
             unit: product.unit,
             presentationId: assemblyItem.presentationId,
             presentationName: assemblyItem.presentationName,
-            unitMultiplier: 1,
+            unitMultiplier: assemblyItem.unitMultiplier ?? 1,
             createdAt: now,
             consumedLots, // AUDIT-012: FIFO restore (ingredient lots consumed)
           });
@@ -1364,7 +1366,8 @@ export const posService = {
               const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
               if (!ingredient) continue;
 
-              const needed = Math.ceil(recipeQtyToStorageBase(line.quantity * item.quantity * wasteMultiplier, line.unit, ingredient.unit));
+              const effectiveQty = item.quantity * (item.unitMultiplier ?? 1);
+              const needed = Math.ceil(recipeQtyToStorageBase(line.quantity * effectiveQty * wasteMultiplier, line.unit, ingredient.unit));
               const previousStock = ingredient.stock;
               // AUDIT-012: usar lo realmente restaurado por lotes si tenemos tracking, sino fallback a `needed`
               const restoredForThisIngredient = hasConsumedLots
