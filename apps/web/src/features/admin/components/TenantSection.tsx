@@ -166,12 +166,12 @@ export function TenantSection({
       className: 'overflow-visible px-1',
       render: (t) => (
         <div className="flex flex-row flex-nowrap gap-1 items-center">
-          <Tooltip content="Ir al local" position="top">
+          <Tooltip content="Ir al local" variant="help" position="top">
             <Button variant="ghost-primary" size="sm" className="min-h-11 admin-ripple" onClick={() => handleNavigateTenant(t.slug)}>
               <Eye size={16} />
             </Button>
           </Tooltip>
-          <Tooltip content="Editar local" position="top">
+          <Tooltip content="Editar local" variant="help" position="top">
             <Button variant="ghost-accent" size="sm" className="min-h-11 admin-ripple" onClick={() => setEditTarget(t)}>
               <Edit2 size={16} />
               <span className="hidden sm:inline"></span>

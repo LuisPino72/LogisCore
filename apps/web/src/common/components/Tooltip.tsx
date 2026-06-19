@@ -5,7 +5,7 @@ export interface TooltipProps {
   content: string;
   children: ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
-  variant?: 'info' | 'warning' | 'help';
+  variant?: 'info' | 'warning' | 'help' | 'danger';
   className?: string;
   delay?: number;
 }
@@ -89,6 +89,7 @@ export function Tooltip({
     info: 'bg-gray-900 text-white',
     warning: 'bg-amber-600 text-white',
     help: 'bg-primary text-white',
+    danger: 'bg-red-600 text-white',
   };
 
   const handleClick = () => {
@@ -104,10 +105,10 @@ export function Tooltip({
     }
   };
 
-  // En dispositivos móviles táctiles (hover: none), los tooltips sobre botones
-  // de acción (info/warning) son molestos y se quedan pegados. Solo permitimos
-  // tooltips interactivos para variantes de ayuda 'help'.
-  if (isMobile && variant !== 'help') {
+  // En mobile solo ocultamos tooltips informativos (info). Los tooltips de
+  // acción (help), advertencia (warning) y destructivos (danger) se muestran
+  // porque son relevantes para la interacción táctil.
+  if (isMobile && variant === 'info') {
     return <>{children}</>;
   }
 

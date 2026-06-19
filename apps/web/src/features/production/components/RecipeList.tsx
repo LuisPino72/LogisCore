@@ -113,7 +113,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                       <Edit3 size={16} />
                     </Button>
                   </Tooltip>
-                  <Tooltip content="Eliminar receta" variant="help">
+                  <Tooltip content="Eliminar receta" variant="danger">
                     <Button
                       variant="ghost-danger"
                       size="sm"

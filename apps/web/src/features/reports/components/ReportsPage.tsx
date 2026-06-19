@@ -445,7 +445,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               ))}
             </Select>
           </div>
-          <Tooltip content="Exportar o imprimir reportes" position="left">
+          <Tooltip content="Exportar o imprimir reportes" variant="help" position="left">
             <ExportButton
               aria-label="Exportar o imprimir reportes"
               summary={summary}

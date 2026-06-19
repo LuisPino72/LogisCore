@@ -107,7 +107,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
               </div>
             </div>
             <div className="flex gap-1">
-              <Tooltip content="Ver historial" position="top">
+              <Tooltip content="Ver historial" variant="help" position="top">
                 <Button
                   variant="ghost-primary"
                   size="sm"
@@ -119,7 +119,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
               </Tooltip>
               {isOwner && (
                 <>
-                  <Tooltip content="Editar" position="top">
+                  <Tooltip content="Editar" variant="help" position="top">
                     <Button
                       variant="ghost-accent"
                       size="sm"
@@ -129,7 +129,7 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
                       <Pencil size={14} />
                     </Button>
                   </Tooltip>
-                  <Tooltip content="Eliminar" position="top">
+                  <Tooltip content="Eliminar" variant="danger" position="top">
                     <Button
                       variant="ghost-danger"
                       size="sm"

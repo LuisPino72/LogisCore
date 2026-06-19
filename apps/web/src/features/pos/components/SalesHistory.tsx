@@ -138,7 +138,7 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
             </Button>
           </Tooltip>
           {canVoid && (
-            <Tooltip content="Anular venta" variant="help">
+            <Tooltip content="Anular venta" variant="warning">
               <Button variant="ghost-danger" size="sm" onClick={() => onVoid(sale.id)} className="p-2" aria-label="Anular venta">
                 <Ban size={16} />
               </Button>

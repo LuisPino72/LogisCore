@@ -73,7 +73,7 @@ export function UserSection({
       render: (u) => (
         <div className="flex gap-1 items-center">
           {u.role === 'owner' && <Badge variant="info">Propietario</Badge>}
-          <Tooltip content="Restablecer contraseña" position="top">
+          <Tooltip content="Restablecer contraseña" variant="help" position="top">
             <Button
               variant="ghost-primary"
               size="sm"
@@ -84,7 +84,7 @@ export function UserSection({
             </Button>
           </Tooltip>
           {u.role !== 'owner' && (
-            <Tooltip content="Eliminar empleado" position="top">
+            <Tooltip content="Eliminar empleado" variant="danger" position="top">
               <Button
                 variant="ghost-danger"
                 size="sm"

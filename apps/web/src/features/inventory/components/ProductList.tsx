@@ -152,7 +152,7 @@ function ProductActions({ product, bulkMode, isOwner, isOnline, selectedForBulk,
           <Edit3 size={15} />
         </Button>
       </Tooltip>
-      <Tooltip content="Eliminar producto" variant="help">
+      <Tooltip content="Eliminar producto" variant="danger">
         <Button variant="ghost-danger" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Eliminar" disabled={!isOnline}>
           <Trash2 size={15} />
         </Button>
