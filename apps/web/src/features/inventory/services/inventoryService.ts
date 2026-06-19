@@ -1213,7 +1213,7 @@ export const inventoryService = {
           await db.inventoryLots.add(lot);
           movementCostUsd = costPerUnit > 0 ? preciseRound(Math.abs(storageQuantity) * costPerUnit, 2) : undefined;
 
-          const productForWac = await db.products.where({ id: input.productId }).first();
+           const productForWac = await db.products.where({ tenantId: input.tenantId, id: input.productId }).first();
           if (productForWac) {
             const previousCostStorage = productForWac.isWeighted
               ? (productForWac.costPrice ?? 0) / 1000

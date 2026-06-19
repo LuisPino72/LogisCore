@@ -1059,7 +1059,7 @@ export const reportsService = {
         const expectedClosingUsd = openingRate > 0
           // AUDIT-014: Per-sale USD total (rate-stable). Suma de cada venta convertida a su propia tasa,
           // no recálculo desde Bs con openingRate (que es incorrecto cuando BCV se actualiza mid-day).
-          ? preciseRound(openingBalanceUsd + totalSalesUsd, 2)
+           ? preciseRound(openingBalanceUsd + totalSalesUsd + (r.collectedDebtBs ?? 0) / closeRate, 2)
           : undefined;
 
         const differenceUsd = (r.differenceBs != null && closeRate > 0)

@@ -79,20 +79,23 @@ async function autoCloseRegister(
       updatedAt: now,
     });
 
-    await syncQueue.enqueue('cash_registers', 'UPDATE', register.id, toSnake({
-      id: register.id,
+    const freshReg = await db.cashRegisters.get(register.id);
+    if (!freshReg) throw new Error('Cash register not found after update');
+
+    await syncQueue.enqueue('cash_registers', 'UPDATE', freshReg.id, toSnake({
+      id: freshReg.id,
       tenant_id: tenantUuid,
       is_open: false,
       closed_by: userId,
       closed_at: now,
       closing_balance_bs: expectedClosingBs,
-      closing_rate: register.openingRate,
+      closing_rate: freshReg.openingRate,
       expected_closing_bs: expectedClosingBs,
       difference_bs: 0,
-      total_sales_count: register.totalSalesCount,
-      total_sales_bs: register.totalSalesBs,
-      total_igtf_bs: register.totalIgtfBs,
-      collected_debt_bs: register.collectedDebtBs ?? 0, // FUGA-1
+      total_sales_count: freshReg.totalSalesCount,
+      total_sales_bs: freshReg.totalSalesBs,
+      total_igtf_bs: freshReg.totalIgtfBs,
+      collected_debt_bs: freshReg.collectedDebtBs ?? 0, // FUGA-1
       updated_at: now,
     } as Record<string, unknown>), tenantId);
 
@@ -1650,8 +1653,11 @@ export const posService = {
           updatedAt: now,
         });
 
-        await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
-          id: cashReg.id,
+        const freshReg = await db.cashRegisters.get(cashReg.id);
+        if (!freshReg) throw new Error('Cash register not found after update');
+
+        await syncQueue.enqueue('cash_registers', 'UPDATE', freshReg.id, toSnake({
+          id: freshReg.id,
           tenant_id: tenantUuid,
           is_open: false,
           closed_by: userId,
@@ -1660,10 +1666,10 @@ export const posService = {
           closing_rate: closingRate,
           expected_closing_bs: expectedClosingBs,
           difference_bs: differenceBs,
-          total_sales_count: cashReg.totalSalesCount,
-          total_sales_bs: cashReg.totalSalesBs,
-          total_igtf_bs: cashReg.totalIgtfBs,
-          collected_debt_bs: cashReg.collectedDebtBs ?? 0, // FUGA-1
+          total_sales_count: freshReg.totalSalesCount,
+          total_sales_bs: freshReg.totalSalesBs,
+          total_igtf_bs: freshReg.totalIgtfBs,
+          collected_debt_bs: freshReg.collectedDebtBs ?? 0, // FUGA-1
           updated_at: now,
         } as unknown as Record<string, unknown>), tenantId);
 

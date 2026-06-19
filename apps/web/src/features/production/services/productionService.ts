@@ -23,7 +23,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema, type CalculateRecipeCostResult } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
-import { calculateConsumptionCost } from './costCalculator';
+import { calculateConsumptionCost, selectFifoLots } from './costCalculator';
 import { requireRole } from '../../auth/services/roleGuard';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { unitToStorageType, convertToStorage } from '../../inventory/types';
@@ -1617,6 +1617,42 @@ export const productionService = {
       if (!expandResult.ok) return expandResult;
       const expandedLines = expandResult.data;
 
+      // Fetch inventory movements for this order to get real FIFO costs
+      // We need the raw movements with costUsd field
+      let movements = await db.inventoryMovements
+        .where({ productionOrderId: orderId })
+        .toArray();
+
+      // Fallback: if no movements with FK, use temporal window (legacy orders)
+      if (movements.length === 0) {
+        const orderDate = order.createdAt;
+        const startDate = new Date(new Date(orderDate).getTime() - 60000).toISOString();
+        const endDate = new Date(new Date(orderDate).getTime() + 60000).toISOString();
+
+        movements = await db.inventoryMovements
+          .where({ tenantId })
+          .filter((m) => {
+            if (m.createdAt < startDate || m.createdAt > endDate) return false;
+            if (m.productId === order.productId && m.type === 'production_output') return true;
+            if (m.type === 'adjustment' && m.reasonType === 'consumo_interno') return true;
+            return false;
+          })
+          .toArray();
+      }
+
+      // Build map of actual FIFO cost per productId from 'consumo_interno' movements
+      // These movements have the real costUsd from FIFO lot consumption
+      const actualCostMap = new Map<string, { totalCostUsd: number; totalQty: number }>();
+      for (const m of movements) {
+        if (m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.costUsd != null && m.quantity !== 0) {
+          const key = m.productId;
+          const existing = actualCostMap.get(key) || { totalCostUsd: 0, totalQty: 0 };
+          existing.totalCostUsd += m.costUsd;
+          existing.totalQty += Math.abs(m.quantity); // quantity is negative for consumption
+          actualCostMap.set(key, existing);
+        }
+      }
+
       const wasteMultiplier = 1 + (recipe.wastePct / 100);
       const ingredientCosts: Array<{
         productId: string;
@@ -1642,11 +1678,21 @@ export const productionService = {
           ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
           : line.quantity * wasteMultiplier;
         const displayUnit = product?.unit || line.unit;
-        // BUG-PROD-001: Pesable products store costPrice per display unit ($/kg, $/lt)
-        // but needed is in storage base (g, ml). Divide by 1000 for weighted products.
-        const costPerStorageUnit = product && product.isWeighted
-          ? (product.costPrice ?? 0) / 1000
-          : (product?.costPrice ?? 0);
+
+        // Use actual FIFO cost from inventory movements if available, otherwise fall back to WAC
+        let costPerStorageUnit: number;
+        const actualCostData = actualCostMap.get(line.productId);
+        if (actualCostData && actualCostData.totalQty > 0) {
+          // Actual FIFO cost per storage unit (g or ml)
+          costPerStorageUnit = actualCostData.totalCostUsd / actualCostData.totalQty;
+        } else {
+          // BUG-PROD-001: Pesable products store costPrice per display unit ($/kg, $/lt)
+          // but needed is in storage base (g, ml). Divide by 1000 for weighted products.
+          costPerStorageUnit = product && product.isWeighted
+            ? (product.costPrice ?? 0) / 1000
+            : (product?.costPrice ?? 0);
+        }
+
         const lineCost = needed * costPerStorageUnit;
         totalCost += lineCost;
 
@@ -1809,37 +1855,32 @@ async function consumeFifoInternal(
     return failure(new AppError('TENANT_REQUIRED', 'No hay tenant en sesión.'));
   }
   const db = getDb();
-  const lots = await db.inventoryLots
-    .where({ tenantId, productId })
-    .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
-    .sortBy('createdAt');
 
-  let toConsume = quantity;
+  // 1. Obtener plan de consumo FIFO (solo lectura, lógica compartida)
+  const planResult = await selectFifoLots(productId, quantity, tenantId);
+  if (!planResult.ok) return planResult;
+  const plan = planResult.data;
+
+  // 2. Aplicar escrituras con optimistic locking (version check)
   const consumed: Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }> = [];
 
-  for (const lot of lots) {
-    if (toConsume <= 0) break;
-
-    const currentLot = await db.inventoryLots.get(lot.id);
+  for (const item of plan) {
+    const currentLot = await db.inventoryLots.get(item.lotId);
     if (!currentLot) continue;
-    if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
+
+    // Optimistic lock: verificar que la versión no haya cambiado desde la lectura
+    if ((currentLot.version ?? 0) !== item.version) {
       return failure(new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto de inventario. Reintente la operación.'));
     }
 
-    const consumeQty = Math.min(currentLot.remainingQuantity, toConsume);
-    const newRemaining = currentLot.remainingQuantity - consumeQty;
+    const newRemaining = currentLot.remainingQuantity - item.quantity;
     const newVersion = (currentLot.version ?? 0) + 1;
-    await db.inventoryLots.update(lot.id, { remainingQuantity: newRemaining, version: newVersion });
-    await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({
-      ...lot, remainingQuantity: newRemaining, version: newVersion,
+    await db.inventoryLots.update(item.lotId, { remainingQuantity: newRemaining, version: newVersion });
+    await syncQueue.enqueue('inventory_lots', 'UPDATE', item.lotId, toSnake({
+      ...currentLot, remainingQuantity: newRemaining, version: newVersion,
     } as unknown as Record<string, unknown>), tenantId);
 
-    consumed.push({ lotId: lot.id, quantity: consumeQty, costUsdPerUnit: lot.costUsdPerUnit });
-    toConsume -= consumeQty;
-  }
-
-  if (toConsume > 0) {
-    return failure(new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Stock insuficiente.'));
+    consumed.push({ lotId: item.lotId, quantity: item.quantity, costUsdPerUnit: item.costUsdPerUnit });
   }
 
   return success(consumed);
