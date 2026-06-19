@@ -817,6 +817,7 @@ export const purchaseService = {
         await db.purchaseOrders.update(order.id, {
           paymentStatus: 'pending',
           paidAmountUsd: 0,
+          dueDate: input.dueDate || undefined,
         });
       });
 

@@ -103,6 +103,7 @@ export const ReceivePurchaseOrderInputSchema = z.object({
       receivedQuantity: z.number().min(0),
     })
   ).min(1),
+  dueDate: z.string().optional(),
 }).strict();
 
 export type ReceivePurchaseOrderInput = z.infer<typeof ReceivePurchaseOrderInputSchema>;
