@@ -106,6 +106,8 @@ export const InventoryMovementSchema = z.object({
   reason: z.string().nullish(),
   reasonType: z.string().nullish(),
   costUsd: z.number().nullish(),
+  productionOrderId: z.string().uuid().nullish(), // FUGA-3
+  consumedLots: z.string().nullish(), // FUGA-3
 });
 
 export type InventoryMovement = z.infer<typeof InventoryMovementSchema>;

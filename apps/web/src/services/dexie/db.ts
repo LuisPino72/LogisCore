@@ -74,6 +74,8 @@ export interface DexieInventoryMovement {
   reason?: string;
   reasonType?: string;
   costUsd?: number;
+  productionOrderId?: string; // FUGA-3
+  consumedLots?: string; // FUGA-3
   createdAt: string;
   deletedAt?: string;
 }

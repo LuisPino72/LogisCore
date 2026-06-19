@@ -1097,6 +1097,8 @@ export const productionService = {
             reasonType: 'consumo_interno',
             costUsd,
             createdAt: now,
+            productionOrderId: orderId, // FUGA-3
+            consumedLots: JSON.stringify(fifoResult.data), // FUGA-3
           };
           await db.inventoryMovements.add(movement);
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
@@ -1206,114 +1208,155 @@ export const productionService = {
         db.inventoryLots, db.recipes, db.recipeLines,
         db.syncQueue, db.outbox,
       ], async (tx) => {
-        // Revert ingredient consumption
-        const recipe = await db.recipes.get(order.recipeId);
-        if (recipe) {
-          const lines = await db.recipeLines
-            .where({ recipeId: order.recipeId })
-            .filter((l) => !l.deletedAt)
-            .toArray();
+        // FUGA-3: Revert ingredient con productionOrderId
+        const ingredientMovements = await db.inventoryMovements
+          .filter((m) => m.productionOrderId === orderId && m.type === 'adjustment' && m.reasonType === 'consumo_interno')
+          .toArray();
 
-          const wasteMultiplier = 1 + (recipe.wastePct / 100);
+        if (ingredientMovements.length > 0) {
+          for (const movement of ingredientMovements) {
+            const product = await db.products.where({ id: movement.productId, tenantId }).first();
+            if (!product) continue;
 
-          for (const line of lines) {
-            // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
-            // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
-            const product = await db.products.where({ id: line.productId, tenantId }).first();
-            const neededInStorage = product
-              ? recipeQtyToStorageBase(line.quantity * order.batchCount * wasteMultiplier, line.unit, product.unit)
-              : line.quantity * order.batchCount * wasteMultiplier;
-            const needed = Math.ceil(neededInStorage);
-            if (product) {
-              const previousStock = product.stock;
-              const newStock = previousStock + needed;
-              await db.products.update(line.productId, { stock: newStock });
-              await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...product, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+            const revertQty = Math.abs(movement.quantity);
+            const previousStock = product.stock;
+            const newStock = previousStock + revertQty;
+            await db.products.update(movement.productId, { stock: newStock });
+            await syncQueue.enqueue('products', 'UPDATE', movement.productId, toSnake({ ...product, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
-              const movementId = generateId();
-              const movement = {
-                id: movementId,
-                tenantId,
-                productId: line.productId,
-                userId: order.createdBy,
-                type: 'adjustment' as const,
-                quantity: needed,
-                previousStock,
-                newStock,
-                reasonType: 'ajuste_manual',
-                createdAt: now,
-              };
-              await db.inventoryMovements.add(movement);
-              await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
+            if (movement.consumedLots) {
+              const consumedLots: Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }> = JSON.parse(movement.consumedLots);
+              for (const cl of consumedLots) {
+                const lot = await db.inventoryLots.get(cl.lotId);
+                if (lot && !lot.deletedAt) {
+                  const newRemaining = (lot.remainingQuantity ?? 0) + cl.quantity;
+                  const newVersion = (lot.version ?? 0) + 1;
+                  await db.inventoryLots.update(cl.lotId, { remainingQuantity: newRemaining, version: newVersion });
+                  await syncQueue.enqueue('inventory_lots', 'UPDATE', cl.lotId, toSnake({
+                    ...lot, remainingQuantity: newRemaining, version: newVersion,
+                  } as unknown as Record<string, unknown>), tenantId);
+                }
+              }
             }
-          }
 
-          // Revert finished product stock if it was produced
-          const finishedProduct = await db.products.where({ id: order.productId, tenantId }).first();
-          if (finishedProduct && order.quantityTarget > 0) {
-            // FUGA-2: Convertir order.quantityTarget (display units) a storage units antes de revertir
-            const storageType = unitToStorageType(finishedProduct.isWeighted, finishedProduct.unit);
-            const quantityTargetInStorage = convertToStorage(order.quantityTarget, storageType);
-            const previousStock = finishedProduct.stock;
-            // DINERO-013 (M3): revertir solo el stock que aún existe (no las unidades ya vendidas).
-            // quantityToRevert = min(stock actual, quantityTargetInStorage). Nunca resta de más.
-            const quantityToRevert = Math.min(previousStock, quantityTargetInStorage);
-            const newStock = Math.max(0, previousStock - quantityToRevert);
-            await db.products.update(order.productId, { stock: newStock });
-            await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...finishedProduct, stock: newStock } as unknown as Record<string, unknown>), tenantId);
-
-            const movementId = generateId();
-            const movement = {
-              id: movementId,
+            const revertMovementId = generateId();
+            const revertMovement = {
+              id: revertMovementId,
               tenantId,
-              productId: order.productId,
+              productId: movement.productId,
               userId: order.createdBy,
               type: 'adjustment' as const,
-              quantity: -quantityToRevert,
+              quantity: revertQty,
               previousStock,
               newStock,
               reasonType: 'ajuste_manual',
               createdAt: now,
+              productionOrderId: orderId, // FUGA-3
             };
-            await db.inventoryMovements.add(movement);
-            await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
+            await db.inventoryMovements.add(revertMovement);
+            await syncQueue.enqueue('inventory_movements', 'CREATE', revertMovementId, toSnake(revertMovement as unknown as Record<string, unknown>), tenantId);
           }
+        } else {
+          const recipe = await db.recipes.get(order.recipeId);
+          if (recipe) {
+            const expandResult = await expandRecipe(order.recipeId, order.batchCount);
+            if (expandResult.ok) {
+              const wasteMultiplier = 1 + (recipe.wastePct / 100);
+              for (const line of expandResult.data) {
+                const product = await db.products.where({ id: line.productId, tenantId }).first();
+                if (!product) continue;
+                const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
+                const needed = Math.ceil(neededInStorage);
+                const previousStock = product.stock;
+                const newStock = previousStock + needed;
+                await db.products.update(line.productId, { stock: newStock });
+                await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...product, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
-          // C4: Revert finished product lot
-          const finishedLots = await db.inventoryLots
+                const revertMovementId = generateId();
+                const revertMovement = {
+                  id: revertMovementId,
+                  tenantId,
+                  productId: line.productId,
+                  userId: order.createdBy,
+                  type: 'adjustment' as const,
+                  quantity: needed,
+                  previousStock,
+                  newStock,
+                  reasonType: 'ajuste_manual',
+                  createdAt: now,
+                };
+                await db.inventoryMovements.add(revertMovement);
+                await syncQueue.enqueue('inventory_movements', 'CREATE', revertMovementId, toSnake(revertMovement as unknown as Record<string, unknown>), tenantId);
+              }
+            }
+          }
+        }
+
+        // Revert finished product stock if it was produced
+        const finishedProduct = await db.products.where({ id: order.productId, tenantId }).first();
+        if (finishedProduct && order.quantityTarget > 0) {
+          // FUGA-2: Convertir order.quantityTarget (display units) a storage units antes de revertir
+          const storageType = unitToStorageType(finishedProduct.isWeighted, finishedProduct.unit);
+          const quantityTargetInStorage = convertToStorage(order.quantityTarget, storageType);
+          const previousStock = finishedProduct.stock;
+          // DINERO-013 (M3): revertir solo el stock que aún existe (no las unidades ya vendidas).
+          // quantityToRevert = min(stock actual, quantityTargetInStorage). Nunca resta de más.
+          const quantityToRevert = Math.min(previousStock, quantityTargetInStorage);
+          const newStock = Math.max(0, previousStock - quantityToRevert);
+          await db.products.update(order.productId, { stock: newStock });
+          await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...finishedProduct, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+
+          const movementId = generateId();
+          const movement = {
+            id: movementId,
+            tenantId,
+            productId: order.productId,
+            userId: order.createdBy,
+            type: 'adjustment' as const,
+            quantity: -quantityToRevert,
+            previousStock,
+            newStock,
+            reasonType: 'ajuste_manual',
+            createdAt: now,
+          };
+          await db.inventoryMovements.add(movement);
+          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
+        }
+
+        // C4: Revert finished product lot
+        const finishedLots = await db.inventoryLots
+          .where({ productId: order.productId })
+          .filter((l) => !l.deletedAt && l.createdAt >= order.createdAt && l.createdAt <= now)
+          .toArray();
+        const lotToRevert = finishedLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        if (lotToRevert && lotToRevert.remainingQuantity === lotToRevert.quantityAdded) {
+          await db.inventoryLots.update(lotToRevert.id, { deletedAt: now, remainingQuantity: 0 });
+          await syncQueue.enqueue('inventory_lots', 'UPDATE', lotToRevert.id, { id: lotToRevert.id, deleted_at: now, remaining_quantity: 0 }, tenantId);
+        }
+
+        // PLAN-115 (CODE-MED-22): recalcular WAC del producto terminado SIEMPRE despues
+        // de revertir, no solo si el lote estaba intacto. Si el lote fue parcialmente
+        // vendido (remainingQuantity < quantityAdded), el bloque se saltaba y WAC quedaba
+        // desactualizado. Ahora el calculo ocurre siempre, leyendo remainingLots tras la
+        // posible baja del lote revertido.
+        {
+          const remainingLots = await db.inventoryLots
             .where({ productId: order.productId })
-            .filter((l) => !l.deletedAt && l.createdAt >= order.createdAt && l.createdAt <= now)
+            .filter((l) => !l.deletedAt)
             .toArray();
-          const lotToRevert = finishedLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-          if (lotToRevert && lotToRevert.remainingQuantity === lotToRevert.quantityAdded) {
-            await db.inventoryLots.update(lotToRevert.id, { deletedAt: now, remainingQuantity: 0 });
-            await syncQueue.enqueue('inventory_lots', 'UPDATE', lotToRevert.id, { id: lotToRevert.id, deleted_at: now, remaining_quantity: 0 }, tenantId);
+          let totalCost = 0;
+          let totalQty = 0;
+          for (const lot of remainingLots) {
+            totalCost += (lot.costUsdPerUnit ?? 0) * lot.remainingQuantity;
+            totalQty += lot.remainingQuantity;
           }
-
-          // PLAN-115 (CODE-MED-22): recalcular WAC del producto terminado SIEMPRE despues
-          // de revertir, no solo si el lote estaba intacto. Si el lote fue parcialmente
-          // vendido (remainingQuantity < quantityAdded), el bloque se saltaba y WAC quedaba
-          // desactualizado. Ahora el calculo ocurre siempre, leyendo remainingLots tras la
-          // posible baja del lote revertido.
-          {
-            const remainingLots = await db.inventoryLots
-              .where({ productId: order.productId })
-              .filter((l) => !l.deletedAt)
-              .toArray();
-            let totalCost = 0;
-            let totalQty = 0;
-            for (const lot of remainingLots) {
-              totalCost += (lot.costUsdPerUnit ?? 0) * lot.remainingQuantity;
-              totalQty += lot.remainingQuantity;
-            }
-            const newCostPrice = totalQty > 0
-              ? preciseRound(totalCost / totalQty, 4)
-              : 0;
-            const productForWac = await db.products.where({ id: order.productId, tenantId }).first();
-            if (productForWac && productForWac.costPrice !== newCostPrice) {
-              await db.products.update(order.productId, { costPrice: newCostPrice });
-              await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...productForWac, costPrice: newCostPrice } as unknown as Record<string, unknown>), tenantId);
-            }
+          const newCostPrice = totalQty > 0
+            ? preciseRound(totalCost / totalQty, 4)
+            : 0;
+          const productForWac = await db.products.where({ id: order.productId, tenantId }).first();
+          if (productForWac && productForWac.costPrice !== newCostPrice) {
+            await db.products.update(order.productId, { costPrice: newCostPrice });
+            await syncQueue.enqueue('products', 'UPDATE', order.productId, toSnake({ ...productForWac, costPrice: newCostPrice } as unknown as Record<string, unknown>), tenantId);
           }
         }
 
