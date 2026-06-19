@@ -1,6 +1,7 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing, type DexieProductPresentation } from '../../../services/dexie/db';
+import { type Transaction } from 'dexie';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
@@ -1185,7 +1186,7 @@ export const inventoryService = {
       const movementId = generateId();
       let movementCostUsd: number | undefined;
 
-      await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async () => {
+      await db.transaction('rw', [db.products, db.inventoryMovements, db.inventoryLots, db.syncQueue, db.outbox], async (tx) => {
         await db.products.update(input.productId, { stock: newStock });
  
         if (storageQuantity > 0) {
@@ -1214,7 +1215,7 @@ export const inventoryService = {
           await db.inventoryLots.add(lot);
           movementCostUsd = costPerUnit > 0 ? preciseRound(Math.abs(storageQuantity) * costPerUnit, 2) : undefined;
         } else {
-          const fifoResult = await this.consumeFifo(input.productId, Math.abs(storageQuantity), input.tenantId);
+          const fifoResult = await this.consumeFifo(input.productId, Math.abs(storageQuantity), input.tenantId, tx);
           if (!fifoResult.ok) throw new AppError('INVENTORY_STOCK_INSUFFICIENT', 'Stock insuficiente para completar el ajuste.');
           movementCostUsd = fifoResult.data.reduce((sum, c) => sum + ((c.costUsdPerUnit ?? 0) * c.quantity), 0);
           movementCostUsd = movementCostUsd > 0 ? preciseRound(movementCostUsd, 2) : undefined;
@@ -1473,22 +1474,28 @@ export const inventoryService = {
     return null;
   },
 
-  async consumeFifo(productId: string, quantity: number, tenantId: string): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
+  async consumeFifo(
+    productId: string,
+    quantity: number,
+    tenantId: string,
+    tx?: Transaction,
+  ): Promise<Result<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>, AppError>> {
     if (!tenantId) {
       return failure(new AppError(InventoryErrors.TENANT_REQUIRED, 'No hay tenant en sesión.'));
     }
     const db = getDb();
-    let lots = await db.inventoryLots
-      .where({ tenantId, productId })
-      .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
-      .sortBy('createdAt');
 
-    // AUDIT-FLOW-6-006: Fallback de lote implícito si no hay inventory_lots pero producto tiene stock.
-    // Antes: error INVENTORY_STOCK_INSUFFICIENT aunque product.stock >= quantity.
-    if (lots.length === 0) {
-      const product = await db.products.where({ tenantId, id: productId }).filter(p => !p.deletedAt).first();
-      if (product && product.stock >= quantity) {
-        const now = new Date().toISOString();
+    const execute = async (): Promise<Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }>> => {
+      let lots = await db.inventoryLots
+        .where({ tenantId, productId })
+        .filter((l) => !l.deletedAt && l.remainingQuantity > 0)
+        .sortBy('createdAt');
+
+      // AUDIT-FLOW-6-006: Fallback de lote implícito
+      if (lots.length === 0) {
+        const product = await db.products.where({ tenantId, id: productId }).filter(p => !p.deletedAt).first();
+        if (product && product.stock >= quantity) {
+          const now = new Date().toISOString();
           const implicitLot = {
             id: generateId(),
             tenantId,
@@ -1502,22 +1509,18 @@ export const inventoryService = {
             updatedAt: now,
             version: 1,
           };
-        await db.transaction('rw', [db.inventoryLots, db.syncQueue], async () => {
           await db.inventoryLots.add(implicitLot as never);
           await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
-        });
-        lots = [implicitLot as never];
+          lots = [implicitLot as never];
+        }
       }
-    }
 
-    let toConsume = quantity;
-    const consumed: Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }> = [];
+      let toConsume = quantity;
+      const consumed: Array<{ lotId: string; quantity: number; costUsdPerUnit?: number }> = [];
 
-    await db.transaction('rw', [db.inventoryLots, db.syncQueue], async () => {
       for (const lot of lots) {
         if (toConsume <= 0) break;
 
-        // Optimistic locking: re-read lot just before update and check version
         const currentLot = await db.inventoryLots.get(lot.id);
         if (!currentLot) continue;
         if (currentLot.version !== lot.version) {
@@ -1535,13 +1538,32 @@ export const inventoryService = {
         consumed.push({ lotId: lot.id, quantity: consumeQty, costUsdPerUnit: lot.costUsdPerUnit });
         toConsume -= consumeQty;
       }
-    });
 
-    if (toConsume > 0) {
-      return failure(new AppError(InventoryErrors.INVENTORY_STOCK_INSUFFICIENT, 'Stock insuficiente para completar la operación.'));
+      if (toConsume > 0) {
+        throw new AppError(InventoryErrors.INVENTORY_STOCK_INSUFFICIENT, 'Stock insuficiente para completar la operación.');
+      }
+      return consumed;
+    };
+
+    if (tx) {
+      try {
+        const result = await execute();
+        return success(result);
+      } catch (err) {
+        if (err instanceof AppError) return failure(err);
+        throw err;
+      }
     }
 
-    return success(consumed);
+    return db.transaction('rw', [db.inventoryLots, db.syncQueue], async () => {
+      try {
+        const result = await execute();
+        return success(result);
+      } catch (err) {
+        if (err instanceof AppError) return failure(err);
+        throw err;
+      }
+    });
   },
 
   async getMovementHistory(productId: string, tenantId: string): Promise<Result<InventoryMovement[], AppError>> {
