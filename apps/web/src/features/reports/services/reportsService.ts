@@ -9,6 +9,7 @@ import type { PaymentMethod } from '../../../specs/pos';
 import { logger } from '../../../lib/logger';
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { requireRole } from '../../auth/services/roleGuard';
 import type {
   ReportFilters,
@@ -339,18 +340,26 @@ async function getRateForDate(tenantId: string, date: string): Promise<number> {
     // Silencioso: no hay conexión o no existe el tenant en la nube
   }
 
+  // MED-2: fallback al último rate conocido en el store antes de rendirse
+  const storeRate = useExchangeRateStore.getState().rate;
+  if (storeRate && storeRate > 0) return storeRate;
+
+  console.warn(`[MED-2] getRateForDate: sin tasa para tenant=${tenantId} date=${date}`);
   return 0;
 }
 
 // Module-level cache for exchange rates to avoid N+1 queries
 const rateCache = new Map<string, number>();
 
-async function getRateForDateCached(tenantId: string, date: string): Promise<number> {
+async function getRateForDateCached(tenantId: string, date: string, skipZeroCache: boolean = true): Promise<number> {
   if (rateCache.size > 500) rateCache.clear();
   const key = `${tenantId}:${date}`;
   if (rateCache.has(key)) return rateCache.get(key)!;
   const rate = await getRateForDate(tenantId, date);
-  rateCache.set(key, rate);
+  // MED-2: no cachear rate=0 para que próximas llamadas reintenten
+  if (!skipZeroCache || rate > 0) {
+    rateCache.set(key, rate);
+  }
   return rate;
 }
 
