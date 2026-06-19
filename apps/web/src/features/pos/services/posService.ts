@@ -64,7 +64,7 @@ async function autoCloseRegister(
   const now = new Date().toISOString();
   const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
   const expectedClosingBs = preciseRound(
-    (register.openingBalanceBs ?? 0) + register.totalSalesBs, 2,
+    (register.openingBalanceBs ?? 0) + register.totalSalesBs + (register.collectedDebtBs ?? 0), 2,
   );
 
   await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
@@ -92,6 +92,7 @@ async function autoCloseRegister(
       total_sales_count: register.totalSalesCount,
       total_sales_bs: register.totalSalesBs,
       total_igtf_bs: register.totalIgtfBs,
+      collected_debt_bs: register.collectedDebtBs ?? 0, // FUGA-1
       updated_at: now,
     } as Record<string, unknown>), tenantId);
 
@@ -194,6 +195,7 @@ export const posService = {
         totalSalesCount: row.totalSalesCount,
         totalSalesBs: row.totalSalesBs,
         totalIgtfBs: row.totalIgtfBs,
+        collectedDebtBs: row.collectedDebtBs ?? 0, // FUGA-1
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         deletedAt: row.deletedAt ?? null,
@@ -242,6 +244,7 @@ export const posService = {
             totalSalesCount: data.total_sales_count as number,
             totalSalesBs: data.total_sales_bs as number,
             totalIgtfBs: data.total_igtf_bs as number,
+            collectedDebtBs: (data.collected_debt_bs as number) ?? 0, // FUGA-1
             createdAt: data.created_at as string,
             updatedAt: data.updated_at as string,
           };
@@ -258,6 +261,7 @@ export const posService = {
         expectedClosingBs: row.expectedClosingBs, differenceBs: row.differenceBs,
         totalSalesCount: row.totalSalesCount, totalSalesBs: row.totalSalesBs,
         totalIgtfBs: row.totalIgtfBs,
+        collectedDebtBs: row.collectedDebtBs ?? 0, // FUGA-1
         createdAt: row.createdAt, updatedAt: row.updatedAt,
         deletedAt: row.deletedAt ?? null,
       });
@@ -1012,6 +1016,7 @@ export const posService = {
           totalSalesCount: remoteRegister.total_sales_count as number,
           totalSalesBs: remoteRegister.total_sales_bs as number,
           totalIgtfBs: remoteRegister.total_igtf_bs as number,
+          collectedDebtBs: (remoteRegister.collected_debt_bs as number) ?? 0, // FUGA-1
           createdAt: remoteRegister.created_at as string,
           updatedAt: remoteRegister.updated_at as string,
         });
@@ -1044,6 +1049,7 @@ export const posService = {
         totalSalesCount: 0,
         totalSalesBs: 0,
         totalIgtfBs: 0,
+        collectedDebtBs: 0, // FUGA-1
         createdAt: now,
         updatedAt: now,
       };
@@ -1062,6 +1068,7 @@ export const posService = {
           total_sales_count: 0,
           total_sales_bs: 0,
           total_igtf_bs: 0,
+          collected_debt_bs: 0, // FUGA-1
           created_at: now,
           updated_at: now,
         } as unknown as Record<string, unknown>), tenantId);
@@ -1611,7 +1618,7 @@ export const posService = {
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     const expectedClosingBs = preciseRound(
-      (cashReg.openingBalanceBs ?? 0) + cashReg.totalSalesBs,
+      (cashReg.openingBalanceBs ?? 0) + cashReg.totalSalesBs + (cashReg.collectedDebtBs ?? 0),
       2,
     );
 
@@ -1645,6 +1652,7 @@ export const posService = {
           total_sales_count: cashReg.totalSalesCount,
           total_sales_bs: cashReg.totalSalesBs,
           total_igtf_bs: cashReg.totalIgtfBs,
+          collected_debt_bs: cashReg.collectedDebtBs ?? 0, // FUGA-1
           updated_at: now,
         } as unknown as Record<string, unknown>), tenantId);
 
@@ -1685,6 +1693,7 @@ export const posService = {
         totalSalesCount: cashReg.totalSalesCount,
         totalSalesBs: cashReg.totalSalesBs,
         totalIgtfBs: cashReg.totalIgtfBs,
+        collectedDebtBs: cashReg.collectedDebtBs ?? 0, // FUGA-1
         createdAt: cashReg.createdAt,
         updatedAt: now,
         deletedAt: null,

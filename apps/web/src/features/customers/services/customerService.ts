@@ -693,7 +693,7 @@ export const customerService = {
       // Determinar si es cobro total
       const isFullPayment = newBalance <= 0.01; // Tolerancia de 1 céntimo
 
-      await db.transaction('rw', [db.creditPayments, db.customers, db.sales, db.syncQueue, db.outbox], async (tx) => {
+      await db.transaction('rw', [db.creditPayments, db.customers, db.sales, db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
         // Crear registro de pago
         await tx.creditPayments.add({
           id: paymentId,
@@ -747,6 +747,25 @@ export const customerService = {
             id: saleId,
             credit_collected: true,
             collected_at: now,
+          } as unknown as Record<string, unknown>), tenantId);
+        }
+
+        // FUGA-1: Actualizar caja con el cobro (Opción C: campo separado collectedDebtBs)
+        const openReg = await tx.cashRegisters
+          .where({ tenantId })
+          .filter((r) => !r.deletedAt && r.isOpen)
+          .first();
+        if (openReg) {
+          const newCollectedDebtBs = preciseRound((openReg.collectedDebtBs ?? 0) + amountBs, 2);
+          await tx.cashRegisters.update(openReg.id, {
+            collectedDebtBs: newCollectedDebtBs,
+            updatedAt: now,
+          });
+          await syncQueue.enqueue('cash_registers', 'UPDATE', openReg.id, toSnake({
+            id: openReg.id,
+            tenant_id: tenantUuid,
+            collected_debt_bs: newCollectedDebtBs,
+            updated_at: now,
           } as unknown as Record<string, unknown>), tenantId);
         }
 

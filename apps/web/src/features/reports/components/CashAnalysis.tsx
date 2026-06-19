@@ -172,6 +172,9 @@ export function CashAnalysis({ data, loading }: CashAnalysisProps) {
 
               <div className="flex items-center gap-4 text-xs text-gray-700 pt-1 border-t border-gray-100">
                 <span>{reg.totalSalesCount} transacciones</span>
+                {reg.collectedDebtBs > 0 && (
+                  <span className="text-success">Cobro deudas: {formatBs(reg.collectedDebtBs)}</span>
+                )}
               </div>
             </div>
           </Card>

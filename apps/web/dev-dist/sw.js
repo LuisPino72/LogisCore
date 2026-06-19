@@ -81,7 +81,7 @@ define(['./workbox-16ad23c7'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "/index.html",
-    "revision": "0.egsc7s5hvnc"
+    "revision": "0.bcs1jslggek"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
@@ -93,7 +93,7 @@ define(['./workbox-16ad23c7'], (function (workbox) { 'use strict';
       maxEntries: 200,
       maxAgeSeconds: 2592000
     }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
+      statuses: [200]
     })]
   }), 'GET');
 

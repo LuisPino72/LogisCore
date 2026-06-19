@@ -626,6 +626,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         currentSalesCount={cashRegister?.totalSalesCount ?? 0}
         currentSalesBs={cashRegister?.totalSalesBs ?? 0}
         currentIgtfBs={cashRegister?.totalIgtfBs ?? 0}
+        collectedDebtBs={cashRegister?.collectedDebtBs ?? 0}
         openingBalanceBs={cashRegister?.openingBalanceBs ?? 0}
         exchangeRate={exchangeRate}
         onOpenCash={handleCashOpenSubmit}

@@ -161,6 +161,7 @@ export interface DexieCashRegister {
   totalSalesCount: number;
   totalSalesBs: number;
   totalIgtfBs: number;
+  collectedDebtBs: number; // FUGA-1: Cobros de deuda acumulados en caja
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null; // POS-002 (M-1): acepta null también para alinear con schema
@@ -480,6 +481,8 @@ export class LogisCoreDB extends Dexie {
     });
     // PLAN-PRODUCTION-COST: v24 — add totalCost, costPerUnit to productionOrders (no index needed)
     this.version(24).stores({});
+    // FUGA-1: v25 — add collectedDebtBs to cashRegisters (no index needed, default 0)
+    this.version(25).stores({});
   }
 }
 

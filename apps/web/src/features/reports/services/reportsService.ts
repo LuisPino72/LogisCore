@@ -940,6 +940,7 @@ export const reportsService = {
               totalSalesCount: Number(r.total_sales_count) || 0,
               totalSalesBs: Number(r.total_sales_bs) || 0,
               totalIgtfBs: Number(r.total_igtf_bs) || 0,
+              collectedDebtBs: Number(r.collected_debt_bs) || 0, // FUGA-1
               createdAt: r.created_at as string,
               updatedAt: r.updated_at as string,
             });
@@ -1072,6 +1073,7 @@ export const reportsService = {
           totalSalesCount: r.totalSalesCount,
           totalSalesBs: r.totalSalesBs,
           totalSalesUsd,
+          collectedDebtBs: r.collectedDebtBs ?? 0,
           status: r.isOpen ? 'open' : 'closed',
         };
       });

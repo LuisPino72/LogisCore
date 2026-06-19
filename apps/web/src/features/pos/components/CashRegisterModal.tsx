@@ -13,6 +13,7 @@ interface CashRegisterModalProps {
   currentSalesCount: number;
   currentSalesBs: number;
   currentIgtfBs: number;
+  collectedDebtBs: number;
   openingBalanceBs: number | null;
   exchangeRate: number | null;
   onOpenCash: (balance: number) => Promise<Result<void, AppError>>;
@@ -28,6 +29,7 @@ export function CashRegisterModal({
   mode,
   currentSalesCount,
   currentSalesBs,
+  collectedDebtBs,
   openingBalanceBs,
   exchangeRate,
   onOpenCash,
@@ -70,7 +72,7 @@ export function CashRegisterModal({
     }
   };
 
-  const expectedClosing = (openingBalanceBs ?? 0) + currentSalesBs;
+  const expectedClosing = (openingBalanceBs ?? 0) + currentSalesBs + collectedDebtBs;
 
   // POS-002 (m-22): preview live de diferencia al cerrar caja
   const differencePreview = useMemo(() => {

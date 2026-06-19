@@ -104,6 +104,7 @@ export const CashRegisterSchema = z.object({
   totalSalesCount: z.number().int().min(0),
   totalSalesBs: z.number().min(0),
   totalIgtfBs: z.number().min(0),
+  collectedDebtBs: z.number().min(0).default(0), // FUGA-1: Cobros de deuda acumulados en caja
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
   deletedAt: isoDateTime.nullable().optional(), // POS-002 (M-1): acepta null | undefined para Dexie

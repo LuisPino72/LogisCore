@@ -105,6 +105,7 @@ export function cashRegisterFromSupabase(raw: SupabaseCashRegister, tenantId: st
       totalSalesCount: raw.total_sales_count,
       totalSalesBs: raw.total_sales_bs,
       totalIgtfBs: raw.total_igtf_bs,
+      collectedDebtBs: raw.collected_debt_bs ?? 0, // FUGA-1
       createdAt: raw.created_at,
       updatedAt: raw.updated_at,
       deletedAt: raw.deleted_at,

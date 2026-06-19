@@ -113,6 +113,7 @@ export interface CashRegisterSummaryData {
   totalSalesCount: number;
   totalSalesBs: number;
   totalSalesUsd: number;
+  collectedDebtBs: number;
   status: 'open' | 'closed';
 }
 
