@@ -30,6 +30,11 @@ function toSupplier(raw: Record<string, unknown>): Supplier {
     name: raw.name as string,
     rif: raw.rif as string | undefined,
     phone: raw.phone as string | undefined,
+    balance: (raw.balance as number) ?? 0,
+    creditLimit: raw.creditLimit as number | undefined,
+    notes: raw.notes as string | undefined,
+    address: raw.address as string | undefined,
+    paymentTerms: raw.paymentTerms as string | undefined,
     createdAt: raw.createdAt as string,
     deletedAt: raw.deletedAt as string | undefined,
   };
@@ -46,6 +51,10 @@ function toOrder(raw: Record<string, unknown>): PurchaseOrder {
     createdAt: raw.createdAt as string,
     updatedAt: raw.updatedAt as string,
     deletedAt: raw.deletedAt as string | undefined,
+    paymentStatus: raw.paymentStatus as PurchaseOrder['paymentStatus'],
+    dueDate: raw.dueDate as string | undefined,
+    paidAt: raw.paidAt as string | undefined,
+    paidAmountUsd: raw.paidAmountUsd as number | undefined,
   };
 }
 
@@ -112,6 +121,7 @@ export const purchaseService = {
       name: parsed.data.name.trim(),
       rif: parsed.data.rif?.toUpperCase() || undefined,
       phone: parsed.data.phone?.trim() || undefined,
+      balance: 0,
       createdAt: now,
     };
 
@@ -259,6 +269,7 @@ export const purchaseService = {
             tenantId,
             name: s.name,
             phone: s.phone,
+            balance: Number(s.balance) || 0,
             createdAt: s.created_at,
             updatedAt: s.updated_at ?? s.created_at,
           });
@@ -647,6 +658,7 @@ export const purchaseService = {
         db.syncQueue,
         db.outbox,
         db.expenses,
+        db.suppliers,
       ], async () => {
         for (const rec of input.items) {
           // P3: Re-leer item dentro de la transacción para evitar doble recepción
@@ -780,7 +792,7 @@ export const purchaseService = {
               description: `Compra orden #${order.id.slice(0, 8)}`,
               date: today,
               isRecurring: false,
-              status: 'paid',
+              status: 'pending',
               createdAt: now,
               updatedAt: now,
               purchaseOrderId: id, // PLAN-113 (C2): FK a purchase_orders para idempotencia
@@ -792,6 +804,20 @@ export const purchaseService = {
             await outboxService.enqueue('EXPENSE.CREATED', PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
           }
         }
+
+        const supplierRec = await db.suppliers.get(order.supplierId);
+        if (supplierRec) {
+          const newBalance = preciseRound((supplierRec.balance || 0) + totalReceivedUsd, 2);
+          await db.suppliers.update(order.supplierId, { balance: newBalance });
+          await syncQueue.enqueue('suppliers', 'UPDATE', order.supplierId, toSnake({
+            ...supplierRec,
+            balance: newBalance,
+          } as unknown as Record<string, unknown>), tenantId);
+        }
+        await db.purchaseOrders.update(order.id, {
+          paymentStatus: 'pending',
+          paidAmountUsd: 0,
+        });
       });
 
       await logAuditEventOnly({
@@ -871,6 +897,9 @@ export const purchaseService = {
             createdBy: o.created_by,
             createdAt: o.created_at,
             updatedAt: o.updated_at,
+            paymentStatus: o.payment_status,
+            paidAt: o.paid_at,
+            paidAmountUsd: o.paid_amount_usd ? Number(o.paid_amount_usd) : undefined,
           });
         }
 
@@ -977,5 +1006,152 @@ export const purchaseService = {
       logger.error(PURCHASES_MODULE, 'Error en getPriceHistory:', err);
       return failure(new AppError('PRICE_HISTORY_ERROR', 'Error al obtener historial de precios.'));
     }
+  },
+
+  async paySupplierDebt(
+    supplierId: string,
+    purchaseOrderId: string,
+    amountUsd: number,
+    paymentMethod: string,
+    tenantId: string,
+    exchangeRate: number,
+    reference?: string,
+    notes?: string,
+  ): Promise<Result<{ paymentId: string; newBalance: number; newOrderPaidAmount: number }, AppError>> {
+    const db = getDb();
+    const now = new Date().toISOString();
+    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+
+    if (amountUsd <= 0) return failure(new AppError('INVALID_AMOUNT', 'El monto del pago debe ser mayor a 0.'));
+
+    const supplier = await db.suppliers
+      .where({ id: supplierId })
+      .filter((s) => s.tenantId === tenantId && !s.deletedAt)
+      .first();
+    if (!supplier) return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
+    if ((supplier.balance || 0) <= 0) return failure(new AppError(PurchaseErrors.SUPPLIER_NO_DEBT, 'Este proveedor no tiene deuda pendiente.'));
+    if (amountUsd > (supplier.balance || 0)) return failure(new AppError(PurchaseErrors.PAYMENT_EXCEEDS_DEBT, `El monto ($${amountUsd.toFixed(2)}) excede la deuda ($${supplier.balance.toFixed(2)}).`));
+
+    const order = await db.purchaseOrders
+      .where({ id: purchaseOrderId })
+      .filter((o) => o.tenantId === tenantId && !o.deletedAt)
+      .first();
+    if (!order) return failure(new AppError('ORDER_NOT_FOUND', 'Orden no encontrada.'));
+    if (order.paymentStatus === 'paid') return failure(new AppError(PurchaseErrors.ORDER_ALREADY_PAID, 'Esta orden ya fue pagada completamente.'));
+
+    const orderPendingAmount = (order.totalUsd || 0) - (order.paidAmountUsd || 0);
+    if (amountUsd > orderPendingAmount) return failure(new AppError(PurchaseErrors.PAYMENT_EXCEEDS_ORDER_BALANCE, `El monto ($${amountUsd.toFixed(2)}) excede el saldo pendiente de la orden ($${orderPendingAmount.toFixed(2)}).`));
+
+    const paymentId = generateId();
+    const amountBs = preciseRound(amountUsd * exchangeRate, 2);
+    const newBalance = preciseRound(Math.max(0, (supplier.balance || 0) - amountUsd), 2);
+    const newOrderPaidAmount = preciseRound((order.paidAmountUsd || 0) + amountUsd, 2);
+    const isFullPayment = (order.totalUsd || 0) - newOrderPaidAmount <= 0.01;
+
+    try {
+      await db.transaction('rw', [
+        db.supplierPayments, db.suppliers, db.purchaseOrders,
+        db.expenses, db.syncQueue, db.outbox,
+      ], async (tx) => {
+        await tx.table('supplierPayments').add({
+          id: paymentId, tenantId, supplierId, purchaseOrderId,
+          amountUsd: preciseRound(amountUsd, 2), amountBs,
+          paymentMethod, exchangeRate,
+          reference: reference?.trim() || undefined,
+          notes: notes?.trim() || undefined,
+          createdAt: now,
+        });
+
+        await tx.table('suppliers').update(supplierId, {
+          balance: isFullPayment ? 0 : newBalance,
+        });
+
+        const updateData: Record<string, unknown> = {
+          paidAmountUsd: newOrderPaidAmount,
+        };
+        if (isFullPayment) {
+          updateData.paymentStatus = 'paid';
+          updateData.paidAt = now;
+        } else {
+          updateData.paymentStatus = 'partially_paid';
+        }
+        await tx.table('purchaseOrders').update(purchaseOrderId, updateData);
+
+        if (isFullPayment) {
+          const expense = await tx.table('expenses')
+            .where({ purchaseOrderId })
+            .filter((e: Record<string, unknown>) => !e.deletedAt)
+            .first();
+          if (expense) {
+            const expenseId = expense.id as string;
+            await tx.table('expenses').update(expenseId, { status: 'paid' });
+            await syncQueue.enqueue('expenses', 'UPDATE', expenseId, toSnake({
+              id: expenseId, status: 'paid', updated_at: now,
+            } as unknown as Record<string, unknown>), tenantId);
+          }
+        }
+
+        await syncQueue.enqueue('supplier_payments', 'CREATE', paymentId, toSnake({
+          id: paymentId,
+          tenant_id: tenantUuid,
+          supplier_id: supplierId,
+          purchase_order_id: purchaseOrderId,
+          amount_usd: preciseRound(amountUsd, 2),
+          amount_bs: amountBs,
+          payment_method: paymentMethod,
+          exchange_rate: exchangeRate,
+          reference: reference?.trim() || null,
+          notes: notes?.trim() || null,
+          created_at: now,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        await syncQueue.enqueue('suppliers', 'UPDATE', supplierId, toSnake({
+          id: supplierId,
+          balance: isFullPayment ? 0 : newBalance,
+          updated_at: now,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        await syncQueue.enqueue('purchase_orders', 'UPDATE', purchaseOrderId, toSnake({
+          id: purchaseOrderId,
+          payment_status: isFullPayment ? 'paid' : 'partially_paid',
+          paid_at: isFullPayment ? now : null,
+          paid_amount_usd: newOrderPaidAmount,
+        } as unknown as Record<string, unknown>), tenantId);
+
+        await outboxService.enqueue('SUPPLIER.PAYMENT_CREATED', PURCHASES_MODULE, {
+          supplierId, purchaseOrderId, paymentId,
+          amountUsd: preciseRound(amountUsd, 2),
+          tenantSlug: tenantId,
+        }, tx);
+
+        if (isFullPayment) {
+          await outboxService.enqueue('EXPENSE.UPDATED', PURCHASES_MODULE, {
+            purchaseOrderId, status: 'paid',
+          }, tx);
+        }
+      });
+
+      await logAuditEventOnly({
+        eventName: 'SUPPLIER.PAYMENT_CREATED',
+        module: PURCHASES_MODULE,
+        payload: { supplierId, purchaseOrderId, paymentId, amountUsd: preciseRound(amountUsd, 2) },
+        context: { tenantId },
+      });
+
+      return success({ paymentId, newBalance: isFullPayment ? 0 : newBalance, newOrderPaidAmount });
+    } catch (err) {
+      if (err instanceof AppError) return failure(err);
+      logger.error(PURCHASES_MODULE, 'Error en paySupplierDebt:', err);
+      return failure(new AppError('PAYMENT_FAILED', 'Error al registrar el pago al proveedor.'));
+    }
+  },
+
+  async getPendingPayables(tenantId: string): Promise<number> {
+    const db = getDb();
+    const suppliers = await db.suppliers
+      .where({ tenantId })
+      .filter((s) => !s.deletedAt && (s.balance || 0) > 0)
+      .toArray();
+    return suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
   },
 };

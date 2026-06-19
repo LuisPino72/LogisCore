@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Truck, Trash2, Phone, Pencil, ShoppingCart } from 'lucide-react';
+import { Truck, Trash2, Phone, Pencil, ShoppingCart, DollarSign } from 'lucide-react';
 import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/components';
 import type { Supplier } from '../../../specs/purchases';
 import { getInitials } from '../../../lib/utils';
+import { formatUsd } from '@/lib/formatBs';
+import { PaySupplierModal } from './PaySupplierModal';
 
 interface SupplierListProps {
   suppliers: Supplier[];
@@ -11,13 +13,15 @@ interface SupplierListProps {
   activeOrdersBySupplier?: Record<string, number>;
   onEdit: (supplier: Supplier) => void;
   onDelete: (id: string, name: string) => void;
+  tenantId: string;
 }
 
 const SUPPLIERS_PAGE_SIZE = 20;
 
-export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySupplier, onEdit, onDelete }: SupplierListProps) {
+export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySupplier, onEdit, onDelete, tenantId }: SupplierListProps) {
   const [page, setPage] = useState(1);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [paySupplierId, setPaySupplierId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
@@ -80,10 +84,22 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
                     <span>{activeOrders}</span>
                   </Badge>
                 )}
+                {(s as any).balance > 0 ? (
+                  <Badge variant="danger" dot>{formatUsd((s as any).balance)}</Badge>
+                ) : (
+                  <Badge variant="success">$0</Badge>
+                )}
               </div>
             </div>
             {isOwner && (
               <div className="flex gap-1">
+                {(s as any).balance > 0 && (
+                  <Tooltip content="Pagar" variant="help">
+                    <Button variant="primary" size="sm" onClick={() => setPaySupplierId(s.id)} className="p-1.5 min-w-8 min-h-8">
+                      <DollarSign size={14} />
+                    </Button>
+                  </Tooltip>
+                )}
                 <Tooltip content="Editar" variant="help">
                   <Button variant="ghost-primary" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8">
                     <Pencil size={14} />
@@ -100,6 +116,15 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
         );
       })}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      {paySupplierId && (
+        <PaySupplierModal
+          supplierId={paySupplierId}
+          isOpen={!!paySupplierId}
+          onClose={() => setPaySupplierId(null)}
+          onSuccess={() => setPaySupplierId(null)}
+          tenantId={tenantId}
+        />
+      )}
     </div>
   );
 }

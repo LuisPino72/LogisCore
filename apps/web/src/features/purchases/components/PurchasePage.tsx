@@ -10,6 +10,7 @@ import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { SupplierList } from './SupplierList';
 import { SupplierForm } from './SupplierForm';
 import { OrderList } from './OrderList';
+import { PaySupplierModal } from './PaySupplierModal';
 import { OrderForm } from './OrderForm';
 import { usePurchaseStore } from '../stores/purchaseStore';
 import type { Product } from '../../../specs/inventory';
@@ -46,6 +47,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   const [confirmDeleteSupplier, setConfirmDeleteSupplier] = useState<ConfirmDeleteSupplier | null>(null);
   const [confirmCancelOrder, setConfirmCancelOrder] = useState<{ id: string; name: string } | null>(null);
   const [confirmDeleteOrder, setConfirmDeleteOrder] = useState<{ id: string; name: string } | null>(null);
+  const [payOrder, setPayOrder] = useState<PurchaseOrderWithItems | null>(null);
   const handleStatusFilter = (value: PurchaseOrderStatus | 'all', el: HTMLElement) => {
     saveTabState(activeTab, { statusFilter: value });
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -363,6 +365,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               }}
               onEdit={handleEditOrder}
               onDeleteOrder={(id, name) => setConfirmDeleteOrder({ id, name })}
+              onPayOrder={(order) => setPayOrder(order)}
               onRefresh={refresh}
               tenantId={tenantId}
             />
@@ -382,6 +385,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
               suppliers={fuzzySuppliers}
               loading={loading}
               isOwner={isOwner}
+              tenantId={tenantId}
               activeOrdersBySupplier={orders.reduce((acc, o) => {
                 if (o.status !== 'received' && o.status !== 'cancelled') {
                   acc[o.supplierId] = (acc[o.supplierId] || 0) + 1;
@@ -490,6 +494,16 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
       </div>
     </div>
   </Modal>
+)}
+
+{payOrder && tenantId && (
+  <PaySupplierModal
+    supplierId={payOrder.supplierId}
+    isOpen={!!payOrder}
+    onClose={() => setPayOrder(null)}
+    onSuccess={() => { setPayOrder(null); refresh(); }}
+    tenantId={tenantId}
+  />
 )}
 
       <ModuleOnboarding

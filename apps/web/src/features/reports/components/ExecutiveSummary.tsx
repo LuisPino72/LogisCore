@@ -1,11 +1,14 @@
+import { useState, useEffect } from 'react';
 import { Card, Badge, Tooltip, EmptyState, KpiCard, KpiSkeleton } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, BarChart3, Receipt, Wallet } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, BarChart3, Receipt, Wallet, CreditCard } from 'lucide-react';
 import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { reportsService } from '../services/reportsService';
 
 interface ExecutiveSummaryProps {
   data: ExecutiveSummaryData | null;
   loading: boolean;
+  tenantId: string;
   onKpiClick?: (type: DrillDownType) => void;
 }
 
@@ -18,7 +21,15 @@ function formatDual(bs: number, usd: number): React.ReactNode {
   );
 }
 
-export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummaryProps) {
+export function ExecutiveSummary({ data, loading, tenantId, onKpiClick }: ExecutiveSummaryProps) {
+  const [pendingPayables, setPendingPayables] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (data && tenantId) {
+      reportsService.getPendingPayables(tenantId).then((total) => setPendingPayables(total)).catch(() => {});
+    }
+  }, [data, tenantId]);
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -56,7 +67,7 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
           label="Ventas Totales"
           value={formatDual(data.totalSalesBs, data.totalSalesUsd)}
@@ -148,6 +159,14 @@ export function ExecutiveSummary({ data, loading, onKpiClick }: ExecutiveSummary
           icon={<Wallet size={18} />}
           gradient="amber"
           animationDelay={0.3}
+        />
+        <KpiCard
+          label="Cuentas por Pagar"
+          value={<span className="text-xs sm:text-lg font-bold truncate" style={{ color: (pendingPayables || 0) > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>{formatUsd(pendingPayables ?? 0)}</span>}
+          subtitle={pendingPayables !== null ? 'Total pendiente con proveedores' : 'Cargando...'}
+          icon={<CreditCard size={18} />}
+          gradient={(pendingPayables || 0) > 0 ? 'red' : 'green'}
+          animationDelay={0.35}
         />
       </div>
 

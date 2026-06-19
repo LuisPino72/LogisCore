@@ -37,6 +37,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
       name: String(name).trim(),
       rif: String(rif).trim() ? String(rif).trim().toUpperCase() : undefined,
       phone: String(phone).trim() || undefined,
+      balance: 0,
     };
     const parsed = CreateSupplierInputSchema.safeParse(payload);
     if (!parsed.success) {

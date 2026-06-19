@@ -10,6 +10,11 @@ export const SupplierSchema = z.object({
   // AUDIT-CRUD-012: rif opcional con regex Regla #8 (V/E/J/G/P + 9 dígitos)
   rif: z.string().regex(/^[VJEGP]\d{9}$/i, 'Cédula inválida. Formato: V/E/J/G/P + 9 dígitos.').optional(),
   phone: z.string().max(14).optional(),
+  balance: z.number().nonnegative().default(0),
+  creditLimit: z.number().nonnegative().optional(),
+  notes: z.string().max(200).optional(),
+  address: z.string().max(200).optional(),
+  paymentTerms: z.string().max(50).optional(),
   createdAt: isoDateTime,
   deletedAt: isoDateTime.optional(),
 });
@@ -61,6 +66,10 @@ export const PurchaseOrderSchema = z.object({
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
   deletedAt: isoDateTime.optional(),
+  paymentStatus: z.enum(['pending', 'paid', 'partially_paid', 'overdue']).optional(),
+  dueDate: isoDateTime.optional(),
+  paidAt: isoDateTime.optional(),
+  paidAmountUsd: z.number().nonnegative().optional(),
 });
 
 export type PurchaseOrder = z.infer<typeof PurchaseOrderSchema>;
@@ -97,3 +106,46 @@ export const ReceivePurchaseOrderInputSchema = z.object({
 }).strict();
 
 export type ReceivePurchaseOrderInput = z.infer<typeof ReceivePurchaseOrderInputSchema>;
+
+export const SupplierPaymentMethodSchema = z.enum([
+  'efectivo_bs',
+  'efectivo_usd',
+  'pago_movil',
+  'tarjeta_bs',
+  'tarjeta_usd',
+  'transferencia',
+  'deposito',
+  'cheque',
+  'otro',
+]);
+
+export type SupplierPaymentMethod = z.infer<typeof SupplierPaymentMethodSchema>;
+
+export const PaySupplierInputSchema = z.object({
+  supplierId: z.string().uuid(),
+  purchaseOrderId: z.string().uuid(),
+  amountUsd: z.number().positive('El monto debe ser mayor a 0'),
+  paymentMethod: SupplierPaymentMethodSchema,
+  exchangeRate: z.number().positive(),
+  reference: z.string().max(50).optional(),
+  notes: z.string().max(200).optional(),
+}).strict();
+
+export type PaySupplierInput = z.infer<typeof PaySupplierInputSchema>;
+
+export const SupplierPaymentSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string(),
+  supplierId: z.string().uuid(),
+  purchaseOrderId: z.string().uuid(),
+  amountUsd: z.number().positive(),
+  amountBs: z.number().positive(),
+  paymentMethod: SupplierPaymentMethodSchema,
+  exchangeRate: z.number().positive(),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+  createdAt: isoDateTime,
+  deletedAt: isoDateTime.optional(),
+});
+
+export type SupplierPayment = z.infer<typeof SupplierPaymentSchema>;

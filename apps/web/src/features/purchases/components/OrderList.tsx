@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, CheckCircle, Package, XCircle, Pencil, Trash2, MoreVertical, Eye } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Package, XCircle, Pencil, Trash2, MoreVertical, Eye, DollarSign } from 'lucide-react';
 import { Button, Badge, EmptyState, Modal, Dropdown, Pagination } from '../../../common/components';
 import { cn } from '../../../lib/utils';
 import type { PurchaseOrderWithItems, PurchaseOrderStatus, PurchaseOrderItem } from '../../../specs/purchases';
@@ -29,6 +29,7 @@ interface OrderListProps {
   onCancel: (id: string, tenantId: string) => void;
   onEdit: (order: PurchaseOrderWithItems) => void;
   onDeleteOrder: (id: string, name: string) => void;
+  onPayOrder: (order: PurchaseOrderWithItems) => void;
   onRefresh: () => void;
   tenantId: string;
 }
@@ -131,7 +132,7 @@ function OrderDetailModal({ order, isOpen, onClose }: { order: PurchaseOrderWith
 
 const ORDERS_PAGE_SIZE = 20;
 
-export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onReceive, onCancel, onEdit, onDeleteOrder, tenantId }: OrderListProps) {
+export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onReceive, onCancel, onEdit, onDeleteOrder, onPayOrder, tenantId }: OrderListProps) {
   const [receiveOrderId, setReceiveOrderId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<PurchaseOrderWithItems | null>(null);
@@ -199,6 +200,18 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <StatusBadge status={order.status} />
+                    {(order as any).paymentStatus === 'paid' && (
+                      <Badge variant="success" dot>Pagada</Badge>
+                    )}
+                    {(order as any).paymentStatus === 'partially_paid' && (
+                      <Badge variant="info" dot>Pago Parcial</Badge>
+                    )}
+                    {(order as any).paymentStatus === 'pending' && (
+                      <Badge variant="warning" dot>Pendiente</Badge>
+                    )}
+                    {(order as any).paymentStatus === 'overdue' && (
+                      <Badge variant="danger" dot>Vencida</Badge>
+                    )}
                     <span className="text-xs text-text-secondary">{formatDate(order.createdAt)}</span>
                   </div>
                   <p className="text-sm font-semibold text-gray-800 wrap-break-word mt-0.5">{order.supplierName || 'Sin proveedor'}</p>
@@ -272,6 +285,12 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
                     {(order.status === 'draft' || order.status === 'confirmed') && (
                       <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger" disabled={!isOnline} aria-label="Cancelar orden">
                         <XCircle size={14} />
+                      </Button>
+                    )}
+                    {(order.status === 'received' || order.status === 'partially_received') && (order as any).paymentStatus !== 'paid' && (
+                      <Button variant="primary" size="sm" onClick={() => onPayOrder(order)} disabled={!isOnline}>
+                        <DollarSign size={14} />
+                        <span className="ml-1">Pagar</span>
                       </Button>
                     )}
                     {order.status === 'cancelled' && (

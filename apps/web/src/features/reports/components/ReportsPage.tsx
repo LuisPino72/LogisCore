@@ -550,7 +550,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         <div className={`print-section ${activeTab !== 'summary' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
             <div className="animate-report-fade-in">
-              <ExecutiveSummary data={summary} loading={loading} onKpiClick={openDrillDown} />
+              <ExecutiveSummary data={summary} loading={loading} tenantId={tenantId ?? ''} onKpiClick={openDrillDown} />
             </div>
             <div className="animate-report-fade-in">
               <ExpenseBreakdownChart data={expenseBreakdown} loading={loading} />

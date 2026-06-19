@@ -225,6 +225,11 @@ export interface DexieSupplier {
   name: string;
   rif?: string;
   phone?: string;
+  balance: number;
+  creditLimit?: number;
+  notes?: string;
+  address?: string;
+  paymentTerms?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -256,6 +261,10 @@ export interface DexiePurchaseOrder {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  paymentStatus?: string;
+  dueDate?: string;
+  paidAt?: string;
+  paidAmountUsd?: number;
 }
 
 export interface DexiePurchaseOrderItem {
@@ -366,6 +375,21 @@ export interface DexieRolePermission {
   createdAt: string;
 }
 
+export interface DexieSupplierPayment {
+  id: string;
+  tenantId: string;
+  supplierId: string;
+  purchaseOrderId: string;
+  amountUsd: number;
+  amountBs: number;
+  paymentMethod: string;
+  exchangeRate: number;
+  reference?: string;
+  notes?: string;
+  createdAt: string;
+  deletedAt?: string;
+}
+
 export interface DexieCreditPayment {
   id: string;
   tenantId: string;
@@ -409,6 +433,7 @@ export class LogisCoreDB extends Dexie {
   productionOrders!: Table<DexieProductionOrder, string>;
   rolePermissions!: Table<DexieRolePermission, string>;
   creditPayments!: Table<DexieCreditPayment, string>;
+  supplierPayments!: Table<DexieSupplierPayment, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -493,6 +518,27 @@ export class LogisCoreDB extends Dexie {
     });
     // MED-10: v27 — add cashRegisterId to sales (no new index needed, queried by tenantId+id)
     this.version(27).stores({});
+    // MED-8: v28 — Cuentas por Pagar (proveedores) — tabla supplierPayments + campos en suppliers y purchaseOrders
+    this.version(28).stores({
+      supplierPayments: 'id, tenantId, supplierId, purchaseOrderId, [tenantId+supplierId], [tenantId+purchaseOrderId]',
+    }).upgrade(async (tx) => {
+      const orders = await tx.table('purchaseOrders')
+        .where('status')
+        .anyOf('received', 'partially_received')
+        .toArray();
+      for (const order of orders) {
+        const items = await tx.table('purchaseOrderItems')
+          .where('orderId')
+          .equals(order.id)
+          .toArray();
+        const totalUsd = items.reduce((sum, item) => sum + (item.totalUsd || 0), 0);
+        await tx.table('purchaseOrders').update(order.id, {
+          paymentStatus: 'paid',
+          paidAmountUsd: totalUsd,
+          paidAt: order.updatedAt || order.createdAt,
+        });
+      }
+    });
   }
 }
 

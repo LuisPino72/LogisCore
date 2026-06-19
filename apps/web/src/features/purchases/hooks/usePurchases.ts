@@ -24,6 +24,9 @@ export function usePurchases(tenantId: string | null) {
   const confirmOrder = usePurchaseStore((s) => s.confirmOrder);
   const receiveOrder = usePurchaseStore((s) => s.receiveOrder);
   const cancelOrder = usePurchaseStore((s) => s.cancelOrder);
+  const paySupplier = usePurchaseStore((s) => s.paySupplier);
+  const pendingPayables = usePurchaseStore((s) => s.pendingPayables);
+  const fetchPendingPayables = usePurchaseStore((s) => s.fetchPendingPayables);
   const session = useAuthStore((s) => s.session);
   const initialFetchDone = useRef(false);
 
@@ -79,6 +82,9 @@ export function usePurchases(tenantId: string | null) {
     confirmOrder,
     receiveOrder,
     cancelOrder,
+    paySupplier,
+    pendingPayables,
+    fetchPendingPayables,
     refresh,
     userId: session?.userId,
     role: session?.role,

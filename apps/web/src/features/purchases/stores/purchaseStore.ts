@@ -16,6 +16,7 @@ interface PurchaseStore {
   error: string | null;
   activeTab: TabKey;
   tabStates: Record<TabKey, TabState>;
+  pendingPayables: number;
   setActiveTab: (tab: TabKey) => void;
   saveTabState: (tab: TabKey, state: Partial<TabState>) => void;
   fetchSuppliers: (tenantId: string, silent?: boolean) => Promise<void>;
@@ -32,6 +33,8 @@ interface PurchaseStore {
   confirmOrder: (id: string, tenantId: string) => Promise<boolean>;
   receiveOrder: (id: string, input: ReceivePurchaseOrderInput, tenantId: string, userId: string) => Promise<boolean>;
   cancelOrder: (id: string, tenantId: string) => Promise<boolean>;
+  paySupplier: (supplierId: string, purchaseOrderId: string, amountUsd: number, paymentMethod: string, tenantId: string, exchangeRate: number, reference?: string, notes?: string) => Promise<{ paymentId: string; newBalance: number; newOrderPaidAmount: number } | null>;
+  fetchPendingPayables: (tenantId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -45,6 +48,7 @@ const initialState = {
     ordenes: { ...DEFAULT_TAB_STATE },
     proveedores: { ...DEFAULT_TAB_STATE },
   },
+  pendingPayables: 0,
 };
 
 export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
@@ -198,6 +202,25 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     }
     set({ loading: false, error: result.error.message });
     return false;
+  },
+
+  paySupplier: async (supplierId, purchaseOrderId, amountUsd, paymentMethod, tenantId, exchangeRate, reference, notes) => {
+    set({ loading: true, error: null });
+    const result = await purchaseService.paySupplierDebt(supplierId, purchaseOrderId, amountUsd, paymentMethod, tenantId, exchangeRate, reference, notes);
+    if (result.ok) {
+      await Promise.all([
+        get().fetchSuppliers(tenantId),
+        get().fetchOrders(tenantId),
+      ]);
+      return result.data;
+    }
+    set({ loading: false, error: result.error.message });
+    return null;
+  },
+
+  fetchPendingPayables: async (tenantId) => {
+    const total = await purchaseService.getPendingPayables(tenantId);
+    set({ pendingPayables: total });
   },
 
   reset: () => set(initialState),

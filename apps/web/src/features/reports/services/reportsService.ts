@@ -1769,6 +1769,15 @@ export const reportsService = {
     }
   },
 
+  async getPendingPayables(tenantId: string): Promise<number> {
+    const db = getDb();
+    const suppliers = await db.suppliers
+      .where({ tenantId })
+      .filter((s) => !s.deletedAt && (s.balance || 0) > 0)
+      .toArray();
+    return suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
+  },
+
   async getRecipeProfitability(tenantId: string, filters: ReportFilters): Promise<Result<RecipeProfitabilityItem[], AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
     if (!tenantCheck.success) {
