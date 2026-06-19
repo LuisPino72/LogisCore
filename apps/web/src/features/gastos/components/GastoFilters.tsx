@@ -1,5 +1,5 @@
 import { Input, SearchInput, SearchableSelect } from '@/common/components';
-import { EXPENSE_CATEGORIES, type GastoFiltersState } from '../types';
+import { UI_EXPENSE_CATEGORIES, type GastoFiltersState } from '../types';
 
 interface GastoFiltersProps {
   filters: GastoFiltersState;
@@ -27,9 +27,9 @@ export function GastoFilters({ filters, onChange }: GastoFiltersProps) {
           searchPlaceholder="Buscar..."
           options={[
             { value: 'all', label: 'Todas' },
-            ...EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat })),
+            ...UI_EXPENSE_CATEGORIES.map((cat) => ({ value: cat, label: cat })),
           ]}
-          hideSearch={EXPENSE_CATEGORIES.length <= 10}
+          hideSearch={UI_EXPENSE_CATEGORIES.length <= 10}
           aria-label="Categoría"
           className="transition-all duration-200 hover:border-primary/30"
         />

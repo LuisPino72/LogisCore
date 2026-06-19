@@ -118,6 +118,8 @@ export interface DexieSale {
   igtfUsd: number;
   totalUsd: number;
   discountUsd?: number;
+  // MED-10: FK a cashRegister para voidSale preciso
+  cashRegisterId?: string;
   // Sistema de crédito (fiado)
   isCreditSale?: boolean;
   creditCollected?: boolean;
@@ -489,6 +491,8 @@ export class LogisCoreDB extends Dexie {
     this.version(26).stores({
       inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt], productionOrderId',
     });
+    // MED-10: v27 — add cashRegisterId to sales (no new index needed, queried by tenantId+id)
+    this.version(27).stores({});
   }
 }
 

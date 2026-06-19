@@ -10,9 +10,11 @@ interface GastosSummaryProps {
 
 export function GastosSummary({ gastos }: GastosSummaryProps) {
   const summary = useMemo(() => {
-    const total = gastos.reduce((sum, g) => sum + g.amountUsd, 0);
-    const pending = gastos.filter((g) => g.status === 'pending');
-    const paid = gastos.filter((g) => g.status === 'paid');
+    // MED-9: excluir COMPRA_INVENTARIO del resumen (es audit trail automático)
+    const filtered = gastos.filter((g) => g.category !== 'COMPRA_INVENTARIO');
+    const total = filtered.reduce((sum, g) => sum + g.amountUsd, 0);
+    const pending = filtered.filter((g) => g.status === 'pending');
+    const paid = filtered.filter((g) => g.status === 'paid');
 
     const pendingTotal = pending.reduce((sum, g) => sum + g.amountUsd, 0);
     const paidTotal = paid.reduce((sum, g) => sum + g.amountUsd, 0);

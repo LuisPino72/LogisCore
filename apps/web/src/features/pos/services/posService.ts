@@ -597,6 +597,8 @@ export const posService = {
           igtfUsd,
           totalUsd,
           discountUsd: discountUsd > 0 ? discountUsd : undefined,
+          // MED-10: FK para voidSale preciso
+          cashRegisterId: cashReg.id,
           // Sistema de crédito
           isCreditSale,
           creditCollected: false,
@@ -1300,17 +1302,23 @@ export const posService = {
         }
       }
 
-      // Buscar caja que estaba abierta al momento de la venta (no la que está abierta ahora)
-      const saleTs = new Date(sale.createdAt).getTime();
-      const allRegisters = await db.cashRegisters
-        .where({ tenantId })
-        .filter((r) => !r.deletedAt)
-        .toArray();
-      const cashReg = allRegisters.find((r) => {
-        const opened = r.openedAt ? new Date(r.openedAt).getTime() : 0;
-        const closed = r.closedAt ? new Date(r.closedAt).getTime() : Infinity;
-        return opened <= saleTs && (r.isOpen || closed >= saleTs);
-      }) ?? allRegisters.find((r) => r.isOpen);
+      // MED-10: Usar cashRegisterId FK si existe, fallback a ventana temporal
+      let cashReg: DexieCashRegister | undefined;
+      if (sale.cashRegisterId) {
+        cashReg = await db.cashRegisters.where({ tenantId, id: sale.cashRegisterId }).first();
+      }
+      if (!cashReg) {
+        const saleTs = new Date(sale.createdAt).getTime();
+        const allRegisters = await db.cashRegisters
+          .where({ tenantId })
+          .filter((r) => !r.deletedAt)
+          .toArray();
+        cashReg = allRegisters.find((r) => {
+          const opened = r.openedAt ? new Date(r.openedAt).getTime() : 0;
+          const closed = r.closedAt ? new Date(r.closedAt).getTime() : Infinity;
+          return opened <= saleTs && (r.isOpen || closed >= saleTs);
+        }) ?? allRegisters.find((r) => r.isOpen);
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const txTables: any[] = [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.recipes, db.recipeLines, db.syncQueue, db.outbox];

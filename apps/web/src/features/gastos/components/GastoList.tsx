@@ -56,7 +56,12 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
     {
       key: 'category',
       header: 'Categoría',
-      render: (g) => <span className="font-medium text-gray-800">{getExpenseCategoryLabel(g.category)}</span>,
+      render: (g) => (
+        <span className="font-medium text-gray-800 inline-flex items-center gap-1.5">
+          {getExpenseCategoryLabel(g.category)}
+          {g.category === 'COMPRA_INVENTARIO' && <Badge variant="neutral">Sistema</Badge>}
+        </span>
+      ),
     },
     {
       key: 'amountUsd',
@@ -276,7 +281,10 @@ function MobileCard({
 
       {/* Categoría + descripción */}
       <div className="text-center px-4 pb-4">
-        <p className="text-sm font-semibold text-gray-800 leading-snug">{getExpenseCategoryLabel(gasto.category)}</p>
+        <p className="text-sm font-semibold text-gray-800 leading-snug inline-flex items-center gap-1.5">
+          {getExpenseCategoryLabel(gasto.category)}
+          {gasto.category === 'COMPRA_INVENTARIO' && <Badge variant="neutral">Sistema</Badge>}
+        </p>
         {gasto.description && (
           <p className="text-xs text-text-secondary mt-1 line-clamp-2 leading-relaxed">{gasto.description}</p>
         )}

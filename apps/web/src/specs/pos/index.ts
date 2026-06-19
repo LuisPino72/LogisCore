@@ -57,6 +57,8 @@ export const SaleSchema = z.object({
   totalUsd: z.number().min(0),
   discountUsd: z.number().min(0).optional(),
   // Sistema de crédito (fiado)
+  // MED-10: FK a cashRegister para voidSale preciso
+  cashRegisterId: z.string().uuid().optional(),
   isCreditSale: z.boolean().default(false),
   creditCollected: z.boolean().default(false),
   collectedAt: isoDateTime.optional(),
