@@ -277,13 +277,13 @@ export const dashboardService = {
       const saleIdsCloud = cloudSales.map((s) => s.id);
       const { data: cloudItems, error: itemsError } = await supabase
         .from('sale_items')
-        .select('sale_id, quantity, total_price_usd, cost_usd_per_unit')
+        .select('sale_id, quantity, total_price_usd, cost_usd_per_unit, unit_multiplier')
         .eq('tenant_id', tenantUuid)
         .in('sale_id', saleIdsCloud);
 
       if (itemsError || !cloudItems) return success(0);
 
-      interface CloudSaleItem { sale_id: string; quantity: number; total_price_usd: number; cost_usd_per_unit: number | null }
+      interface CloudSaleItem { sale_id: string; quantity: number; total_price_usd: number; cost_usd_per_unit: number | null; unit_multiplier: number | null }
       const itemsMap = new Map<string, CloudSaleItem[]>();
       for (const item of cloudItems) {
         const sId = item.sale_id;
@@ -297,7 +297,7 @@ export const dashboardService = {
         const items = itemsMap.get(sale.id) ?? [];
         for (const item of items) {
           const revenue = item.total_price_usd;
-          const cost = (item.cost_usd_per_unit ?? 0) * item.quantity;
+          const cost = calcItemCost(item.quantity, item.cost_usd_per_unit ?? 0, item.unit_multiplier ?? 1);
           totalEarningsCloud += (revenue - cost);
         }
       }
