@@ -399,8 +399,9 @@ export const reportsService = {
         for (const item of items) {
           const costBs = calcItemCostBs(item.quantity, item.costUsdPerUnit, sale.exchangeRate, item.unitMultiplier);
           const costUsd = item.costUsdPerUnit ? preciseRound(effectiveItemQuantity(item) * item.costUsdPerUnit, 2) : 0;
-          const revenueBs = preciseRound(item.quantity * item.unitPriceUsd * sale.exchangeRate, 2);
-          const revenueUsd = preciseRound(item.quantity * item.unitPriceUsd, 2);
+          // MED-1: revenue sin round por línea, solo al final al acumular
+          const revenueBs = item.quantity * item.unitPriceUsd * sale.exchangeRate;
+          const revenueUsd = item.quantity * item.unitPriceUsd;
           totalRevenueBs += revenueBs;
           totalRevenueUsd += revenueUsd;
           totalCostBs += costBs;

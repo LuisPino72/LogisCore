@@ -36,11 +36,12 @@ export function calculateSaleTotals(
     ? preciseRound(subtotalBs * IGTF_RATE, 2)
     : 0;
 
-  // AUDIT-FLOW-10-010C: subtotalTaxableBs redondeado en cada iteración (Regla #6).
-  const subtotalTaxableBs = items.reduce((sum, item) => {
+  // MED-1: subtotalTaxableBs usa sum-first-then-round (mismo patrón que subtotalBs).
+  const subtotalTaxableUsd = items.reduce((sum, item) => {
     if (item.isTaxable === false) return sum;
-    return preciseRound(sum + item.unitPriceUsd * item.quantity * exchangeRateBs, 2);
+    return sum + item.unitPriceUsd * item.quantity;
   }, 0);
+  const subtotalTaxableBs = exchangeRateBs > 0 ? preciseRound(subtotalTaxableUsd * exchangeRateBs, 2) : 0;
 
   let discountBs = 0;
   let discountUsd = 0;
