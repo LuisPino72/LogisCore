@@ -1,15 +1,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
-import { Modal, Input, Button } from '../../../common/components';
+import { Modal, Input, Button, Select } from '../../../common/components';
 import { CreateEmployeeInputSchema } from '../types';
+import type { Role } from '../../../specs/roles';
 
 interface EmployeeForm {
   email: string;
   password: string;
   name: string;
+  roleId: string;
 }
 
-const emptyEmployee: EmployeeForm = { email: '', password: '', name: '' };
+const emptyEmployee: EmployeeForm = { email: '', password: '', name: '', roleId: '' };
 
 interface AddEmployeeModalProps {
   isOpen: boolean;
@@ -17,9 +19,10 @@ interface AddEmployeeModalProps {
   tenantId: string | null;
   tenantName: string;
   onAddEmployee: (payload: unknown) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
+  roles: Role[];
 }
 
-export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddEmployee }: AddEmployeeModalProps) {
+export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddEmployee, roles }: AddEmployeeModalProps) {
   const [employee, setEmployee] = useState<EmployeeForm>(emptyEmployee);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +45,11 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
     if (!tenantId) return;
     setError(null);
 
-    const parsed = CreateEmployeeInputSchema.safeParse({ ...employee, tenantId });
+    const parsed = CreateEmployeeInputSchema.safeParse({
+      ...employee,
+      tenantId,
+      roleId: employee.roleId || undefined,
+    });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message || 'Datos inválidos.');
       return;
@@ -91,6 +98,20 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           hint="Mín. 8 caracteres: mayúscula, minúscula, número y símbolo"
           autoComplete="new-password"
         />
+        <Select
+          label="Rol"
+          value={employee.roleId}
+          onChange={(e) => setEmployee((p) => ({ ...p, roleId: e.target.value }))}
+        >
+          <option value="">Default (employee)</option>
+          {roles
+            .filter((r) => !r.isSystem || r.name === 'employee')
+            .map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}{r.isSystem ? ' (sistema)' : ''}
+              </option>
+            ))}
+        </Select>
         {error && <p className="text-danger text-sm">{error}</p>}
         <div className="flex gap-2">
           <Button variant="primary" fullWidth onClick={handleAdd} disabled={isSubmitting}>

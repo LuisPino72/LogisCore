@@ -6,6 +6,7 @@ interface UserInput {
   email: string;
   password: string;
   name: string;
+  roleId?: string;
 }
 
 interface RequestBody {
@@ -84,7 +85,8 @@ async function addUsersToTenant(
     .from('user_roles')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', tenantId)
-    .eq('role', 'employee')
+    .not('role', 'eq', 'owner')
+    .not('role', 'eq', 'admin')
     .is('deleted_at', null);
 
   const currentEmployees = count ?? 0;
@@ -116,9 +118,21 @@ async function addUsersToTenant(
       continue;
     }
 
+    // Resolve role name from role_id, default to 'employee'
+    let roleName = 'employee';
+    if (user.roleId) {
+      const { data: roleRow } = await supabaseAdmin
+        .from('roles')
+        .select('name')
+        .eq('id', user.roleId)
+        .is('deleted_at', null)
+        .single();
+      if (roleRow) roleName = roleRow.name;
+    }
+
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
-      .insert({ user_id: authUser.user.id, tenant_id: tenantId, role: 'employee' });
+      .insert({ user_id: authUser.user.id, tenant_id: tenantId, role: roleName });
 
     if (roleError) {
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);

@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Result, AppError } from '@logiscore/core';
 import { KeyRound, Trash2 } from 'lucide-react';
-import { Badge, Button, Card, DataTable, Pagination, Tooltip } from '../../../common/components';
+import { Badge, Button, Card, DataTable, Pagination, Tooltip, Select } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
 import type { UserRole } from '../types';
+import type { Role } from '../../../specs/roles';
 import { SectionHeader } from './SectionHeader';
 import { AddEmployeeModal } from './AddEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
@@ -19,6 +20,8 @@ interface UserSectionProps {
   addEmployee: (payload: unknown) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
   removeEmployee: (userRoleId: string) => Promise<Result<unknown, AppError>>;
   resetPassword: (userId: string, newPassword: string) => Promise<Result<void, AppError>>;
+  updateUserRole: (userRoleId: string, roleId: string) => Promise<Result<void, AppError>>;
+  roles: Role[];
   showAddEmployeeModal: boolean;
   onCloseAddEmployeeModal: () => void;
 }
@@ -30,6 +33,8 @@ export function UserSection({
   addEmployee,
   removeEmployee,
   resetPassword,
+  updateUserRole,
+  roles,
   showAddEmployeeModal,
   onCloseAddEmployeeModal,
 }: UserSectionProps) {
@@ -38,6 +43,7 @@ export function UserSection({
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [resetTarget, setResetTarget] = useState<{ userId: string; email: string; name: string } | null>(null);
+  const [editingRole, setEditingRole] = useState<{ id: string; currentRole: string } | null>(null);
 
   useEffect(() => { setPage(1); }, [users.length]);
 
@@ -62,9 +68,67 @@ export function UserSection({
     return result;
   }, [resetPassword, addToast]);
 
+  const handleRoleChange = useCallback(async (userRoleId: string, roleId: string) => {
+    if (!roleId) return;
+    const roleName = roles.find((r) => r.id === roleId)?.name ?? '';
+    if (!roleName) return;
+
+    const result = await updateUserRole(userRoleId, roleId);
+    if (result.ok) {
+      addToast({ type: 'success', message: `Rol actualizado a ${roleName}.`, duration: 4000 });
+    } else {
+      addToast({ type: 'error', message: result.error.message, duration: 5000 });
+    }
+    setEditingRole(null);
+  }, [roles, updateUserRole, addToast]);
+
+  const roleOptions = useMemo(() => [
+    { value: '', label: 'Seleccionar...' },
+    ...roles.map((r) => ({ value: r.id, label: r.name })),
+  ], [roles]);
+
   const columns: Column<UserRole>[] = useMemo(() => [
     { key: 'email', header: 'Email' },
-    { key: 'role', header: 'Rol' },
+    {
+      key: 'role',
+      header: 'Rol',
+      render: (u) => {
+        if (u.role === 'owner') {
+          return <Badge variant="info">Propietario</Badge>;
+        }
+
+        if (editingRole?.id === u.id) {
+          return (
+            <select
+              className="select text-sm py-1 px-2 min-w-[130px]"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleRoleChange(u.id, e.target.value);
+                }
+              }}
+              onBlur={() => setEditingRole(null)}
+              autoFocus
+            >
+              <option value="">Seleccionar...</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          );
+        }
+
+        return (
+          <button
+            type="button"
+            className="text-sm text-primary underline hover:no-underline cursor-pointer"
+            onClick={() => setEditingRole({ id: u.id, currentRole: u.role })}
+          >
+            {u.role}
+          </button>
+        );
+      },
+    },
     { key: 'createdAt', header: 'Creado', hideOnMobile: true },
     {
       key: 'actions',
@@ -98,7 +162,7 @@ export function UserSection({
         </div>
       ),
     },
-  ], []);
+  ], [editingRole, roles, handleRoleChange]);
 
   return (
     <>
@@ -130,6 +194,7 @@ export function UserSection({
         tenantId={selectedTenantId}
         tenantName={selectedTenantName}
         onAddEmployee={addEmployee}
+        roles={roles}
       />
 
       <DeleteEmployeeModal

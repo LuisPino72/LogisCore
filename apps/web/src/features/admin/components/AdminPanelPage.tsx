@@ -42,7 +42,7 @@ export function AdminPanelPage() {
     renewSubscription, createTenant, addEmployee, updateTenant, removeEmployee,
     softDeleteTenant, hardDeleteTenant, restoreTenant, resetPassword,
     createGlobalCategory, updateGlobalCategory, deleteGlobalCategory,
-    fetchRoles,
+    fetchRoles, roles, updateUserRole,
   } = useAdminPanel();
 
   const { filters, filteredTenants, setSearch, setStatus, setPlan } = useTenantFilters(tenants);
@@ -201,6 +201,8 @@ export function AdminPanelPage() {
               addEmployee={addEmployee}
               removeEmployee={removeEmployee}
               resetPassword={resetPassword}
+              updateUserRole={updateUserRole}
+              roles={roles}
               showAddEmployeeModal={showAddEmployeeModal}
               onCloseAddEmployeeModal={() => setShowAddEmployeeModal(false)}
             />

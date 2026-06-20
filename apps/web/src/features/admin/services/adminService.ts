@@ -294,6 +294,25 @@ export const adminService = {
       }
 
       const result = await response.json() as { employees: Array<{ id: string; email: string; name: string }> };
+
+      // If roleId was specified, update the user_roles entry to the target role
+      if (data.roleId && result.employees[0]) {
+        const { data: roleRow } = await supabase
+          .from('roles')
+          .select('name')
+          .eq('id', data.roleId)
+          .is('deleted_at', null)
+          .single();
+
+        if (roleRow) {
+          await supabase
+            .from('user_roles')
+            .update({ role: roleRow.name })
+            .eq('user_id', result.employees[0].id)
+            .is('deleted_at', null);
+        }
+      }
+
       return success(result.employees[0]);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al conectar con el servidor';
@@ -376,6 +395,31 @@ export const adminService = {
 
     if (error) {
       return failure(new AppError('TENANT_NOT_FOUND', 'Error al eliminar empleado'));
+    }
+
+    return success(undefined);
+  },
+
+  async updateUserRole(userRoleId: string, roleId: string): Promise<Result<void, AppError>> {
+    // Resolve role name from roles table
+    const { data: role } = await supabase
+      .from('roles')
+      .select('name')
+      .eq('id', roleId)
+      .is('deleted_at', null)
+      .single();
+
+    if (!role) {
+      return failure(new AppError('ROLE_NOT_FOUND', 'Rol no encontrado'));
+    }
+
+    const { error } = await supabase
+      .from('user_roles')
+      .update({ role: role.name })
+      .eq('id', userRoleId);
+
+    if (error) {
+      return failure(new AppError('ROLE_UPDATE_FAILED', 'Error al actualizar rol del usuario'));
     }
 
     return success(undefined);

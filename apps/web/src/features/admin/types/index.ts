@@ -31,6 +31,7 @@ export const CreateEmployeeInputSchema = z.object({
   password: passwordSchema,
   name: z.string().min(1, 'Nombre requerido').max(25),
   tenantId: z.string().uuid('ID de tenant inválido'),
+  roleId: z.string().uuid('ID de rol inválido').optional(),
 }).strict();
 
 export type CreateEmployeeInput = z.infer<typeof CreateEmployeeInputSchema>;

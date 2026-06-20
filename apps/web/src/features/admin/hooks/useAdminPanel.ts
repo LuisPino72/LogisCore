@@ -28,6 +28,7 @@ interface UseAdminPanelReturn {
   addEmployee: (payload: unknown) => Promise<Result<{ id: string; email: string; name: string }, AppError>>;
   updateTenant: (id: string, data: unknown) => Promise<Result<Tenant, AppError>>;
   removeEmployee: (userRoleId: string) => Promise<Result<void, AppError>>;
+  updateUserRole: (userRoleId: string, roleId: string) => Promise<Result<void, AppError>>;
   softDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
   hardDeleteTenant: (id: string) => Promise<Result<void, AppError>>;
   restoreTenant: (id: string) => Promise<Result<void, AppError>>;
@@ -124,6 +125,11 @@ export function useAdminPanel(): UseAdminPanelReturn {
     if (result.ok) {
       setUsers((prev) => prev.filter((u) => u.id !== userRoleId));
     }
+    return result;
+  }, []);
+
+  const updateUserRole = useCallback(async (userRoleId: string, roleId: string) => {
+    const result = await adminService.updateUserRole(userRoleId, roleId);
     return result;
   }, []);
 
@@ -290,6 +296,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     addEmployee,
     updateTenant,
     removeEmployee,
+    updateUserRole,
     softDeleteTenant,
     hardDeleteTenant,
     restoreTenant,
