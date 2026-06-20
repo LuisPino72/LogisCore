@@ -26,6 +26,18 @@ function toSnake(o: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+vi.mock('../../services/supabase/client', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      })),
+    })),
+  },
+}));
+
 vi.mock('../../services/dexie/db', () => ({
   getDb: () => mockDb,
   isDbReady: () => true,

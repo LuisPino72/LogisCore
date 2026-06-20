@@ -33,7 +33,17 @@ function createMockDb() {
         if (idx >= 0) mockSales[idx] = { ...mockSales[idx], ...changes };
         return 1;
       }),
-      where: vi.fn(() => ({ toArray: async () => mockSales })),
+      where: vi.fn((criteria?: Record<string, unknown>) => {
+        const filtered = () => criteria ? mockSales.filter((s) => Object.entries(criteria).every(([k, v]) => s[k] === v)) : mockSales;
+        return {
+          filter: (predicate: (s: Record<string, unknown>) => boolean) => ({
+            first: async () => filtered().filter(predicate)[0] ?? null,
+            toArray: async () => filtered().filter(predicate),
+          }),
+          first: async () => filtered()[0] ?? null,
+          toArray: async () => filtered(),
+        };
+      }),
     },
     saleItems: {
       where: vi.fn((criteria: Record<string, unknown>) => ({
@@ -47,7 +57,11 @@ function createMockDb() {
         if (idx >= 0) mockProducts[idx] = { ...mockProducts[idx], ...changes };
         return 1;
       }),
-      where: vi.fn(() => ({ filter: () => ({ toArray: async () => [] }), toArray: async () => [] })),
+      where: vi.fn(() => ({
+        filter: () => ({ first: async () => null, toArray: async () => [] }),
+        first: async () => null,
+        toArray: async () => [],
+      })),
     },
     recipes: {
       where: vi.fn((criteria: Record<string, unknown>) => ({
@@ -125,6 +139,7 @@ vi.mock('../../services/network/networkAwareService', () => ({
 }));
 vi.mock('../../services/audit/emitWithAudit', () => ({
   emitWithAudit: vi.fn(async () => undefined),
+  logAuditEventOnly: vi.fn(async () => undefined),
   emitEngineEvent: vi.fn(),
 }));
 vi.mock('../../features/auth/stores/authStore', () => ({

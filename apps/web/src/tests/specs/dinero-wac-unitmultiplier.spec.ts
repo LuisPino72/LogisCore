@@ -99,6 +99,7 @@ function createMockDb() {
     },
     expenses: {
       add: vi.fn(async () => 'id'),
+      where: vi.fn(() => makeChain([])),
     },
     inventoryLots: {
       where: vi.fn(() => makeChain([])),
@@ -107,6 +108,13 @@ function createMockDb() {
       }),
     },
     suppliers: {
+      get: vi.fn(async (id: string) => {
+        const arr: Array<Record<string, unknown>> = [
+          { id: 'sup-1', tenantId: TENANT_ID, deletedAt: null, name: 'Test Supplier' },
+        ];
+        return arr.find((s) => s.id === id) ?? null;
+      }),
+      update: vi.fn(async () => {}),
       where: vi.fn(() => ({
         filter: (predicate: (i: unknown) => boolean) => ({
           first: async () => {
@@ -117,6 +125,7 @@ function createMockDb() {
             return filtered[0] ?? null;
           },
         }),
+        toArray: async () => [],
       })),
     },
     exchangeRates: {
@@ -153,7 +162,11 @@ vi.mock('../../services/outbox/outboxService', () => ({
   outboxService: { enqueue: vi.fn(() => Promise.resolve({ ok: true, data: 1 })) },
 }));
 
-vi.mock('../../features/auth/useAuthStore', () => ({
+vi.mock('../../features/auth/services/roleGuard', () => ({
+  requireRole: vi.fn(),
+}));
+
+vi.mock('../../features/auth/stores/authStore', () => ({
   useAuthStore: {
     getState: () => ({
       session: {

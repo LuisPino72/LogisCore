@@ -91,6 +91,9 @@ function createMockDb() {
         equals: vi.fn(() => makeChain([])),
       })),
     },
+    creditPayments: {
+      where: vi.fn(() => makeChain([])),
+    },
   };
 }
 
