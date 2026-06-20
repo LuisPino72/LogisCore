@@ -10,8 +10,8 @@ import { outboxProcessor } from '../../../services/outbox/outboxProcessor';
 import { sessionGuard } from './sessionGuardService';
 import { offlineGrace } from './offlineGraceService';
 
-import { extractRole, extractTenantId, extractPermissions, isJWTExpired } from '../../../lib/jwt';
-export { extractRole, extractTenantId, extractPermissions, decodeJWTPayload, isJWTExpired } from '../../../lib/jwt';
+import { extractRole, extractRoleName, extractTenantId, extractPermissions, isJWTExpired } from '../../../lib/jwt';
+export { extractRole, extractRoleName, extractTenantId, extractPermissions, decodeJWTPayload, isJWTExpired } from '../../../lib/jwt';
 
 function sanitizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -30,6 +30,7 @@ async function buildUserSession(
   }
 
   const role = extractRole(session);
+  const roleName = extractRoleName(session);
   const tenantUuid = extractTenantId(session);
   const permissions = extractPermissions(session);
   let tenantSlug: string | null = null;
@@ -46,6 +47,7 @@ async function buildUserSession(
     userId: session.user.id,
     email: session.user.email ?? '',
     role: role as UserSession['role'],
+    roleName,
     tenantId: tenantUuid,
     tenantSlug,
     accessToken: session.access_token,

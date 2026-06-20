@@ -33,8 +33,7 @@ export interface UserSession {
   tenantSlug: string | null;
   accessToken: string;
   expiresAt?: Date;
-  // BACKLOG-106 [AUTH-002]: Permisos del rol (modules[] desde rolePermissions).
-  // Asignados por bootstrap retroactivo si role='employee'.
+  roleName?: string;
   permissions?: string[];
 }
 

@@ -56,4 +56,4 @@ export function extractPermissions(session: { access_token: string } | null): st
   return perms && perms.length > 0 ? perms : undefined;
 }
 
-export { decodeJWTPayload, isJWTExpired };
+export { decodeJWTPayload, isJWTExpired, extractRoleName };
