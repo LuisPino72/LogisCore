@@ -6,6 +6,9 @@ import { CreateTenantWithUsersInputSchema, CreateEmployeeInputSchema, UpdateTena
 import { AdminErrors } from '../types/errors';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
+import type { Role, CreateRoleInput, UpdateRoleInput } from '../../../specs/roles';
+import { CreateRoleInputSchema, UpdateRoleInputSchema } from '../../../specs/roles';
+import { RoleErrors, ROLE_ERROR_MESSAGES } from '../../../specs/roles/errors';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -829,6 +832,205 @@ export const adminService = {
         },
       });
     } catch { /* best-effort */ }
+  },
+
+  async fetchRoles(): Promise<Result<(Role & { permissionCount: number })[], AppError>> {
+    const { data, error } = await supabase
+      .from('roles')
+      .select('id, name, description, is_system, rls_tier, created_at, deleted_at')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      return failure(new AppError('ROLE_FETCH_FAILED', 'Error al cargar roles'));
+    }
+
+    const roles: Role[] = (data ?? [])
+      .filter((r: Record<string, unknown>) => !r.deleted_at)
+      .map((r: Record<string, unknown>) => ({
+        id: r.id as string,
+        name: r.name as string,
+        description: (r.description as string) ?? undefined,
+        isSystem: r.is_system as boolean,
+        rlsTier: r.rls_tier as 'admin' | 'owner' | 'employee',
+        createdAt: r.created_at as string,
+      }));
+
+    const permCounts = new Map<string, number>();
+    const { data: perms } = await supabase
+      .from('role_permissions')
+      .select('role_id');
+    if (perms) {
+      for (const p of perms as Array<{ role_id: string }>) {
+        permCounts.set(p.role_id, (permCounts.get(p.role_id) ?? 0) + 1);
+      }
+    }
+
+    return success(roles.map((r) => ({ ...r, permissionCount: permCounts.get(r.id) ?? 0 })));
+  },
+
+  async fetchRolePermissions(roleId: string): Promise<Result<string[], AppError>> {
+    const { data, error } = await supabase
+      .from('role_permissions')
+      .select('permission')
+      .eq('role_id', roleId);
+
+    if (error) {
+      return failure(new AppError('PERMISSION_FETCH_FAILED', 'Error al cargar permisos'));
+    }
+
+    return success((data ?? []).map((r: Record<string, unknown>) => r.permission as string));
+  },
+
+  async createRole(input: CreateRoleInput): Promise<Result<Role & { permissionCount?: number }, AppError>> {
+    const parsed = CreateRoleInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(new AppError('ROLE_CREATE_FAILED', parsed.error.issues[0]?.message || 'Datos inválidos'));
+    }
+
+    const { name, description, rlsTier, permissions } = parsed.data;
+
+    const { data: role, error: roleError } = await supabase
+      .from('roles')
+      .insert({ name, description: description ?? null, rls_tier: rlsTier, is_system: false })
+      .select('id, name, description, is_system, rls_tier, created_at')
+      .single();
+
+    if (roleError || !role) {
+      if (roleError?.message?.includes('duplicate key') || roleError?.message?.includes('roles_name_unique')) {
+        return failure(new AppError(RoleErrors.ROLE_NAME_EXISTS, ROLE_ERROR_MESSAGES[RoleErrors.ROLE_NAME_EXISTS]));
+      }
+      return failure(new AppError('ROLE_CREATE_FAILED', roleError?.message || 'Error al crear rol'));
+    }
+
+    if (permissions.length > 0) {
+      const { error: permError } = await supabase
+        .from('role_permissions')
+        .insert(permissions.map((p: string) => ({ role_id: role.id, permission: p })));
+
+      if (permError) {
+        await supabase.from('roles').delete().eq('id', role.id);
+        return failure(new AppError('ROLE_CREATE_FAILED', 'Error al asignar permisos'));
+      }
+    }
+
+    await emitWithAudit({
+      eventName: 'ADMIN.ROLE.CREATE',
+      module: 'ADMIN',
+      payload: { roleId: role.id, name: role.name, permissionsCount: permissions.length },
+      context: { userId: (await supabase.auth.getUser()).data.user?.id ?? '', tenantId: '', tenantUuid: '' },
+    });
+
+    return success({
+      id: role.id,
+      name: role.name,
+      description: role.description ?? undefined,
+      isSystem: role.is_system,
+      rlsTier: role.rls_tier,
+      createdAt: role.created_at,
+      permissionCount: permissions.length,
+    });
+  },
+
+  async updateRole(id: string, input: UpdateRoleInput): Promise<Result<Role, AppError>> {
+    const parsed = UpdateRoleInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return failure(new AppError('ROLE_UPDATE_FAILED', parsed.error.issues[0]?.message || 'Datos inválidos'));
+    }
+
+    const { data: existing } = await supabase
+      .from('roles')
+      .select('is_system')
+      .eq('id', id)
+      .single();
+
+    if (existing?.is_system) {
+      return failure(new AppError(RoleErrors.ROLE_IS_SYSTEM, ROLE_ERROR_MESSAGES[RoleErrors.ROLE_IS_SYSTEM]));
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
+    if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
+    if (parsed.data.rlsTier !== undefined) updateData.rls_tier = parsed.data.rlsTier;
+
+    const { data: updated, error } = await supabase
+      .from('roles')
+      .update(updateData)
+      .eq('id', id)
+      .select('id, name, description, is_system, rls_tier, created_at')
+      .single();
+
+    if (error || !updated) {
+      return failure(new AppError('ROLE_UPDATE_FAILED', error?.message || 'Error al actualizar rol'));
+    }
+
+    return success({
+      id: updated.id,
+      name: updated.name,
+      description: updated.description ?? undefined,
+      isSystem: updated.is_system,
+      rlsTier: updated.rls_tier,
+      createdAt: updated.created_at,
+    });
+  },
+
+  async upsertRolePermissions(roleId: string, permissions: string[]): Promise<Result<void, AppError>> {
+    const { data: existing } = await supabase
+      .from('roles')
+      .select('is_system')
+      .eq('id', roleId)
+      .single();
+
+    if (existing?.is_system) {
+      return failure(new AppError(RoleErrors.ROLE_IS_SYSTEM, ROLE_ERROR_MESSAGES[RoleErrors.ROLE_IS_SYSTEM]));
+    }
+
+    const { error: delError } = await supabase
+      .from('role_permissions')
+      .delete()
+      .eq('role_id', roleId);
+
+    if (delError) {
+      return failure(new AppError('PERMISSION_UPDATE_FAILED', 'Error al actualizar permisos'));
+    }
+
+    if (permissions.length > 0) {
+      const { error: insError } = await supabase
+        .from('role_permissions')
+        .insert(permissions.map((p: string) => ({ role_id: roleId, permission: p })));
+
+      if (insError) {
+        return failure(new AppError('PERMISSION_UPDATE_FAILED', 'Error al guardar permisos'));
+      }
+    }
+
+    return success(undefined);
+  },
+
+  async deleteRole(id: string): Promise<Result<void, AppError>> {
+    const { data: existing } = await supabase
+      .from('roles')
+      .select('is_system, name')
+      .eq('id', id)
+      .single();
+
+    if (!existing) {
+      return failure(new AppError(RoleErrors.ROLE_NOT_FOUND, ROLE_ERROR_MESSAGES[RoleErrors.ROLE_NOT_FOUND]));
+    }
+
+    if (existing.is_system) {
+      return failure(new AppError(RoleErrors.ROLE_IS_SYSTEM, 'No se puede eliminar un rol del sistema'));
+    }
+
+    const { error } = await supabase
+      .from('roles')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      return failure(new AppError('ROLE_DELETE_FAILED', 'Error al eliminar rol'));
+    }
+
+    return success(undefined);
   },
 };
 

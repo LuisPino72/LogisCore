@@ -39,4 +39,21 @@ export function extractTenantId(session: { access_token: string } | null): strin
   return (decoded.tenant_id as string) ?? null;
 }
 
+export function extractRoleName(session: { access_token: string } | null): string | undefined {
+  if (!session) return undefined;
+  if (isJWTExpired(session.access_token)) return undefined;
+  const decoded = decodeJWTPayload(session.access_token);
+  const jwtAppMeta = decoded.app_metadata as Record<string, unknown> | undefined;
+  return jwtAppMeta?.role_name as string | undefined;
+}
+
+export function extractPermissions(session: { access_token: string } | null): string[] | undefined {
+  if (!session) return undefined;
+  if (isJWTExpired(session.access_token)) return undefined;
+  const decoded = decodeJWTPayload(session.access_token);
+  const jwtAppMeta = decoded.app_metadata as Record<string, unknown> | undefined;
+  const perms = jwtAppMeta?.permissions as string[] | undefined;
+  return perms && perms.length > 0 ? perms : undefined;
+}
+
 export { decodeJWTPayload, isJWTExpired };

@@ -112,8 +112,8 @@ const ALL_MODULES: SidebarModule[] = [
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
 ];
 
-// BACKLOG-106 [AUTH-002]: Lookup dinámico desde rolePermissions (single source of truth)
-// Antes era un Set hardcoded; ahora se filtra por `getRolePermissions(role).modules` (ver sidebarModules más abajo).
+// AUTH-002: Sidebar filtrado por permissions[] del JWT — admin (sin permissions) ve todo,
+// owner/employee/custom roles ven solo módulos donde tengan al menos un permiso.
 
 const MODULE_ROUTE_MAP: Record<string, string> = {
   dashboard: '/dashboard',
@@ -311,9 +311,11 @@ function DashboardLayout() {
     return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
   }
 
-  // BACKLOG-106 [AUTH-002]: Filtrar sidebar por permisos del rol (lectura síncrona).
+  // BACKLOG-106 [AUTH-002]: Filtrar sidebar por permisos desde JWT.
   const sidebarModules =
-    role === 'employee' ? ALL_MODULES.filter((m) => hasPermission(session, m.id)) : ALL_MODULES;
+    session?.permissions
+      ? ALL_MODULES.filter((m) => hasPermission(session, m.id))
+      : ALL_MODULES;
 
   return (
     <>

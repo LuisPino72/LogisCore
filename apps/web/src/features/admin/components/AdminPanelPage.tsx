@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { useTenantFilters } from '../hooks/useTenantFilters';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { ArrowLeft, Building2, CreditCard, Plus, Shield, Store, Tags, UsersRound } from 'lucide-react';
+import { ArrowLeft, Building2, CreditCard, Plus, Shield, Store, Tags, UsersRound, UserCog } from 'lucide-react';
 import { AppShell, BottomNav, Button, Card, EmptyState, Spinner, LogoutButton } from '../../../common/components';
 import './index.css';
 import { TenantSection } from './TenantSection';
@@ -12,16 +12,18 @@ import { AllUsersSection } from './AllUsersSection';
 import { SubscriptionSection } from './SubscriptionSection';
 import { GlobalCategorySection } from './GlobalCategorySection';
 import { AuditSection } from './AuditSection';
+import { RoleSection } from './RoleSection';
 import type { Tenant } from '../types';
 
 const ADMIN_PAGE_SIZE = 10;
 
-type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories' | 'audit';
+type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories' | 'audit' | 'roles';
 
 const TABS = [
   { id: 'tenants' as Sheet, label: 'Locales', icon: <Building2 size={20} /> },
   { id: 'all-users' as Sheet, label: 'Usuarios', icon: <UsersRound size={20} /> },
   { id: 'subscriptions' as Sheet, label: 'Suscripciones', icon: <CreditCard size={20} /> },
+  { id: 'roles' as Sheet, label: 'Roles', icon: <UserCog size={20} /> },
   { id: 'global-categories' as Sheet, label: 'Categorías', icon: <Tags size={20} /> },
   { id: 'audit' as Sheet, label: 'Auditoría', icon: <Shield size={20} /> },
 ] as const;
@@ -40,6 +42,7 @@ export function AdminPanelPage() {
     renewSubscription, createTenant, addEmployee, updateTenant, removeEmployee,
     softDeleteTenant, hardDeleteTenant, restoreTenant, resetPassword,
     createGlobalCategory, updateGlobalCategory, deleteGlobalCategory,
+    fetchRoles,
   } = useAdminPanel();
 
   const { filters, filteredTenants, setSearch, setStatus, setPlan } = useTenantFilters(tenants);
@@ -62,7 +65,8 @@ export function AdminPanelPage() {
     fetchAllUsers();
     fetchSubscriptions();
     fetchGlobalCategories();
-  }, [fetchTenants, fetchAllUsers, fetchSubscriptions, fetchGlobalCategories]);
+    fetchRoles();
+  }, [fetchTenants, fetchAllUsers, fetchSubscriptions, fetchGlobalCategories, fetchRoles]);
 
   const handleSelectTenant = (tenant: Tenant) => {
     setSelectedTenantId(tenant.id);
@@ -223,6 +227,12 @@ export function AdminPanelPage() {
           </div>
         )}
 
+        {activeSheet === 'roles' && (
+          <div className="admin-section-reveal">
+            <RoleSection />
+          </div>
+        )}
+
         {activeSheet === 'global-categories' && (
           <div className="admin-section-reveal">
             <GlobalCategorySection
@@ -249,6 +259,7 @@ export function AdminPanelPage() {
           { id: 'tenants', label: 'Locales', icon: <Building2 size={20} />, onClick: () => setActiveSheet('tenants') },
           { id: 'all-users', label: 'Usuarios', icon: <UsersRound size={20} />, onClick: () => setActiveSheet('all-users') },
           { id: 'subscriptions', label: 'Suscripciones', icon: <CreditCard size={20} />, onClick: () => setActiveSheet('subscriptions') },
+          { id: 'roles', label: 'Roles', icon: <UserCog size={20} />, onClick: () => setActiveSheet('roles') },
           { id: 'global-categories', label: 'Categorías', icon: <Tags size={20} />, onClick: () => setActiveSheet('global-categories') },
           { id: 'audit', label: 'Auditoría', icon: <Shield size={20} />, onClick: () => setActiveSheet('audit') },
         ]}

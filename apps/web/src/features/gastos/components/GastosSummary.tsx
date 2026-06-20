@@ -82,9 +82,8 @@ export function GastosSummary({ gastos }: GastosSummaryProps) {
           checked={includeCompras}
           onChange={(e) => setIncludeCompras(e.target.checked)}
           className="expense-toggle-compras"
-        >
-          Incluir compras de inventario
-        </Checkbox>
+          label="Incluir compras de inventario"
+        />
         {includeCompras && summary.comprasTotal > 0 && (
           <span className="text-xs text-accent font-medium ml-auto">
             + Compras: {formatUsd(summary.comprasTotal)} ({summary.comprasCount})

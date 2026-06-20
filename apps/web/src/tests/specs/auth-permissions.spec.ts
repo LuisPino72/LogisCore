@@ -23,20 +23,42 @@ vi.mock('@logiscore/core', () => ({
 
 import { useAuthStore } from '../../features/auth/stores/authStore';
 import { requireRole } from '../../features/auth/services/roleGuard';
-import { getRolePermissions, hasPermission, DEFAULT_PERMISSIONS } from '../../features/auth/permissions/rolePermissions';
+import { hasPermission, hasActionPermission } from '../../features/auth/permissions/rolePermissions';
 
 const mockGetState = vi.mocked(useAuthStore.getState);
 
+const SESSIONS: Record<string, {
+  userId: string; email: string; role: string; tenantId: string; permissions: string[] | undefined;
+}> = {
+  employee: {
+    userId: 'u-1', email: 'u@bodega.com', role: 'employee', tenantId: 't-1',
+    permissions: ['pos:create', 'pos:read', 'customers:create', 'customers:read'],
+  },
+  owner: {
+    userId: 'u-1', email: 'u@bodega.com', role: 'owner', tenantId: 't-1',
+    permissions: [
+      'dashboard:read', 'inventory:create', 'inventory:read',
+      'purchases:create', 'purchases:read', 'gastos:create', 'gastos:read',
+      'production:create', 'production:read', 'customers:create', 'customers:read',
+      'reports:read', 'pos:create', 'pos:read',
+    ],
+  },
+  admin: {
+    userId: 'u-1', email: 'u@bodega.com', role: 'admin', tenantId: 't-1',
+    permissions: undefined,
+  },
+};
+
 function setRole(role: 'admin' | 'owner' | 'employee' | undefined) {
   mockGetState.mockReturnValue({
-    session: role ? { userId: 'u-1', email: 'u@bodega.com', role, tenantId: 't-1' } : null,
+    session: role ? SESSIONS[role] : null,
   } as ReturnType<typeof useAuthStore.getState>);
 }
 
 describe('AUTH-002: requireRole lanza AUTH_SCOPE_DENIED cuando rol no permitido', () => {
   it('Given: employee. When: requireRole(owner, admin). Then: throws AUTH_SCOPE_DENIED', () => {
     setRole('employee');
-    expect(() => requireRole('owner', 'admin')).toThrow(/Acción restringida/);
+    expect(() => requireRole('owner', 'admin')).toThrow('No tienes acceso a esta función.');
     try { requireRole('owner', 'admin'); } catch (e: unknown) {
       const err = e as { code: string; details: { currentRole: string; allowedRoles: string[] } };
       expect(err.code).toBe('AUTH_SCOPE_DENIED');
@@ -57,32 +79,49 @@ describe('AUTH-002: requireRole lanza AUTH_SCOPE_DENIED cuando rol no permitido'
 
   it('Given: no session. When: requireRole(owner, admin). Then: throws AUTH_SCOPE_DENIED (currentRole=null)', () => {
     setRole(undefined);
-    expect(() => requireRole('owner', 'admin')).toThrow(/Acción restringida/);
+    expect(() => requireRole('owner', 'admin')).toThrow('No tienes acceso a esta función.');
   });
 });
 
-describe('AUTH-002: getRolePermissions retorna módulos correctos', () => {
-  it('owner tiene acceso a todos los módulos de negocio', () => {
-    const mods = getRolePermissions('owner');
-    expect(mods).toContain('pos');
-    expect(mods).toContain('purchases');
-    expect(mods).toContain('production');
-    expect(mods).toContain('reports');
+describe('AUTH-002: hasPermission/hasActionPermission reflejan permisos del JWT', () => {
+  it('employee tiene permisos de pos y customers pero no de otros módulos', () => {
+    setRole('employee');
+    const session = mockGetState().session;
+    expect(hasPermission(session, 'pos')).toBe(true);
+    expect(hasPermission(session, 'customers')).toBe(true);
+    expect(hasPermission(session, 'purchases')).toBe(false);
+    expect(hasPermission(session, 'production')).toBe(false);
+    expect(hasPermission(session, 'reports')).toBe(false);
+    expect(hasActionPermission(session, 'pos', 'create')).toBe(true);
+    expect(hasActionPermission(session, 'inventory', 'create')).toBe(false);
   });
 
-  it('employee solo tiene acceso a pos y customers', () => {
-    const mods = getRolePermissions('employee');
-    expect(mods).toEqual(['pos', 'customers']);
+  it('owner tiene permisos de todos los módulos de negocio', () => {
+    setRole('owner');
+    const session = mockGetState().session;
+    expect(hasPermission(session, 'pos')).toBe(true);
+    expect(hasPermission(session, 'purchases')).toBe(true);
+    expect(hasPermission(session, 'production')).toBe(true);
+    expect(hasPermission(session, 'reports')).toBe(true);
+    expect(hasPermission(session, 'dashboard')).toBe(true);
+    expect(hasPermission(session, 'gastos')).toBe(true);
+    expect(hasPermission(session, 'customers')).toBe(true);
   });
 
-  it('admin solo tiene acceso a admin (panel global)', () => {
-    const mods = getRolePermissions('admin');
-    expect(mods).toEqual(['admin']);
+  it('admin con permissions undefined tiene bypass en cualquier módulo', () => {
+    setRole('admin');
+    const session = mockGetState().session;
+    expect(hasPermission(session, 'admin')).toBe(true);
+    expect(hasPermission(session, 'pos')).toBe(true);
+    expect(hasActionPermission(session, 'admin', 'manage')).toBe(true);
   });
 
-  it('rol undefined retorna módulos de employee (fallback seguro)', () => {
-    const mods = getRolePermissions(undefined);
-    expect(mods).toEqual(['pos', 'customers']);
+  it('session null retorna false para cualquier permiso', () => {
+    setRole(undefined);
+    const session = mockGetState().session;
+    expect(hasPermission(session, 'pos')).toBe(false);
+    expect(hasPermission(session, 'inventory')).toBe(false);
+    expect(hasActionPermission(session, 'pos', 'create')).toBe(false);
   });
 });
 
@@ -116,12 +155,4 @@ describe('AUTH-002: hasPermission filtra sidebar correctamente', () => {
   });
 });
 
-describe('AUTH-002: DEFAULT_PERMISSIONS tiene los 3 roles', () => {
-  it('roles registrados: owner, admin, employee', () => {
-    const roles = DEFAULT_PERMISSIONS.map((p) => p.role);
-    expect(roles).toContain('owner');
-    expect(roles).toContain('admin');
-    expect(roles).toContain('employee');
-    expect(roles.length).toBe(3);
-  });
-});
+

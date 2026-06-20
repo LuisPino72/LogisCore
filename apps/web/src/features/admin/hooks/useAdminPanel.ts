@@ -3,6 +3,8 @@ import { type Result, type AppError } from '@logiscore/core';
 import { adminService } from '../services/adminService';
 import { CreateEmployeeInputSchema } from '../types';
 import type { Tenant, UserRole, GlobalUser, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory } from '../types';
+import type { Role } from '../../../specs/roles';
+import type { CreateRoleInput, UpdateRoleInput } from '../../../specs/roles';
 
 interface UseAdminPanelReturn {
   tenants: Tenant[];
@@ -33,6 +35,13 @@ interface UseAdminPanelReturn {
   createGlobalCategory: (input: unknown) => Promise<Result<GlobalCategory, AppError>>;
   updateGlobalCategory: (id: string, name: string) => Promise<Result<GlobalCategory, AppError>>;
   deleteGlobalCategory: (id: string) => Promise<Result<void, AppError>>;
+  roles: Role[];
+  fetchRoles: () => Promise<void>;
+  fetchRolePermissions: (roleId: string) => Promise<Result<string[], AppError>>;
+  createRole: (input: CreateRoleInput) => Promise<Result<Role, AppError>>;
+  updateRole: (id: string, input: UpdateRoleInput) => Promise<Result<Role, AppError>>;
+  upsertRolePermissions: (roleId: string, permissions: string[]) => Promise<Result<void, AppError>>;
+  deleteRole: (id: string) => Promise<Result<void, AppError>>;
 }
 
 export function useAdminPanel(): UseAdminPanelReturn {
@@ -43,6 +52,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
   const [globalCategories, setGlobalCategories] = useState<GlobalCategory[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [analytics, setAnalytics] = useState<TenantAnalytics | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -209,6 +219,46 @@ export function useAdminPanel(): UseAdminPanelReturn {
     return result;
   }, [fetchGlobalCategories]);
 
+  const fetchRoles = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const result = await adminService.fetchRoles();
+    if (result.ok) {
+      setRoles(result.data);
+    } else {
+      setError(result.error.message);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const fetchRolePermissions = useCallback(async (roleId: string) => {
+    return adminService.fetchRolePermissions(roleId);
+  }, []);
+
+  const createRole = useCallback(async (input: CreateRoleInput) => {
+    const result = await adminService.createRole(input);
+    if (result.ok) await fetchRoles();
+    return result as Result<Role, AppError>;
+  }, [fetchRoles]);
+
+  const updateRole = useCallback(async (id: string, input: UpdateRoleInput) => {
+    const result = await adminService.updateRole(id, input);
+    if (result.ok) await fetchRoles();
+    return result;
+  }, [fetchRoles]);
+
+  const upsertRolePermissions = useCallback(async (roleId: string, permissions: string[]) => {
+    const result = await adminService.upsertRolePermissions(roleId, permissions);
+    if (result.ok) await fetchRoles();
+    return result;
+  }, [fetchRoles]);
+
+  const deleteRole = useCallback(async (id: string) => {
+    const result = await adminService.deleteRole(id);
+    if (result.ok) await fetchRoles();
+    return result;
+  }, [fetchRoles]);
+
   const fetchAnalytics = useCallback(async (tenantId: string) => {
     setAnalytics(null);
     const result = await adminService.getTenantAnalytics(tenantId);
@@ -225,6 +275,7 @@ export function useAdminPanel(): UseAdminPanelReturn {
     globalCategories,
     dashboardStats,
     analytics,
+    roles,
     isLoading,
     error,
     fetchTenants,
@@ -246,5 +297,11 @@ export function useAdminPanel(): UseAdminPanelReturn {
     createGlobalCategory,
     updateGlobalCategory,
     deleteGlobalCategory,
+    fetchRoles,
+    fetchRolePermissions,
+    createRole,
+    updateRole,
+    upsertRolePermissions,
+    deleteRole,
   };
 }

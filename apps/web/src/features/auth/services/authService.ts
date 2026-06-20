@@ -10,8 +10,8 @@ import { outboxProcessor } from '../../../services/outbox/outboxProcessor';
 import { sessionGuard } from './sessionGuardService';
 import { offlineGrace } from './offlineGraceService';
 
-import { extractRole, extractTenantId, isJWTExpired } from '../../../lib/jwt';
-export { extractRole, extractTenantId, decodeJWTPayload, isJWTExpired } from '../../../lib/jwt';
+import { extractRole, extractTenantId, extractPermissions, isJWTExpired } from '../../../lib/jwt';
+export { extractRole, extractTenantId, extractPermissions, decodeJWTPayload, isJWTExpired } from '../../../lib/jwt';
 
 function sanitizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -31,6 +31,7 @@ async function buildUserSession(
 
   const role = extractRole(session);
   const tenantUuid = extractTenantId(session);
+  const permissions = extractPermissions(session);
   let tenantSlug: string | null = null;
 
   if (tenantUuid) {
@@ -49,6 +50,7 @@ async function buildUserSession(
     tenantSlug,
     accessToken: session.access_token,
     expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
+    permissions,
   };
 }
 
@@ -120,8 +122,8 @@ export const authService = {
         tenantSlug,
         accessToken: session.access_token,
         expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
-        // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes reciben POS-only.
-        permissions: role === 'employee' ? ['pos'] : undefined,
+        // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes reciben permisos acotados.
+        permissions: role === 'employee' ? ['pos:create', 'pos:read', 'customers:create', 'customers:read'] : undefined,
       });
     }
 
@@ -153,9 +155,9 @@ export const authService = {
     }
 
     // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes sin permissions
-    // asignadas reciben POS-only al primer login post-migración.
+    // asignadas reciben permisos acotados al primer login post-migración.
     if (userSession.role === 'employee' && !userSession.permissions) {
-      return success({ ...userSession, permissions: ['pos'] });
+      return success({ ...userSession, permissions: ['pos:create', 'pos:read', 'customers:create', 'customers:read'] });
     }
 
     return success(userSession);

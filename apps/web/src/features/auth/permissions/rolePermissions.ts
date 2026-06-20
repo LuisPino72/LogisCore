@@ -1,53 +1,21 @@
-/**
- * BACKLOG-106 [AUTH-002]: Permisos por rol (single source of truth)
- *
- * El módulo `pos` y `customers` son los únicos accesibles para employees.
- * Owners tienen acceso total. Admins acceden solo al panel global /admin.
- *
- * Los datos también se persisten en Dexie (tabla `rolePermissions`),
- * pero la lectura síncrona desde este módulo evita un round-trip a DB
- * para verificar el módulo. Si los roles requieren configuración por
- * tenant en el futuro, se puede cambiar a lectura asíncrona.
- */
-import type { UserRole } from '../types';
 import type { UserSession as CoreUserSession } from '@logiscore/core';
 
-type SessionLike = { role?: UserRole | null } | CoreUserSession | null | undefined;
-
-export interface RolePermission {
-  id: string;
-  role: UserRole;
-  modules: string[];
-}
-
-export const DEFAULT_PERMISSIONS: RolePermission[] = [
-  {
-    id: 'role-owner',
-    role: 'owner',
-    modules: ['dashboard', 'inventory', 'production', 'purchases', 'pos', 'gastos', 'customers', 'reports'],
-  },
-  {
-    id: 'role-admin',
-    role: 'admin',
-    modules: ['admin'],
-  },
-  {
-    id: 'role-employee',
-    role: 'employee',
-    modules: ['pos', 'customers'],
-  },
-];
-
-const FALLBACK_MODULES = DEFAULT_PERMISSIONS.find((p) => p.role === 'employee')!.modules;
-
-export function getRolePermissions(role: UserRole | undefined | null): string[] {
-  if (!role) return FALLBACK_MODULES;
-  const found = DEFAULT_PERMISSIONS.find((p) => p.role === role);
-  return found ? found.modules : FALLBACK_MODULES;
-}
+type SessionLike = { role?: string | null; permissions?: string[] } | CoreUserSession | null | undefined;
 
 export function hasPermission(session: SessionLike, module: string): boolean {
-  const role = session?.role as UserRole | undefined | null;
-  if (!role) return false;
-  return getRolePermissions(role).includes(module);
+  if (!session) return false;
+  if (session.role === 'admin') return true;
+  if (!session.permissions || session.permissions.length === 0) return false;
+  return session.permissions.some((p) => p.startsWith(`${module}:`));
+}
+
+export function hasActionPermission(
+  session: SessionLike,
+  module: string,
+  action: string,
+): boolean {
+  if (!session) return false;
+  if (session.role === 'admin') return true;
+  if (!session.permissions || session.permissions.length === 0) return false;
+  return session.permissions.includes(`${module}:${action}`);
 }
