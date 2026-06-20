@@ -18,6 +18,7 @@ import type {
   CreatePurchaseOrderInput,
   ReceivePurchaseOrderInput,
 } from '../../../specs/purchases';
+import { SupplierPaymentMethodSchema } from '../../../specs/purchases';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import { convertToStorage, unitToStorageType } from '../../inventory/types';
 import { requireRole } from '../../auth/services/roleGuard';
@@ -1022,6 +1023,11 @@ export const purchaseService = {
     const db = getDb();
     const now = new Date().toISOString();
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+
+    const paymentMethodValidation = SupplierPaymentMethodSchema.safeParse(paymentMethod);
+    if (!paymentMethodValidation.success) {
+      return failure(new AppError(PurchaseErrors.INVALID_PAYMENT_METHOD, `Método de pago inválido: ${paymentMethodValidation.error.issues.map(i => i.message).join('; ')}`));
+    }
 
     if (amountUsd <= 0) return failure(new AppError('INVALID_AMOUNT', 'El monto del pago debe ser mayor a 0.'));
 

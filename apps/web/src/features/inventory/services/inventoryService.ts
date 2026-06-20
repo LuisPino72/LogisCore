@@ -238,6 +238,7 @@ export const inventoryService = {
             quantity: stockInicial,
             previousStock: 0,
             newStock: stockInicial,
+            costUsd: input.costPrice ?? undefined,
             createdAt: now,
           };
           await db.inventoryMovements.add(movement);
@@ -403,6 +404,7 @@ export const inventoryService = {
             quantity: parentStock,
             previousStock: 0,
             newStock: parentStock,
+            costUsd: input.costPrice ?? undefined,
             createdAt: now,
           };
           await db.inventoryMovements.add(movement);

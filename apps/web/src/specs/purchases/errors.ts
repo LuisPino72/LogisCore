@@ -15,6 +15,7 @@ export const PurchaseErrors = {
   ORDER_ALREADY_PAID: 'ORDER_ALREADY_PAID',
   PAYMENT_EXCEEDS_DEBT: 'PAYMENT_EXCEEDS_DEBT',
   PAYMENT_EXCEEDS_ORDER_BALANCE: 'PAYMENT_EXCEEDS_ORDER_BALANCE',
+  INVALID_PAYMENT_METHOD: 'INVALID_PAYMENT_METHOD',
 } as const;
 
 export type PurchaseErrorCode = typeof PurchaseErrors[keyof typeof PurchaseErrors];

@@ -16,13 +16,14 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { TenantTranslator } from '../../../services/tenantTranslator';
-import { getDb } from '../../../services/dexie/db';
+import { getDb, type DexieInventoryLot } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { emitWithAudit, emitWithPersistence } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema, type CalculateRecipeCostResult } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
+import { type Transaction } from 'dexie';
 import { calculateConsumptionCost, selectFifoLots } from './costCalculator';
 import { requireRole } from '../../auth/services/roleGuard';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -1110,6 +1111,7 @@ export const productionService = {
 
           // d. Create finished product lot
           const finishedLotId = generateId();
+          const finishedMovementId = generateId();
           const finishedLot = {
             id: finishedLotId,
             tenantId,
@@ -1117,6 +1119,7 @@ export const productionService = {
             quantityAdded: quantityTargetInStorage,
             remainingQuantity: quantityTargetInStorage,
             costUsdPerUnit: costPerStorageUnit,
+            sourceMovementId: finishedMovementId,
             createdAt: now,
             updatedAt: now,
             version: 1,
@@ -1137,7 +1140,6 @@ export const productionService = {
           await syncQueue.enqueue('products', 'UPDATE', recipe.productId, toSnake({ ...finishedProduct, stock: newStock, costPrice: newWac } as unknown as Record<string, unknown>), tenantId);
 
           // f. Create movement for finished product
-          const finishedMovementId = generateId();
           const finishedMovement = {
             id: finishedMovementId,
             tenantId,
@@ -1318,12 +1320,27 @@ export const productionService = {
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
         }
 
-        // C4: Revert finished product lot
-        const finishedLots = await db.inventoryLots
-          .where({ productId: order.productId })
-          .filter((l) => !l.deletedAt && l.createdAt >= order.createdAt && l.createdAt <= now)
-          .toArray();
-        const lotToRevert = finishedLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        // C4: Revert finished product lot — buscar por FK productionOrderId en vez de ventana temporal
+        const prodMovement = await db.inventoryMovements
+          .where({ productionOrderId: orderId })
+          .filter((m) => m.type === 'production_output')
+          .first();
+        let lotToRevert: DexieInventoryLot | undefined;
+        if (prodMovement) {
+          const lots = await db.inventoryLots
+            .where({ productId: order.productId })
+            .filter((l) => l.sourceMovementId === prodMovement.id && !l.deletedAt)
+            .toArray();
+          lotToRevert = lots.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        }
+        // Fallback legacy: ventana temporal para órdenes pre-FK
+        if (!lotToRevert) {
+          const finishedLots = await db.inventoryLots
+            .where({ productId: order.productId })
+            .filter((l) => !l.deletedAt && l.createdAt >= order.createdAt && l.createdAt <= now)
+            .toArray();
+          lotToRevert = finishedLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+        }
         if (lotToRevert && lotToRevert.remainingQuantity === lotToRevert.quantityAdded) {
           await db.inventoryLots.update(lotToRevert.id, { deletedAt: now, remainingQuantity: 0 });
           await syncQueue.enqueue('inventory_lots', 'UPDATE', lotToRevert.id, { id: lotToRevert.id, deleted_at: now, remaining_quantity: 0 }, tenantId);
@@ -1417,14 +1434,12 @@ export const productionService = {
     tenantId: string,
     userId: string,
     options: { allowOverride?: boolean } = {},
+    tx?: Transaction,
   ): Promise<Result<{ consumedLots: Array<{ lotId: string; quantity: number }>; totalIngredientCost: number }, AppError>> {
     const db = getDb();
     const now = new Date().toISOString();
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
-    // PLAN-115 (CODE-MED-10 + CODE-MIN-9): validar quantity > 0 al inicio.
-    // Sin esto, expandRecipe con quantity=0 retorna lineas con 0,
-    // totalIngredientCost=0, y comboLot se crea con costUsdPerUnit=NaN.
     if (!Number.isFinite(quantity) || quantity <= 0) {
       return failure(new AppError(ProductionErrors.ASSEMBLY_INVALID_QUANTITY, 'La cantidad de ensamblaje debe ser mayor a cero.'));
     }
@@ -1438,7 +1453,6 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.ASSEMBLY_NO_RECIPE, `Producto no tiene receta de ensamblaje.`));
     }
 
-    // PRODUCTION-001-006: Expandir receta para resolver sub-recetas
     const expandResult = await expandRecipe(recipe.id, quantity);
     if (!expandResult.ok) return expandResult;
     const expandedLines = expandResult.data;
@@ -1451,127 +1465,98 @@ export const productionService = {
     let totalIngredientCost = 0;
     const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = [];
 
-    for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
-      // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
-      const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
+    const doWrites = async (): Promise<void> => {
+      for (const line of expandedLines) {
+        const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
+        if (!ingredient) {
+          throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado.');
+        }
 
-      if (!ingredient) {
-        return failure(new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente no encontrado.`));
-      }
+        const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, ingredient.unit);
+        const needed = Math.ceil(neededInStorage);
 
-      const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, ingredient.unit);
-      const needed = Math.ceil(neededInStorage);
+        const calcResult = await calculateConsumptionCost(line.productId, needed, { allowOverride: options.allowOverride });
+        if (!calcResult.ok) throw calcResult.error;
+        const { totalCost: lineTotalCost, consumedLots } = calcResult.data;
 
-      // PRODUCTION-003 [Paso-3]: Usando helper compartido para cálculo FIFO y plan de consumo.
-      const calcResult = await calculateConsumptionCost(line.productId, needed, { allowOverride: options.allowOverride });
-      if (!calcResult.ok) return failure(calcResult.error);
-      const { totalCost: lineTotalCost, consumedLots } = calcResult.data;
-
-      // Mantener isInsufficient para el reasonType del movement (override manual → ajuste_manual).
-      const isInsufficient = ingredient.stock < needed;
-
-      // Update product stock (PLAN-115 CODE-MED-8): throw si !allowOverride && stock<needed
-      // (consistencia con posService.createSale para items normales). El clamp a 0 era por
-      // diseno para el path allowOverride: true (override manual del bodeguero).
-      const previousStock = ingredient.stock;
-      let newStock: number;
-      if (previousStock < needed) {
-        if (options.allowOverride) {
-          newStock = 0;
+        const isInsufficient = ingredient.stock < needed;
+        const previousStock = ingredient.stock;
+        let newStock: number;
+        if (previousStock < needed) {
+          if (options.allowOverride) {
+            newStock = 0;
+          } else {
+            throw new AppError(ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK, `Stock insuficiente para ingrediente. Necesario: ${needed}, disponible: ${previousStock}.`);
+          }
         } else {
-          return failure(new AppError(ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK, `Stock insuficiente para ingrediente. Necesario: ${needed}, disponible: ${previousStock}.`));
+          newStock = previousStock - needed;
         }
-      } else {
-        newStock = previousStock - needed;
-      }
 
-      await db.products.update(line.productId, { stock: newStock });
-      await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+        await db.products.update(line.productId, { stock: newStock });
+        await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
-      // Aplicar consumo a la DB (reducir remainingQuantity, incrementar version).
-      for (const detail of consumedLots) {
-        const currentLot = await db.inventoryLots.get(detail.lotId);
-        if (!currentLot || currentLot.remainingQuantity <= 0) continue;
-        // PLAN-115 (CODE-MED-9): optimistic lock sobre `version`, no `costUsdPerUnit`.
-        // costUsdPerUnit casi nunca cambia tras crear el lote (solo con sync manual raro),
-        // asi que el check era dead code. `version` se incrementa en cada update y SI detecta
-        // race conditions reales (mismo patron que posService:562 y consumeFifoInternal:1425).
-        if ((currentLot.version ?? 0) !== (detail.version ?? 0)) {
-          throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto de inventario. Reintente la operación.');
+        for (const detail of consumedLots) {
+          const currentLot = await db.inventoryLots.get(detail.lotId);
+          if (!currentLot || currentLot.remainingQuantity <= 0) continue;
+          if ((currentLot.version ?? 0) !== (detail.version ?? 0)) {
+            throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto de inventario. Reintente la operación.');
+          }
+          const newRemaining = currentLot.remainingQuantity - detail.quantity;
+          const newVersion = (currentLot.version ?? 0) + 1;
+          assemblyConsumedLots.push({ lotId: detail.lotId, quantity: detail.quantity });
+          await db.inventoryLots.update(detail.lotId, { remainingQuantity: newRemaining, version: newVersion });
+          await syncQueue.enqueue('inventory_lots', 'UPDATE', detail.lotId, toSnake({
+            ...currentLot, remainingQuantity: newRemaining, version: newVersion,
+          } as unknown as Record<string, unknown>), tenantId);
         }
-        const newRemaining = currentLot.remainingQuantity - detail.quantity;
-        const newVersion = (currentLot.version ?? 0) + 1;
-        assemblyConsumedLots.push({ lotId: detail.lotId, quantity: detail.quantity });
-        await db.inventoryLots.update(detail.lotId, { remainingQuantity: newRemaining, version: newVersion });
-        await syncQueue.enqueue('inventory_lots', 'UPDATE', detail.lotId, toSnake({
-          ...currentLot, remainingQuantity: newRemaining, version: newVersion,
+
+        totalIngredientCost += lineTotalCost;
+        const movementCostUsd = preciseRound(lineTotalCost, 2);
+        const movementId = generateId();
+        const reasonType = isInsufficient ? 'ajuste_manual' : 'consumo_interno';
+
+        await db.inventoryMovements.add({
+          id: movementId, tenantId, productId: line.productId, userId,
+          type: 'adjustment' as const, quantity: -needed, previousStock, newStock,
+          reasonType, costUsd: movementCostUsd, createdAt: now,
+        });
+        await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
+          id: movementId, tenant_id: tenantUuid, product_id: line.productId, user_id: userId,
+          type: 'adjustment', quantity: -needed, previous_stock: previousStock, new_stock: newStock,
+          reason_type: reasonType, cost_usd: movementCostUsd, created_at: now,
         } as unknown as Record<string, unknown>), tenantId);
       }
 
-      totalIngredientCost += lineTotalCost;
-      const movementCostUsd = preciseRound(lineTotalCost, 2);
+      const comboLotId = generateId();
+      const comboLot = {
+        id: comboLotId, tenantId, productId,
+        quantityAdded: quantity, remainingQuantity: quantity,
+        costUsdPerUnit: preciseRound(totalIngredientCost / quantity, 4),
+        createdAt: now, updatedAt: now, version: 1,
+      };
+      await db.inventoryLots.add(comboLot);
+      await syncQueue.enqueue('inventory_lots', 'CREATE', comboLotId, toSnake(comboLot as unknown as Record<string, unknown>), tenantId);
+    };
 
-      const movementId = generateId();
-      const reasonType = isInsufficient ? 'ajuste_manual' : 'consumo_interno';
-
-      await db.inventoryMovements.add({
-        id: movementId,
-        tenantId,
-        productId: line.productId,
-        userId,
-        type: 'adjustment' as const,
-        quantity: -needed,
-        previousStock,
-        newStock,
-        reasonType,
-        costUsd: movementCostUsd,
-        createdAt: now,
-      });
-      await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
-        id: movementId, tenant_id: tenantUuid, product_id: line.productId, user_id: userId,
-        type: 'adjustment', quantity: -needed, previous_stock: previousStock, new_stock: newStock,
-        reason_type: reasonType, cost_usd: movementCostUsd, created_at: now,
-      } as unknown as Record<string, unknown>), tenantId);
+    try {
+      if (tx) {
+        await doWrites();
+      } else {
+        await db.transaction('rw', [db.products, db.inventoryLots, db.inventoryMovements, db.syncQueue], async () => {
+          await doWrites();
+        });
+      }
+    } catch (err) {
+      if (err instanceof AppError) return failure(err);
+      throw err;
     }
 
-    // POS-002 (C-10): builder discarded bug — emitWithPersistence returns {enqueueInTransaction, auditAfterTransaction}
-    // which must be invoked explicitly. Use emitWithAudit directly (handles outbox + audit correctly).
     await emitWithAudit({
       eventName: 'PRODUCTION.ASSEMBLY_CONSUMED',
       module: PRODUCTION_MODULE,
       payload: { productId, quantity, tenantId },
       context: { userId, tenantId },
     });
-
-    // PRODUCTION-003 [Paso-4]: Crear lote del combo ensamblado para tracking FIFO.
-    // NO se descuenta stock del combo (se vende al instante) — el lote permite
-    // trazabilidad temporal del costo real (FIFO) de cada combo producido.
-    //
-    // PLAN-115 (CODE-MED-11): decision de diseno — el comboLot NO actualiza
-    // product.costPrice del producto ensamblado. El producto de ensamblaje
-    // tipicamente no tiene stock propio (se produce al instante de vender), por
-    // que su costPrice historico refleja el costo del ULTIMO combo vendido, no
-    // el costo actual de mercado. Actualizarlo aca seria fragil:
-    //   - En createOrder (batch) SI recalculamos WAC porque hay stock que mantener.
-    //   - En assembly no: el combo no deja inventario, solo deja trazabilidad.
-    // Si en el futuro el producto de ensamblaje acumula stock (caso hibrido), la
-    // decision deberia revisarse y quizas replicar el WAC recalc de createOrder.
-    const comboLotId = generateId();
-    const comboLot = {
-      id: comboLotId,
-      tenantId,
-      productId,
-      // DINERO-009 (A4): respetar quantity ensamblado (no siempre 1)
-      quantityAdded: quantity,
-      remainingQuantity: quantity,
-      costUsdPerUnit: preciseRound(totalIngredientCost / quantity, 4),
-      createdAt: now,
-      updatedAt: now,
-      version: 1,
-    };
-    await db.inventoryLots.add(comboLot);
-    await syncQueue.enqueue('inventory_lots', 'CREATE', comboLotId, toSnake(comboLot as unknown as Record<string, unknown>), tenantId);
 
     return success({ consumedLots: assemblyConsumedLots, totalIngredientCost });
   },

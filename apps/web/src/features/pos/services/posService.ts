@@ -793,7 +793,8 @@ export const posService = {
             scaledQuantity,
             tenantId,
             userId,
-            { allowOverride: input.allowOverride }
+            { allowOverride: input.allowOverride },
+            tx,
           );
 
           if (!result.ok) {
@@ -1393,7 +1394,7 @@ export const posService = {
                 // Fallback legacy: restaurar lotes más recientes primero (ventas pre-AUDIT-012)
                 const ingredientLots = await db.inventoryLots
                   .where({ productId: line.productId })
-                  .filter(l => l.remainingQuantity >= 0)
+                  .filter(l => !l.deletedAt && l.remainingQuantity >= 0)
                   .toArray();
                 ingredientLots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
@@ -1413,6 +1414,26 @@ export const posService = {
                     id: lot.id, remainingQuantity: newRemaining, version: newVersion,
                   } as unknown as Record<string, unknown>), tenantId);
                   toRestore -= restoreAmount;
+                }
+                if (toRestore > 0) {
+                  const implicitLotId = generateId();
+                  await db.inventoryLots.add({
+                    id: implicitLotId,
+                    tenantId,
+                    productId: line.productId,
+                    quantityAdded: toRestore,
+                    remainingQuantity: toRestore,
+                    costUsdPerUnit: ingredient.costPrice ?? undefined,
+                    createdAt: now,
+                    updatedAt: now,
+                    version: 1,
+                  });
+                  await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLotId, toSnake({
+                    id: implicitLotId, tenant_id: tenantUuid, product_id: line.productId,
+                    quantity_added: toRestore, remaining_quantity: toRestore,
+                    cost_usd_per_unit: ingredient.costPrice ?? undefined,
+                    created_at: now, updated_at: now, version: 1,
+                  } as unknown as Record<string, unknown>), tenantId);
                 }
               }
 
@@ -1466,7 +1487,7 @@ export const posService = {
               // Fallback legacy: ventas pre-AUDIT-012 sin tracking — restaurar lotes más recientes primero
               const lots = await db.inventoryLots
                 .where({ productId: item.productId })
-                .filter((l) => l.remainingQuantity >= 0)
+                .filter((l) => !l.deletedAt && l.remainingQuantity >= 0)
                 .toArray();
               lots.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
@@ -1486,6 +1507,26 @@ export const posService = {
                   id: lot.id, remainingQuantity: newRemaining, version: newVersion,
                 } as unknown as Record<string, unknown>), tenantId);
                 toRestore -= restoreAmount;
+              }
+              if (toRestore > 0) {
+                const implicitLotId = generateId();
+                await db.inventoryLots.add({
+                  id: implicitLotId,
+                  tenantId,
+                  productId: item.productId,
+                  quantityAdded: toRestore,
+                  remainingQuantity: toRestore,
+                    costUsdPerUnit: product.costPrice ?? undefined,
+                    createdAt: now,
+                    updatedAt: now,
+                    version: 1,
+                  });
+                  await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLotId, toSnake({
+                    id: implicitLotId, tenant_id: tenantUuid, product_id: item.productId,
+                    quantity_added: toRestore, remaining_quantity: toRestore,
+                    cost_usd_per_unit: product.costPrice ?? undefined,
+                  created_at: now, updated_at: now, version: 1,
+                } as unknown as Record<string, unknown>), tenantId);
               }
             }
 
