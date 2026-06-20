@@ -9,7 +9,7 @@ import { supabase } from '../../../services/supabase/client';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
-import { requireRole } from '../../auth/services/roleGuard';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 import {
   CreateCustomerInputSchema,
@@ -60,7 +60,10 @@ export const customerService = {
     input: CreateCustomerInput,
   ): Promise<Result<Customer, AppError>> {
     try {
-      requireRole('owner', 'admin');
+      const _createSession = useAuthStore.getState().session;
+      if (!_createSession || !hasActionPermission(_createSession, 'customers', 'create')) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      }
 
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
@@ -144,7 +147,10 @@ export const customerService = {
     tenantId: string,
   ): Promise<Result<Customer, AppError>> {
     try {
-      requireRole('owner', 'admin');
+      const _updateSession = useAuthStore.getState().session;
+      if (!_updateSession || !hasActionPermission(_updateSession, 'customers', 'update')) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      }
 
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
@@ -225,7 +231,10 @@ export const customerService = {
 
   async softDeleteCustomer(id: string, tenantId: string): Promise<Result<void, AppError>> {
     try {
-      requireRole('owner', 'admin');
+      const _deleteSession = useAuthStore.getState().session;
+      if (!_deleteSession || !hasActionPermission(_deleteSession, 'customers', 'delete')) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      }
 
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);

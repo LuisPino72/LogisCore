@@ -14,7 +14,7 @@ import imageCompression from 'browser-image-compression';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import type { Product, Category, InventoryMovement, CreateProductInput, AdjustStockInput, ProductFilters, ActiveLot, Presentation, CreatePresentationInput, UpdatePresentationInput } from '../types';
 import { convertToStorage, unitToStorageType, displayStock } from '../types';
-import { requireRole } from '../../auth/services/roleGuard';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toNumber, toProduct, toCategory, toMovement, toPresentation } from './mappers';
 import { CreateProductInputSchema, CreateCategoryInputSchema, UpdateCategoryInputSchema } from '../../../specs/inventory';
@@ -1146,7 +1146,10 @@ export const inventoryService = {
   },
 
   async adjustStock(input: AdjustStockInput & { userId: string; tenantId: string }): Promise<Result<InventoryMovement, AppError>> {
-    requireRole('owner', 'admin');
+    const _adjSession = useAuthStore.getState().session;
+    if (!_adjSession || !hasActionPermission(_adjSession, 'inventory', 'adjust_stock')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
 
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);

@@ -1,6 +1,6 @@
 // Shared JWT utilities — NO module dependencies, pure functions only
 
-function decodeJWTPayload(token: string): Record<string, unknown> {
+export function decodeJWTPayload(token: string): Record<string, unknown> {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return {};
@@ -12,7 +12,7 @@ function decodeJWTPayload(token: string): Record<string, unknown> {
   }
 }
 
-function isJWTExpired(token: string): boolean {
+export function isJWTExpired(token: string): boolean {
   const decoded = decodeJWTPayload(token);
   const exp = decoded.exp as number | undefined;
   if (!exp) return false;
@@ -55,5 +55,3 @@ export function extractPermissions(session: { access_token: string } | null): st
   const perms = jwtAppMeta?.permissions as string[] | undefined;
   return perms && perms.length > 0 ? perms : undefined;
 }
-
-export { decodeJWTPayload, isJWTExpired, extractRoleName };

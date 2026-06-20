@@ -21,7 +21,8 @@ import type {
 import { SupplierPaymentMethodSchema } from '../../../specs/purchases';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import { convertToStorage, unitToStorageType } from '../../inventory/types';
-import { requireRole } from '../../auth/services/roleGuard';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
 
 const PURCHASES_MODULE = 'PURCHASES';
 
@@ -83,7 +84,10 @@ export const purchaseService = {
     userId: string,
     input: CreateSupplierInput,
   ): Promise<Result<Supplier, AppError>> {
-    requireRole('owner', 'admin');
+    const _session = useAuthStore.getState().session;
+    if (!_session || !hasActionPermission(_session, 'purchases', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -151,7 +155,10 @@ export const purchaseService = {
     input: Partial<CreateSupplierInput>,
     tenantId: string,
   ): Promise<Result<Supplier, AppError>> {
-    requireRole('owner', 'admin');
+    const _session = useAuthStore.getState().session;
+    if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     try {
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
@@ -207,7 +214,10 @@ export const purchaseService = {
   },
 
   async softDeleteSupplier(id: string, tenantId: string): Promise<Result<void, AppError>> {
-    requireRole('owner', 'admin');
+    const _session = useAuthStore.getState().session;
+    if (!_session || !hasActionPermission(_session, 'purchases', 'delete')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     try {
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
@@ -289,7 +299,10 @@ export const purchaseService = {
     userId: string,
     input: CreatePurchaseOrderInput,
   ): Promise<Result<PurchaseOrder, AppError>> {
-    requireRole('owner', 'admin');
+    const _session2 = useAuthStore.getState().session;
+    if (!_session2 || !hasActionPermission(_session2, 'purchases', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -407,7 +420,10 @@ export const purchaseService = {
     userId: string,
     input: Partial<CreatePurchaseOrderInput>,
   ): Promise<Result<PurchaseOrder, AppError>> {
-    requireRole('owner', 'admin');
+    const _session = useAuthStore.getState().session;
+    if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -507,7 +523,10 @@ export const purchaseService = {
 
   async softDeleteOrder(id: string, tenantId: string): Promise<Result<void, AppError>> {
     try {
-      requireRole('owner', 'admin'); // PLAN-111 (#4): role guard consistente con createOrder
+      const _session = useAuthStore.getState().session;
+      if (!_session || !hasActionPermission(_session, 'purchases', 'delete')) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      }
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();
@@ -545,7 +564,10 @@ export const purchaseService = {
 
   async confirmOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
     try {
-      requireRole('owner', 'admin'); // PLAN-111 (#4): role guard
+      const _session = useAuthStore.getState().session;
+      if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      }
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();
@@ -588,7 +610,10 @@ export const purchaseService = {
     userId: string,
     exchangeRate: number,
   ): Promise<Result<PurchaseOrder, AppError>> {
-    requireRole('owner', 'admin'); // PLAN-111 (#4): role guard
+    const _session = useAuthStore.getState().session;
+    if (!_session || !hasActionPermission(_session, 'purchases', 'receive_order')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -837,7 +862,10 @@ export const purchaseService = {
 
   async cancelOrder(id: string, tenantId: string): Promise<Result<PurchaseOrder, AppError>> {
     try {
-      requireRole('owner', 'admin'); // PLAN-111 (#4): role guard
+      const _session = useAuthStore.getState().session;
+      if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      }
       const networkCheck = requireNetwork();
       if (!networkCheck.ok) return failure(networkCheck.error);
       const db = getDb();

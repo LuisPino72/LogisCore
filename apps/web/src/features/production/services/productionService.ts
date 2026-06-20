@@ -25,7 +25,7 @@ import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrder
 import { logger } from '../../../lib/logger';
 import { type Transaction } from 'dexie';
 import { calculateConsumptionCost, selectFifoLots } from './costCalculator';
-import { requireRole } from '../../auth/services/roleGuard';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { unitToStorageType, convertToStorage } from '../../inventory/types';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
@@ -287,7 +287,10 @@ export const productionService = {
     userId: string,
     input: CreateRecipeInput,
   ): Promise<Result<Recipe, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'production', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -533,7 +536,10 @@ export const productionService = {
     input: UpdateRecipeInput,
     tenantId: string,
   ): Promise<Result<Recipe, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'production', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -675,7 +681,10 @@ export const productionService = {
   },
 
   async deleteRecipe(id: string, tenantId: string): Promise<Result<void, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'production', 'delete')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -904,7 +913,10 @@ export const productionService = {
     userId: string,
     input: CreateProductionOrderInput,
   ): Promise<Result<ProductionOrder, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'production', 'produce_batch')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -1179,7 +1191,10 @@ export const productionService = {
   },
 
   async cancelOrder(orderId: string, tenantId: string): Promise<Result<void, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'production', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 

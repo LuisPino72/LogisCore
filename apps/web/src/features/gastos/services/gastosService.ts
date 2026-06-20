@@ -8,7 +8,7 @@ import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { emitWithAudit, logAuditEventOnly } from '../../../services/audit/emitWithAudit';
-import { requireRole } from '../../auth/services/roleGuard';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { logger } from '../../../lib/logger';
 
@@ -88,7 +88,10 @@ export const gastosService = {
   },
 
   async create(tenantId: string, userId: string, input: unknown): Promise<Result<Gasto, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'gastos', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     // AUDIT-CRUD-006: requireNetwork para consistencia con resto del codebase
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -150,7 +153,10 @@ export const gastosService = {
   },
 
   async update(tenantId: string, id: string, input: unknown, currentRate?: number): Promise<Result<Gasto, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'gastos', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     // AUDIT-CRUD-007: requireNetwork para consistencia
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -224,7 +230,10 @@ export const gastosService = {
   },
 
   async remove(tenantId: string, id: string): Promise<Result<void, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'gastos', 'delete')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     // AUDIT-CRUD-008: requireNetwork para consistencia
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -444,7 +453,10 @@ export const gastosService = {
     ids: string[],
     currentRate: number,
   ): Promise<Result<void, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'gastos', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 

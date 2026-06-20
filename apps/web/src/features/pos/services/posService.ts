@@ -19,7 +19,7 @@ import { saleFromSupabase, saleItemFromSupabase, cashRegisterFromSupabase } from
 import type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { convertToStorage, unitToStorageType } from '../../../features/inventory/types';
-import { requireRole } from '../../auth/services/roleGuard';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 type VerificationProduct = {
@@ -959,7 +959,10 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, openingBalanceBs, openingRate } = input;
 
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'pos', 'open_box')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
 
     if (!openingBalanceBs || openingBalanceBs <= 0) {
       return failure(new AppError(PosErrors.BOX_OPENING_BALANCE_REQUIRED, 'Debe ingresar un monto inicial para abrir la caja.'));
@@ -1284,7 +1287,10 @@ export const posService = {
   },
 
   async voidSale(saleId: string, tenantId: string, userId: string): Promise<Result<void, AppError>> {
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'pos', 'void_sale')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
 
     try {
       const db = getDb();
@@ -1663,7 +1669,10 @@ export const posService = {
     const db = getDb();
     const { tenantId, userId, declaredClosingBalanceBs, closingRate } = input;
 
-    requireRole('owner', 'admin');
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'pos', 'close_box')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
 
     const cashReg = await db.cashRegisters
       .where({ tenantId })

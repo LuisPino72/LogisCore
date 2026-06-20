@@ -10,6 +10,7 @@ import { outboxProcessor } from '../../../services/outbox/outboxProcessor';
 import { sessionGuard } from './sessionGuardService';
 import { offlineGrace } from './offlineGraceService';
 
+import { isValidRole } from '../types';
 import { extractRole, extractRoleName, extractTenantId, extractPermissions, isJWTExpired } from '../../../lib/jwt';
 export { extractRole, extractRoleName, extractTenantId, extractPermissions, decodeJWTPayload, isJWTExpired } from '../../../lib/jwt';
 
@@ -46,7 +47,7 @@ async function buildUserSession(
   return {
     userId: session.user.id,
     email: session.user.email ?? '',
-    role: role as UserSession['role'],
+    role: role && isValidRole(role) ? role : 'employee',
     roleName,
     tenantId: tenantUuid,
     tenantSlug,
@@ -119,13 +120,12 @@ export const authService = {
       return success({
         userId: session.user.id,
         email: session.user.email ?? '',
-        role: role as UserSession['role'],
+    role: role && isValidRole(role) ? role : 'employee',
         tenantId: tenantUuid,
         tenantSlug,
         accessToken: session.access_token,
         expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
-        // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes reciben permisos acotados.
-        permissions: role === 'employee' ? ['pos:create', 'pos:read', 'customers:create', 'customers:read'] : undefined,
+        permissions: extractPermissions(session) ?? (role === 'employee' ? ['pos:create', 'pos:read', 'customers:create', 'customers:read'] : undefined),
       });
     }
 
@@ -158,7 +158,7 @@ export const authService = {
 
     // BACKLOG-106 [AUTH-002]: Migración retroactiva — employees preexistentes sin permissions
     // asignadas reciben permisos acotados al primer login post-migración.
-    if (userSession.role === 'employee' && !userSession.permissions) {
+    if (userSession.role === 'employee' && (!userSession.permissions || userSession.permissions.length === 0)) {
       return success({ ...userSession, permissions: ['pos:create', 'pos:read', 'customers:create', 'customers:read'] });
     }
 
