@@ -12,6 +12,7 @@
  * Esto facilita el testing puro y mantiene al helper libre de side effects.
  */
 import { type Result, success, failure, AppError } from '@logiscore/core';
+import { preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { ProductionErrors } from '../../../specs/production/errors';
@@ -149,15 +150,15 @@ export async function calculateConsumptionCost(
     });
   }
 
-  // 5. Redondear totalCost a 2 decimales (Regla #6 — precisión fiscal).
-  const roundedTotal = Math.round(totalCost * 100) / 100;
+  // 5. Redondear totalCost a 4 decimales (DINERO-025 — precisión interna).
+  const roundedTotal = preciseRound(totalCost, 4);
   return success({
     totalCost: roundedTotal,
     consumedLots: consumedLots.map((d) => ({
       lotId: d.lotId,
       quantity: d.quantity,
       costUsdPerUnit: d.costUsdPerUnit,
-      costUsd: Math.round(d.costUsd * 100) / 100,
+      costUsd: preciseRound(d.costUsd, 4),
       version: d.version,
     })),
   });

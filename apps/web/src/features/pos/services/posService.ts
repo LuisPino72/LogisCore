@@ -659,6 +659,11 @@ export const posService = {
             .filter((l) => l.remainingQuantity > 0)
             .sortBy('createdAt');
 
+          // DINERO-025: Bloquear venta si no hay lotes FIFO ni costPrice (evitar ganancia 100% falsa)
+          if (lots.length === 0 && !product.costPrice) {
+            throw new AppError('SALE_NO_COST_DATA', `"${product.name}" no tiene costo registrado. Registre un costo o reciba una compra primero.`);
+          }
+
           if (lots.length === 0 && product.stock >= storageQuantity) {
             const implicitLot = {
               id: generateId(),

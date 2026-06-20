@@ -1134,7 +1134,7 @@ export const productionService = {
           const previousValue = prevStock * prevCostPrice;
           const newValue = quantityTargetInStorage * costPerStorageUnit;
           const newWac = newStock > 0
-            ? Math.round(((previousValue + newValue) / newStock) * 100) / 100
+            ? preciseRound((previousValue + newValue) / newStock, 4)
             : 0;
           await db.products.update(recipe.productId, { stock: newStock, costPrice: newWac });
           await syncQueue.enqueue('products', 'UPDATE', recipe.productId, toSnake({ ...finishedProduct, stock: newStock, costPrice: newWac } as unknown as Record<string, unknown>), tenantId);

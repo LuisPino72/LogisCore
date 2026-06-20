@@ -1512,9 +1512,13 @@ export const inventoryService = {
         .sortBy('createdAt');
 
       // AUDIT-FLOW-6-006: Fallback de lote implícito
+      // DINERO-025: Bloquear si no hay costPrice (evitar costo 0)
       if (lots.length === 0) {
         const product = await db.products.where({ tenantId, id: productId }).filter(p => !p.deletedAt).first();
         if (product && product.stock >= quantity) {
+          if (!product.costPrice) {
+            throw new AppError('CONSUME_NO_COST_DATA', `"${product.name}" no tiene costo registrado.`);
+          }
           const now = new Date().toISOString();
           const implicitLot = {
             id: generateId(),
