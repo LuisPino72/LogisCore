@@ -485,7 +485,7 @@ export const customerService = {
       const db = getDb();
       const sales = await db.sales
         .where({ tenantId, customerId })
-        .filter((s) => !s.deletedAt && s.status === 'completed' && (!s.isCreditSale || !!s.creditCollected))
+        .filter((s) => !s.deletedAt && s.status === 'completed')
         .toArray();
 
       if (sales.length === 0) {
@@ -499,15 +499,37 @@ export const customerService = {
         });
       }
 
+      const creditSales = sales.filter((s) => s.isCreditSale && !s.creditCollected);
+      const paidBySale = new Map<string, number>();
+      if (creditSales.length > 0) {
+        const payments = await db.creditPayments
+          .where({ tenantId, customerId })
+          .filter((cp) => !cp.deletedAt)
+          .toArray();
+        for (const cp of payments) {
+          paidBySale.set(cp.saleId, (paidBySale.get(cp.saleId) ?? 0) + cp.amountUsd);
+        }
+      }
+
       let totalBs = 0;
       let totalUsd = 0;
       let firstAt: string | null = null;
       let lastAt: string | null = null;
 
       for (const s of sales) {
-        totalBs += s.subtotalBs;
-        if (s.exchangeRate > 0) {
-          totalUsd += s.subtotalBs / s.exchangeRate;
+        if (s.isCreditSale && !s.creditCollected) {
+          const creditTotalUsd = s.exchangeRate > 0 ? s.totalBs / s.exchangeRate : 0;
+          const paidUsd = paidBySale.get(s.id) ?? 0;
+          const fraction = creditTotalUsd > 0 ? Math.min(1, paidUsd / creditTotalUsd) : 0;
+          totalBs += s.totalBs * fraction;
+          if (s.exchangeRate > 0) {
+            totalUsd += (s.totalBs * fraction) / s.exchangeRate;
+          }
+        } else {
+          totalBs += s.totalBs;
+          if (s.exchangeRate > 0) {
+            totalUsd += s.totalBs / s.exchangeRate;
+          }
         }
         if (!firstAt || s.createdAt < firstAt) firstAt = s.createdAt;
         if (!lastAt || s.createdAt > lastAt) lastAt = s.createdAt;
@@ -537,16 +559,39 @@ export const customerService = {
       const db = getDb();
       const sales = await db.sales
         .where({ tenantId })
-        .filter((s) => !s.deletedAt && s.status === 'completed' && s.customerId != null && (!s.isCreditSale || !!s.creditCollected))
+        .filter((s) => !s.deletedAt && s.status === 'completed' && s.customerId != null)
         .toArray();
+
+      const creditSales = sales.filter((s) => s.isCreditSale && !s.creditCollected);
+      const creditCustomerIds = [...new Set(creditSales.map((s) => s.customerId!).filter(Boolean))];
+      const paidBySale = new Map<string, number>();
+      if (creditCustomerIds.length > 0) {
+        const payments = await db.creditPayments
+          .where({ tenantId })
+          .filter((cp) => creditCustomerIds.includes(cp.customerId) && !cp.deletedAt)
+          .toArray();
+        for (const cp of payments) {
+          paidBySale.set(cp.saleId, (paidBySale.get(cp.saleId) ?? 0) + cp.amountUsd);
+        }
+      }
 
       const customerMap = new Map<string, { totalBs: number; totalUsd: number; count: number; lastPurchaseAt: string }>();
       for (const s of sales) {
         const cid = s.customerId!;
         const existing = customerMap.get(cid) ?? { totalBs: 0, totalUsd: 0, count: 0, lastPurchaseAt: s.createdAt };
-        existing.totalBs += s.subtotalBs;
-        if (s.exchangeRate > 0) {
-          existing.totalUsd += s.subtotalBs / s.exchangeRate;
+        if (s.isCreditSale && !s.creditCollected) {
+          const creditTotalUsd = s.exchangeRate > 0 ? s.totalBs / s.exchangeRate : 0;
+          const paidUsd = paidBySale.get(s.id) ?? 0;
+          const fraction = creditTotalUsd > 0 ? Math.min(1, paidUsd / creditTotalUsd) : 0;
+          existing.totalBs += s.totalBs * fraction;
+          if (s.exchangeRate > 0) {
+            existing.totalUsd += (s.totalBs * fraction) / s.exchangeRate;
+          }
+        } else {
+          existing.totalBs += s.totalBs;
+          if (s.exchangeRate > 0) {
+            existing.totalUsd += s.totalBs / s.exchangeRate;
+          }
         }
         existing.count += 1;
         if (s.createdAt > existing.lastPurchaseAt) {

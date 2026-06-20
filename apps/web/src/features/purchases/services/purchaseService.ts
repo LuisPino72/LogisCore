@@ -1153,12 +1153,68 @@ export const purchaseService = {
     }
   },
 
+  async reconcileSupplierBalance(
+    supplierId: string,
+    tenantId: string,
+  ): Promise<Result<{ corrected: boolean; previousBalance: number; actualBalance: number }, AppError>> {
+    const db = getDb();
+
+    const supplier = await db.suppliers
+      .where({ id: supplierId })
+      .filter((s) => s.tenantId === tenantId && !s.deletedAt)
+      .first();
+    if (!supplier) return failure(new AppError(PurchaseErrors.SUPPLIER_NOT_FOUND, 'Proveedor no encontrado.'));
+
+    const orders = await db.purchaseOrders
+      .where({ supplierId })
+      .filter((o) => o.tenantId === tenantId && !o.deletedAt && o.status !== 'cancelled')
+      .toArray();
+
+    const actualBalance = orders.reduce((sum, o) => {
+      const total = o.totalUsd || 0;
+      const paid = o.paidAmountUsd || 0;
+      return sum + Math.max(0, total - paid);
+    }, 0);
+    const roundedActual = preciseRound(actualBalance, 2);
+    const previousBalance = supplier.balance || 0;
+
+    if (Math.abs(roundedActual - previousBalance) > 0.01) {
+      await db.suppliers.update(supplierId, { balance: roundedActual });
+      await syncQueue.enqueue('suppliers', 'UPDATE', supplierId, toSnake({
+        ...supplier,
+        balance: roundedActual,
+      } as unknown as Record<string, unknown>), tenantId);
+      logger.warn(PURCHASES_MODULE, 'supplier.balance corregido', { supplierId, previous: previousBalance, actual: roundedActual });
+      return success({ corrected: true, previousBalance, actualBalance: roundedActual });
+    }
+
+    return success({ corrected: false, previousBalance, actualBalance: previousBalance });
+  },
+
   async getPendingPayables(tenantId: string): Promise<number> {
     const db = getDb();
     const suppliers = await db.suppliers
       .where({ tenantId })
       .filter((s) => !s.deletedAt && (s.balance || 0) > 0)
       .toArray();
-    return suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
+    const balanceSum = suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
+
+    const orders = await db.purchaseOrders
+      .where({ tenantId })
+      .filter((o) => !o.deletedAt && o.status !== 'cancelled')
+      .toArray();
+    const orderTotal = orders.reduce((sum, o) => {
+      const total = o.totalUsd || 0;
+      const paid = o.paidAmountUsd || 0;
+      return sum + Math.max(0, total - paid);
+    }, 0);
+    const roundedOrderTotal = preciseRound(orderTotal, 2);
+    const roundedBalanceSum = preciseRound(balanceSum, 2);
+    if (Math.abs(roundedOrderTotal - roundedBalanceSum) > 0.01) {
+      logger.warn(PURCHASES_MODULE, 'getPendingPayables: supplier.balance mismatch',
+        { balanceSum: roundedBalanceSum, orderTotal: roundedOrderTotal });
+    }
+
+    return roundedBalanceSum;
   },
 };

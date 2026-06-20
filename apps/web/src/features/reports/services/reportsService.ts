@@ -452,6 +452,9 @@ export const reportsService = {
         }
       }
 
+      // Build set of credit sale IDs in period (for R4: fetch payments regardless of date)
+      const creditSaleIdsInPeriod = new Set(data.filter(d => d.sale.isCreditSale).map(d => d.sale.id));
+
       // Non-sellable expenses + Adjustment losses + Operating expenses + Credit payments (parallel, no dependency)
       const [nsResult, adjResult, operatingExpenses, creditPaymentsArr] = await Promise.all([
         this.getNonSellableExpenses(tenantId, start, end),
@@ -468,6 +471,20 @@ export const reportsService = {
         })(),
         (async () => {
           const db = getDb();
+          // R4: fetch payments for period's credit sales (any date) + payments in period (orphan)
+          if (creditSaleIdsInPeriod.size > 0) {
+            const [paymentsForPeriodSales, paymentsInPeriod] = await Promise.all([
+              db.creditPayments
+                .where({ tenantId })
+                .filter((cp) => creditSaleIdsInPeriod.has(cp.saleId) && !cp.deletedAt)
+                .toArray(),
+              db.creditPayments
+                .where({ tenantId })
+                .filter((cp) => cp.createdAt >= start && cp.createdAt <= end && !creditSaleIdsInPeriod.has(cp.saleId))
+                .toArray(),
+            ]);
+            return [...paymentsForPeriodSales, ...paymentsInPeriod];
+          }
           return db.creditPayments
             .where({ tenantId })
             .filter((cp) => cp.createdAt >= start && cp.createdAt <= end)
@@ -477,8 +494,12 @@ export const reportsService = {
 
       // Adjust pending credit by subtracting payments made
       const paidBySale = new Map<string, number>();
+      const orphanPaymentIds = new Set<string>();
       for (const cp of creditPaymentsArr) {
         paidBySale.set(cp.saleId, (paidBySale.get(cp.saleId) ?? 0) + cp.amountUsd);
+        if (!creditSaleIdsInPeriod.has(cp.saleId)) {
+          orphanPaymentIds.add(cp.id);
+        }
       }
 
       pendingCreditUsd = 0;
@@ -496,6 +517,13 @@ export const reportsService = {
           if (s.customerId) {
             customerDebtMap.set(s.customerId, (customerDebtMap.get(s.customerId) ?? 0) + remaining);
           }
+        }
+      }
+
+      // R2: count orphan payments (payments for sales outside the period) as collected
+      for (const cp of creditPaymentsArr) {
+        if (orphanPaymentIds.has(cp.id)) {
+          collectedCreditUsd += cp.amountUsd;
         }
       }
 
@@ -1545,11 +1573,39 @@ export const reportsService = {
         .filter((c) => !c.deletedAt)
         .toArray();
 
-      // Get sales in period
-      const sales = await db.sales
+      // Get sales in period (include partial credit sales)
+      const allPeriodSales = await db.sales
         .where({ tenantId })
-        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end && (!s.isCreditSale || !!s.creditCollected))
+        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end)
         .toArray();
+
+      // Build paid fraction map for partial credit sales
+      const paidFraction = new Map<string, number>();
+      const partialCreditSales = allPeriodSales.filter((s) => s.isCreditSale && !s.creditCollected);
+      if (partialCreditSales.length > 0) {
+        const saleIds = partialCreditSales.map((s) => s.id);
+        const payments = await db.creditPayments
+          .where({ tenantId })
+          .filter((cp) => saleIds.includes(cp.saleId) && !cp.deletedAt)
+          .toArray();
+        const paidBySale = new Map<string, number>();
+        for (const cp of payments) paidBySale.set(cp.saleId, (paidBySale.get(cp.saleId) ?? 0) + cp.amountUsd);
+        for (const s of partialCreditSales) {
+          const creditTotalUsd = s.exchangeRate > 0 ? s.totalBs / s.exchangeRate : 0;
+          const paidUsd = paidBySale.get(s.id) ?? 0;
+          paidFraction.set(s.id, creditTotalUsd > 0 ? Math.min(1, paidUsd / creditTotalUsd) : 0);
+        }
+      }
+
+      const sales = allPeriodSales.filter((s) => {
+        if (paidFraction.has(s.id)) return (paidFraction.get(s.id) ?? 0) > 0;
+        return true;
+      });
+
+      function effectiveTotalBs(sale: typeof allPeriodSales[number]): number {
+        const frac = paidFraction.get(sale.id);
+        return frac !== undefined ? sale.totalBs * frac : (sale.totalBs || 0);
+      }
 
       // Get customers who bought in period
       const customerIdsInPeriod = new Set(sales.filter((s) => s.customerId).map((s) => s.customerId));
@@ -1561,13 +1617,13 @@ export const reportsService = {
       // Returning customers (existed before period but bought in period)
       const returningCustomers = activeCustomers.filter((c) => c.createdAt < start);
 
-      // Calculate average ticket
+      // Calculate average ticket (using effectiveTotalBs for partial credits)
       const salesWithCustomer = sales.filter((s) => s.customerId);
-      const totalSpentBs = salesWithCustomer.reduce((sum, s) => sum + (s.totalBs || 0), 0);
+      const totalSpentBs = salesWithCustomer.reduce((sum, s) => sum + effectiveTotalBs(s), 0);
       const avgTicketBs = salesWithCustomer.length > 0 ? preciseRound(totalSpentBs / salesWithCustomer.length, 2) : 0;
       const totalUsdFromSales = salesWithCustomer.reduce((sum, s) => {
         const rate = s.exchangeRate && s.exchangeRate > 0 ? s.exchangeRate : 1;
-        return sum + ((s.totalBs || 0) / rate);
+        return sum + (effectiveTotalBs(s) / rate);
       }, 0);
       const avgTicketUsd = salesWithCustomer.length > 0
         ? preciseRound(totalUsdFromSales / salesWithCustomer.length, 2)
@@ -1584,7 +1640,7 @@ export const reportsService = {
         if (customer) {
           const existing = customerSpending.get(customer.id) || { name: customer.name, total: 0 };
           const rate = sale.exchangeRate && sale.exchangeRate > 0 ? sale.exchangeRate : 1;
-          existing.total += (sale.totalBs || 0) / rate;
+          existing.total += effectiveTotalBs(sale) / rate;
           customerSpending.set(customer.id, existing);
         }
       }
@@ -1628,10 +1684,39 @@ export const reportsService = {
         .filter((c) => !c.deletedAt)
         .toArray();
 
-      const sales = await db.sales
+      const allPeriodSales = await db.sales
         .where({ tenantId })
-        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end && !!s.customerId && (!s.isCreditSale || !!s.creditCollected))
+        .filter((s) => !s.deletedAt && s.createdAt >= start && s.createdAt <= end && !!s.customerId)
         .toArray();
+
+      // Build paidFraction map for partial credit sales
+      const paidFractionRanking = new Map<string, number>();
+      const partialCreditSales = allPeriodSales.filter((s) => s.isCreditSale && !s.creditCollected);
+      if (partialCreditSales.length > 0) {
+        const saleIds = partialCreditSales.map((s) => s.id);
+        const payments = await db.creditPayments
+          .where({ tenantId })
+          .filter((cp) => saleIds.includes(cp.saleId) && !cp.deletedAt)
+          .toArray();
+        const paidBySale = new Map<string, number>();
+        for (const cp of payments) paidBySale.set(cp.saleId, (paidBySale.get(cp.saleId) ?? 0) + cp.amountUsd);
+        for (const s of partialCreditSales) {
+          const creditTotalUsd = s.exchangeRate > 0 ? s.totalBs / s.exchangeRate : 0;
+          const paidUsd = paidBySale.get(s.id) ?? 0;
+          paidFractionRanking.set(s.id, creditTotalUsd > 0 ? Math.min(1, paidUsd / creditTotalUsd) : 0);
+        }
+      }
+
+      const sales = allPeriodSales.filter((s) => {
+        const frac = paidFractionRanking.get(s.id);
+        if (frac !== undefined) return frac > 0;
+        return true;
+      });
+
+      function effectiveTotalBsRanking(sale: typeof allPeriodSales[number]): number {
+        const frac = paidFractionRanking.get(sale.id);
+        return frac !== undefined ? sale.totalBs * frac : (sale.totalBs || 0);
+      }
 
       // Group sales by customer
       const customerStats = new Map<string, {
@@ -1653,8 +1738,8 @@ export const reportsService = {
         };
         existing.purchaseCount++;
         const rate = sale.exchangeRate && sale.exchangeRate > 0 ? sale.exchangeRate : 1;
-        existing.totalSpentBs += sale.totalBs || 0;
-        existing.totalSpentUsd += (sale.totalBs || 0) / rate;
+        existing.totalSpentBs += effectiveTotalBsRanking(sale);
+        existing.totalSpentUsd += effectiveTotalBsRanking(sale) / rate;
         if (!existing.lastPurchaseAt || sale.createdAt > existing.lastPurchaseAt) {
           existing.lastPurchaseAt = sale.createdAt;
         }
@@ -1775,7 +1860,25 @@ export const reportsService = {
       .where({ tenantId })
       .filter((s) => !s.deletedAt && (s.balance || 0) > 0)
       .toArray();
-    return suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
+    const balanceSum = suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
+
+    const orders = await db.purchaseOrders
+      .where({ tenantId })
+      .filter((o) => !o.deletedAt && o.status !== 'cancelled')
+      .toArray();
+    const orderTotal = orders.reduce((sum, o) => {
+      const total = o.totalUsd || 0;
+      const paid = o.paidAmountUsd || 0;
+      return sum + Math.max(0, total - paid);
+    }, 0);
+    const roundedOrderTotal = preciseRound(orderTotal, 2);
+    const roundedBalanceSum = preciseRound(balanceSum, 2);
+    if (Math.abs(roundedOrderTotal - roundedBalanceSum) > 0.01) {
+      logger.warn('Reports', 'getPendingPayables: supplier.balance mismatch',
+        { balanceSum: roundedBalanceSum, orderTotal: roundedOrderTotal });
+    }
+
+    return roundedBalanceSum;
   },
 
   async getRecipeProfitability(tenantId: string, filters: ReportFilters): Promise<Result<RecipeProfitabilityItem[], AppError>> {

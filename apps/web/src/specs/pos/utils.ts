@@ -54,10 +54,11 @@ export function calculateSaleTotals(
       const taxableDiscount = preciseRound(subtotalTaxableBs * pct / 100, 2);
       ivaBase = subtotalTaxableBs - taxableDiscount;
     } else {
-      discountBs = preciseRound(discount.value * exchangeRateBs, 2);
+      const rawDiscountBs = discount.value * exchangeRateBs;
+      discountBs = preciseRound(rawDiscountBs, 2);
       if (subtotalBs > 0) {
         const taxableRatio = subtotalTaxableBs / subtotalBs;
-        const taxableDiscount = preciseRound(discountBs * taxableRatio, 2);
+        const taxableDiscount = preciseRound(rawDiscountBs * taxableRatio, 2);
         ivaBase = subtotalTaxableBs - taxableDiscount;
       }
     }
