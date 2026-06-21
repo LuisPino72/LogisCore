@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Button, Modal, Badge, Input, Select } from '../../../common/components';
-import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Plus, Trash2, ArrowLeft, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, CheckCircle2, X, Loader2, Download, Plus, Trash2, ArrowLeft, ChevronDown, ChevronUp, Info, Scale, Package } from 'lucide-react';
 import { parseCsvFile, validateCsvRows, importProductsFromCsv, validateRow, type CsvRow, type ImportResult, type ImportSummary } from '../services/csvImportService';
 
 function downloadCsvTemplate() {
@@ -489,7 +489,7 @@ export function CSVUploadModal({ isOpen, onClose, tenantId, userId, onImported }
                         <td className="py-2 px-2 text-right">{row.precio || '-'}</td>
                         <td className="py-2 px-2 text-right">{row.stock || '-'}</td>
                         <td className="py-2 px-2">{row.categoria || <span className="text-gray-400">Otros</span>}</td>
-                        <td className="py-2 px-2 text-center">{row.pesable === 'si' ? '⚖️' : '📦'}</td>
+                        <td className="py-2 px-2 text-center">{row.pesable === 'si' ? <Scale size={14} className="inline text-gray-500" /> : <Package size={14} className="inline text-gray-500" />}</td>
                         <td className="py-2 px-2 text-center font-mono text-xs">{row.unidad || 'unidad'}</td>
                         <td className="py-2 px-2 text-center">{row.iva === 'no' ? 'No' : 'Sí'}</td>
                         <td className="py-2 px-2 text-center">

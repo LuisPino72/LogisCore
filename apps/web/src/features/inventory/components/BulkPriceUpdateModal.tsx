@@ -131,7 +131,7 @@ export function BulkPriceUpdateModal({ open, onClose, selectedProducts, bulkPric
               }`}>
                 <div className="flex items-center justify-between">
                   <p className={`text-xs font-medium ${bulkPrice.impact.isDecreasing ? 'text-warning' : 'text-primary'}`}>
-                    {bulkPrice.impact.isDecreasing ? '⚠️ Reduciendo precios' : 'Vista previa'}
+                    {bulkPrice.impact.isDecreasing ? <><AlertTriangle size={14} className="inline mr-1" />Reduciendo precios</> : 'Vista previa'}
                   </p>
                   <span className="text-xs text-gray-500">
                     {bulkPrice.impact.productsWithPrice} de {bulkPrice.impact.totalProducts} productos

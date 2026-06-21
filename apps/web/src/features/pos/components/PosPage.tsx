@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
-import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, User } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosNavigation } from '../hooks/usePosNavigation';
 import { usePosModals } from '../hooks/usePosModals';
@@ -90,6 +90,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
   const [showRegisterSelection, setShowRegisterSelection] = useState(false);
+  const [showPayConfirm, setShowPayConfirm] = useState(false);
 
   // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
   const [now, setNow] = useState(() => new Date());
@@ -195,7 +196,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [weightingProduct, weightingQty, addToCart, addToast, closeWeightModal]);
 
-  const handlePay = useCallback(async () => {
+  const executePayment = useCallback(async () => {
     if (!tenantId || !userId || !paymentMethod) {
       addToast({ type: 'warning', message: 'Faltan datos para procesar la venta. Verifica sesión y método de pago.', duration: 4000 });
       return;
@@ -229,7 +230,24 @@ export function PosPage({ tenantId }: PosPageProps) {
     } finally {
       setProcessing(false);
     }
-  }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs]);
+  }, [tenantId, userId, paymentMethod, completeSale, clearCart, addToast, cart, exchangeRateBs, selectedCustomer, closeMobileCart]);
+
+  const handlePay = useCallback(() => {
+    if (!tenantId || !userId || !paymentMethod) {
+      addToast({ type: 'warning', message: 'Faltan datos para procesar la venta. Verifica sesión y método de pago.', duration: 4000 });
+      return;
+    }
+    setShowPayConfirm(true);
+  }, [tenantId, userId, paymentMethod, addToast]);
+
+  const handleConfirmPay = useCallback(() => {
+    setShowPayConfirm(false);
+    executePayment();
+  }, [executePayment]);
+
+  const handleCancelPay = useCallback(() => {
+    setShowPayConfirm(false);
+  }, []);
 
   const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'text') => {
     if (!completedSale || !tenantInfo) return;
@@ -751,6 +769,48 @@ export function PosPage({ tenantId }: PosPageProps) {
           <p className="text-sm text-gray-600 text-center">
             Se restaurará el stock de todos los productos de esta venta. Esta acción no se puede deshacer.
           </p>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showPayConfirm}
+        onClose={handleCancelPay}
+        title="Confirmar venta"
+        size="sm"
+        footer={
+          <div className="flex gap-2 w-full">
+            <Button variant="ghost" className="flex-1" onClick={handleCancelPay}>Cancelar</Button>
+            <Button variant="primary" className="flex-1" onClick={handleConfirmPay} loading={processing}>Confirmar venta</Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3 pt-2 animate-slide-down">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <ShoppingCart size={20} className="text-primary" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-gray-900">{formatUsd(cart.reduce((s, i) => s + i.totalPriceUsd, 0))}</p>
+              <p className="text-xs text-text-secondary">{formatBs(preciseRound(cart.reduce((s, i) => s + i.totalPriceUsd, 0) * exchangeRateBs, 2))}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-surface-alt rounded-lg p-2.5">
+              <p className="text-xs text-text-secondary">Productos</p>
+              <p className="font-semibold text-gray-900">{cart.reduce((s, i) => s + i.quantity, 0)} unidades</p>
+            </div>
+            <div className="bg-surface-alt rounded-lg p-2.5">
+              <p className="text-xs text-text-secondary">Método de pago</p>
+              <p className="font-semibold text-gray-900">{paymentMethod ? METADATA_PAGOS[paymentMethod]?.label ?? paymentMethod : '-'}</p>
+            </div>
+          </div>
+          {selectedCustomer && (
+            <div className="flex items-center gap-2 bg-primary/5 rounded-lg p-2.5 text-sm">
+              <User size={14} className="text-primary shrink-0" />
+              <span className="font-medium text-gray-900 truncate">{selectedCustomer.name}</span>
+              {isCreditSale && <Badge variant="warning" className="text-[10px]">Fiado</Badge>}
+            </div>
+          )}
         </div>
       </Modal>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Alert, Modal, Input, Button } from '../../../common/components';
 import type { Tenant } from '../types';
 
@@ -68,7 +69,7 @@ export function DeleteTenantModal({ isOpen, onClose, tenant, onSoftDelete, onHar
         <div className="space-y-4 animate-slide-down">
           <div className="flex flex-col items-center gap-3 pt-2">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
-              <span className="text-danger text-xl">⚠</span>
+              <AlertTriangle size={24} className="text-danger" />
             </div>
           </div>
           <Alert variant="error">

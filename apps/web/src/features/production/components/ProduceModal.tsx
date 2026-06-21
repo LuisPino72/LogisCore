@@ -66,7 +66,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
     // Check for excessive stock warning (> 100k units)
     const totalProduction = recipe.yieldQuantity * value;
     if (totalProduction > 100_000) {
-      setExcessiveStockWarning(`⚠️ Se producirán ${totalProduction.toLocaleString()} ${recipe.yieldUnit}. ¿Estás seguro? Stock muy alto.`);
+      setExcessiveStockWarning(`Se producirán ${totalProduction.toLocaleString()} ${recipe.yieldUnit}. ¿Estás seguro? Stock muy alto.`);
     } else {
       setExcessiveStockWarning(null);
     }

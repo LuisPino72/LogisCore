@@ -43,36 +43,36 @@ import { NotificationBell } from './common/components/NotificationBell';
 import { useSystemNotifications } from './features/system/hooks/useSystemNotifications';
 
 const DashboardPage = lazy(() =>
-  import('./features/dashboard').then((m) => ({ default: m.DashboardPage })),
+  import('./features/dashboard/components/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 );
 const InventoryPage = lazy(() =>
-  import('./features/inventory').then((m) => ({ default: m.InventoryPage })),
+  import('./features/inventory/components/InventoryPage').then((m) => ({ default: m.InventoryPage })),
 );
-const PosPage = lazy(() => import('./features/pos').then((m) => ({ default: m.PosPage })));
+const PosPage = lazy(() => import('./features/pos/components/PosPage').then((m) => ({ default: m.PosPage })));
 const PurchasePage = lazy(() =>
-  import('./features/purchases').then((m) => ({ default: m.PurchasePage })),
+  import('./features/purchases/components/PurchasePage').then((m) => ({ default: m.PurchasePage })),
 );
 const ReportsPage = lazy(() =>
-  import('./features/reports').then((m) => ({ default: m.ReportsPage })),
+  import('./features/reports/components/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 );
-const GastosPage = lazy(() => import('./features/gastos').then((m) => ({ default: m.GastosPage })));
+const GastosPage = lazy(() => import('./features/gastos/components/GastosPage').then((m) => ({ default: m.GastosPage })));
 const ProductionPage = lazy(() =>
-  import('./features/production').then((m) => ({ default: m.ProductionPage })),
+  import('./features/production/pages/ProductionPage').then((m) => ({ default: m.ProductionPage })),
 );
 const CustomersPage = lazy(() =>
-  import('./features/customers').then((m) => ({ default: m.CustomersPage })),
+  import('./features/customers/components/CustomersPage').then((m) => ({ default: m.CustomersPage })),
 );
 
 // PERF-001: Pre-carga y prefetch de módulos
 const MODULE_IMPORTS: Record<string, () => Promise<unknown>> = {
-  dashboard: () => import('./features/dashboard'),
-  inventory: () => import('./features/inventory'),
-  pos: () => import('./features/pos'),
-  purchases: () => import('./features/purchases'),
-  gastos: () => import('./features/gastos'),
-  production: () => import('./features/production'),
-  customers: () => import('./features/customers'),
-  reports: () => import('./features/reports'),
+  dashboard: () => import('./features/dashboard/components/DashboardPage'),
+  inventory: () => import('./features/inventory/components/InventoryPage'),
+  pos: () => import('./features/pos/components/PosPage'),
+  purchases: () => import('./features/purchases/components/PurchasePage'),
+  gastos: () => import('./features/gastos/components/GastosPage'),
+  production: () => import('./features/production/pages/ProductionPage'),
+  customers: () => import('./features/customers/components/CustomersPage'),
+  reports: () => import('./features/reports/components/ReportsPage'),
 };
 
 const prefetchedModules = new Set<string>();
@@ -489,15 +489,15 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function AuthRedirect() {
   const { isAuthenticated } = useAuth();
-  const role = useAuthStore((s) => s.session?.role);
+  const session = useAuthStore((s) => s.session);
+  const role = session?.role;
 
   if (isAuthenticated) {
-    return (
-      <Navigate
-        to={role === 'admin' ? '/admin' : role === 'employee' ? '/pos' : '/dashboard'}
-        replace
-      />
-    );
+    if (role === 'admin') return <Navigate to="/admin" replace />;
+    if (session?.permissions && !hasPermission(session, 'dashboard')) {
+      return <Navigate to="/pos" replace />;
+    }
+    return <Navigate to={role === 'employee' ? '/pos' : '/dashboard'} replace />;
   }
 
   return <LoginPage />;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info, Lock } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
@@ -51,7 +51,10 @@ export function CartSummary({
   const [showCreditInfo, setShowCreditInfo] = useState(false);
   const { addToast } = useToastStore();
 
-  const totals = calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount);
+  const totals = useMemo(
+    () => calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount),
+    [items, exchangeRateBs, paymentMethod, discount],
+  );
   const { subtotalUsd, subtotalBs, igtfBs, ivaBs, discountBs, discountUsd, totalBs, totalUsd, ivaUsd } = totals;
   const ivaBase = totals.ivaBase;
 
