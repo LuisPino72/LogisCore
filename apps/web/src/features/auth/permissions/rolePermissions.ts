@@ -4,7 +4,7 @@ type SessionLike = { role?: string | null; permissions?: string[] } | CoreUserSe
 
 export function hasPermission(session: SessionLike, module: string): boolean {
   if (!session) return false;
-  if (session.role === 'admin') return true;
+  if (session.role === 'admin' || session.role === 'owner') return true;
   if (!session.permissions || session.permissions.length === 0) return false;
   return session.permissions.some((p) => p.startsWith(`${module}:`));
 }
@@ -15,7 +15,7 @@ export function hasActionPermission(
   action: string,
 ): boolean {
   if (!session) return false;
-  if (session.role === 'admin') return true;
+  if (session.role === 'admin' || session.role === 'owner') return true;
   if (!session.permissions || session.permissions.length === 0) return false;
   return session.permissions.includes(`${module}:${action}`);
 }

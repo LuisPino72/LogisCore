@@ -65,7 +65,7 @@ vi.mock('../../services/network/requireNetwork', () => ({ requireNetwork: vi.fn(
 vi.mock('../../services/network/networkAwareService', () => ({ networkAware: { isOnline: () => true } }));
 vi.mock('../../features/auth/services/roleGuard', () => ({ requireRole: vi.fn() }));
 vi.mock('../../features/auth/stores/authStore', () => ({
-  useAuthStore: { getState: () => ({ session: { userId: 'u-1', tenantId: 'tenant-1' } }) },
+  useAuthStore: { getState: () => ({ session: { userId: 'u-1', role: 'owner', tenantId: 'tenant-1' } }) },
 }));
 vi.mock('../../services/tenantTranslator', () => ({ TenantTranslator: { slugToUuid: vi.fn(() => Promise.resolve('tenant-uuid')) } }));
 vi.mock('../../lib/logger', () => ({ logger: { error: (...args: unknown[]) => console.error(...args), warn: (...args: unknown[]) => console.warn(...args) } }));

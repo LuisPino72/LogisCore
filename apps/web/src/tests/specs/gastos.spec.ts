@@ -113,7 +113,7 @@ vi.mock('../../features/exchange/stores/exchangeRateStore', () => ({
 }));
 
 vi.mock('../../features/auth/stores/authStore', () => ({
-  useAuthStore: { getState: () => ({ session: { userId: '550e8400-e29b-41d4-a716-446655440001' } }) },
+  useAuthStore: { getState: () => ({ session: { userId: '550e8400-e29b-41d4-a716-446655440001', role: 'owner' } }) },
 }));
 
 vi.mock('@logiscore/core', () => ({
