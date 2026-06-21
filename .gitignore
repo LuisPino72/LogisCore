@@ -35,11 +35,11 @@ coverage/
 .vercel/
 .cursor/
 
-# Supabase (track migrations + schema, ignore temp + local config)
+# Supabase (track schema + config, ignore migrations + temp + local config)
 supabase/.branches/
 supabase/.temp/
 supabase/.branches
-!supabase/migrations/
+supabase/migrations/
 !supabase/schema.dbml
 !supabase/seed.sql
 !supabase/config.toml
