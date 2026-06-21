@@ -169,6 +169,10 @@ export const inventoryService = {
     userId: string,
     input: CreateProductInput & { stockInicial?: number },
   ): Promise<Result<Product, AppError>> {
+    const _createProdSession = useAuthStore.getState().session;
+    if (!_createProdSession || !hasActionPermission(_createProdSession, 'inventory', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -285,6 +289,10 @@ export const inventoryService = {
     input: CreateProductInput & { stockInicial?: number },
     presentations: CreatePresentationInput[],
   ): Promise<Result<{ product: Product; presentations: Presentation[] }, AppError>> {
+    const _createPresSession = useAuthStore.getState().session;
+    if (!_createPresSession || !hasActionPermission(_createPresSession, 'inventory', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -464,6 +472,10 @@ export const inventoryService = {
   },
 
   async updateProduct(id: string, input: Partial<Product>, tenantId: string): Promise<Result<Product, AppError>> {
+    const _updateProdSession = useAuthStore.getState().session;
+    if (!_updateProdSession || !hasActionPermission(_updateProdSession, 'inventory', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -662,6 +674,10 @@ export const inventoryService = {
     presentationId: string,
     input: UpdatePresentationInput,
   ): Promise<Result<Presentation, AppError>> {
+    const _updatePresSession = useAuthStore.getState().session;
+    if (!_updatePresSession || !hasActionPermission(_updatePresSession, 'inventory', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -735,6 +751,10 @@ export const inventoryService = {
     tenantId: string,
     presentationId: string,
   ): Promise<Result<void, AppError>> {
+    const _deletePresSession = useAuthStore.getState().session;
+    if (!_deletePresSession || !hasActionPermission(_deletePresSession, 'inventory', 'delete')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -766,6 +786,10 @@ export const inventoryService = {
   },
 
   async softDeleteProduct(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    const _deleteProdSession = useAuthStore.getState().session;
+    if (!_deleteProdSession || !hasActionPermission(_deleteProdSession, 'inventory', 'delete')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
@@ -986,6 +1010,10 @@ export const inventoryService = {
   },
 
   async createCategory(input: { name: string; tenantId: string }): Promise<Result<Category, AppError>> {
+    const _createCatSession = useAuthStore.getState().session;
+    if (!_createCatSession || !hasActionPermission(_createCatSession, 'inventory', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -1021,6 +1049,10 @@ export const inventoryService = {
   },
 
   async updateCategory(id: string, name: string, tenantId: string): Promise<Result<Category, AppError>> {
+    const _updateCatSession = useAuthStore.getState().session;
+    if (!_updateCatSession || !hasActionPermission(_updateCatSession, 'inventory', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -1118,6 +1150,10 @@ export const inventoryService = {
   },
 
   async deleteCategory(id: string, tenantId: string): Promise<Result<void, AppError>> {
+    const _deleteCatSession = useAuthStore.getState().session;
+    if (!_deleteCatSession || !hasActionPermission(_deleteCatSession, 'inventory', 'delete')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
     const db = getDb();
@@ -1331,6 +1367,10 @@ export const inventoryService = {
   },
 
   async uploadProductImage(file: File, tenantId: string, productId: string): Promise<Result<string, AppError>> {
+    const _uploadImgSession = useAuthStore.getState().session;
+    if (!_uploadImgSession || !hasActionPermission(_uploadImgSession, 'inventory', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     const MAX_ORIGINAL_SIZE = 10 * 1024 * 1024;
 

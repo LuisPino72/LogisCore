@@ -1451,6 +1451,10 @@ export const productionService = {
     options: { allowOverride?: boolean } = {},
     tx?: Transaction,
   ): Promise<Result<{ consumedLots: Array<{ lotId: string; quantity: number }>; totalIngredientCost: number }, AppError>> {
+    const _consumeSession = useAuthStore.getState().session;
+    if (!_consumeSession || !hasActionPermission(_consumeSession, 'production', 'produce_batch')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     const db = getDb();
     const now = new Date().toISOString();
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);

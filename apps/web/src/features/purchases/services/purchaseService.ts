@@ -1190,6 +1190,11 @@ export const purchaseService = {
     supplierId: string,
     tenantId: string,
   ): Promise<Result<{ corrected: boolean; previousBalance: number; actualBalance: number }, AppError>> {
+    const _reconSession = useAuthStore.getState().session;
+    if (!_reconSession || !hasActionPermission(_reconSession, 'purchases', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
+
     const db = getDb();
 
     const supplier = await db.suppliers

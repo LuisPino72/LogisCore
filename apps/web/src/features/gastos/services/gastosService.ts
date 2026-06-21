@@ -279,6 +279,10 @@ export const gastosService = {
   },
 
   async getAllMonthly(tenantId: string, month?: string): Promise<Result<Gasto[], AppError>> {
+    const _monthlySession = useAuthStore.getState().session;
+    if (!_monthlySession || !hasActionPermission(_monthlySession, 'gastos', 'read')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     try {
       const db = getDb();
       const targetMonth = month ?? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit' }).format(new Date());
@@ -340,6 +344,10 @@ export const gastosService = {
   },
 
   async checkAndGenerateRecurring(tenantId: string): Promise<Result<{ generated: Gasto[]; upcoming: { category: string; description?: string; id: string; date: string }[] }, AppError>> {
+    const _recurSession = useAuthStore.getState().session;
+    if (!_recurSession || !hasActionPermission(_recurSession, 'gastos', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     // AUDIT-CRUD-010: requireNetwork para consistencia
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
