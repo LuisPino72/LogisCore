@@ -532,11 +532,11 @@ export const reportsService = {
         }
       }
 
-      // Count active cash registers for the period
+      // Count active cash registers for the period (includes open sessions from previous days)
       const dbForReg = getDb();
       const todayRegisters = await dbForReg.cashRegisters
         .where({ tenantId })
-        .filter((r) => !r.deletedAt && r.createdAt >= start && r.createdAt <= end)
+        .filter((r) => !r.deletedAt && (r.isOpen || (r.createdAt >= start && r.createdAt <= end)))
         .toArray();
       const activeRegistersCount = todayRegisters.length;
 
