@@ -6,6 +6,8 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ExchangeRateErrors } from '../../../specs/exchange-rate/errors';
 import { ExchangeRateInputSchema } from '../../../specs/exchange-rate/index';
 import { TenantTranslator } from '../../../services/tenantTranslator';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
 import type { ExchangeRateResponse } from '../types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -131,6 +133,11 @@ export const exchangeRateService = {
   },
 
   async setManualRate(tenantId: string, rate: number): Promise<Result<ExchangeRateResponse, AppError>> {
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'exchange', 'update')) {
+      return failure(new AppError('AUTH_PERMISSION_DENIED', 'No tienes permiso para cambiar la tasa de cambio'));
+    }
+
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
 
