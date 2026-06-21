@@ -9,6 +9,9 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import type { Role, CreateRoleInput, UpdateRoleInput } from '../../../specs/roles';
 import { CreateRoleInputSchema, UpdateRoleInputSchema } from '../../../specs/roles';
 import { RoleErrors, ROLE_ERROR_MESSAGES } from '../../../specs/roles/errors';
+import { getDb } from '../../../services/dexie/db';
+import type { DexieRegisterConfig, DexieCashRegister } from '../../../services/dexie/db';
+import { syncQueue } from '../../../services/sync/syncQueue';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -255,6 +258,19 @@ export const adminService = {
           tenantUuid: result.tenant.id,
         },
       });
+
+      // PLAN-MULTICAJAS: Seed "Caja Principal" por defecto al crear tenant
+      try {
+        await supabase
+          .from('registers_config')
+          .insert({
+            tenant_id: result.tenant.id,
+            name: 'Caja Principal',
+            is_active: true,
+          });
+      } catch {
+        // Non-critical: el tenant se creó correctamente, la caja puede crearse manualmente
+      }
 
       return success(result);
     } catch (err) {
@@ -1075,6 +1091,75 @@ export const adminService = {
     }
 
     return success(undefined);
+  },
+
+  async forceCloseSession(sessionId: string): Promise<Result<DexieCashRegister, AppError>> {
+    const db = getDb();
+    const session = await db.cashRegisters.get(sessionId);
+    if (!session) return failure(new AppError('SESSION_NOT_FOUND', 'Sesión no encontrada'));
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const now = new Date().toISOString();
+    const updated: Partial<DexieCashRegister> = {
+      closedBy: user?.id || 'system',
+      closedAt: now,
+      closingBalanceBs: (session.openingBalanceBs ?? 0) + session.totalSalesBs + (session.collectedDebtBs || 0),
+      closingRate: session.openingRate,
+      expectedClosingBs: (session.openingBalanceBs ?? 0) + session.totalSalesBs + (session.collectedDebtBs || 0),
+      differenceBs: 0,
+      isOpen: false,
+    };
+    await db.cashRegisters.update(sessionId, updated);
+    await syncQueue.enqueue('cashRegisters', 'UPDATE', sessionId, updated as Record<string, unknown>, session.tenantId);
+    const updatedSession = await db.cashRegisters.get(sessionId);
+    return success(updatedSession!);
+  },
+
+  // ============================================================
+  // PLAN-MULTICAJAS: CRUD de registers_config
+  // ============================================================
+
+  async createRegister(input: { tenantId: string; name: string }): Promise<Result<DexieRegisterConfig, AppError>> {
+    const db = getDb();
+    const id = crypto.randomUUID();
+    const config: DexieRegisterConfig = {
+      id,
+      tenantId: input.tenantId,
+      name: input.name,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    await db.registerConfigs.add(config);
+    await syncQueue.enqueue('registerConfigs', 'CREATE', id, { ...config, updated_at: config.createdAt }, input.tenantId);
+    return success(config);
+  },
+
+  async updateRegister(id: string, input: Partial<Pick<DexieRegisterConfig, 'name' | 'isActive'>>): Promise<Result<DexieRegisterConfig, AppError>> {
+    const db = getDb();
+    const updatedAt = new Date().toISOString();
+    await db.registerConfigs.update(id, { ...input, updatedAt });
+    const updated = await db.registerConfigs.get(id);
+    if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
+    await syncQueue.enqueue('registerConfigs', 'UPDATE', id, { ...input, updated_at: updatedAt }, updated.tenantId);
+    return success(updated);
+  },
+
+  async deleteRegister(id: string): Promise<Result<void, AppError>> {
+    const db = getDb();
+    const config = await db.registerConfigs.get(id);
+    if (!config) return success(undefined);
+    // Validar que no haya sesiones activas para esta caja
+    const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
+    if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
+    await db.registerConfigs.delete(id);
+    await syncQueue.enqueue('registerConfigs', 'DELETE', id, { id, deleted_at: new Date().toISOString() }, config.tenantId);
+    return success(undefined);
+  },
+
+  async getRegisters(tenantId: string): Promise<Result<DexieRegisterConfig[], AppError>> {
+    const db = getDb();
+    const registers = await db.registerConfigs.where('tenantId').equals(tenantId).toArray();
+    return success(registers);
   },
 };
 

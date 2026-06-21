@@ -7,7 +7,7 @@ import { ReportsErrors } from '../../../specs/reports/errors';
 import { ReportsFiltersSchema, ValidateTenantInputSchema, TopProductsLimitSchema } from '../../../specs/reports/index';
 import type { PaymentMethod } from '../../../specs/pos';
 import { logger } from '../../../lib/logger';
-import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
+import { startOfDayVzla, endOfDayVzla, startOfDayFromDateStringVzla, endOfDayFromDateStringVzla } from '../../../lib/date';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
@@ -28,6 +28,8 @@ import type {
   CustomersSummaryData,
   RecipeProfitabilityItem,
   ProductionSummaryData,
+  RegisterCashAnalysis,
+  GlobalCashAnalysis,
 } from '../types';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -530,6 +532,14 @@ export const reportsService = {
         }
       }
 
+      // Count active cash registers for the period
+      const dbForReg = getDb();
+      const todayRegisters = await dbForReg.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && r.createdAt >= start && r.createdAt <= end)
+        .toArray();
+      const activeRegistersCount = todayRegisters.length;
+
       const nonSellableExpensesUsd = nsResult.ok ? nsResult.data.totalUsd : 0;
       const nonSellableExpensesBs = nsResult.ok ? nsResult.data.totalBs : 0;
       const adjustmentLossExpenses = adjResult.ok ? adjResult.data : {
@@ -604,6 +614,7 @@ export const reportsService = {
         pendingCreditUsd: preciseRound(pendingCreditUsd, 2),
         collectedCreditUsd: preciseRound(collectedCreditUsd, 2),
         customersWithDebt: customerDebtMap.size,
+        activeRegistersCount,
       });
     } catch (err) {
       console.error('[reportsService.getExecutiveSummary]', err);
@@ -1048,6 +1059,48 @@ export const reportsService = {
         // Fallback silencioso
       }
 
+      // Resolve register names from registerConfigs
+      const regIds = registers.map((r) => r.registerId).filter(Boolean) as string[];
+      const regConfigs = regIds.length > 0
+        ? await db.registerConfigs.where('id').anyOf(regIds).toArray()
+        : [];
+      const regNameMap = new Map(regConfigs.map((c) => [c.id, c.name]));
+
+      // Resolve operator names from Supabase user_roles
+      const userIds = registers.map((r) => r.openedBy).filter(Boolean) as string[];
+      const userNameMap = new Map<string, string>();
+      if (userIds.length > 0) {
+        try {
+          const { data: userRoles } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('tenant_id', tenantUuid)
+            .is('deleted_at', null);
+          if (userRoles) {
+            for (const ur of userRoles) {
+              userNameMap.set(ur.user_id, ur.user_id);
+            }
+          }
+          const tokenResult = await supabase.auth.getSession();
+          if (tokenResult.data.session?.access_token) {
+            const resp = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-users`,
+              { headers: { 'Authorization': `Bearer ${tokenResult.data.session.access_token}` } },
+            );
+            if (resp.ok) {
+              const allUsers = await resp.json();
+              for (const u of allUsers) {
+                if (userIds.includes(u.userId)) {
+                  userNameMap.set(u.userId, u.name || u.email || u.userId);
+                }
+              }
+            }
+          }
+        } catch {
+          // fallback: use userId as name
+        }
+      }
+
       // Pre-sort sales by createdAt for O(log N) register windowing
       allSales.sort((a, b) => a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0);
 
@@ -1102,6 +1155,8 @@ export const reportsService = {
 
         return {
           registerId: r.id,
+          registerName: r.registerId ? (regNameMap.get(r.registerId) ?? 'Caja') : 'Caja Principal',
+          operatorName: r.openedBy ? (userNameMap.get(r.openedBy) ?? 'Usuario') : '—',
           openedAt: r.openedAt ?? r.createdAt,
           closedAt: r.closedAt ?? undefined,
           openingBalanceBs: r.openingBalanceBs ?? 0,
@@ -1128,6 +1183,115 @@ export const reportsService = {
   },
 
   
+
+  async getCashAnalysisByRegister(tenantId: string, date: string): Promise<Result<RegisterCashAnalysis[], AppError>> {
+    const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+    if (!tenantCheck.success) {
+      return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
+    }
+    try {
+      const db = getDb();
+      const start = startOfDayFromDateStringVzla(date);
+      const end = endOfDayFromDateStringVzla(date);
+
+      const registers = await db.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && r.createdAt >= start && r.createdAt <= end)
+        .toArray();
+
+      // Resolve register names from registerConfigs
+      const registerIds = registers.map((r) => r.registerId).filter(Boolean) as string[];
+      const configs = registerIds.length > 0
+        ? await db.registerConfigs.where('id').anyOf(registerIds).toArray()
+        : [];
+      const configMap = new Map(configs.map((c) => [c.id, c.name]));
+
+      // Resolve operator names from Supabase user_roles
+      const userIds = registers.map((r) => r.openedBy).filter(Boolean) as string[];
+      const userMap = new Map<string, string>();
+      if (userIds.length > 0) {
+        try {
+          const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+          const { data: userRoles } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('tenant_id', tenantUuid)
+            .is('deleted_at', null);
+          if (userRoles) {
+            for (const ur of userRoles) {
+              userMap.set(ur.user_id, ur.user_id);
+            }
+          }
+          // Try to get display names via edge function
+          const tokenResult = await supabase.auth.getSession();
+          if (tokenResult.data.session?.access_token) {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-list-users`,
+              { headers: { 'Authorization': `Bearer ${tokenResult.data.session.access_token}` } },
+            );
+            if (response.ok) {
+              const allUsers = await response.json();
+              for (const u of allUsers) {
+                if (userIds.includes(u.userId)) {
+                  userMap.set(u.userId, u.name || u.email || u.userId);
+                }
+              }
+            }
+          }
+        } catch {
+          // fallback: use userId as name
+        }
+      }
+
+      const result: RegisterCashAnalysis[] = registers.map((r) => {
+        const openingBal = r.openingBalanceBs ?? 0;
+        const salesBs = r.totalSalesBs;
+        const debtBs = r.collectedDebtBs ?? 0;
+        const expectedBs = r.expectedClosingBs ?? (openingBal + salesBs + debtBs);
+        const diffBs = r.differenceBs ?? null;
+        const closeRate = r.closingRate && r.closingRate > 0 ? r.closingRate : (r.openingRate && r.openingRate > 0 ? r.openingRate : 0);
+
+        return {
+          registerId: r.id,
+          registerName: r.registerId ? (configMap.get(r.registerId) ?? 'Caja') : 'Caja Principal',
+          operatorName: r.openedBy ? (userMap.get(r.openedBy) ?? 'Usuario') : '—',
+          openingBalanceBs: openingBal,
+          totalSalesBs: salesBs,
+          totalSalesCount: r.totalSalesCount,
+          collectedDebtBs: debtBs,
+          expectedClosingBs: expectedBs,
+          differenceBs: diffBs,
+          differenceUsd: diffBs !== null && closeRate > 0 ? preciseRound(diffBs / closeRate, 2) : null,
+          status: r.isOpen ? 'open' : 'closed',
+        };
+      });
+
+      return success(result);
+    } catch (err) {
+      console.error('[reportsService.getCashAnalysisByRegister]', err);
+      return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al generar análisis por caja.'));
+    }
+  },
+
+  async getCashAnalysisGlobal(tenantId: string, date: string): Promise<Result<GlobalCashAnalysis, AppError>> {
+    const registersResult = await this.getCashAnalysisByRegister(tenantId, date);
+    if (!registersResult.ok) {
+      return failure(registersResult.error);
+    }
+    const registers = registersResult.data;
+
+    const global: GlobalCashAnalysis = {
+      totalRegisters: registers.length,
+      totalOpeningBalanceBs: preciseRound(registers.reduce((s, r) => s + r.openingBalanceBs, 0), 2),
+      totalSalesBs: preciseRound(registers.reduce((s, r) => s + r.totalSalesBs, 0), 2),
+      totalSalesCount: registers.reduce((s, r) => s + r.totalSalesCount, 0),
+      totalCollectedDebtBs: preciseRound(registers.reduce((s, r) => s + r.collectedDebtBs, 0), 2),
+      totalExpectedClosingBs: preciseRound(registers.reduce((s, r) => s + (r.expectedClosingBs ?? 0), 0), 2),
+      totalDifferenceBs: preciseRound(registers.reduce((s, r) => s + (r.differenceBs ?? 0), 0), 2),
+    };
+
+    return success(global);
+  },
 
   async getNonSellableExpenses(tenantId: string, start: string, end: string): Promise<Result<{ totalUsd: number; totalBs: number }, AppError>> {
     const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);

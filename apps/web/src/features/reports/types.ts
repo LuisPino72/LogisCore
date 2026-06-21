@@ -46,6 +46,7 @@ export interface ExecutiveSummaryData {
   pendingCreditUsd: number;
   collectedCreditUsd: number;
   customersWithDebt: number;
+  activeRegistersCount: number;
 }
 
 export interface DailyProfitPoint {
@@ -100,6 +101,8 @@ export interface PaymentBreakdownData {
 
 export interface CashRegisterSummaryData {
   registerId: string;
+  registerName?: string;
+  operatorName?: string;
   openedAt: string;
   closedAt?: string;
   openingBalanceBs: number;
@@ -216,6 +219,32 @@ export interface ProductionSummaryData {
   averageWastePct: number;
   totalIngredientCostUsd: number;
   totalIngredientCostBs: number;
+}
+
+// ===== MULTI-CASH REGISTER ANALYSIS =====
+
+export interface RegisterCashAnalysis {
+  registerId: string;
+  registerName: string;
+  operatorName: string;
+  openingBalanceBs: number;
+  totalSalesBs: number;
+  totalSalesCount: number;
+  collectedDebtBs: number;
+  expectedClosingBs: number | null;
+  differenceBs: number | null;
+  differenceUsd: number | null;
+  status: 'open' | 'closed';
+}
+
+export interface GlobalCashAnalysis {
+  totalRegisters: number;
+  totalOpeningBalanceBs: number;
+  totalSalesBs: number;
+  totalSalesCount: number;
+  totalCollectedDebtBs: number;
+  totalExpectedClosingBs: number;
+  totalDifferenceBs: number;
 }
 
 

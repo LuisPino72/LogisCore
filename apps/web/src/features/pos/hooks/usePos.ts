@@ -18,6 +18,9 @@ export function usePos(tenantId: string | null) {
   const loading = usePosStore((s) => s.loading);
   const error = usePosStore((s) => s.error);
   const searchQuery = usePosStore((s) => s.searchQuery);
+  const activeSessionId = usePosStore((s) => s.activeSessionId);
+  const activeRegisterId = usePosStore((s) => s.activeRegisterId);
+  const registerName = usePosStore((s) => s.registerName);
 
   const addToCart = usePosStore((s) => s.addToCart);
   const removeFromCart = usePosStore((s) => s.removeFromCart);
@@ -159,6 +162,9 @@ export function usePos(tenantId: string | null) {
     toggleFavorite, fetchSalesHistory, voidSale, getTodaySoldProducts,
     fetchPresentations, getPresentations, presentacionesMap, reset,
     isOpen: cashRegister?.isOpen ?? false,
+    activeSessionId,
+    activeRegisterId,
+    registerName,
     search,
     refresh: doRefresh,
     userId: session?.userId ?? null,

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { type Result, type AppError } from '@logiscore/core';
-import { UserPlus, Upload, X } from 'lucide-react';
-import { Modal, Input, Button } from '../../../common/components';
+import { UserPlus, Upload, X, Monitor } from 'lucide-react';
+import { Modal, Input, Button, Badge } from '../../../common/components';
 import { sanitizeValue } from '../../../lib/validation';
 import { formatPhone, unformatPhone } from '../../../lib/utils';
 import { UpdateTenantSchema, type Tenant } from '../types';
 import { adminService } from '../services/adminService';
+import { RegisterManagerModal } from './RegisterManagerModal';
 
 interface EditForm {
   name: string;
@@ -33,6 +34,8 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
+  const [showRegisterManager, setShowRegisterManager] = useState(false);
+  const [registerCount, setRegisterCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,6 +51,9 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
       setLogoError(null);
       setRemoveLogo(false);
       setError(null);
+      adminService.getRegisters(tenant.id).then((result) => {
+        if (result.ok) setRegisterCount(result.data.length);
+      });
     }
   }, [tenant?.id, tenant?.name, tenant?.rif, tenant?.direccion, tenant?.telefono]);
 
@@ -119,6 +125,11 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
       onClose={onClose}
       title="Editar local"
     >
+      <RegisterManagerModal
+        isOpen={showRegisterManager}
+        onClose={() => setShowRegisterManager(false)}
+        tenantId={tenant?.id ?? ''}
+      />
       <div className="space-y-4 admin-section-reveal">
         <Input
           placeholder="Nombre"
@@ -195,9 +206,12 @@ export function EditTenantModal({ isOpen, onClose, tenant, onSave, onAddEmployee
           {logoError && <p className="text-danger text-xs mt-1">{logoError}</p>}
         </div>
 
-        <div className="border-t border-gray-100 pt-3">
+        <div className="border-t border-gray-100 pt-3 space-y-2">
           <Button variant="secondary" fullWidth onClick={onAddEmployeeClick}>
             <UserPlus size={16} /> Agregar empleado
+          </Button>
+          <Button variant="secondary" fullWidth onClick={() => setShowRegisterManager(true)}>
+            <Monitor size={16} /> Gestionar Cajas {registerCount > 0 && <Badge variant="info">{registerCount}</Badge>}
           </Button>
         </div>
         {error && <p className="text-danger text-sm">{error}</p>}

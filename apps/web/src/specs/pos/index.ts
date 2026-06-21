@@ -107,12 +107,24 @@ export const CashRegisterSchema = z.object({
   totalSalesBs: z.number().min(0),
   totalIgtfBs: z.number().min(0),
   collectedDebtBs: z.number().min(0).default(0), // FUGA-1: Cobros de deuda acumulados en caja
+  registerId: z.string().uuid().optional(), // PLAN-MULTICAJAS: FK a registers_config
+  operatorId: z.string().uuid().optional(), // PLAN-MULTICAJAS: FK a users
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
   deletedAt: isoDateTime.nullable().optional(), // POS-002 (M-1): acepta null | undefined para Dexie
 });
 
 export type CashRegister = z.infer<typeof CashRegisterSchema>;
+
+export const RegisterConfigSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string(),
+  name: z.string().min(1, 'Nombre de la caja requerido').max(50),
+  isActive: z.boolean().default(true),
+  createdAt: isoDateTime,
+});
+
+export type RegisterConfig = z.infer<typeof RegisterConfigSchema>;
 
 export const CreateSaleInputSchema = z.object({
   tenantId: z.string().min(1),
@@ -125,6 +137,7 @@ export const CreateSaleInputSchema = z.object({
   customerId: z.string().uuid().optional(),
   allowOverride: z.boolean().optional(),
   isCreditSale: z.boolean().optional().default(false),
+  cashRegisterId: z.string().uuid().optional(),
 });
 
 export type CreateSaleInput = z.infer<typeof CreateSaleInputSchema>;
@@ -134,6 +147,7 @@ export const OpenCashRegisterInputSchema = z.object({
   userId: z.string().uuid(),
   openingBalanceBs: z.number().positive('Monto inicial debe ser mayor a 0'),
   openingRate: z.number().positive('Se requiere tasa de cambio al abrir la caja'),
+  registerId: z.string().uuid().optional(),
 });
 
 export type OpenCashRegisterInput = z.infer<typeof OpenCashRegisterInputSchema>;
@@ -143,6 +157,7 @@ export const CloseCashRegisterInputSchema = z.object({
   userId: z.string().uuid(),
   declaredClosingBalanceBs: z.number().min(0, 'Monto final declarado requerido'),
   closingRate: z.number().positive('Se requiere tasa de cambio al cerrar la caja'),
+  sessionId: z.string().uuid().optional(),
 });
 
 export type CloseCashRegisterInput = z.infer<typeof CloseCashRegisterInputSchema>;

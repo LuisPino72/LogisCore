@@ -10,6 +10,7 @@ import {
   BarChart3,
   Users as UsersIcon,
   Edit2,
+  Monitor,
 } from 'lucide-react';
 import {
   Badge,
@@ -37,6 +38,7 @@ import { EditTenantModal } from './EditTenantModal';
 import { DeleteTenantModal } from './DeleteTenantModal';
 import { AddEmployeeModal } from './AddEmployeeModal';
 import { AnalyticsModal } from './AnalyticsModal';
+import { RegisterManagerModal } from './RegisterManagerModal';
 
 const PAGE_SIZE = 10;
 
@@ -98,6 +100,7 @@ export function TenantSection({
   const [showAddFromEdit, setShowAddFromEdit] = useState(false);
   const [addFromEditTenantId, setAddFromEditTenantId] = useState<string | null>(null);
   const [addFromEditTenantName, setAddFromEditTenantName] = useState('');
+  const [registerManagerTarget, setRegisterManagerTarget] = useState<Tenant | null>(null);
 
   useEffect(() => { setPage(1); }, [filteredTenants.length]);
 
@@ -178,6 +181,11 @@ export function TenantSection({
             <Button variant="ghost-accent" size="sm" className="min-h-11 admin-ripple" onClick={() => setEditTarget(t)}>
               <Edit2 size={16} />
               <span className="hidden sm:inline"></span>
+            </Button>
+          </Tooltip>
+          <Tooltip content="Gestionar cajas" variant="help" position="top">
+            <Button variant="ghost" size="sm" className="min-h-11 admin-ripple" onClick={() => setRegisterManagerTarget(t)}>
+              <Monitor size={16} />
             </Button>
           </Tooltip>
           <Dropdown
@@ -295,6 +303,12 @@ export function TenantSection({
         tenantName={addFromEditTenantName}
         onAddEmployee={addEmployee}
         roles={roles}
+      />
+
+      <RegisterManagerModal
+        isOpen={registerManagerTarget !== null}
+        onClose={() => setRegisterManagerTarget(null)}
+        tenantId={registerManagerTarget?.id ?? ''}
       />
     </>
   );

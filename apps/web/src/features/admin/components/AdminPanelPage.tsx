@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { useTenantFilters } from '../hooks/useTenantFilters';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { ArrowLeft, Building2, CreditCard, Plus, Shield, Store, Tags, UsersRound, UserCog } from 'lucide-react';
+import { ArrowLeft, Building2, CreditCard, Monitor, Plus, Shield, Store, Tags, UsersRound, UserCog } from 'lucide-react';
 import { AppShell, BottomNav, Button, Card, EmptyState, Spinner, LogoutButton } from '../../../common/components';
 import './index.css';
 import { TenantSection } from './TenantSection';
@@ -13,11 +13,12 @@ import { SubscriptionSection } from './SubscriptionSection';
 import { GlobalCategorySection } from './GlobalCategorySection';
 import { AuditSection } from './AuditSection';
 import { RoleSection } from './RoleSection';
+import { ActiveSessionsSection } from './ActiveSessionsSection';
 import type { Tenant } from '../types';
 
 const ADMIN_PAGE_SIZE = 10;
 
-type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories' | 'audit' | 'roles';
+type Sheet = 'tenants' | 'users' | 'all-users' | 'subscriptions' | 'global-categories' | 'audit' | 'roles' | 'sessions';
 
 const TABS = [
   { id: 'tenants' as Sheet, label: 'Locales', icon: <Building2 size={20} /> },
@@ -25,6 +26,7 @@ const TABS = [
   { id: 'subscriptions' as Sheet, label: 'Suscripciones', icon: <CreditCard size={20} /> },
   { id: 'roles' as Sheet, label: 'Roles', icon: <UserCog size={20} /> },
   { id: 'global-categories' as Sheet, label: 'Categorías', icon: <Tags size={20} /> },
+  { id: 'sessions' as Sheet, label: 'Sesiones', icon: <Monitor size={20} /> },
   { id: 'audit' as Sheet, label: 'Auditoría', icon: <Shield size={20} /> },
 ] as const;
 
@@ -249,6 +251,12 @@ export function AdminPanelPage() {
           </div>
         )}
 
+        {activeSheet === 'sessions' && (
+          <div className="admin-section-reveal">
+            <ActiveSessionsSection tenants={tenants} />
+          </div>
+        )}
+
         {activeSheet === 'audit' && (
           <div className="admin-section-reveal">
             <AuditSection />
@@ -263,6 +271,7 @@ export function AdminPanelPage() {
           { id: 'all-users', label: 'Usuarios', icon: <UsersRound size={20} />, onClick: () => setActiveSheet('all-users') },
           { id: 'subscriptions', label: 'Suscripciones', icon: <CreditCard size={20} />, onClick: () => setActiveSheet('subscriptions') },
           { id: 'roles', label: 'Roles', icon: <UserCog size={20} />, onClick: () => setActiveSheet('roles') },
+          { id: 'sessions', label: 'Sesiones', icon: <Monitor size={20} />, onClick: () => setActiveSheet('sessions') },
           { id: 'global-categories', label: 'Categorías', icon: <Tags size={20} />, onClick: () => setActiveSheet('global-categories') },
           { id: 'audit', label: 'Auditoría', icon: <Shield size={20} />, onClick: () => setActiveSheet('audit') },
         ]}

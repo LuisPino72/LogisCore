@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, Badge, Tooltip, EmptyState, KpiCard, KpiSkeleton } from '@/common/components';
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, BarChart3, Receipt, Wallet, CreditCard } from 'lucide-react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, BarChart3, Receipt, Wallet, CreditCard, Layers } from 'lucide-react';
 import type { ExecutiveSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { reportsService } from '../services/reportsService';
@@ -24,12 +24,28 @@ function formatDual(bs: number, usd: number): React.ReactNode {
 
 export function ExecutiveSummary({ data, loading, tenantId, onKpiClick }: ExecutiveSummaryProps) {
   const [pendingPayables, setPendingPayables] = useState<number | null>(null);
+  const [registerNames, setRegisterNames] = useState<string[]>([]);
 
   useEffect(() => {
     if (data && tenantId) {
       reportsService.getPendingPayables(tenantId).then((total) => setPendingPayables(total)).catch(() => {});
     }
   }, [data, tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const filters = { timeRange: 'today' as const };
+    reportsService.getCashAnalysis(tenantId, filters).then((result) => {
+      if (result.ok) {
+        const names = result.data.map((r) => {
+          const regName = r.registerName || 'Caja';
+          const opName = r.operatorName ? ` (${r.operatorName})` : '';
+          return `${regName}${opName}`;
+        });
+        setRegisterNames(names);
+      }
+    }).catch(() => {});
+  }, [tenantId]);
 
   if (loading) {
     return (
@@ -65,6 +81,18 @@ export function ExecutiveSummary({ data, loading, tenantId, onKpiClick }: Execut
             {data.salesVsYesterdayPercent >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             <span className="ml-1">{Math.abs(data.salesVsYesterdayPercent)}% vs ayer</span>
           </Badge>
+        )}
+        {data.activeRegistersCount > 0 && (
+          <Tooltip content={
+            registerNames.length > 0
+              ? registerNames.join(', ')
+              : `${data.activeRegistersCount} ${data.activeRegistersCount === 1 ? 'caja' : 'cajas'} activa${data.activeRegistersCount !== 1 ? 's' : ''} hoy`
+          }>
+            <Badge variant="info" className="cursor-help">
+              <Layers size={12} />
+              <span className="ml-1">{data.activeRegistersCount} {data.activeRegistersCount === 1 ? 'Caja' : 'Cajas'}</span>
+            </Badge>
+          </Tooltip>
         )}
       </div>
 

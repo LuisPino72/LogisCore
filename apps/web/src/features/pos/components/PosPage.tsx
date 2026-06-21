@@ -13,6 +13,7 @@ import { CartPanel } from './CartPanel';
 import { FlyToCart } from './FlyToCart';
 import { WeightEntryModal } from './WeightEntryModal';
 import { CashRegisterModal } from './CashRegisterModal';
+import { RegisterSelectionModal } from './RegisterSelectionModal';
 import { CashStatusBadge } from './CashStatusBadge';
 import { ParkCartModal } from './ParkCartModal';
 import { ParkedCartsList } from './ParkedCartsList';
@@ -53,6 +54,10 @@ export function PosPage({ tenantId }: PosPageProps) {
     getPresentations,
   } = usePos(tenantId);
 
+  const activeSessionId = usePosStore((s) => s.activeSessionId);
+  const registerName = usePosStore((s) => s.registerName);
+  const clearActiveRegister = usePosStore((s) => s.clearActiveRegister);
+
   const { addToast } = useToastStore();
 
   const { activeTab, mobileCartOpen, switchToSell, switchToHistory, toggleMobileCart, closeMobileCart } = usePosNavigation();
@@ -84,6 +89,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [sharing, setSharing] = useState(false);
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
+  const [showRegisterSelection, setShowRegisterSelection] = useState(false);
 
   // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
   const [now, setNow] = useState(() => new Date());
@@ -118,6 +124,24 @@ export function PosPage({ tenantId }: PosPageProps) {
       if (res.ok && res.data) setTenantInfo(res.data);
     });
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!activeSessionId && tenantId) {
+      setShowRegisterSelection(true);
+    } else {
+      setShowRegisterSelection(false);
+    }
+  }, [activeSessionId, tenantId]);
+
+  const handleRegisterSelected = useCallback((_registerId: string, _sessionId: string, _name: string) => {
+    setShowRegisterSelection(false);
+    addToast({ type: 'success', message: `Caja "${_name}" abierta correctamente`, duration: 3000 });
+  }, [addToast]);
+
+  const handleChangeRegister = useCallback(() => {
+    clearActiveRegister();
+    setShowRegisterSelection(true);
+  }, [clearActiveRegister]);
 
   useEffect(() => {
     if (completedSale) {
@@ -446,6 +470,20 @@ export function PosPage({ tenantId }: PosPageProps) {
           <Tooltip content={isOnline ? (isOpen ? 'Haz click para cerrar.' : 'Haz click para abrir.') : 'Necesitas internet para abrir o cerrar caja'} position="bottom">
             <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} disabled={!isOnline} />
           </Tooltip>
+          {registerName && isOpen && (
+            <div className="flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full min-h-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              {registerName}
+              <button
+                type="button"
+                onClick={handleChangeRegister}
+                className="ml-1 text-primary/60 hover:text-primary transition-colors"
+                title="Cambiar de caja"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <Tooltip content="Escanear código de barras" position="bottom">
             <Button variant="ghost" size="sm" onClick={() => setShowBarcodeScanner(true)} className="p-1 min-w-11 min-h-11">
               <Scan size={18} />
@@ -618,6 +656,15 @@ export function PosPage({ tenantId }: PosPageProps) {
         quantity={weightingQty}
         onQuantityChange={setWeightingQty}
       />
+
+      {tenantId && (
+        <RegisterSelectionModal
+          tenantId={tenantId}
+          isOpen={showRegisterSelection}
+          onClose={() => { setShowRegisterSelection(false); }}
+          onSuccess={handleRegisterSelected}
+        />
+      )}
 
       <CashRegisterModal
         isOpen={showCashModal}

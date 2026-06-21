@@ -82,22 +82,25 @@ async function autoCloseRegister(
     const freshReg = await db.cashRegisters.get(register.id);
     if (!freshReg) throw new Error('Cash register not found after update');
 
-    await syncQueue.enqueue('cash_registers', 'UPDATE', freshReg.id, toSnake({
-      id: freshReg.id,
-      tenant_id: tenantUuid,
-      is_open: false,
-      closed_by: userId,
-      closed_at: now,
-      closing_balance_bs: expectedClosingBs,
-      closing_rate: freshReg.openingRate,
-      expected_closing_bs: expectedClosingBs,
-      difference_bs: 0,
-      total_sales_count: freshReg.totalSalesCount,
-      total_sales_bs: freshReg.totalSalesBs,
-      total_igtf_bs: freshReg.totalIgtfBs,
-      collected_debt_bs: freshReg.collectedDebtBs ?? 0, // FUGA-1
-      updated_at: now,
-    } as Record<string, unknown>), tenantId);
+      const autoClosePayload: Record<string, unknown> = {
+        id: freshReg.id,
+        tenant_id: tenantUuid,
+        is_open: false,
+        closed_by: userId,
+        closed_at: now,
+        closing_balance_bs: expectedClosingBs,
+        closing_rate: freshReg.openingRate,
+        expected_closing_bs: expectedClosingBs,
+        difference_bs: 0,
+        total_sales_count: freshReg.totalSalesCount,
+        total_sales_bs: freshReg.totalSalesBs,
+        total_igtf_bs: freshReg.totalIgtfBs,
+        collected_debt_bs: freshReg.collectedDebtBs ?? 0,
+        updated_at: now,
+      };
+      if (freshReg.registerId) autoClosePayload.register_id = freshReg.registerId;
+      if (freshReg.operatorId) autoClosePayload.operator_id = freshReg.operatorId;
+      await syncQueue.enqueue('cash_registers', 'UPDATE', freshReg.id, toSnake(autoClosePayload as Record<string, unknown>), tenantId);
 
     await outboxService.enqueue(SystemEvents.BOX_CLOSED, MODULE_NAME, {
       registerId: register.id,
@@ -133,6 +136,44 @@ async function autoCloseRegister(
 
 export const posService = {
   /**
+   * Obtiene una sesión de caja específica por su ID.
+   */
+  async getSessionById(sessionId: string): Promise<Result<CashRegister | null, AppError>> {
+    try {
+      const db = getDb();
+      const row = await db.cashRegisters.get(sessionId);
+      if (!row) return success(null);
+      return success({
+        id: row.id,
+        tenantId: row.tenantId,
+        isOpen: row.isOpen,
+        openedBy: row.openedBy,
+        openedAt: row.openedAt,
+        openingBalanceBs: row.openingBalanceBs,
+        openingRate: row.openingRate,
+        closedBy: row.closedBy,
+        closedAt: row.closedAt,
+        closingBalanceBs: row.closingBalanceBs,
+        closingRate: row.closingRate,
+        expectedClosingBs: row.expectedClosingBs,
+        differenceBs: row.differenceBs,
+        totalSalesCount: row.totalSalesCount,
+        totalSalesBs: row.totalSalesBs,
+        totalIgtfBs: row.totalIgtfBs,
+        collectedDebtBs: row.collectedDebtBs ?? 0,
+        registerId: row.registerId ?? undefined,
+        operatorId: row.operatorId ?? undefined,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        deletedAt: row.deletedAt ?? null,
+      });
+    } catch (err) {
+      logger.error(MODULE_NAME, 'Error en getSessionById:', err);
+      return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Error al consultar la sesión de caja.'));
+    }
+  },
+
+  /**
    * Obtiene la caja registradora actual del tenant.
    *
    * Patrón cache-first: Lee de Dexie (offline) primero.
@@ -166,7 +207,7 @@ export const posService = {
         if (data) {
           const result = cashRegisterFromSupabase(data, tenantId);
           if (result.ok) {
-            row = result.data;
+            row = result.data as unknown as DexieCashRegister;
             // POS-002 (M-6): skip remote put si hay pending/failed local — evita overwrite
             const pendingCount = await db.syncQueue
               .where('recordId').equals(row!.id)
@@ -199,6 +240,8 @@ export const posService = {
         totalSalesBs: row.totalSalesBs,
         totalIgtfBs: row.totalIgtfBs,
         collectedDebtBs: row.collectedDebtBs ?? 0, // FUGA-1
+        registerId: row.registerId ?? undefined,
+        operatorId: row.operatorId ?? undefined,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         deletedAt: row.deletedAt ?? null,
@@ -248,6 +291,8 @@ export const posService = {
             totalSalesBs: data.total_sales_bs as number,
             totalIgtfBs: data.total_igtf_bs as number,
             collectedDebtBs: (data.collected_debt_bs as number) ?? 0, // FUGA-1
+            registerId: (data.register_id as string) ?? undefined,
+            operatorId: (data.operator_id as string) ?? undefined,
             createdAt: data.created_at as string,
             updatedAt: data.updated_at as string,
           };
@@ -265,6 +310,8 @@ export const posService = {
         totalSalesCount: row.totalSalesCount, totalSalesBs: row.totalSalesBs,
         totalIgtfBs: row.totalIgtfBs,
         collectedDebtBs: row.collectedDebtBs ?? 0, // FUGA-1
+        registerId: row.registerId ?? undefined,
+        operatorId: row.operatorId ?? undefined,
         createdAt: row.createdAt, updatedAt: row.updatedAt,
         deletedAt: row.deletedAt ?? null,
       });
@@ -414,15 +461,17 @@ export const posService = {
 
   async createSale(input: CreateSaleInput): Promise<Result<Sale, AppError>> {
     const db = getDb();
-    const { tenantId, userId, paymentMethod, items, exchangeRate } = input;
+    const { tenantId, userId, paymentMethod, items, exchangeRate, cashRegisterId } = input;
 
-    const cashReg = await db.cashRegisters
-      .where({ tenantId })
-      .filter((r) => !r.deletedAt && r.isOpen)
-      .first();
+    const cashReg = cashRegisterId
+      ? await db.cashRegisters.get(cashRegisterId)
+      : await db.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && r.isOpen)
+        .first();
 
     if (!cashReg) {
-      return failure(new AppError(PosErrors.SALE_BOX_CLOSED, 'La caja está cerrada. Ábrala para realizar ventas.'));
+      return failure(new AppError('NO_ACTIVE_SESSION', 'Debe abrir una caja antes de vender'));
     }
 
     const openedDate = cashReg.openedAt ? new Date(cashReg.openedAt) : null;
@@ -863,29 +912,29 @@ export const posService = {
 
         // Skip cash register update for credit sales (money hasn't entered the register)
         if (!isCreditSale) {
-          const updatedCashReg = {
-            ...cashReg,
-            totalSalesCount: cashReg.totalSalesCount + 1,
-            totalSalesBs: preciseRound(cashReg.totalSalesBs + totalBs, 2),
-            totalIgtfBs: preciseRound(cashReg.totalIgtfBs + igtfBs, 2),
-            updatedAt: now,
-          };
-          await db.cashRegisters.update(cashReg.id, {
-            totalSalesCount: updatedCashReg.totalSalesCount,
-            totalSalesBs: updatedCashReg.totalSalesBs,
-            totalIgtfBs: updatedCashReg.totalIgtfBs,
-            updatedAt: now,
-          });
+          const txCashReg = await db.cashRegisters.get(cashReg.id);
+          if (txCashReg) {
+            const newTotalSalesCount = (txCashReg.totalSalesCount ?? 0) + 1;
+            const newTotalSalesBs = preciseRound((txCashReg.totalSalesBs ?? 0) + totalBs, 2);
+            const newTotalIgtfBs = preciseRound((txCashReg.totalIgtfBs ?? 0) + igtfBs, 2);
 
-          await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
-            id: cashReg.id,
-            tenant_id: tenantUuid,
-            total_sales_count: updatedCashReg.totalSalesCount,
-            total_sales_bs: updatedCashReg.totalSalesBs,
-            total_igtf_bs: updatedCashReg.totalIgtfBs,
-            is_open: true,
-            updated_at: now,
-          } as unknown as Record<string, unknown>), tenantId);
+            await db.cashRegisters.update(cashReg.id, {
+              totalSalesCount: newTotalSalesCount,
+              totalSalesBs: newTotalSalesBs,
+              totalIgtfBs: newTotalIgtfBs,
+              updatedAt: now,
+            });
+
+            await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
+              id: cashReg.id,
+              tenant_id: tenantUuid,
+              total_sales_count: newTotalSalesCount,
+              total_sales_bs: newTotalSalesBs,
+              total_igtf_bs: newTotalIgtfBs,
+              is_open: true,
+              updated_at: now,
+            } as unknown as Record<string, unknown>), tenantId);
+          }
         }
 
         // Update customer balance for credit sales
@@ -962,7 +1011,7 @@ export const posService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const { tenantId, userId, openingBalanceBs, openingRate } = input;
+    const { tenantId, userId, openingBalanceBs, openingRate, registerId } = input;
 
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'pos', 'open_box')) {
@@ -977,30 +1026,66 @@ export const posService = {
       return failure(new AppError(PosErrors.BOX_OPENING_BALANCE_REQUIRED, 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.'));
     }
 
-
-    const existing = await db.cashRegisters
-      .where({ tenantId })
-      .filter((r) => !r.deletedAt && r.isOpen)
-      .first();
-
-    if (existing) {
-      const openedDate = existing.openedAt ? new Date(existing.openedAt) : null;
-      if (openedDate && isSameDayVzla(openedDate, new Date())) {
-        return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta para hoy.'));
+    // Resolver registerId: si no se pasa, buscar la única caja configurada o lanzar error
+    let resolvedRegisterId = registerId;
+    if (!resolvedRegisterId) {
+      const configs = await db.registerConfigs
+        .where({ tenantId })
+        .filter((c) => c.isActive)
+        .toArray();
+      if (configs.length === 1) {
+        resolvedRegisterId = configs[0].id;
+      } else if (configs.length > 1) {
+        return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Hay múltiples cajas configuradas. Selecciona una caja para abrir.'));
       }
-      await autoCloseRegister(db, existing, tenantId, userId);
     }
 
-    // Option B: Una caja por día — no permitir abrir si ya se cerró una hoy
+    // Verificar si ya existe sesión abierta para este registerId
+    if (resolvedRegisterId) {
+      const existing = await db.cashRegisters
+        .where({ registerId: resolvedRegisterId })
+        .filter((r) => !r.deletedAt && r.isOpen)
+        .first();
+
+      if (existing) {
+        const openedDate = existing.openedAt ? new Date(existing.openedAt) : null;
+        const operatorLabel = existing.operatorId === userId ? 'ti' : `otro operador`;
+        if (openedDate && isSameDayVzla(openedDate, new Date())) {
+          return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, `La caja ya está abierta por ${operatorLabel}.`));
+        }
+        // Auto-cierre de sesión huérfana (día anterior)
+        await autoCloseRegister(db, existing, tenantId, userId);
+      }
+    } else {
+      // Fallback: comportamiento original (tenant-wide)
+      const existing = await db.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && r.isOpen)
+        .first();
+
+      if (existing) {
+        const openedDate = existing.openedAt ? new Date(existing.openedAt) : null;
+        if (openedDate && isSameDayVzla(openedDate, new Date())) {
+          return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta para hoy.'));
+        }
+        await autoCloseRegister(db, existing, tenantId, userId);
+      }
+    }
+
+    // Verificar cierres del día (tenant-wide o por registerId)
     const todayStart = startOfDayVzla();
     const todayEnd = endOfDayVzla();
-    const todayClosed = await db.cashRegisters
-      .where({ tenantId })
-      .filter((r) => !r.deletedAt && !r.isOpen && r.openedAt != null && r.openedAt >= todayStart && r.openedAt <= todayEnd)
-      .first();
+    const todayClosed = resolvedRegisterId
+      ? await db.cashRegisters
+        .where({ registerId: resolvedRegisterId })
+        .filter((r) => !r.deletedAt && !r.isOpen && r.openedAt != null && r.openedAt >= todayStart && r.openedAt <= todayEnd)
+        .first()
+      : await db.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && !r.isOpen && r.openedAt != null && r.openedAt >= todayStart && r.openedAt <= todayEnd)
+        .first();
 
     if (todayClosed) {
-      // Permitir reabrir si la caja cerrada no tuvo ventas (cierre accidental)
       if (todayClosed.totalSalesCount === 0) {
         await db.cashRegisters.update(todayClosed.id, { deletedAt: new Date().toISOString() });
       } else {
@@ -1008,21 +1093,26 @@ export const posService = {
       }
     }
 
-    // Verificar Supabase para evitar 409 en sync (siempre online por el guard de arriba)
+    // Verificar Supabase para evitar 409 en sync
     try {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
-      const { data: remoteRegister } = await supabase
+      let query = supabase
         .from('cash_registers')
         .select('*')
         .eq('tenant_id', tenantUuid)
         .is('deleted_at', null)
-        .eq('is_open', true)
-        .maybeSingle();
+        .eq('is_open', true);
+      if (resolvedRegisterId) {
+        query = query.eq('register_id', resolvedRegisterId);
+      }
+      const { data: remoteRegister } = await query.maybeSingle();
 
       if (remoteRegister) {
         await db.cashRegisters.put({
           id: remoteRegister.id as string,
           tenantId,
+          registerId: resolvedRegisterId,
+          operatorId: userId,
           isOpen: remoteRegister.is_open as boolean,
           openedBy: remoteRegister.opened_by as string | null,
           openedAt: remoteRegister.opened_at as string | null,
@@ -1037,7 +1127,7 @@ export const posService = {
           totalSalesCount: remoteRegister.total_sales_count as number,
           totalSalesBs: remoteRegister.total_sales_bs as number,
           totalIgtfBs: remoteRegister.total_igtf_bs as number,
-          collectedDebtBs: (remoteRegister.collected_debt_bs as number) ?? 0, // FUGA-1
+          collectedDebtBs: (remoteRegister.collected_debt_bs as number) ?? 0,
           createdAt: remoteRegister.created_at as string,
           updatedAt: remoteRegister.updated_at as string,
         });
@@ -1045,7 +1135,6 @@ export const posService = {
       }
     } catch {
       // Si falla la verificación remota, continuar con creación local
-      // El sync fallará con 409 si hay conflicto, lo cual es recuperable
     }
 
     const id = generateId();
@@ -1070,7 +1159,9 @@ export const posService = {
         totalSalesCount: 0,
         totalSalesBs: 0,
         totalIgtfBs: 0,
-        collectedDebtBs: 0, // FUGA-1
+        collectedDebtBs: 0,
+        registerId: resolvedRegisterId ?? undefined,
+        operatorId: userId,
         createdAt: now,
         updatedAt: now,
       };
@@ -1078,7 +1169,7 @@ export const posService = {
       await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
         await db.cashRegisters.add(register);
 
-        await syncQueue.enqueue('cash_registers', 'CREATE', id, toSnake({
+        const snakePayload: Record<string, unknown> = {
           id,
           tenant_id: tenantUuid,
           is_open: true,
@@ -1089,10 +1180,14 @@ export const posService = {
           total_sales_count: 0,
           total_sales_bs: 0,
           total_igtf_bs: 0,
-          collected_debt_bs: 0, // FUGA-1
+          collected_debt_bs: 0,
           created_at: now,
           updated_at: now,
-        } as unknown as Record<string, unknown>), tenantId);
+        };
+        if (resolvedRegisterId) snakePayload.register_id = resolvedRegisterId;
+        if (userId) snakePayload.operator_id = userId;
+
+        await syncQueue.enqueue('cash_registers', 'CREATE', id, toSnake(snakePayload), tenantId);
 
         await outboxService.enqueue(SystemEvents.BOX_OPENED, MODULE_NAME, {
           registerId: id,
@@ -1105,19 +1200,14 @@ export const posService = {
       await logAuditEventOnly({
         eventName: SystemEvents.BOX_OPENED,
         module: MODULE_NAME,
-        payload: { registerId: id, tenantSlug: tenantId, openingBalanceBs, openedBy: userId },
+        payload: { registerId: id, tenantSlug: tenantId, openingBalanceBs, openedBy: userId, registerConfigId: resolvedRegisterId },
         context: { userId, tenantId, tenantUuid },
       });
 
-
-      // Push inmediato para sincronizar apertura de caja a la nube
       syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (openCash):', err));
 
       return success({ ...register, deletedAt: null });
     } catch (err) {
-      // POS-002 (C-8): detectar unique violation de uq_cash_registers_one_open_per_tenant
-      // y re-leer la caja abierta existente. Dexie expone el nombre del failing index
-      // en `err.name` o `err.message` con texto "uq_cash_registers_one_open_per_tenant".
       const errName = (err as { name?: string })?.name ?? '';
       const errMsg = err instanceof Error ? err.message : String(err);
       const isUniqueViolation =
@@ -1125,10 +1215,8 @@ export const posService = {
         errMsg.includes('uq_cash_registers_one_open_per_tenant');
 
       if (isUniqueViolation) {
-        // Race condition: otro dispositivo creó la caja entre nuestro check y add.
-        // Re-leer y retornar la existente (idempotente).
         const existingRemote = await db.cashRegisters
-          .where({ tenantId })
+          .where({ registerId: resolvedRegisterId })
           .filter((r) => !r.deletedAt && r.isOpen)
           .first();
         if (existingRemote) {
@@ -1571,9 +1659,14 @@ export const posService = {
 
         // Revertir totales de caja si existe una caja abierta
         if (cashReg) {
+          // Tarea 3: Re-read inside transaction for atomicity
+          const txCashReg = await db.cashRegisters.get(cashReg.id);
+          if (!txCashReg) {
+            throw new AppError('CASH_REGISTER_NOT_FOUND', 'Caja no encontrada.');
+          }
           // AUDIT-FLOW-12-012: Si la caja ya está cerrada, NO actualizar totales
           // (eso corrompería expectedClosingBs/differenceBs del arqueo). Abortar.
-          if (!cashReg.isOpen) {
+          if (!txCashReg.isOpen) {
             throw new AppError(
               PosErrors.SALE_VOID_BOX_CLOSED,
               'No se puede anular una venta cuya caja ya está cerrada. Crea un ajuste manual.',
@@ -1582,8 +1675,8 @@ export const posService = {
           // AUDIT-011: Canonical totals recompute (no silent clamp)
           // Re-leer todas las ventas completed (no voided) en la ventana de la caja
           // y derivar totales desde la fuente de verdad, no por decremento.
-          const regOpened = cashReg.openedAt ?? cashReg.createdAt; // AUDIT-011
-          const regClosed = cashReg.closedAt ?? now; // AUDIT-011
+          const regOpened = txCashReg.openedAt ?? txCashReg.createdAt; // AUDIT-011
+          const regClosed = txCashReg.closedAt ?? now; // AUDIT-011
           const completedRegSales = await db.sales // AUDIT-011
             .where({ tenantId })
             .filter((s) =>
@@ -1608,23 +1701,23 @@ export const posService = {
 
           // AUDIT-011: Si el cómputo da negativo (no debería), loggear como bug y usar 0
           if (canonicalTotalSalesBs < 0) {
-            logger.error('voidSale', `BUG: canonical totalSalesBs=${canonicalTotalSalesBs} en register ${cashReg.id} tras anular ${saleId}. Usando 0.`);
+            logger.error('voidSale', `BUG: canonical totalSalesBs=${canonicalTotalSalesBs} en register ${txCashReg.id} tras anular ${saleId}. Usando 0.`);
             canonicalTotalSalesBs = 0;
           }
           if (canonicalTotalIgtfBs < 0) {
-            logger.error('voidSale', `BUG: canonical totalIgtfBs=${canonicalTotalIgtfBs} en register ${cashReg.id} tras anular ${saleId}. Usando 0.`);
+            logger.error('voidSale', `BUG: canonical totalIgtfBs=${canonicalTotalIgtfBs} en register ${txCashReg.id} tras anular ${saleId}. Usando 0.`);
             canonicalTotalIgtfBs = 0;
           }
 
-          await db.cashRegisters.update(cashReg.id, {
+          await db.cashRegisters.update(txCashReg.id, {
             totalSalesCount: canonicalCount, // AUDIT-011
             totalSalesBs: canonicalTotalSalesBs, // AUDIT-011
             totalIgtfBs: canonicalTotalIgtfBs, // AUDIT-011
             updatedAt: now,
           });
 
-          await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
-            id: cashReg.id,
+          await syncQueue.enqueue('cash_registers', 'UPDATE', txCashReg.id, toSnake({
+            id: txCashReg.id,
             tenant_id: tenantUuid,
             total_sales_count: canonicalCount, // AUDIT-011
             total_sales_bs: canonicalTotalSalesBs, // AUDIT-011
@@ -1672,20 +1765,37 @@ export const posService = {
     if (!networkCheck.ok) return failure(networkCheck.error);
 
     const db = getDb();
-    const { tenantId, userId, declaredClosingBalanceBs, closingRate } = input;
+    const { tenantId, userId, declaredClosingBalanceBs, closingRate, sessionId } = input;
 
     const session = useAuthStore.getState().session;
-    if (!session || !hasActionPermission(session, 'pos', 'close_box')) {
+    if (!session) {
       return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
     }
 
-    const cashReg = await db.cashRegisters
-      .where({ tenantId })
-      .filter((r) => !r.deletedAt && r.isOpen)
-      .first();
+    // Buscar la sesión específica si se provee sessionId, o la primera abierta del tenant
+    let cashReg: DexieCashRegister | undefined;
+    if (sessionId) {
+      cashReg = await db.cashRegisters.get(sessionId);
+    } else {
+      cashReg = await db.cashRegisters
+        .where({ tenantId })
+        .filter((r) => !r.deletedAt && r.isOpen)
+        .first();
+    }
 
     if (!cashReg) {
       return failure(new AppError(PosErrors.BOX_ALREADY_CLOSED, 'La caja ya está cerrada.'));
+    }
+
+    // Pos:close_box para propia sesión, pos:manager_close para sesión ajena
+    const isOwnSession = cashReg.operatorId === userId || cashReg.openedBy === userId;
+    const hasClosePermission = hasActionPermission(session, 'pos', 'close_box');
+    const hasManagerPermission = hasActionPermission(session, 'pos', 'manager_close');
+    if (!isOwnSession && !hasManagerPermission) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para cerrar una caja que no abriste.'));
+    }
+    if (isOwnSession && !hasClosePermission) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para cerrar la caja.'));
     }
 
     const now = new Date().toISOString();
@@ -1716,7 +1826,7 @@ export const posService = {
         const freshReg = await db.cashRegisters.get(cashReg.id);
         if (!freshReg) throw new Error('Cash register not found after update');
 
-        await syncQueue.enqueue('cash_registers', 'UPDATE', freshReg.id, toSnake({
+        const closePayload: Record<string, unknown> = {
           id: freshReg.id,
           tenant_id: tenantUuid,
           is_open: false,
@@ -1729,9 +1839,12 @@ export const posService = {
           total_sales_count: freshReg.totalSalesCount,
           total_sales_bs: freshReg.totalSalesBs,
           total_igtf_bs: freshReg.totalIgtfBs,
-          collected_debt_bs: freshReg.collectedDebtBs ?? 0, // FUGA-1
+          collected_debt_bs: freshReg.collectedDebtBs ?? 0,
           updated_at: now,
-        } as unknown as Record<string, unknown>), tenantId);
+        };
+        if (freshReg.registerId) closePayload.register_id = freshReg.registerId;
+        if (freshReg.operatorId) closePayload.operator_id = freshReg.operatorId;
+        await syncQueue.enqueue('cash_registers', 'UPDATE', freshReg.id, toSnake(closePayload as Record<string, unknown>), tenantId);
 
         await outboxService.enqueue(SystemEvents.BOX_CLOSED, MODULE_NAME, {
           registerId: cashReg.id,
@@ -1771,6 +1884,8 @@ export const posService = {
         totalSalesBs: cashReg.totalSalesBs,
         totalIgtfBs: cashReg.totalIgtfBs,
         collectedDebtBs: cashReg.collectedDebtBs ?? 0, // FUGA-1
+        registerId: cashReg.registerId ?? undefined,
+        operatorId: cashReg.operatorId ?? undefined,
         createdAt: cashReg.createdAt,
         updatedAt: now,
         deletedAt: null,

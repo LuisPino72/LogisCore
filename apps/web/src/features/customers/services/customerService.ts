@@ -11,6 +11,7 @@ import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { usePosStore } from '../../pos/stores/posStore';
 import {
   CreateCustomerInputSchema,
   UpdateCustomerInputSchema,
@@ -809,23 +810,24 @@ export const customerService = {
           } as unknown as Record<string, unknown>), tenantId);
         }
 
-        // FUGA-1: Actualizar caja con el cobro (Opción C: campo separado collectedDebtBs)
-        const openReg = await tx.cashRegisters
-          .where({ tenantId })
-          .filter((r) => !r.deletedAt && r.isOpen)
-          .first();
-        if (openReg) {
-          const newCollectedDebtBs = preciseRound((openReg.collectedDebtBs ?? 0) + amountBs, 2);
-          await tx.cashRegisters.update(openReg.id, {
-            collectedDebtBs: newCollectedDebtBs,
-            updatedAt: now,
-          });
-          await syncQueue.enqueue('cash_registers', 'UPDATE', openReg.id, toSnake({
-            id: openReg.id,
-            tenant_id: tenantUuid,
-            collected_debt_bs: newCollectedDebtBs,
-            updated_at: now,
-          } as unknown as Record<string, unknown>), tenantId);
+        // Tarea 2: Impactar sesión activa vía posStore (no tenant-wide)
+        // Si no hay sesión activa (cobro desde módulo clientes), se omite
+        const posSessionId = usePosStore.getState().activeSessionId;
+        if (posSessionId) {
+          const txCashReg = await tx.cashRegisters.get(posSessionId);
+          if (txCashReg) {
+            const newCollectedDebtBs = preciseRound((txCashReg.collectedDebtBs ?? 0) + amountBs, 2);
+            await tx.cashRegisters.update(posSessionId, {
+              collectedDebtBs: newCollectedDebtBs,
+              updatedAt: now,
+            });
+            await syncQueue.enqueue('cash_registers', 'UPDATE', posSessionId, toSnake({
+              id: posSessionId,
+              tenant_id: tenantUuid,
+              collected_debt_bs: newCollectedDebtBs,
+              updated_at: now,
+            } as unknown as Record<string, unknown>), tenantId);
+          }
         }
 
         await outboxService.enqueue('DEBT.COLLECTED', MODULE_NAME, {

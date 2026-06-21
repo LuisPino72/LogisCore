@@ -166,9 +166,20 @@ export interface DexieCashRegister {
   totalSalesBs: number;
   totalIgtfBs: number;
   collectedDebtBs: number; // FUGA-1: Cobros de deuda acumulados en caja
+  registerId?: string; // PLAN-MULTICAJAS: FK a registers_config
+  operatorId?: string; // PLAN-MULTICAJAS: FK a users
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null; // POS-002 (M-1): acepta null también para alinear con schema
+}
+
+export interface DexieRegisterConfig {
+  id: string;
+  tenantId: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface DexieParkedCart {
@@ -434,6 +445,7 @@ export class LogisCoreDB extends Dexie {
   rolePermissions!: Table<DexieRolePermission, string>;
   creditPayments!: Table<DexieCreditPayment, string>;
   supplierPayments!: Table<DexieSupplierPayment, string>;
+  registerConfigs!: Table<DexieRegisterConfig, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -538,6 +550,11 @@ export class LogisCoreDB extends Dexie {
           paidAt: order.updatedAt || order.createdAt,
         });
       }
+    });
+    // PLAN-MULTICAJAS: v29 — registers_config + registerId/operatorId en cashRegisters
+    this.version(29).stores({
+      registerConfigs: 'id, tenantId, [tenantId+name]',
+      cashRegisters: 'id, tenantId, registerId, operatorId, isOpen, [tenantId+deletedAt], [tenantId+registerId+isOpen]',
     });
   }
 }

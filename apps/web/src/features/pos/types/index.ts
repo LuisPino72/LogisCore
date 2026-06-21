@@ -33,6 +33,9 @@ export interface PosState {
   salesHistoryTotal: number;
   salesHistoryLoading: boolean;
   activeParkedCartId: string | null;
+  activeRegisterId: string | null;
+  activeSessionId: string | null;
+  registerName: string | null;
   loading: boolean;
   error: string | null;
   searchQuery: string;
