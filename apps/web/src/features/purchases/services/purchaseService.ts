@@ -1048,6 +1048,11 @@ export const purchaseService = {
     reference?: string,
     notes?: string,
   ): Promise<Result<{ paymentId: string; newBalance: number; newOrderPaidAmount: number }, AppError>> {
+    const _paySession = useAuthStore.getState().session;
+    if (!_paySession || !hasActionPermission(_paySession, 'purchases', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
+
     const db = getDb();
     const now = new Date().toISOString();
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);

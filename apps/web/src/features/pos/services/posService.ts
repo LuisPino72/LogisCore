@@ -439,6 +439,11 @@ export const posService = {
       return failure(new AppError(PosErrors.SALE_EXCHANGE_RATE_NOT_FOUND, 'No hay tasa de cambio configurada. Configure la tasa antes de vender.'));
     }
 
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'pos', 'create')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
+
     const parsed = CreateSaleInputSchema.safeParse(input);
     if (!parsed.success) {
       return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Datos de venta inválidos: ' + parsed.error.issues.map((e: { message: string }) => e.message).join(', ')));

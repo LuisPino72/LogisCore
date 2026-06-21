@@ -704,6 +704,11 @@ export const customerService = {
     reference?: string,
   ): Promise<Result<{ paymentId: string; newBalance: number }, AppError>> {
     try {
+      const _collectSession = useAuthStore.getState().session;
+      if (!_collectSession || !hasActionPermission(_collectSession, 'customers', 'update')) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      }
+
       const db = getDb();
       const now = new Date().toISOString();
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);

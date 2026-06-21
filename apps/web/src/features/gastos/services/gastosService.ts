@@ -515,6 +515,10 @@ export const gastosService = {
   },
 
   async cancelOccurrence(tenantId: string, templateId: string, occurrenceDate: string): Promise<Result<void, AppError>> {
+    const _cancelSession = useAuthStore.getState().session;
+    if (!_cancelSession || !hasActionPermission(_cancelSession, 'gastos', 'update')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
     // AUDIT-CRUD-009: requireNetwork para consistencia
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
