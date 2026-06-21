@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Result, AppError } from '@logiscore/core';
 import { KeyRound, Trash2 } from 'lucide-react';
-import { Badge, Button, Card, DataTable, Pagination, Tooltip, Select } from '../../../common/components';
+import { Badge, Button, Card, DataTable, Pagination, Tooltip } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
 import type { UserRole } from '../types';
@@ -81,11 +81,6 @@ export function UserSection({
     }
     setEditingRole(null);
   }, [roles, updateUserRole, addToast]);
-
-  const roleOptions = useMemo(() => [
-    { value: '', label: 'Seleccionar...' },
-    ...roles.map((r) => ({ value: r.id, label: r.name })),
-  ], [roles]);
 
   const columns: Column<UserRole>[] = useMemo(() => [
     { key: 'email', header: 'Email' },

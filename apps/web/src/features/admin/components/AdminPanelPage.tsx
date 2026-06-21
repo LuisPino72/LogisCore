@@ -188,6 +188,7 @@ export function AdminPanelPage() {
               analytics={analytics}
               showCreateModal={showCreateModal}
               onCloseCreateModal={() => setShowCreateModal(false)}
+              roles={roles}
             />
           </div>
         )}

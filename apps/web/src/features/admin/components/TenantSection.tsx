@@ -30,6 +30,7 @@ import type {
   CreateTenantWithUsersInput,
   CreateTenantResponse,
 } from '../types';
+import type { Role } from '../../../specs/roles';
 import { SectionHeader } from './SectionHeader';
 import { CreateTenantModal } from './CreateTenantModal';
 import { EditTenantModal } from './EditTenantModal';
@@ -64,6 +65,7 @@ interface TenantSectionProps {
   analytics: TenantAnalytics | null;
   showCreateModal: boolean;
   onCloseCreateModal: () => void;
+  roles: Role[];
 }
 
 export function TenantSection({
@@ -84,6 +86,7 @@ export function TenantSection({
   analytics,
   showCreateModal,
   onCloseCreateModal,
+  roles,
 }: TenantSectionProps) {
   const { addToast } = useToastStore();
 
@@ -291,6 +294,7 @@ export function TenantSection({
         tenantId={addFromEditTenantId}
         tenantName={addFromEditTenantName}
         onAddEmployee={addEmployee}
+        roles={roles}
       />
     </>
   );
