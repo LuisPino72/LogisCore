@@ -442,7 +442,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             value={formData.sku}
             onChange={(e) => setField('sku', e.target.value)}
             error={errors.sku}
-            validation={{ required: true, maxLength: 18 }}
+            validation={{ required: true, maxLength: 25 }}
             inputClassName="text-sm"
           />
           <Tooltip content="Generar SKU automático" variant="help">
