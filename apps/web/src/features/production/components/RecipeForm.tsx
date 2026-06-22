@@ -4,6 +4,7 @@ import { Button, Card, Modal, Input, SearchableSelect, Select, Spinner, Tooltip 
 import { useRecipeForm } from '../hooks/useRecipeForm';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { formatUsd } from '@/lib/formatBs';
 import type { Recipe } from '../types';
 
@@ -84,6 +85,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(!!recipe);
   const [showPreview, setShowPreview] = useState(false);
+  const { ivaRate } = useSettingsStore();
 
   useEffect(() => {
     if (recipe) {
@@ -572,7 +574,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 onChange={(e) => updateField('newProductIsTaxable', e.target.checked)}
                 className="rounded border-gray-300 text-primary focus:ring-primary"
               />
-              <span className="text-sm text-gray-700">Cobrar IVA (16%) al producto terminado</span>
+              <span className="text-sm text-gray-700">Cobrar IVA ({(ivaRate * 100).toFixed(0)}%) al producto terminado</span>
             </label>
 
             <div>

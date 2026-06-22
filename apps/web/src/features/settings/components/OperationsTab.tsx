@@ -79,7 +79,8 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
     setSaving(false);
 
     if (result.ok) {
-      addToast({ type: 'success', message: 'Configuraci\u00f3n de operaciones actualizada correctamente' });
+      useSettingsStore.getState().setOperationSettings(result.data);
+      addToast({ type: 'success', message: 'Configuración de operaciones actualizada correctamente' });
     } else {
       setLocalError(result.error.message);
     }
@@ -145,7 +146,8 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
           label="Mensaje pie de ticket"
           value={ticketFooterMessage}
           onChange={(e) => setTicketFooterMessage(e.target.value)}
-          hint="Texto que aparece al final del ticket de venta."
+          validation={{ maxLength: 25 }}
+          hint="Texto que aparece al final del ticket de venta (máx 100 caracteres)."
           autoResize
           maxRows={3}
         />

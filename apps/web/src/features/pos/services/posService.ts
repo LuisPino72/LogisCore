@@ -648,11 +648,8 @@ export const posService = {
           if (!txCustomer || txCustomer.deletedAt) {
             throw new AppError('CUSTOMER_NOT_FOUND', 'Cliente no encontrado.');
           }
-          const pendingSales = await db.sales
-            .where({ tenantId })
-            .filter((s) => !s.deletedAt && s.status === 'completed' && s.isCreditSale === true && !s.creditCollected && s.customerId === input.customerId)
-            .toArray();
-          const currentDebt = pendingSales.reduce((sum, s) => sum + s.totalUsd, 0);
+          // Use denormalized customer.balance instead of filter query (filter is unsupported inside Dexie rw transactions)
+          const currentDebt = txCustomer.balance ?? 0;
           if (currentDebt + totalUsd > txCustomer.creditLimit) {
             const available = Math.max(0, txCustomer.creditLimit - currentDebt);
             throw new AppError('CREDIT_LIMIT_EXCEEDED', `El cliente excede su límite de crédito ($${txCustomer.creditLimit.toFixed(2)}). Debe $${currentDebt.toFixed(2)}. Disponible: $${available.toFixed(2)}.`);

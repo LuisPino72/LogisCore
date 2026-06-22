@@ -54,6 +54,7 @@ export const FiscalTab: FC<FiscalTabProps> = ({ tenantId }) => {
     setSaving(false);
 
     if (result.ok) {
+      useSettingsStore.getState().setFiscalSettings(result.data);
       addToast({ type: 'success', message: 'Tasas fiscales actualizadas correctamente' });
     } else {
       setLocalError(result.error.message);

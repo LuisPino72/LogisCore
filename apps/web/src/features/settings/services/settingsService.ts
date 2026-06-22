@@ -9,7 +9,7 @@ import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { isSameDayVzla } from '../../../lib/date';
+import { isSameDayVzla, startOfDayVzla } from '../../../lib/date';
 import { SettingsErrors } from '../types/errors';
 import type { FiscalSettings, OperationSettings, BusinessInfo, ChangePasswordInput } from '../types';
 import { FiscalSettingsSchema, OperationSettingsSchema, UpdateBusinessInfoSchema, ChangePasswordSchema } from '../types';
@@ -95,18 +95,28 @@ export const settingsService = {
             igtfRate: data.igtf_rate as number,
             igtfEnabled: data.igtf_enabled as boolean,
           };
-          // Cache Supabase result in Dexie for offline use
+          // Preserve existing operation settings in Dexie, only overwrite fiscal fields
+          let existingOps: DexieTenantSettings | undefined;
+          if (isDbReady()) {
+            try {
+              const d = getDb();
+              existingOps = await d.tenantSettings.get(tenantId);
+            } catch { /* fall through */ }
+          }
+          const opsPartial: OperationSettings = {
+            maxDiscountPct: existingOps?.maxDiscountPct ?? 100,
+            defaultMinStock: existingOps?.defaultMinStock ?? 5,
+            defaultCreditLimit: existingOps?.defaultCreditLimit ?? 100,
+            mandatoryCustomerId: existingOps?.mandatoryCustomerId ?? false,
+            lowStockThreshold: existingOps?.lowStockThreshold ?? 5,
+            ticketFooterMessage: existingOps?.ticketFooterMessage ?? '¡Gracias por su compra!',
+          };
           await cacheSettings({
             tenantId,
             ivaRate: settings.ivaRate,
             igtfRate: settings.igtfRate,
             igtfEnabled: settings.igtfEnabled,
-            maxDiscountPct: 100,
-            defaultMinStock: 5,
-            defaultCreditLimit: 100,
-            mandatoryCustomerId: false,
-            lowStockThreshold: 5,
-            ticketFooterMessage: '¡Gracias por su compra!',
+            ...opsPartial,
             updatedAt: new Date().toISOString(),
           });
           return success(settings);
@@ -123,7 +133,7 @@ export const settingsService = {
 
   async updateFiscalSettings(
     tenantId: string, userId: string, data: FiscalSettings,
-  ): Promise<Result<void, AppError>> {
+  ): Promise<Result<FiscalSettings, AppError>> {
     const parsed = FiscalSettingsSchema.safeParse(data);
     if (!parsed.success) {
       return failure(new AppError('SETTINGS_VALIDATION_FAILED', parsed.error.issues[0]?.message || 'Datos fiscales inválidos'));
@@ -146,6 +156,24 @@ export const settingsService = {
       }
     }
 
+    // Fallback: if Dexie had no data, check Supabase remotely
+    if (navigator.onLine) {
+      try {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+        if (tenantUuid) {
+          const { data: remoteSessions } = await supabase
+            .from('cash_register_sessions')
+            .select('id', { count: 'exact', head: true })
+            .eq('tenant_id', tenantUuid)
+            .eq('is_open', true)
+            .gte('opened_at', startOfDayVzla);
+          if (remoteSessions && remoteSessions.length > 0) {
+            return failure(new AppError('SETTINGS_FISCAL_BLOCKED', SettingsErrors.SETTINGS_FISCAL_BLOCKED));
+          }
+        }
+      } catch { /* fall through - best effort */ }
+    }
+
     try {
       const db = getDb();
       const row = await buildSettingsRow(tenantId, parsed.data);
@@ -160,9 +188,6 @@ export const settingsService = {
         }, tx);
       });
 
-      useSettingsStore.getState().setFiscalSettings(parsed.data);
-      useSettingsStore.getState().setLastUpdatedAt(Date.now());
-
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
         eventName: 'SETTINGS.FISCAL.UPDATED',
@@ -171,7 +196,7 @@ export const settingsService = {
         context: { userId, tenantId, tenantUuid: tenantUuid ?? undefined },
       });
 
-      return success(undefined);
+      return success(parsed.data);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en updateFiscalSettings:', err);
       return failure(new AppError('SETTINGS_UPDATE_FAILED', SettingsErrors.SETTINGS_UPDATE_FAILED));
@@ -204,12 +229,22 @@ export const settingsService = {
             lowStockThreshold: data.low_stock_threshold as number,
             ticketFooterMessage: data.ticket_footer_message as string,
           };
-          // Cache Supabase result in Dexie for offline use
+          // Preserve existing fiscal settings in Dexie, only overwrite operation fields
+          let existingFiscal: DexieTenantSettings | undefined;
+          if (isDbReady()) {
+            try {
+              const d = getDb();
+              existingFiscal = await d.tenantSettings.get(tenantId);
+            } catch { /* fall through */ }
+          }
+          const fiscalPartial: FiscalSettings = {
+            ivaRate: existingFiscal?.ivaRate ?? IVA_RATE,
+            igtfRate: existingFiscal?.igtfRate ?? IGTF_RATE,
+            igtfEnabled: existingFiscal?.igtfEnabled ?? IGTF_RATE > 0,
+          };
           await cacheSettings({
             tenantId,
-            ivaRate: IVA_RATE,
-            igtfRate: IGTF_RATE,
-            igtfEnabled: IGTF_RATE > 0,
+            ...fiscalPartial,
             maxDiscountPct: settings.maxDiscountPct,
             defaultMinStock: settings.defaultMinStock,
             defaultCreditLimit: settings.defaultCreditLimit,
@@ -235,7 +270,7 @@ export const settingsService = {
 
   async updateOperationSettings(
     tenantId: string, userId: string, data: OperationSettings,
-  ): Promise<Result<void, AppError>> {
+  ): Promise<Result<OperationSettings, AppError>> {
     const parsed = OperationSettingsSchema.safeParse(data);
     if (!parsed.success) {
       return failure(new AppError('SETTINGS_VALIDATION_FAILED', parsed.error.issues[0]?.message || 'Datos de operación inválidos'));
@@ -263,9 +298,6 @@ export const settingsService = {
         }, tx);
       });
 
-      useSettingsStore.getState().setOperationSettings(parsed.data);
-      useSettingsStore.getState().setLastUpdatedAt(Date.now());
-
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
         eventName: 'SETTINGS.OPERATIONS.UPDATED',
@@ -274,7 +306,7 @@ export const settingsService = {
         context: { userId, tenantId, tenantUuid: tenantUuid ?? undefined },
       });
 
-      return success(undefined);
+      return success(parsed.data);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en updateOperationSettings:', err);
       return failure(new AppError('SETTINGS_UPDATE_FAILED', SettingsErrors.SETTINGS_UPDATE_FAILED));

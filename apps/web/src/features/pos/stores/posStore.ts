@@ -12,6 +12,7 @@ import { useExchangeRateStore } from '../../../features/exchange/stores/exchange
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import { getDb } from '../../../services/dexie/db';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { useSettingsStore } from '../../settings/stores/settingsStore';
 import type { CreateSaleInput } from '../../../specs/pos';
 import type { Customer } from '../../../specs/customers';
 import { MAX_PARKED_CARTS } from '../../../specs/pos';
@@ -169,11 +170,14 @@ export const usePosStore = create<PosStore>()(
 
   setDiscount: (type, value) => {
     if (value <= 0) return;
-    if (type === 'percentage' && (value > 100 || value < 0)) return;
+    const maxDiscountPct = useSettingsStore.getState().maxDiscountPct;
+    if (type === 'percentage' && (value > maxDiscountPct || value < 0)) return;
     if (type === 'fixed') {
       const { cart } = get();
       const subtotalUsd = cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
       if (value > subtotalUsd) return;
+      const pctOfSubtotal = subtotalUsd > 0 ? (value / subtotalUsd) * 100 : 0;
+      if (pctOfSubtotal > maxDiscountPct) return;
     }
     set({ discount: { type, value } });
   },

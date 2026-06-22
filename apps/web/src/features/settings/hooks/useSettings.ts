@@ -13,7 +13,7 @@ export function useSettings() {
   useEffect(() => {
     if (!tenantId) return;
     // Reset ref when tenant changes to allow re-loading
-    loadedRef.current = false;
+    if (loadedRef.current) return;
     loadedRef.current = true;
     let cancelled = false;
     settingsService.loadTenantSettings(tenantId).then((r) => {
@@ -29,7 +29,11 @@ export function useSettings() {
     if (!session?.userId) return;
     setError(null);
     const result = await settingsService.updateFiscalSettings(tenantId, session.userId, data);
-    if (!result.ok) setError(result.error.message);
+    if (result.ok) {
+      useSettingsStore.getState().setFiscalSettings(result.data);
+    } else {
+      setError(result.error.message);
+    }
   }, [tenantId]);
 
   const updateOperations = useCallback(async (data: OperationSettings) => {
@@ -38,7 +42,11 @@ export function useSettings() {
     if (!session?.userId) return;
     setError(null);
     const result = await settingsService.updateOperationSettings(tenantId, session.userId, data);
-    if (!result.ok) setError(result.error.message);
+    if (result.ok) {
+      useSettingsStore.getState().setOperationSettings(result.data);
+    } else {
+      setError(result.error.message);
+    }
   }, [tenantId]);
 
   const refresh = useCallback(async () => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type FC } from 'react';
 import { Card, Input, Button, Textarea, Alert, Skeleton } from '../../../common/components';
 import { Upload, X } from 'lucide-react';
+import { supabase } from '../../../services/supabase/client';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { settingsService } from '../services/settingsService';
 import { useToastStore } from '../../../stores/toastStore';
@@ -70,11 +71,29 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     reader.readAsDataURL(file);
   };
 
-  const handleRemoveLogo = () => {
+  const handleRemoveLogo = async () => {
     setLogoFile(null);
     setLogoPreview(null);
     setLogoError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (logoUrl) {
+      try {
+        const filePath = logoUrl.split('/').pop();
+        if (filePath) {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token ?? '';
+          const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
+          await fetch(storageUrl, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
+      } catch {
+        // Best effort — logo will be overwritten on next upload
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -163,7 +182,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
             label="Nombre del negocio"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            validation={{ required: true, maxLength: 100 }}
+            validation={{ required: true, maxLength: 25 }}
             autoComplete="organization"
           />
           <Input
@@ -209,9 +228,9 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
               <Button
                 variant="ghost"
                 onClick={handleRemoveLogo}
-                className="absolute -top-2 -right-2 p-0! min-w-[22px] min-h-[22px] w-[22px] h-[22px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
+                className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
               >
-                <X size={12} />
+                <X size={16} />
               </Button>
             </div>
           ) : logoUrl ? (
@@ -220,9 +239,9 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
               <Button
                 variant="ghost"
                 onClick={handleRemoveLogo}
-                className="absolute -top-2 -right-2 p-0! min-w-[22px] min-h-[22px] w-[22px] h-[22px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
+                className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
               >
-                <X size={12} />
+                <X size={16} />
               </Button>
             </div>
           ) : (

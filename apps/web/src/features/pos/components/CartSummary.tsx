@@ -3,6 +3,7 @@ import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info, Lock } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals } from '../../../specs/pos';
+import { preciseRound } from '@logiscore/shared';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useToastStore } from '../../../stores/toastStore';
@@ -63,7 +64,7 @@ export function CartSummary({
   const ivaBase = totals.ivaBase;
 
   const activeIgtfRate = igtfEnabled ? igtfRate : 0;
-  const igtfUsd = paymentMethod === 'efectivo_usd' && activeIgtfRate > 0 && exchangeRateBs > 0 ? (igtfBs / exchangeRateBs) : 0;
+  const igtfUsd = paymentMethod === 'efectivo_usd' && activeIgtfRate > 0 && exchangeRateBs > 0 ? preciseRound(igtfBs / exchangeRateBs, 4) : 0;
 
   const hasCustomerWithCredit = selectedCustomer && selectedCustomer.creditLimit > 0;
   const availableCredit = selectedCustomer ? Math.max(0, selectedCustomer.creditLimit - selectedCustomer.balance) : 0;

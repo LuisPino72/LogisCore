@@ -325,6 +325,9 @@ export class SyncEngine {
     return success(result);
   }
 
+  /** Tables where we should merge (not overwrite) on sync to avoid data loss */
+  private readonly MERGE_TABLES = new Set(['tenantSettings']);
+
   private async upsertLocalRecord(tableName: string, record: Record<string, unknown>, pendingIds?: Set<string>): Promise<void> {
     if (isDbClosing()) return;
     const db = getDb();
@@ -361,6 +364,16 @@ export class SyncEngine {
       local.tenantId = tid;
     }
     const dexieTable = tableName.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    if (this.MERGE_TABLES.has(dexieTable)) {
+      const existing = await db.table(dexieTable).get((local.tenantId ?? local.id) as string | number);
+      if (existing) {
+        for (const key of Object.keys(existing)) {
+          if (!(key in local)) {
+            local[key] = existing[key];
+          }
+        }
+      }
+    }
     await db.table(dexieTable).put(local);
   }
 

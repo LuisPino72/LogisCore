@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Users, ShoppingBag, Plus } from 'lucide-react';
 import { Card, Button, DataTable, Skeleton, Alert, Badge } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
@@ -76,7 +76,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
     return result;
   }, [addToast, loadUsers]);
 
-  const userColumns: Column<UserRole>[] = [
+  const userColumns: Column<UserRole>[] = useMemo(() => [
     { key: 'name', header: 'Nombre', render: (u) => u.name || u.email || '—' },
     {
       key: 'email', header: 'Email', hideOnMobile: true, render: (u) => u.email || '—',
@@ -89,9 +89,9 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         return <Badge variant="neutral">{u.role}</Badge>;
       },
     },
-  ];
+  ], []);
 
-  const registerColumns: Column<DexieRegisterConfig>[] = [
+  const registerColumns: Column<DexieRegisterConfig>[] = useMemo(() => [
     { key: 'name', header: 'Nombre' },
     {
       key: 'isActive',
@@ -102,7 +102,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
           : <Badge variant="neutral">Inactivo</Badge>
       ),
     },
-  ];
+  ], []);
 
   return (
     <div className="space-y-8">

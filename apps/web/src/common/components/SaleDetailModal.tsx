@@ -5,7 +5,7 @@ import { Spinner } from './Loading';
 import { User, FileText, MessageCircle } from 'lucide-react';
 import { METADATA_PAGOS, type Sale } from '@/specs/pos';
 import type { PaymentMethod } from '@/specs/pos';
-import { IGTF_RATE } from '@logiscore/shared';
+import { useSettingsStore } from '../../features/settings/stores/settingsStore';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { posService } from '@/features/pos/services/posService';
 import { customerService } from '@/features/customers/services/customerService';
@@ -54,6 +54,7 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
   const [tenantInfo, setTenantInfo] = useState<TenantInfoResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const { ivaRate, igtfRate, igtfEnabled } = useSettingsStore();
 
   useEffect(() => {
     if (!isOpen || !saleId) {
@@ -204,12 +205,12 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
               </div>
               {sale.igtfBs > 0 && (
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>IGTF ({(IGTF_RATE * 100).toFixed(0)}%)</span>
+                  <span>IGTF ({(igtfEnabled ? igtfRate * 100 : 0).toFixed(0)}%)</span>
                   <span>{formatBs(sale.igtfBs)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm text-gray-600">
-                <span>IVA (16%)</span>
+                <span>IVA ({(ivaRate * 100).toFixed(0)}%)</span>
                 <span>{formatBs(sale.ivaBs ?? 0)}</span>
               </div>
               <div className="flex justify-between text-base font-bold">

@@ -21,6 +21,7 @@ const TABLE_PRIORITY: Record<string, number> = {
   purchase_order_items: 55,
   expenses: 50,
   exchange_rates: 40,
+  tenant_settings: 95,
 };
 
 export const syncQueue = {
