@@ -429,6 +429,10 @@ export const adminService = {
       return failure(new AppError('ROLE_NOT_FOUND', 'Rol no encontrado'));
     }
 
+    if (role.name && role.name.toLowerCase() === 'admin') {
+      return failure(new AppError('ROLE_FORBIDDEN', 'No puedes asignar el rol de administrador. Este rol está reservado.'));
+    }
+
     const { error } = await supabase
       .from('user_roles')
       .update({ role: role.name })
@@ -949,6 +953,11 @@ export const adminService = {
 
     const { name, description, rlsTier, permissions } = parsed.data;
 
+    const RESERVED_NAMES = ['admin', 'owner', 'employee'];
+    if (RESERVED_NAMES.includes(name.toLowerCase())) {
+      return failure(new AppError('ROLE_NAME_RESERVED', `El nombre "${name}" es un rol reservado del sistema y no puede ser creado.`));
+    }
+
     const { data: role, error: roleError } = await supabase
       .from('roles')
       .insert({ name, description: description ?? null, rls_tier: rlsTier, is_system: false })
@@ -1005,6 +1014,11 @@ export const adminService = {
 
     if (existing?.is_system) {
       return failure(new AppError(RoleErrors.ROLE_IS_SYSTEM, ROLE_ERROR_MESSAGES[RoleErrors.ROLE_IS_SYSTEM]));
+    }
+
+    const RESERVED_NAMES = ['admin', 'owner', 'employee'];
+    if (parsed.data.name && RESERVED_NAMES.includes(parsed.data.name.toLowerCase())) {
+      return failure(new AppError('ROLE_NAME_RESERVED', `El nombre "${parsed.data.name}" es un rol reservado del sistema.`));
     }
 
     const updateData: Record<string, unknown> = {};

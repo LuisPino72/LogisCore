@@ -407,17 +407,7 @@ export const settingsService = {
       if (parsed.data.phone !== undefined) payload.telefono = parsed.data.phone;
       if (parsed.data.logoUrl !== undefined) payload.logo_url = parsed.data.logoUrl;
 
-      if (Object.keys(payload).length > 0) {
-        const { error: updateError } = await supabase
-          .from('tenants')
-          .update(payload)
-          .eq('id', tenantId);
-
-        if (updateError) {
-          return failure(new AppError('SETTINGS_UPDATE_FAILED', SettingsErrors.SETTINGS_UPDATE_FAILED));
-        }
-      }
-
+      // Offline-first: write to Dexie first (optimistic update)
       if (isDbReady()) {
         const db = getDb();
         const existing = await db.tenantRefs.get(tenantId);
@@ -430,6 +420,38 @@ export const settingsService = {
             telefono: parsed.data.phone ?? existing.telefono,
             logoUrl: parsed.data.logoUrl ?? existing.logoUrl,
           });
+        }
+      }
+
+      // Then try Supabase (online)
+      if (Object.keys(payload).length > 0) {
+        if (navigator.onLine) {
+          const { error: updateError } = await supabase
+            .from('tenants')
+            .update(payload)
+            .eq('id', tenantId);
+
+          if (updateError) {
+            logger.warn(MODULE_NAME, 'updateBusinessInfo: Supabase update failed, enqueuing outbox:', updateError);
+            if (isDbReady()) {
+              const db = getDb();
+              await db.transaction('rw', [db.outbox], async (tx) => {
+                await outboxService.enqueue('SETTINGS.BUSINESS.UPDATED', MODULE_NAME, {
+                  tenantId, ...parsed.data, ...payload,
+                }, tx);
+              });
+            }
+          }
+        } else {
+          // Offline: enqueue outbox for later sync
+          if (isDbReady()) {
+            const db = getDb();
+            await db.transaction('rw', [db.outbox], async (tx) => {
+              await outboxService.enqueue('SETTINGS.BUSINESS.UPDATED', MODULE_NAME, {
+                tenantId, ...parsed.data, ...payload,
+              }, tx);
+            });
+          }
         }
       }
 

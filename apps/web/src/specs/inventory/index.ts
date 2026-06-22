@@ -17,7 +17,7 @@ export const InventoryProductTypeEnum = z.enum(['resale', 'materia_prima']);
 export const ProductSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1, 'Nombre requerido').max(25),
-  sku: z.string().min(1, 'SKU requerido').max(18),
+  sku: z.string().min(1, 'SKU requerido').max(50),
   // MED-6: permitir 0 para materia prima (no vendible)
   priceUsd: z.number().min(0, 'Precio no puede ser negativo').max(999999.99),
   categoryId: z.string().uuid().optional(),

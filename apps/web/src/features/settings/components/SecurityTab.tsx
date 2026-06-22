@@ -71,7 +71,7 @@ export function SecurityTab() {
 
   return (
     <Card>
-      <div className="p-4 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Lock size={20} className="text-primary" />
           <h2 className="text-lg font-semibold text-gray-900">Cambiar Contraseña</h2>
@@ -107,10 +107,10 @@ export function SecurityTab() {
         <Button
           variant="primary"
           onClick={handleSubmit}
-          disabled={submitting}
+          loading={submitting}
           className="min-h-11"
         >
-          {submitting ? 'Cambiando...' : 'Cambiar contraseña'}
+          Cambiar contraseña
         </Button>
       </div>
     </Card>

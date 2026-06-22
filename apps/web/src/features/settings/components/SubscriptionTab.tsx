@@ -55,7 +55,7 @@ export function SubscriptionTab({ tenantId }: SubscriptionTabProps) {
 
   return (
     <Card>
-      <div className="p-4 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-2">
           <CreditCard size={20} className="text-primary" />
           <h2 className="text-lg font-semibold text-gray-900">Suscripción</h2>
@@ -81,12 +81,8 @@ export function SubscriptionTab({ tenantId }: SubscriptionTabProps) {
                 <div className="mt-0.5">{statusBadge(subscription.status)}</div>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Inicio</p>
+                <p className="text-sm text-gray-700">Vencimiento</p>
                 <p className="text-base text-gray-900">{formatDate(subscription.expires_at)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Renovación</p>
-                <p className="text-base text-gray-900">{subscription.expires_at ? formatDate(subscription.expires_at) : 'Sin fecha'}</p>
               </div>
             </div>
 

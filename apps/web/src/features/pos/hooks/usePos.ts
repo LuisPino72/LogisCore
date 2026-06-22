@@ -3,6 +3,8 @@ import { usePosStore } from '../stores/posStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
+import { settingsService } from '../../settings/services/settingsService';
+import { useSettingsStore } from '../../settings/stores/settingsStore';
 import type { Customer } from '../../../specs/customers';
 
 export function usePos(tenantId: string | null) {
@@ -70,6 +72,10 @@ export function usePos(tenantId: string | null) {
     initialFetchDone.current = true;
     doRefresh();
     fetchParkedCarts(tenantId);
+    // Preload settings for POS (prevents sale blocking when settings haven't been loaded yet)
+    if (!useSettingsStore.getState().loaded) {
+      settingsService.loadTenantSettings(tenantId);
+    }
   }, [tenantId, doRefresh, fetchParkedCarts]);
 
   useEffect(() => {

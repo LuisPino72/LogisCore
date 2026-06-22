@@ -107,7 +107,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
   return (
     <div className="space-y-8">
       <Card>
-        <div className="p-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Users size={20} className="text-primary" />
@@ -146,7 +146,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
       </Card>
 
       <Card>
-        <div className="p-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <ShoppingBag size={20} className="text-primary" />

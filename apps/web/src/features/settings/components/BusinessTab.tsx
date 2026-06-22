@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type FC } from 'react';
-import { Card, Input, Button, Textarea, Alert } from '../../../common/components';
+import { Card, Input, Button, Textarea, Alert, Skeleton } from '../../../common/components';
 import { Upload, X } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { settingsService } from '../services/settingsService';
@@ -131,12 +131,12 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
   if (loading) {
     return (
       <Card>
-        <div className="p-4 sm:p-6 space-y-4 animate-pulse">
-          <div className="h-5 bg-gray-200 rounded w-48" />
-          <div className="h-10 bg-gray-200 rounded" />
-          <div className="h-10 bg-gray-200 rounded" />
-          <div className="h-20 bg-gray-200 rounded" />
-          <div className="h-10 bg-gray-200 rounded" />
+        <div className="p-4 sm:p-6 space-y-4">
+          <Skeleton variant="title" className="w-48" />
+          <Skeleton variant="shimmer" className="h-10 rounded-lg" />
+          <Skeleton variant="shimmer" className="h-10 rounded-lg" />
+          <Skeleton variant="shimmer" className="h-20 rounded-lg" />
+          <Skeleton variant="shimmer" className="h-10 rounded-lg" />
         </div>
       </Card>
     );
@@ -171,7 +171,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
             value={rif}
             sanitize="rif"
             onChange={(e) => setRif(sanitizeValue(e.target.value, 'rif'))}
-            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 12 }}
+            validation={{ required: true, pattern: /^[VJEGP]\d{9}$/, maxLength: 10 }}
             autoComplete="off"
             hint="Ej: J123456789"
           />
@@ -206,34 +206,34 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
           {logoPreview ? (
             <div className="relative inline-block">
               <img src={logoPreview} alt="Preview logo" className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={handleRemoveLogo}
-                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center"
+                className="absolute -top-2 -right-2 p-0! min-w-[22px] min-h-[22px] w-[22px] h-[22px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
               >
                 <X size={12} />
-              </button>
+              </Button>
             </div>
           ) : logoUrl ? (
             <div className="relative inline-block">
               <img src={logoUrl} alt="Logo actual" className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={handleRemoveLogo}
-                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center"
+                className="absolute -top-2 -right-2 p-0! min-w-[22px] min-h-[22px] w-[22px] h-[22px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
               >
                 <X size={12} />
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
+            <Button
+              variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors"
+              className="flex items-center gap-2"
             >
               <Upload size={16} />
               <span>Subir logo del negocio</span>
-            </button>
+            </Button>
           )}
           {logoError && <p className="text-danger text-xs mt-1">{logoError}</p>}
         </div>

@@ -50,7 +50,7 @@ export function CartSummary({
   const [discountError, setDiscountError] = useState('');
   const [showCreditInfo, setShowCreditInfo] = useState(false);
   const { addToast } = useToastStore();
-  const { ivaRate, igtfRate, igtfEnabled } = useSettingsStore();
+  const { ivaRate, igtfRate, igtfEnabled, maxDiscountPct } = useSettingsStore();
 
   const totals = useMemo(
     () => calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount, {
@@ -75,13 +75,16 @@ export function CartSummary({
       setDiscountError('El descuento debe ser mayor a 0.');
       return;
     }
-    if (discountType === 'percentage' && val > 100) {
-      setDiscountError('El descuento porcentual no puede ser mayor a 100%.');
+    if (discountType === 'percentage' && val > maxDiscountPct) {
+      setDiscountError(`El descuento máximo permitido es ${maxDiscountPct}%.`);
       return;
     }
-    if (discountType === 'fixed' && val > subtotalUsd) {
-      setDiscountError('El descuento no puede ser mayor al subtotal.');
-      return;
+    if (discountType === 'fixed') {
+      const pctOfSubtotal = subtotalUsd > 0 ? (val / subtotalUsd) * 100 : 0;
+      if (pctOfSubtotal > maxDiscountPct) {
+        setDiscountError(`El descuento máximo permitido es ${maxDiscountPct}% del subtotal.`);
+        return;
+      }
     }
     onSetDiscount(discountType, val);
     setShowDiscountInput(false);

@@ -507,9 +507,18 @@ export const posService = {
       return failure(new AppError('SETTINGS_NOT_LOADED', 'Los ajustes del negocio aún se están cargando. Intenta de nuevo en unos segundos.'));
     }
 
-    // Validate discount against maxDiscountPct
-    if (input.discountType === 'percentage' && input.discountValue != null && input.discountValue > maxDiscountPct) {
-      return failure(new AppError('SALE_DISCOUNT_EXCEEDS_MAX', `El descuento máximo permitido es ${maxDiscountPct}%.`));
+    // Validate discount against maxDiscountPct (percentage AND fixed)
+    if (input.discountValue != null && input.discountValue > 0) {
+      if (input.discountType === 'percentage' && input.discountValue > maxDiscountPct) {
+        return failure(new AppError('SALE_DISCOUNT_EXCEEDS_MAX', `El descuento máximo permitido es ${maxDiscountPct}%.`));
+      }
+      if (input.discountType === 'fixed') {
+        const subtotalUsd = items.reduce((s, i) => s + i.totalPriceUsd, 0);
+        const pctOfTotal = subtotalUsd > 0 ? (input.discountValue / subtotalUsd) * 100 : 0;
+        if (pctOfTotal > maxDiscountPct) {
+          return failure(new AppError('SALE_DISCOUNT_EXCEEDS_MAX', `El descuento máximo permitido es ${maxDiscountPct}% del subtotal.`));
+        }
+      }
     }
 
     // Validate item coherence: totalPriceUsd must equal quantity * unitPriceUsd (tolerance 0.01)
