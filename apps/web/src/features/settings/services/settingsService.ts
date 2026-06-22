@@ -34,32 +34,42 @@ function toOperationSettings(row: DexieTenantSettings): OperationSettings {
   };
 }
 
-function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, operations?: OperationSettings): DexieTenantSettings {
+async function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, operations?: OperationSettings): Promise<DexieTenantSettings> {
+  // Read existing row from Dexie first to avoid overwriting with stale store data
+  let existing: DexieTenantSettings | undefined;
+  if (isDbReady()) {
+    try {
+      const db = getDb();
+      existing = await db.tenantSettings.get(tenantId);
+    } catch { /* fall through */ }
+  }
   const store = useSettingsStore.getState();
   return {
     tenantId,
-    ivaRate: fiscal?.ivaRate ?? store.ivaRate,
-    igtfRate: fiscal?.igtfRate ?? store.igtfRate,
-    igtfEnabled: fiscal?.igtfEnabled ?? store.igtfEnabled,
-    maxDiscountPct: operations?.maxDiscountPct ?? store.maxDiscountPct,
-    defaultMinStock: operations?.defaultMinStock ?? store.defaultMinStock,
-    defaultCreditLimit: operations?.defaultCreditLimit ?? store.defaultCreditLimit,
-    mandatoryCustomerId: operations?.mandatoryCustomerId ?? store.mandatoryCustomerId,
-    lowStockThreshold: operations?.lowStockThreshold ?? store.lowStockThreshold,
-    ticketFooterMessage: operations?.ticketFooterMessage ?? store.ticketFooterMessage,
+    ivaRate: fiscal?.ivaRate ?? existing?.ivaRate ?? store.ivaRate,
+    igtfRate: fiscal?.igtfRate ?? existing?.igtfRate ?? store.igtfRate,
+    igtfEnabled: fiscal?.igtfEnabled ?? existing?.igtfEnabled ?? store.igtfEnabled,
+    maxDiscountPct: operations?.maxDiscountPct ?? existing?.maxDiscountPct ?? store.maxDiscountPct,
+    defaultMinStock: operations?.defaultMinStock ?? existing?.defaultMinStock ?? store.defaultMinStock,
+    defaultCreditLimit: operations?.defaultCreditLimit ?? existing?.defaultCreditLimit ?? store.defaultCreditLimit,
+    mandatoryCustomerId: operations?.mandatoryCustomerId ?? existing?.mandatoryCustomerId ?? store.mandatoryCustomerId,
+    lowStockThreshold: operations?.lowStockThreshold ?? existing?.lowStockThreshold ?? store.lowStockThreshold,
+    ticketFooterMessage: operations?.ticketFooterMessage ?? existing?.ticketFooterMessage ?? store.ticketFooterMessage,
     updatedAt: new Date().toISOString(),
   };
 }
+
+const MODULE_NAME = 'SETTINGS';
 
 async function cacheSettings(data: DexieTenantSettings): Promise<void> {
   if (!isDbReady()) return;
   try {
     const db = getDb();
     await db.tenantSettings.put(data);
-  } catch { /* best-effort */ }
+  } catch (err) {
+    logger.warn(MODULE_NAME, 'cacheSettings: error escribiendo a Dexie (best-effort)', err);
+  }
 }
-
-const MODULE_NAME = 'SETTINGS';
 
 export const settingsService = {
   async getFiscalSettings(tenantId: string): Promise<Result<FiscalSettings, AppError>> {
@@ -85,6 +95,20 @@ export const settingsService = {
             igtfRate: data.igtf_rate as number,
             igtfEnabled: data.igtf_enabled as boolean,
           };
+          // Cache Supabase result in Dexie for offline use
+          await cacheSettings({
+            tenantId,
+            ivaRate: settings.ivaRate,
+            igtfRate: settings.igtfRate,
+            igtfEnabled: settings.igtfEnabled,
+            maxDiscountPct: 100,
+            defaultMinStock: 5,
+            defaultCreditLimit: 100,
+            mandatoryCustomerId: false,
+            lowStockThreshold: 5,
+            ticketFooterMessage: '¡Gracias por su compra!',
+            updatedAt: new Date().toISOString(),
+          });
           return success(settings);
         }
       } catch { /* fall through */ }
@@ -124,7 +148,7 @@ export const settingsService = {
 
     try {
       const db = getDb();
-      const row = buildSettingsRow(tenantId, parsed.data);
+      const row = await buildSettingsRow(tenantId, parsed.data);
 
       await db.transaction('rw', [db.tenantSettings, db.outbox], async (tx) => {
         await db.tenantSettings.put(row);
@@ -137,6 +161,7 @@ export const settingsService = {
       });
 
       useSettingsStore.getState().setFiscalSettings(parsed.data);
+      useSettingsStore.getState().setLastUpdatedAt(Date.now());
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
@@ -179,6 +204,20 @@ export const settingsService = {
             lowStockThreshold: data.low_stock_threshold as number,
             ticketFooterMessage: data.ticket_footer_message as string,
           };
+          // Cache Supabase result in Dexie for offline use
+          await cacheSettings({
+            tenantId,
+            ivaRate: IVA_RATE,
+            igtfRate: IGTF_RATE,
+            igtfEnabled: IGTF_RATE > 0,
+            maxDiscountPct: settings.maxDiscountPct,
+            defaultMinStock: settings.defaultMinStock,
+            defaultCreditLimit: settings.defaultCreditLimit,
+            mandatoryCustomerId: settings.mandatoryCustomerId,
+            lowStockThreshold: settings.lowStockThreshold,
+            ticketFooterMessage: settings.ticketFooterMessage,
+            updatedAt: new Date().toISOString(),
+          });
           return success(settings);
         }
       } catch { /* fall through */ }
@@ -209,7 +248,7 @@ export const settingsService = {
 
     try {
       const db = getDb();
-      const row = buildSettingsRow(tenantId, undefined, parsed.data);
+      const row = await buildSettingsRow(tenantId, undefined, parsed.data);
 
       await db.transaction('rw', [db.tenantSettings, db.outbox], async (tx) => {
         await db.tenantSettings.put(row);
@@ -225,6 +264,7 @@ export const settingsService = {
       });
 
       useSettingsStore.getState().setOperationSettings(parsed.data);
+      useSettingsStore.getState().setLastUpdatedAt(Date.now());
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
@@ -278,6 +318,18 @@ export const settingsService = {
       }
 
       if (row) {
+        // Guard: don't overwrite if a newer update happened while we were fetching
+        const lastUpdate = useSettingsStore.getState().lastUpdatedAt;
+        if (lastUpdate > 0) {
+          const rowTime = row.updatedAt ? new Date(row.updatedAt).getTime() : 0;
+          if (rowTime < lastUpdate) {
+            // The store has a more recent update than what we fetched — skip overwrite
+            useSettingsStore.getState().setLoaded(true);
+            useSettingsStore.getState().setLoading(false);
+            return success(undefined);
+          }
+        }
+
         useSettingsStore.getState().setFiscalSettings(toFiscalSettings(row));
         useSettingsStore.getState().setOperationSettings(toOperationSettings(row));
       }
@@ -424,6 +476,9 @@ export const settingsService = {
       return failure(new AppError('SETTINGS_UPDATE_FAILED', 'Error al cambiar la contraseña'));
     }
 
+    // Refresh session to invalidate old token on other devices
+    await supabase.auth.refreshSession();
+
     let tenantUuid: string | undefined;
     try {
       tenantUuid = await TenantTranslator.slugToUuid(session.tenantId ?? '');
@@ -441,6 +496,11 @@ export const settingsService = {
   },
 
   async uploadBusinessLogo(tenantId: string, file: File): Promise<Result<string, AppError>> {
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'settings', 'manage')) {
+      return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
+    }
+
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     const MAX_SIZE = 2 * 1024 * 1024;
 

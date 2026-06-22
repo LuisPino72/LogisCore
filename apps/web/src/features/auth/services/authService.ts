@@ -308,6 +308,10 @@ export const authService = {
 
     this.stopSync();
 
+    // Reset settings store to avoid stale data from previous tenant
+    const { useSettingsStore } = await import('../../settings/stores/settingsStore');
+    useSettingsStore.getState().reset();
+
     // 7. Flush de sync antes de cerrar DB local
     try {
       const pendingCount = await syncQueue.getPendingCount();

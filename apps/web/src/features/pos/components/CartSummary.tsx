@@ -3,7 +3,7 @@ import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info, Lock } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals } from '../../../specs/pos';
-import { IGTF_RATE } from '@logiscore/shared';
+import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useToastStore } from '../../../stores/toastStore';
 
@@ -50,15 +50,20 @@ export function CartSummary({
   const [discountError, setDiscountError] = useState('');
   const [showCreditInfo, setShowCreditInfo] = useState(false);
   const { addToast } = useToastStore();
+  const { ivaRate, igtfRate, igtfEnabled } = useSettingsStore();
 
   const totals = useMemo(
-    () => calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount),
-    [items, exchangeRateBs, paymentMethod, discount],
+    () => calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount, {
+      ivaRate,
+      igtfRate: igtfEnabled ? igtfRate : 0,
+    }),
+    [items, exchangeRateBs, paymentMethod, discount, ivaRate, igtfRate, igtfEnabled],
   );
   const { subtotalUsd, subtotalBs, igtfBs, ivaBs, discountBs, discountUsd, totalBs, totalUsd, ivaUsd } = totals;
   const ivaBase = totals.ivaBase;
 
-  const igtfUsd = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && exchangeRateBs > 0 ? (igtfBs / exchangeRateBs) : 0;
+  const activeIgtfRate = igtfEnabled ? igtfRate : 0;
+  const igtfUsd = paymentMethod === 'efectivo_usd' && activeIgtfRate > 0 && exchangeRateBs > 0 ? (igtfBs / exchangeRateBs) : 0;
 
   const hasCustomerWithCredit = selectedCustomer && selectedCustomer.creditLimit > 0;
   const availableCredit = selectedCustomer ? Math.max(0, selectedCustomer.creditLimit - selectedCustomer.balance) : 0;
@@ -108,16 +113,16 @@ export function CartSummary({
         <span className="min-w-0 text-right">{formatUsd(subtotalUsd)} / {formatBs(subtotalBs)}</span>
       </div>
 
-      {paymentMethod === 'efectivo_usd' && IGTF_RATE > 0 && (
+      {paymentMethod === 'efectivo_usd' && activeIgtfRate > 0 && (
         <div className="flex justify-between min-w-0 flex-wrap text-sm text-gray-600">
-          <span className="flex items-center gap-1.5">IGTF <span className="text-[10px] bg-info/10 text-info px-1.5 py-0.5 rounded-full font-medium">{(IGTF_RATE * 100).toFixed(0)}%</span></span>
+          <span className="flex items-center gap-1.5">IGTF <span className="text-[10px] bg-info/10 text-info px-1.5 py-0.5 rounded-full font-medium">{(activeIgtfRate * 100).toFixed(0)}%</span></span>
           <span className="min-w-0 text-right">{formatUsd(igtfUsd)} / {formatBs(igtfBs)}</span>
         </div>
       )}
 
       {ivaBase > 0 && (
         <div className="flex justify-between text-sm text-gray-600">
-          <span className="flex items-center gap-1.5">IVA <span className="text-[10px] bg-info/10 text-info px-1.5 py-0.5 rounded-full font-medium">16%</span></span>
+          <span className="flex items-center gap-1.5">IVA <span className="text-[10px] bg-info/10 text-info px-1.5 py-0.5 rounded-full font-medium">{(ivaRate * 100).toFixed(0)}%</span></span>
           <span>{formatUsd(ivaUsd)} / {formatBs(ivaBs)}</span>
         </div>
       )}

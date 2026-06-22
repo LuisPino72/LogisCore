@@ -500,7 +500,12 @@ export const posService = {
     }
 
     // Read dynamic settings from store (backward compatible: uses defaults if not loaded)
-    const { ivaRate, igtfRate, igtfEnabled, maxDiscountPct } = useSettingsStore.getState();
+    const { ivaRate, igtfRate, igtfEnabled, maxDiscountPct, loaded: settingsLoaded } = useSettingsStore.getState();
+
+    // Guard: reject sale if settings haven't loaded yet (prevents wrong fiscal rates)
+    if (!settingsLoaded) {
+      return failure(new AppError('SETTINGS_NOT_LOADED', 'Los ajustes del negocio aún se están cargando. Intenta de nuevo en unos segundos.'));
+    }
 
     // Validate discount against maxDiscountPct
     if (input.discountType === 'percentage' && input.discountValue != null && input.discountValue > maxDiscountPct) {

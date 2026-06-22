@@ -34,8 +34,10 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
 
   useEffect(() => {
     if (!tenantId) return;
+    let cancelled = false;
     setLoading(true);
     settingsService.getBusinessInfo(tenantId).then((result) => {
+      if (cancelled) return;
       if (result.ok) {
         setName(result.data.name);
         setRif(result.data.rif);
@@ -47,6 +49,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
       }
       setLoading(false);
     });
+    return () => { cancelled = true; };
   }, [tenantId]);
 
   const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

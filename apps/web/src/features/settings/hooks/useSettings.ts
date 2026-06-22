@@ -11,11 +11,16 @@ export function useSettings() {
   const loadedRef = useRef(false);
 
   useEffect(() => {
-    if (!tenantId || loadedRef.current) return;
+    if (!tenantId) return;
+    // Reset ref when tenant changes to allow re-loading
+    loadedRef.current = false;
     loadedRef.current = true;
+    let cancelled = false;
     settingsService.loadTenantSettings(tenantId).then((r) => {
+      if (cancelled) return;
       if (!r.ok) setError(r.error.message);
     });
+    return () => { cancelled = true; };
   }, [tenantId]);
 
   const updateFiscal = useCallback(async (data: FiscalSettings) => {

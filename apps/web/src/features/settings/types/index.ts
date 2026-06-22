@@ -3,10 +3,12 @@ import { z } from 'zod';
 export const FiscalSettingsSchema = z.object({
   ivaRate: z.number()
     .min(0, 'IVA no puede ser negativo')
-    .max(1, 'IVA no puede superar el 100%'),
+    .max(1, 'IVA no puede superar el 100%')
+    .multipleOf(0.01, 'IVA debe tener máximo 2 decimales'),
   igtfRate: z.number()
     .min(0, 'IGTF no puede ser negativo')
-    .max(1, 'IGTF no puede superar el 100%'),
+    .max(1, 'IGTF no puede superar el 100%')
+    .multipleOf(0.01, 'IGTF debe tener máximo 2 decimales'),
   igtfEnabled: z.boolean(),
 });
 

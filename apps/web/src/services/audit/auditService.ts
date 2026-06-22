@@ -55,6 +55,11 @@ export const CRITICAL_EVENTS = [
   'ADMIN.TENANT.HARD_DELETE',
   // Exchange (1)
   'EXCHANGE.RATE_UPDATED',
+  // Settings (4)
+  'SETTINGS.FISCAL.UPDATED',
+  'SETTINGS.OPERATIONS.UPDATED',
+  'SETTINGS.BUSINESS.UPDATED',
+  'USER.PASSWORD_CHANGED',
 ] as const;
 
 export function sanitizePayload(payload: Record<string, unknown> = {}): Record<string, unknown> {

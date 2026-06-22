@@ -17,6 +17,8 @@ export interface SettingsStore {
   setOperationSettings: (data: OperationSettings) => void;
   setLoading: (v: boolean) => void;
   setLoaded: (v: boolean) => void;
+  lastUpdatedAt: number;
+  setLastUpdatedAt: (v: number) => void;
   reset: () => void;
 }
 
@@ -32,6 +34,7 @@ const initialState = {
   ticketFooterMessage: '¡Gracias por su compra!',
   loading: false,
   loaded: false,
+  lastUpdatedAt: 0,
 };
 
 export const useSettingsStore = create<SettingsStore>((set) => ({
@@ -59,6 +62,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   setLoading: (v: boolean) => set({ loading: v }),
 
   setLoaded: (v: boolean) => set({ loaded: v }),
+
+  setLastUpdatedAt: (v: number) => set({ lastUpdatedAt: v }),
 
   reset: () => {
     set({ ...initialState });

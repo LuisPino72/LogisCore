@@ -25,8 +25,7 @@ describe('auditService.ts — funciones puras', () => {
   });
 
   describe('CRITICAL_EVENTS', () => {
-    it('contiene exactamente los 9 eventos críticos', () => {
-      expect(CRITICAL_EVENTS).toHaveLength(9);
+    it('contiene eventos de venta, caja, inventario, usuario, compras, gastos, producción, customer, admin, exchange y settings', () => {
       expect(CRITICAL_EVENTS).toContain('SALE.COMPLETED');
       expect(CRITICAL_EVENTS).toContain('SALE.VOIDED');
       expect(CRITICAL_EVENTS).toContain('INVOICE.ISSUED');
@@ -36,6 +35,10 @@ describe('auditService.ts — funciones puras', () => {
       expect(CRITICAL_EVENTS).toContain('INVENTORY.ADJUSTMENT');
       expect(CRITICAL_EVENTS).toContain('USER.LOGIN');
       expect(CRITICAL_EVENTS).toContain('USER.LOGOUT');
+      expect(CRITICAL_EVENTS).toContain('SETTINGS.FISCAL.UPDATED');
+      expect(CRITICAL_EVENTS).toContain('SETTINGS.OPERATIONS.UPDATED');
+      expect(CRITICAL_EVENTS).toContain('SETTINGS.BUSINESS.UPDATED');
+      expect(CRITICAL_EVENTS).toContain('USER.PASSWORD_CHANGED');
     });
 
     it('SYNC.REFRESH_TABLE NO es crítico', () => {

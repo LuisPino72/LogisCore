@@ -575,6 +575,10 @@ export class LogisCoreDB extends Dexie {
     this.version(30).stores({
       tenantSettings: 'tenantId, ivaRate, igtfRate, igtfEnabled',
     });
+    // H-1.1: v31 — limpiar índices inútiles en tenantSettings
+    this.version(31).stores({
+      tenantSettings: 'tenantId',
+    });
   }
 }
 
