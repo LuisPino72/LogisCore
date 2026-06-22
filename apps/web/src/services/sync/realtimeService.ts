@@ -23,7 +23,8 @@ export type RealtimeTable =
   | 'recipes'
   | 'recipe_lines'
   | 'production_orders'
-  | 'expenses';
+  | 'expenses'
+  | 'tenant_settings';
 
 export const REALTIME_TABLES: RealtimeTable[] = [
   'sales',
@@ -42,6 +43,7 @@ export const REALTIME_TABLES: RealtimeTable[] = [
   'recipe_lines',
   'production_orders',
   'expenses',
+  'tenant_settings',
 ];
 
 export type RealtimeCallback = (tableName: string, record: Record<string, unknown>) => Promise<void>;

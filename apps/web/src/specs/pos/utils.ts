@@ -19,11 +19,17 @@ export interface SaleTotals {
   totalUsd: number;
 }
 
+export interface SaleTotalsOptions {
+  ivaRate?: number;
+  igtfRate?: number;
+}
+
 export function calculateSaleTotals(
   items: CartItemInput[],
   exchangeRateBs: number,
   paymentMethod: string,
   discount: { type: 'percentage' | 'fixed'; value: number } | null,
+  options?: SaleTotalsOptions,
 ): SaleTotals {
   // AUDIT-FLOW-10-010B: subtotalUsd redondeado a 2 decimales (Regla #6).
   const subtotalUsd = preciseRound(
@@ -32,8 +38,11 @@ export function calculateSaleTotals(
   );
   const subtotalBs = exchangeRateBs > 0 ? preciseRound(subtotalUsd * exchangeRateBs, 2) : 0;
 
-  const igtfBs = paymentMethod === 'efectivo_usd' && IGTF_RATE > 0
-    ? preciseRound(subtotalBs * IGTF_RATE, 2)
+  const activeIgtfRate = options?.igtfRate ?? IGTF_RATE;
+  const activeIvaRate = options?.ivaRate ?? IVA_RATE;
+
+  const igtfBs = paymentMethod === 'efectivo_usd' && activeIgtfRate > 0
+    ? preciseRound(subtotalBs * activeIgtfRate, 2)
     : 0;
 
   // MED-1: subtotalTaxableBs usa sum-first-then-round (mismo patrón que subtotalBs).
@@ -67,7 +76,7 @@ export function calculateSaleTotals(
     discountUsd = exchangeRateBs > 0 ? preciseRound(discountBs / exchangeRateBs, 2) : 0;
   }
 
-  const ivaBs = preciseRound(ivaBase * IVA_RATE, 2);
+  const ivaBs = preciseRound(ivaBase * activeIvaRate, 2);
   const ivaUsd = exchangeRateBs > 0 ? preciseRound(ivaBs / exchangeRateBs, 2) : 0;
   const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
   const totalUsd = exchangeRateBs > 0 ? preciseRound(totalBs / exchangeRateBs, 2) : (subtotalUsd - discountUsd);

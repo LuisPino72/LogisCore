@@ -1,0 +1,66 @@
+import { create } from 'zustand';
+import type { FiscalSettings, OperationSettings } from '../types';
+
+export interface SettingsStore {
+  ivaRate: number;
+  igtfRate: number;
+  igtfEnabled: boolean;
+  maxDiscountPct: number;
+  defaultMinStock: number;
+  defaultCreditLimit: number;
+  mandatoryCustomerId: boolean;
+  lowStockThreshold: number;
+  ticketFooterMessage: string;
+  loading: boolean;
+  loaded: boolean;
+  setFiscalSettings: (data: FiscalSettings) => void;
+  setOperationSettings: (data: OperationSettings) => void;
+  setLoading: (v: boolean) => void;
+  setLoaded: (v: boolean) => void;
+  reset: () => void;
+}
+
+const initialState = {
+  ivaRate: 0.16,
+  igtfRate: 0,
+  igtfEnabled: false,
+  maxDiscountPct: 100,
+  defaultMinStock: 5,
+  defaultCreditLimit: 100,
+  mandatoryCustomerId: false,
+  lowStockThreshold: 5,
+  ticketFooterMessage: '¡Gracias por su compra!',
+  loading: false,
+  loaded: false,
+};
+
+export const useSettingsStore = create<SettingsStore>((set) => ({
+  ...initialState,
+
+  setFiscalSettings: (data: FiscalSettings) => {
+    set({
+      ivaRate: data.ivaRate,
+      igtfRate: data.igtfRate,
+      igtfEnabled: data.igtfEnabled,
+    });
+  },
+
+  setOperationSettings: (data: OperationSettings) => {
+    set({
+      maxDiscountPct: data.maxDiscountPct,
+      defaultMinStock: data.defaultMinStock,
+      defaultCreditLimit: data.defaultCreditLimit,
+      mandatoryCustomerId: data.mandatoryCustomerId,
+      lowStockThreshold: data.lowStockThreshold,
+      ticketFooterMessage: data.ticketFooterMessage,
+    });
+  },
+
+  setLoading: (v: boolean) => set({ loading: v }),
+
+  setLoaded: (v: boolean) => set({ loaded: v }),
+
+  reset: () => {
+    set({ ...initialState });
+  },
+}));

@@ -6,7 +6,7 @@ import { sanitizeValue } from '../../../lib/validation';
 import { formatPhone, unformatPhone } from '../../../lib/utils';
 import { UpdateTenantSchema, type Tenant } from '../types';
 import { adminService } from '../services/adminService';
-import { RegisterManagerModal } from './RegisterManagerModal';
+import { RegisterManagerModal } from '../../../common/components/RegisterManagerModal';
 
 interface EditForm {
   name: string;

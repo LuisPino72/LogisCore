@@ -36,9 +36,9 @@ import { SectionHeader } from './SectionHeader';
 import { CreateTenantModal } from './CreateTenantModal';
 import { EditTenantModal } from './EditTenantModal';
 import { DeleteTenantModal } from './DeleteTenantModal';
-import { AddEmployeeModal } from './AddEmployeeModal';
+import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
 import { AnalyticsModal } from './AnalyticsModal';
-import { RegisterManagerModal } from './RegisterManagerModal';
+import { RegisterManagerModal } from '../../../common/components/RegisterManagerModal';
 
 const PAGE_SIZE = 10;
 

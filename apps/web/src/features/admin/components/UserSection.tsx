@@ -7,7 +7,7 @@ import { useToastStore } from '../../../stores/toastStore';
 import type { UserRole } from '../types';
 import type { Role } from '../../../specs/roles';
 import { SectionHeader } from './SectionHeader';
-import { AddEmployeeModal } from './AddEmployeeModal';
+import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
 

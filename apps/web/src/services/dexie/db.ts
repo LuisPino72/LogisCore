@@ -182,6 +182,20 @@ export interface DexieRegisterConfig {
   updatedAt?: string;
 }
 
+export interface DexieTenantSettings {
+  tenantId: string;
+  ivaRate: number;
+  igtfRate: number;
+  igtfEnabled: boolean;
+  maxDiscountPct: number;
+  defaultMinStock: number;
+  defaultCreditLimit: number;
+  mandatoryCustomerId: boolean;
+  lowStockThreshold: number;
+  ticketFooterMessage: string;
+  updatedAt: string;
+}
+
 export interface DexieParkedCart {
   id: string;
   tenantId: string;
@@ -446,6 +460,7 @@ export class LogisCoreDB extends Dexie {
   creditPayments!: Table<DexieCreditPayment, string>;
   supplierPayments!: Table<DexieSupplierPayment, string>;
   registerConfigs!: Table<DexieRegisterConfig, string>;
+  tenantSettings!: Table<DexieTenantSettings, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -555,6 +570,10 @@ export class LogisCoreDB extends Dexie {
     this.version(29).stores({
       registerConfigs: 'id, tenantId, [tenantId+name]',
       cashRegisters: 'id, tenantId, registerId, operatorId, isOpen, [tenantId+deletedAt], [tenantId+registerId+isOpen]',
+    });
+    // PLAN-SETTINGS-001: v30 — tenantSettings
+    this.version(30).stores({
+      tenantSettings: 'tenantId, ivaRate, igtfRate, igtfEnabled',
     });
   }
 }

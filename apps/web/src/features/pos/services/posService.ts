@@ -21,6 +21,7 @@ import type { Product } from '../../../specs/inventory';
 import { convertToStorage, unitToStorageType } from '../../../features/inventory/types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { useSettingsStore } from '../../settings/stores/settingsStore';
 
 type VerificationProduct = {
   productId: string;
@@ -498,6 +499,14 @@ export const posService = {
       return failure(new AppError(PosErrors.SALE_TOTALS_MISMATCH, 'Datos de venta inválidos: ' + parsed.error.issues.map((e: { message: string }) => e.message).join(', ')));
     }
 
+    // Read dynamic settings from store (backward compatible: uses defaults if not loaded)
+    const { ivaRate, igtfRate, igtfEnabled, maxDiscountPct } = useSettingsStore.getState();
+
+    // Validate discount against maxDiscountPct
+    if (input.discountType === 'percentage' && input.discountValue != null && input.discountValue > maxDiscountPct) {
+      return failure(new AppError('SALE_DISCOUNT_EXCEEDS_MAX', `El descuento máximo permitido es ${maxDiscountPct}%.`));
+    }
+
     // Validate item coherence: totalPriceUsd must equal quantity * unitPriceUsd (tolerance 0.01)
     for (const item of items) {
       const expected = preciseRound(item.quantity * item.unitPriceUsd, 2);
@@ -555,6 +564,10 @@ export const posService = {
       rawExchangeRate,
       paymentMethod,
       input.discountType && input.discountValue != null ? { type: input.discountType, value: input.discountValue } : null,
+      {
+        ivaRate,
+        igtfRate: igtfEnabled ? igtfRate : 0,
+      },
     );
     // POS-002 (C-6): destructurar también USD para persistir
     const { subtotalBs, igtfBs, ivaBs, discountBs, subtotalUsd, ivaUsd, totalUsd, discountUsd } = totals;

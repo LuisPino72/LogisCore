@@ -34,6 +34,7 @@ import {
   DollarSign,
   ChefHat,
   Users,
+  Settings,
 } from 'lucide-react';
 import { LoginPage } from './features/auth/components/LoginPage';
 const AdminPanelPage = lazy(() => import('./features/admin/components/AdminPanelPage').then((m) => ({ default: m.AdminPanelPage })));
@@ -62,6 +63,9 @@ const ProductionPage = lazy(() =>
 const CustomersPage = lazy(() =>
   import('./features/customers/components/CustomersPage').then((m) => ({ default: m.CustomersPage })),
 );
+const SettingsPage = lazy(() =>
+  import('./features/settings/components/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
 
 // PERF-001: Pre-carga y prefetch de módulos
 const MODULE_IMPORTS: Record<string, () => Promise<unknown>> = {
@@ -73,6 +77,7 @@ const MODULE_IMPORTS: Record<string, () => Promise<unknown>> = {
   production: () => import('./features/production/pages/ProductionPage'),
   customers: () => import('./features/customers/components/CustomersPage'),
   reports: () => import('./features/reports/components/ReportsPage'),
+  settings: () => import('./features/settings/components/SettingsPage'),
 };
 
 const prefetchedModules = new Set<string>();
@@ -110,6 +115,7 @@ const ALL_MODULES: SidebarModule[] = [
   { id: 'gastos', label: 'Gastos', icon: <Receipt size={20} /> },
   { id: 'customers', label: 'Clientes', icon: <Users size={20} /> },
   { id: 'reports', label: 'Reportes', icon: <FileText size={20} /> },
+  { id: 'settings', label: 'Ajustes', icon: <Settings size={20} /> },
 ];
 
 // AUTH-002: Sidebar filtrado por permissions[] del JWT — admin (sin permissions) ve todo,
@@ -124,6 +130,7 @@ const MODULE_ROUTE_MAP: Record<string, string> = {
   pos: '/pos',
   customers: '/customers',
   reports: '/reports',
+  settings: '/settings',
 };
 
 function LoadingScreen() {
@@ -193,6 +200,7 @@ function useSyncModuleFromRoute() {
   if (path.startsWith('/pos')) return 'pos';
   if (path.startsWith('/customers')) return 'customers';
   if (path.startsWith('/reports')) return 'reports';
+  if (path.startsWith('/settings')) return 'settings';
   return 'dashboard';
 }
 
@@ -273,6 +281,7 @@ function DashboardLayout() {
     '/pos',
     '/customers',
     '/reports',
+    '/settings',
   ];
   const isKnownModulePath = knownModulePaths.some(
     (p) => location.pathname === p || location.pathname.startsWith(p + '/'),
@@ -432,6 +441,13 @@ function DashboardLayout() {
             <div className="animate-fade-in">
               <Suspense fallback={<ModuleSkeleton />}>
                 <ReportsPage tenantId={effectiveTenantId} />
+              </Suspense>
+            </div>
+          )}
+          {activeModule === 'settings' && (
+            <div className="animate-fade-in">
+              <Suspense fallback={<ModuleSkeleton />}>
+                <SettingsPage tenantId={effectiveTenantId} />
               </Suspense>
             </div>
           )}
