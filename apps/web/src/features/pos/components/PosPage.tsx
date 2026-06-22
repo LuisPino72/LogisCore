@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
@@ -90,6 +90,12 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
   const [showRegisterSelection, setShowRegisterSelection] = useState(false);
+
+  // Global Barcode Listener State
+  const SCAN_TIMEOUT_MS = 120;
+  const MAX_BARCODE_LENGTH = 50;
+  const barcodeBuffer = useRef('');
+  const lastKeyTime = useRef(0);
   const [showPayConfirm, setShowPayConfirm] = useState(false);
 
   // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
@@ -112,6 +118,67 @@ export function PosPage({ tenantId }: PosPageProps) {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [cart.length]);
+
+  const handleBarcodeScan = useCallback(
+    async (code: string) => {
+      if (!tenantId) return;
+      const cleaned = code.replace(/^\]\w{1,2}\d?/, '').split('').filter((c) => c >= ' ').join('').trim();
+      if (!cleaned) return;
+      const result = await inventoryService.getProductBySku(cleaned, tenantId);
+      if (result.ok && result.data) {
+        if (result.data.isWeighted) {
+          addToast({ type: 'info', message: `${result.data.name} es pesable. Agrégalo manualmente.`, duration: 3000 });
+          return;
+        }
+        if (navigator.vibrate) {
+          navigator.vibrate(100);
+        }
+        const presentation = await inventoryService.getPresentationByBarcode(cleaned, tenantId);
+        if (presentation?.id) {
+          addToCart(result.data, 1, { id: presentation.id, name: presentation.name, priceUsd: presentation.priceUsd, unitMultiplier: presentation.unitMultiplier });
+        } else {
+          addToCart(result.data, 1);
+        }
+        addToast({ type: 'success', message: `${result.data.name} agregado`, duration: 2000 });
+      } else {
+        addToast({ type: 'error', message: `Producto con código "${cleaned}" no encontrado.`, duration: 4000 });
+      }
+    },
+    [tenantId, addToCart, addToast],
+  );
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement instanceof HTMLInputElement || 
+        document.activeElement instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastKeyTime.current > SCAN_TIMEOUT_MS) {
+        barcodeBuffer.current = '';
+      }
+      lastKeyTime.current = now;
+
+      if (e.key === 'Enter') {
+        if (barcodeBuffer.current.length > 2) {
+          handleBarcodeScan(barcodeBuffer.current);
+        }
+        barcodeBuffer.current = '';
+      } else if (e.key.length === 1) {
+        if (e.key < ' ') return;
+        barcodeBuffer.current += e.key;
+        if (barcodeBuffer.current.length > MAX_BARCODE_LENGTH) {
+          barcodeBuffer.current = '';
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleBarcodeScan]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -430,32 +497,6 @@ export function PosPage({ tenantId }: PosPageProps) {
       toggleMobileCart();
     },
     [loadParkedCart, toggleMobileCart],
-  );
-
-  const handleBarcodeScan = useCallback(
-    async (code: string) => {
-      if (!tenantId) return;
-      const result = await inventoryService.getProductBySku(code, tenantId);
-      if (result.ok && result.data) {
-        if (result.data.isWeighted) {
-          addToast({ type: 'info', message: `${result.data.name} es pesable. Agrégalo manualmente.`, duration: 3000 });
-          return;
-        }
-        if (navigator.vibrate) {
-          navigator.vibrate(100);
-        }
-        const presentation = await inventoryService.getPresentationByBarcode(code, tenantId);
-        if (presentation?.id) {
-          addToCart(result.data, 1, { id: presentation.id, name: presentation.name, priceUsd: presentation.priceUsd, unitMultiplier: presentation.unitMultiplier });
-        } else {
-          addToCart(result.data, 1);
-        }
-        addToast({ type: 'success', message: `${result.data.name} agregado`, duration: 2000 });
-      } else {
-        addToast({ type: 'error', message: `Producto con código "${code}" no encontrado.`, duration: 4000 });
-      }
-    },
-    [tenantId, addToCart, addToast],
   );
 
   const handleConfirmVoid = useCallback(async () => {
