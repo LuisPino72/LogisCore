@@ -5,6 +5,8 @@ import { useDashboard } from '../hooks/useDashboard';
 import { WelcomeBanner } from './WelcomeBanner';
 import { PwaInstallBanner } from './PwaInstallBanner';
 import { PendingTasksWidget } from './PendingTasksWidget';
+import { RecentActivityWidget } from './RecentActivityWidget';
+import { useRecentActivity } from '../hooks/useRecentActivity';
 import { EmptyState, Card, Badge, Tooltip } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
@@ -60,6 +62,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     pendingTasksLoading,
     fetchTopProducts,
   } = useDashboard(tenantId);
+
+  const { activity: recentActivity, loading: activityLoading } = useRecentActivity(tenantId);
 
   const [showAllLowStock, setShowAllLowStock] = useState(false);
 
@@ -134,6 +138,14 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
             </Card>
           </div>
         )}
+
+        <div className="dashboard-card-entrance" style={{ animationDelay: '0.2s' }}>
+          <Card>
+            <div className="p-4 sm:p-5">
+              <RecentActivityWidget activity={recentActivity} loading={activityLoading} />
+            </div>
+          </Card>
+        </div>
 
         {dashboardError && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-warning/8 border border-warning/20 text-sm text-warning animate-slide-down dashboard-card--full">

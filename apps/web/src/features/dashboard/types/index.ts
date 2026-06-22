@@ -30,6 +30,15 @@ export interface PendingTask {
   totalCount?: number;
 }
 
+export interface ActivityEntry {
+  id: string;
+  type: 'sale_completed' | 'sale_voided' | 'expense_created' | 'debt_collected' | 'purchase_received' | 'supplier_paid';
+  message: string;
+  timestamp: string;
+  icon: string;
+  route?: string;
+}
+
 export interface DashboardState {
   tenantInfo: TenantInfoResponse | null;
   subscription: SubscriptionResponse | null;
