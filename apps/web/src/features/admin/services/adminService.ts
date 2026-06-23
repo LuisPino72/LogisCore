@@ -12,6 +12,7 @@ import { RoleErrors, ROLE_ERROR_MESSAGES } from '../../../specs/roles/errors';
 import { getDb } from '../../../services/dexie/db';
 import type { DexieRegisterConfig, DexieCashRegister } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -166,27 +167,30 @@ export const adminService = {
       createdAt: u.created_at as string,
     }));
 
-    // Fetch emails from auth.users via edge function
-    const tokenResult = await getAdminToken();
-    if (tokenResult.ok) {
-      try {
-        const response = await fetch(
-          EDGE_FUNCTIONS.listUsers,
-          { headers: { 'Authorization': `Bearer ${tokenResult.data}` } },
-        );
-        if (response.ok) {
-          const allUsers: GlobalUser[] = await response.json();
-          const userMap = new Map(allUsers.map((u) => [u.userId, { email: u.email, name: u.name }]));
-          for (const u of users) {
-            const match = userMap.get(u.userId);
-            if (match) {
-              u.email = match.email;
-              u.name = match.name;
+    // Enrich with emails from auth.users — solo si el usuario actual es admin global
+    const session = useAuthStore.getState().session;
+    if (session?.role === 'admin') {
+      const tokenResult = await getAdminToken();
+      if (tokenResult.ok) {
+        try {
+          const response = await fetch(
+            EDGE_FUNCTIONS.listUsers,
+            { headers: { 'Authorization': `Bearer ${tokenResult.data}` } },
+          );
+          if (response.ok) {
+            const allUsers: GlobalUser[] = await response.json();
+            const userMap = new Map(allUsers.map((u) => [u.userId, { email: u.email, name: u.name }]));
+            for (const u of users) {
+              const match = userMap.get(u.userId);
+              if (match) {
+                u.email = match.email;
+                u.name = match.name;
+              }
             }
           }
+        } catch {
+          // fallback: keep email/name empty
         }
-      } catch {
-        // fallback: keep email/name empty
       }
     }
 
@@ -1144,7 +1148,7 @@ export const adminService = {
       createdAt: new Date().toISOString(),
     };
     await db.registerConfigs.add(config);
-    await syncQueue.enqueue('registerConfigs', 'CREATE', id, { ...config, updated_at: config.createdAt }, input.tenantId);
+    await syncQueue.enqueue('registers_config', 'CREATE', id, { ...config, updated_at: config.createdAt }, input.tenantId);
     return success(config);
   },
 
@@ -1154,7 +1158,7 @@ export const adminService = {
     await db.registerConfigs.update(id, { ...input, updatedAt });
     const updated = await db.registerConfigs.get(id);
     if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
-    await syncQueue.enqueue('registerConfigs', 'UPDATE', id, { ...input, updated_at: updatedAt }, updated.tenantId);
+    await syncQueue.enqueue('registers_config', 'UPDATE', id, { ...input, updated_at: updatedAt }, updated.tenantId);
     return success(updated);
   },
 
@@ -1166,7 +1170,7 @@ export const adminService = {
     const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
     if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
     await db.registerConfigs.delete(id);
-    await syncQueue.enqueue('registerConfigs', 'DELETE', id, { id, deleted_at: new Date().toISOString() }, config.tenantId);
+    await syncQueue.enqueue('registers_config', 'DELETE', id, { id, deleted_at: new Date().toISOString() }, config.tenantId);
     return success(undefined);
   },
 

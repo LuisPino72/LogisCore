@@ -37,6 +37,7 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'recipe_lines', timeCol: 'created_at' },
   { name: 'production_orders', timeCol: 'updated_at' },
   { name: 'tenant_settings', timeCol: 'updated_at' },
+  { name: 'registers_config', timeCol: 'created_at' },
 ];
 
 export class SyncEngine {
@@ -325,6 +326,11 @@ export class SyncEngine {
     return success(result);
   }
 
+  /** Maps remote (Supabase) table names to local (Dexie) table names when they differ */
+  private readonly TABLE_ALIASES: Record<string, string> = {
+    'registers_config': 'registerConfigs',
+  };
+
   /** Tables where we should merge (not overwrite) on sync to avoid data loss */
   private readonly MERGE_TABLES = new Set(['tenantSettings']);
 
@@ -363,7 +369,7 @@ export class SyncEngine {
       const tid = record.tenant_id as string;
       local.tenantId = tid;
     }
-    const dexieTable = tableName.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    const dexieTable = this.TABLE_ALIASES[tableName] ?? tableName.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
     if (this.MERGE_TABLES.has(dexieTable)) {
       const existing = await db.table(dexieTable).get((local.tenantId ?? local.id) as string | number);
       if (existing) {
