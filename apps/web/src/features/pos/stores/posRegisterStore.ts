@@ -42,10 +42,16 @@ export const createRegisterSlice = (set: any, get: () => RegisterGetter): PosReg
       }
     }
     const result = await posService.getOpenCashRegister(tenantId);
-    if (result.ok) {
-      set({ cashRegister: result.data, ...(!silent && { loading: false }) });
+    if (result.ok && result.data) {
+      const reg = result.data;
+      set({
+        cashRegister: reg,
+        activeSessionId: reg.id,
+        activeRegisterId: reg.registerId ?? null,
+        ...(!silent && { loading: false }),
+      });
     } else if (!silent) {
-      set({ loading: false, error: result.error.message });
+      set({ loading: false, error: result.ok ? null : result.error.message });
     }
   },
 

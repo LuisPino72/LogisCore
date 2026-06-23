@@ -55,6 +55,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   } = usePos(tenantId);
 
   const activeSessionId = usePosStore((s) => s.activeSessionId);
+  const registerLoading = usePosStore((s) => s.loading);
   const registerName = usePosStore((s) => s.registerName);
   const clearActiveRegister = usePosStore((s) => s.clearActiveRegister);
   const categories = usePosStore((s) => s.categories);
@@ -193,12 +194,13 @@ export function PosPage({ tenantId }: PosPageProps) {
   }, [tenantId, loadCategories, loadLowStockAlert]);
 
   useEffect(() => {
+    if (registerLoading) return;
     if (!activeSessionId && tenantId) {
       setShowRegisterSelection(true);
     } else {
       setShowRegisterSelection(false);
     }
-  }, [activeSessionId, tenantId]);
+  }, [activeSessionId, tenantId, registerLoading]);
 
   const handleRegisterSelected = useCallback((_registerId: string, _sessionId: string, _name: string) => {
     setShowRegisterSelection(false);
