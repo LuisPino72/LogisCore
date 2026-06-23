@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Users, ShoppingBag, Plus } from 'lucide-react';
-import { Card, Button, DataTable, Skeleton, Alert, Badge } from '../../../common/components';
+import { Card, Button, DataTable, Skeleton, Alert, Badge, Select, Modal, Input } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
 import { adminService } from '../../admin/services/adminService';
+import { settingsService } from '../services/settingsService';
 import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
 import { RegisterManagerModal } from '../../../common/components/RegisterManagerModal';
+import { useAuthStore } from '../../auth/stores/authStore';
 import type { UserRole } from '../../admin/types';
 import type { DexieRegisterConfig } from '../../../services/dexie/db';
 import type { Role } from '../../../specs/roles';
@@ -16,6 +18,8 @@ interface TeamTabProps {
 
 export function TeamTab({ tenantId }: TeamTabProps) {
   const { addToast } = useToastStore();
+  const session = useAuthStore((s) => s.session);
+  const isOwner = session?.role === 'owner';
 
   const [users, setUsers] = useState<UserRole[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -26,9 +30,16 @@ export function TeamTab({ tenantId }: TeamTabProps) {
   const [registersError, setRegistersError] = useState<string | null>(null);
 
   const [roles, setRoles] = useState<Role[]>([]);
+  const [tenantName, setTenantName] = useState('');
 
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showRegisterManager, setShowRegisterManager] = useState(false);
+
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingRoleId, setEditingRoleId] = useState('');
+  const [deletingUser, setDeletingUser] = useState<UserRole | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<UserRole | null>(null);
+  const [newResetPassword, setNewResetPassword] = useState('');
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -61,11 +72,19 @@ export function TeamTab({ tenantId }: TeamTabProps) {
     }
   }, []);
 
+  const loadTenantName = useCallback(async () => {
+    const result = await settingsService.getBusinessInfo(tenantId);
+    if (result.ok) {
+      setTenantName(result.data.name);
+    }
+  }, [tenantId]);
+
   useEffect(() => {
     loadUsers();
     loadRegisters();
     loadRoles();
-  }, [loadUsers, loadRegisters, loadRoles]);
+    loadTenantName();
+  }, [loadUsers, loadRegisters, loadRoles, loadTenantName]);
 
   const handleAddEmployee = useCallback(async (payload: unknown) => {
     const result = await adminService.addEmployee(payload);
@@ -75,6 +94,41 @@ export function TeamTab({ tenantId }: TeamTabProps) {
     }
     return result;
   }, [addToast, loadUsers]);
+
+  const handleUpdateRole = useCallback(async (userRoleId: string, roleId: string) => {
+    const result = await adminService.updateUserRole(userRoleId, roleId);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Rol actualizado correctamente.', duration: 4000 });
+      setEditingUserId(null);
+      await loadUsers();
+    } else {
+      addToast({ type: 'error', message: result.error.message, duration: 6000 });
+    }
+  }, [addToast, loadUsers]);
+
+  const handleDeleteEmployee = useCallback(async () => {
+    if (!deletingUser) return;
+    const result = await adminService.removeEmployee(deletingUser.id);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Empleado eliminado correctamente.', duration: 4000 });
+      setDeletingUser(null);
+      await loadUsers();
+    } else {
+      addToast({ type: 'error', message: result.error.message, duration: 6000 });
+    }
+  }, [deletingUser, addToast, loadUsers]);
+
+  const handleResetPassword = useCallback(async () => {
+    if (!resetPasswordUser || !newResetPassword) return;
+    const result = await adminService.resetPassword(resetPasswordUser.userId, newResetPassword);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Contraseña restablecida correctamente.', duration: 4000 });
+      setResetPasswordUser(null);
+      setNewResetPassword('');
+    } else {
+      addToast({ type: 'error', message: result.error.message, duration: 6000 });
+    }
+  }, [resetPasswordUser, newResetPassword, addToast]);
 
   const userColumns: Column<UserRole>[] = useMemo(() => [
     { key: 'name', header: 'Nombre', render: (u) => u.name || u.email || '—' },
@@ -86,10 +140,56 @@ export function TeamTab({ tenantId }: TeamTabProps) {
       header: 'Rol',
       render: (u) => {
         if (u.role === 'owner') return <Badge variant="info">Propietario</Badge>;
+        if (editingUserId === u.id) {
+          return (
+            <Select
+              value={editingRoleId}
+              onChange={(e) => setEditingRoleId(e.target.value)}
+              className="text-xs"
+            >
+              {roles.filter((r) => r.name !== 'admin').map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </Select>
+          );
+        }
         return <Badge variant="neutral">{u.role}</Badge>;
       },
     },
-  ], []);
+    ...(isOwner ? [{
+      key: 'actions',
+      header: '',
+      render: (u: UserRole) => {
+        if (u.role === 'owner') return null;
+        return (
+          <div className="flex gap-1">
+            {editingUserId === u.id ? (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => handleUpdateRole(u.id, editingRoleId)}>
+                  Guardar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditingUserId(null)}>
+                  Cancelar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }}>
+                  Editar rol
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setResetPasswordUser(u)}>
+                  Restablecer contraseña
+                </Button>
+                <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeletingUser(u)}>
+                  Eliminar
+                </Button>
+              </>
+            )}
+          </div>
+        );
+      },
+    }] : []),
+  ], [editingUserId, editingRoleId, roles, isOwner, handleUpdateRole]);
 
   const registerColumns: Column<DexieRegisterConfig>[] = useMemo(() => [
     { key: 'name', header: 'Nombre' },
@@ -106,18 +206,22 @@ export function TeamTab({ tenantId }: TeamTabProps) {
 
   return (
     <div className="space-y-8">
-      <Card>
+      <Card className="hover:shadow-md transition-shadow duration-200">
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users size={20} className="text-primary" />
-              <h2 className="text-lg font-semibold text-gray-900">Empleados</h2>
-              <span className="text-sm text-gray-500">({users.length})</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <Users size={20} className="text-primary" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">Empleados</h2>
+                <Badge variant="neutral" className="text-xs">{users.length}</Badge>
+              </div>
             </div>
             <Button
               variant="primary"
               size="sm"
-              className="min-h-11"
+              className="min-h-11 transition-all duration-200"
               onClick={() => setShowAddEmployee(true)}
             >
               <Plus size={16} />
@@ -145,18 +249,22 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         </div>
       </Card>
 
-      <Card>
+      <Card className="hover:shadow-md transition-shadow duration-200">
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <ShoppingBag size={20} className="text-primary" />
-              <h2 className="text-lg font-semibold text-gray-900">Cajas</h2>
-              <span className="text-sm text-gray-500">({registers.length})</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <ShoppingBag size={20} className="text-primary" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">Cajas</h2>
+                <Badge variant="neutral" className="text-xs">{registers.length}</Badge>
+              </div>
             </div>
             <Button
               variant="primary"
               size="sm"
-              className="min-h-11"
+              className="min-h-11 transition-all duration-200"
               onClick={() => setShowRegisterManager(true)}
             >
               <Plus size={16} />
@@ -187,7 +295,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         isOpen={showAddEmployee}
         onClose={() => setShowAddEmployee(false)}
         tenantId={tenantId}
-        tenantName={users.find((u) => u.role === 'owner')?.name || ''}
+        tenantName={tenantName}
         onAddEmployee={handleAddEmployee}
         roles={roles}
       />
@@ -197,6 +305,57 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         onClose={() => setShowRegisterManager(false)}
         tenantId={tenantId}
       />
+
+      <Modal
+        isOpen={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        title="Eliminar empleado"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => setDeletingUser(null)}>
+              Cancelar
+            </Button>
+            <Button variant="danger" fullWidth onClick={handleDeleteEmployee}>
+              Eliminar
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-700">
+          ¿Eliminar a <strong>{deletingUser?.name || deletingUser?.email}</strong>? Esta acción desactivará al empleado.
+        </p>
+      </Modal>
+
+      <Modal
+        isOpen={!!resetPasswordUser}
+        onClose={() => { setResetPasswordUser(null); setNewResetPassword(''); }}
+        title={`Restablecer contraseña: ${resetPasswordUser?.name || ''}`}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => { setResetPasswordUser(null); setNewResetPassword(''); }}>
+              Cancelar
+            </Button>
+            <Button variant="primary" fullWidth onClick={handleResetPassword} disabled={!newResetPassword || newResetPassword.length < 8}>
+              Restablecer
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-500">
+            Email: {resetPasswordUser?.email}
+          </p>
+          <Input
+            label="Nueva contraseña"
+            type="password"
+            maxLength={14}
+            value={newResetPassword}
+            onChange={(e) => setNewResetPassword(e.target.value)}
+            hint="Mín. 8 y máx. 14 caracteres"
+            autoComplete="new-password"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, type FC } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Tabs, Skeleton, Alert } from '../../../common/components';
+import { Tabs, Skeleton, Alert, Button } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useSettings } from '../hooks/useSettings';
@@ -59,12 +59,13 @@ export const SettingsPage: FC<SettingsPageProps> = ({ tenantId }) => {
       <div className="app-shell-content app-shell-content--with-bottom-nav">
         <div className="@container w-full max-w-4xl mx-auto p-4 md:p-6">
           <Alert variant="error" className="mb-4">{error}</Alert>
-          <button
+          <Button
+            variant="secondary"
             onClick={refresh}
-            className="text-sm text-primary hover:text-primary-dark font-medium underline underline-offset-2"
+            className="min-h-11"
           >
             Reintentar
-          </button>
+          </Button>
         </div>
       </div>
     );

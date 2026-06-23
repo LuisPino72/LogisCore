@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type FC } from 'react';
+import { Building2, Upload, X } from 'lucide-react';
 import { Card, Input, Button, Textarea, Alert, Skeleton } from '../../../common/components';
-import { Upload, X } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { settingsService } from '../services/settingsService';
 import { useToastStore } from '../../../stores/toastStore';
@@ -149,13 +149,18 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
   }
 
   return (
-    <Card>
+    <Card className="hover:shadow-md transition-shadow duration-200">
       <div className="p-4 sm:p-6 space-y-5">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Mi Negocio</h2>
-          <p className="text-sm text-gray-500">
-            Información principal de tu local comercial.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+            <Building2 size={20} className="text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Mi Negocio</h2>
+            <p className="text-sm text-gray-500">
+              Información principal de tu local comercial.
+            </p>
+          </div>
         </div>
 
         {localError && (
@@ -164,7 +169,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Nombre del negocio"
             value={name}
@@ -211,35 +216,35 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
           />
           {logoPreview ? (
             <div className="relative inline-block">
-              <img src={logoPreview} alt="Preview logo" className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
+              <img src={logoPreview} alt="Preview logo" className="w-20 h-20 rounded-lg object-cover border border-gray-200 transition-all duration-200" />
               <Button
                 variant="ghost"
                 onClick={handleRemoveLogo}
-                className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
+                className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center transition-all duration-200"
               >
                 <X size={16} />
               </Button>
             </div>
           ) : logoUrl ? (
             <div className="relative inline-block">
-              <img src={logoUrl} alt="Logo actual" className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
+              <img src={logoUrl} alt="Logo actual" className="w-20 h-20 rounded-lg object-cover border border-gray-200 transition-all duration-200" />
               <Button
                 variant="ghost"
                 onClick={handleRemoveLogo}
-                className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center"
+                className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center transition-all duration-200"
               >
                 <X size={16} />
               </Button>
             </div>
           ) : (
-            <Button
-              variant="outline"
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto min-h-11 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
             >
               <Upload size={16} />
               <span>Subir logo del negocio</span>
-            </Button>
+            </button>
           )}
           {logoError && <p className="text-danger text-xs mt-1">{logoError}</p>}
         </div>
@@ -249,7 +254,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
             variant="primary"
             onClick={handleSave}
             loading={saving || uploading}
-            className="min-h-11"
+            className="min-h-11 transition-all duration-200"
           >
             Guardar cambios
           </Button>

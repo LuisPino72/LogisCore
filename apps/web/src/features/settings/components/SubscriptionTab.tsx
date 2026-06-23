@@ -53,12 +53,28 @@ export function SubscriptionTab({ tenantId }: SubscriptionTabProps) {
     }
   };
 
+  const planLabel = (plan: string) => {
+    switch (plan) {
+      case 'basic': return 'Básico';
+      case 'pro': return 'Profesional';
+      case 'premium': return 'Premium';
+      default: return plan;
+    }
+  };
+
   return (
-    <Card>
+    <Card className="hover:shadow-md transition-shadow duration-200">
       <div className="p-4 sm:p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <CreditCard size={20} className="text-primary" />
-          <h2 className="text-lg font-semibold text-gray-900">Suscripción</h2>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+            <CreditCard size={20} className="text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Suscripción</h2>
+            <p className="text-sm text-gray-500">
+              Estado y detalles de tu plan de LogisCore.
+            </p>
+          </div>
         </div>
 
         {loading ? (
@@ -74,14 +90,14 @@ export function SubscriptionTab({ tenantId }: SubscriptionTabProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500">Plan</p>
-                <p className="text-base font-medium text-gray-900 capitalize">{subscription.plan}</p>
+                <p className="text-base font-medium text-gray-900">{planLabel(subscription.plan)}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Estado</p>
                 <div className="mt-0.5">{statusBadge(subscription.status)}</div>
               </div>
               <div>
-                <p className="text-sm text-gray-700">Vencimiento</p>
+                <p className="text-sm text-gray-500">Vencimiento</p>
                 <p className="text-base text-gray-900">{formatDate(subscription.expires_at)}</p>
               </div>
             </div>
@@ -91,7 +107,7 @@ export function SubscriptionTab({ tenantId }: SubscriptionTabProps) {
                 href="https://wa.me/584145180265?text=Hola%20Luis,%20necesito%20soporte%20con%20mi%20cuenta%20de%20LogisCore"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium underline underline-offset-2"
+                className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium underline underline-offset-2 transition-colors duration-200"
               >
                 <ExternalLink size={16} />
                 Contactar a Soporte Técnico

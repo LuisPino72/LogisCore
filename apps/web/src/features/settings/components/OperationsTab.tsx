@@ -1,4 +1,5 @@
 import { useState, useEffect, type FC } from 'react';
+import { Settings } from 'lucide-react';
 import { Card, Input, Toggle, Button, Textarea, Alert } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -87,13 +88,18 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
   };
 
   return (
-    <Card>
+    <Card className="hover:shadow-md transition-shadow duration-200">
       <div className="p-4 sm:p-6 space-y-5">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Configuraci\u00f3n de Operaciones</h2>
-          <p className="text-sm text-gray-500">
-            Par\u00e1metros generales para el funcionamiento del POS y el inventario.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+            <Settings size={20} className="text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Configuración de Operaciones</h2>
+            <p className="text-sm text-gray-500">
+              Parámetros generales para el funcionamiento del POS y el inventario.
+            </p>
+          </div>
         </div>
 
         {localError && (
@@ -102,7 +108,7 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Descuento m\u00e1ximo POS (%)"
             type="number"
@@ -163,7 +169,7 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
             variant="primary"
             onClick={handleSave}
             loading={saving}
-            className="min-h-11"
+            className="min-h-11 transition-all duration-200"
           >
             Guardar cambios
           </Button>
