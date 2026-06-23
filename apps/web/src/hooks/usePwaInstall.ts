@@ -16,8 +16,39 @@ function safeSet(key: string, value: string) {
   try { localStorage.setItem(key, value); } catch { /* no storage */ }
 }
 
+/**
+ * Singleton global que captura el evento `beforeinstallprompt` UNA SOLA VEZ
+ * y lo mantiene vivo entre navegaciones SPA (login → dashboard).
+ * Sin esto, si el usuario descarta el banner nativo de Chrome en el login,
+ * el dashboard nunca recibe el evento y el botón "Instalar" no aparece.
+ */
+let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
+let listeners: Array<() => void> = [];
+let listenerAttached = false;
+
+function notifyListeners() {
+  for (const fn of listeners) fn();
+}
+
+function ensureListener() {
+  if (listenerAttached) return;
+  listenerAttached = true;
+
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault();
+    globalDeferredPrompt = e as BeforeInstallPromptEvent;
+    notifyListeners();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    globalDeferredPrompt = null;
+    safeSet(INSTALLED_KEY, 'true');
+    notifyListeners();
+  });
+}
+
 export function usePwaInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [, forceUpdate] = useState(0);
   const [isInstalled, setIsInstalled] = useState(() => safeGet(INSTALLED_KEY) === 'true');
   const [dismissed, setDismissed] = useState(() => {
     try { return sessionStorage.getItem(DISMISSED_KEY) === 'true'; } catch { return false; }
@@ -26,6 +57,8 @@ export function usePwaInstall() {
 
   useEffect(() => {
     let cancelled = false;
+
+    ensureListener();
 
     const detectInstalled = async () => {
       if (safeGet(INSTALLED_KEY) === 'true') {
@@ -59,26 +92,19 @@ export function usePwaInstall() {
 
     detectInstalled();
 
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    const handleGlobalChange = () => {
+      forceUpdate((n) => n + 1);
     };
 
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-      safeSet(INSTALLED_KEY, 'true');
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    window.addEventListener('appinstalled', handleAppInstalled);
+    listeners.push(handleGlobalChange);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      listeners = listeners.filter((fn) => fn !== handleGlobalChange);
     };
   }, []);
+
+  const deferredPrompt = globalDeferredPrompt;
 
   const install = useCallback(async () => {
     if (!deferredPrompt) return;
@@ -90,11 +116,11 @@ export function usePwaInstall() {
         safeSet(INSTALLED_KEY, 'true');
       }
     } catch {
-      // prompt() can throw if app is already installed or prompt dismissed
       setIsInstalled(true);
       safeSet(INSTALLED_KEY, 'true');
     }
-    setDeferredPrompt(null);
+    globalDeferredPrompt = null;
+    notifyListeners();
   }, [deferredPrompt]);
 
   const dismiss = useCallback(() => {
