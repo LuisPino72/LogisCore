@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { preciseRound } from '@logiscore/shared';
 import type { Product } from '../types';
 import { inventoryService } from '../services/inventoryService';
 
@@ -79,7 +80,7 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
     if (isNaN(numValue) || numValue <= 0) return null;
     const productsWithPrice = selectedProducts.filter((p) => p.priceUsd > 0);
     const newPrices = productsWithPrice.map((p) => computeNewPrice(p.priceUsd, mode, numValue));
-    const roundedPrices = newPrices.map((p) => Math.round(p * 100) / 100);
+    const roundedPrices = newPrices.map((p) => preciseRound(p, 2));
     return {
       totalProducts: selectedProducts.length,
       productsWithPrice: productsWithPrice.length,
@@ -174,7 +175,7 @@ export function useBulkPriceUpdate({ products, tenantId, onSuccess }: UseBulkPri
         continue;
       }
       const newPrice = computeNewPrice(product.priceUsd, mode, numValue);
-      const roundedPrice = Math.round(newPrice * 100) / 100;
+      const roundedPrice = preciseRound(newPrice, 2);
       const updateInput: Partial<Product> = { priceUsd: roundedPrice };
       const result = await inventoryService.updateProduct(product.id, updateInput, tenantId);
       if (result.ok) {

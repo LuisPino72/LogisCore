@@ -16,8 +16,8 @@ import { CashRegisterModal } from './CashRegisterModal';
 import { RegisterSelectionModal } from './RegisterSelectionModal';
 import { CashStatusBadge } from './CashStatusBadge';
 import { ParkCartModal } from './ParkCartModal';
-import { ParkedCartsList } from './ParkedCartsList';
 import { SalesHistory } from './SalesHistory';
+import { TableGrid } from './TableGrid';
 import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
 import { buildReorderUrl } from '../../../lib/reorderHelper';
@@ -90,6 +90,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [processing, setProcessing] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const [parkTableNumber, setParkTableNumber] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
@@ -486,6 +487,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         closeParkModal();
         setPaymentMethod(null);
         closeMobileCart();
+        setParkTableNumber(null);
       }
     },
     [tenantId, parkCart, closeParkModal, closeMobileCart],
@@ -499,6 +501,11 @@ export function PosPage({ tenantId }: PosPageProps) {
     },
     [loadParkedCart, toggleMobileCart],
   );
+
+  const handleParkTable = useCallback((tableNumber: number) => {
+    setParkTableNumber(tableNumber);
+    addToast({ type: 'success', message: `Mesa ${tableNumber} seleccionada. Agrega productos y presiona "Poner en cola" para asignarla.`, duration: 3000 });
+  }, [addToast]);
 
   const handleConfirmVoid = useCallback(async () => {
     if (!voidConfirmId || !tenantId || !userId) return;
@@ -612,10 +619,11 @@ export function PosPage({ tenantId }: PosPageProps) {
 
         {activeTab === 'sell' ? (
           <div className="animate-tab-fade">
-            <ParkedCartsList
+            <TableGrid
               carts={parkedCarts}
               onLoad={handleLoadParked}
               onDelete={(id) => { if (tenantId) deleteParkedCart(tenantId, id); }}
+              onParkTable={handleParkTable}
             />
             <div className="flex-1 overflow-hidden relative">
               {(!isOpen || isFromPreviousDay) && (
@@ -787,9 +795,10 @@ export function PosPage({ tenantId }: PosPageProps) {
 
       <ParkCartModal
         isOpen={showParkModal}
-        onClose={closeParkModal}
+        onClose={() => { closeParkModal(); setParkTableNumber(null); }}
         onConfirm={handleParkConfirm}
         loading={processing}
+        defaultTableNumber={parkTableNumber ?? undefined}
       />
 
       <Modal

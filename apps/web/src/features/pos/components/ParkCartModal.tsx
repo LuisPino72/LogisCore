@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Input, Button } from '../../../common/components';
 
 interface ParkCartModalProps {
@@ -6,11 +6,21 @@ interface ParkCartModalProps {
   onClose: () => void;
   onConfirm: (name: string) => void;
   loading: boolean;
+  defaultTableNumber?: number;
 }
 
-export function ParkCartModal({ isOpen, onClose, onConfirm, loading }: ParkCartModalProps) {
+export function ParkCartModal({ isOpen, onClose, onConfirm, loading, defaultTableNumber }: ParkCartModalProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen && defaultTableNumber) {
+      setName(`Mesa ${defaultTableNumber}`);
+      setError('');
+    } else if (isOpen && !defaultTableNumber) {
+      setName('');
+    }
+  }, [isOpen, defaultTableNumber]);
 
   const handleConfirm = () => {
     const trimmed = name.trim();
@@ -30,14 +40,16 @@ export function ParkCartModal({ isOpen, onClose, onConfirm, loading }: ParkCartM
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Poner venta en cola">
+    <Modal isOpen={isOpen} onClose={handleClose} title={defaultTableNumber ? `Mesa ${defaultTableNumber}` : 'Poner venta en cola'}>
       <div className="flex flex-col gap-3">
         <p className="text-sm text-gray-600">
-          Guarda esta venta para atender a otros clientes y recuperarla después.
+          {defaultTableNumber
+            ? `Asigna productos a la Mesa ${defaultTableNumber}. Puedes cambiar el nombre si lo prefieres.`
+            : 'Guarda esta venta para atender a otros clientes y recuperarla después.'}
         </p>
         <Input
-          label="Nombre / Descripción"
-          placeholder="Ej: Cliente con tarjeta olvidada"
+          label={defaultTableNumber ? 'Nombre de la mesa / pedido' : 'Nombre / Descripción'}
+          placeholder={defaultTableNumber ? `Mesa ${defaultTableNumber}` : 'Ej: Cliente con tarjeta olvidada'}
           autoComplete="off"
           value={name}
           onChange={(e) => {
