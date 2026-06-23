@@ -90,6 +90,7 @@ class SessionGuardService {
       await supabase.rpc('session_heartbeat', { p_session_token: token });
       this.heartbeatFailures = 0;
     } catch {
+      console.debug('[SessionGuard] Heartbeat check failed');
       this.heartbeatFailures++;
       if (this.heartbeatFailures >= SessionGuardService.MAX_HEARTBEAT_FAILURES) {
         EventBus.emit(SystemEvents.USER_LOGOUT);

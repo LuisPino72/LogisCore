@@ -3,7 +3,7 @@ import { Calendar, DollarSign } from 'lucide-react';
 import { Badge, EmptyState, Pagination } from '../../../common/components';
 import { formatUsd } from '@/lib/formatBs';
 import { formatDate } from '../../../lib/formatDate';
-import { getDb } from '../../../services/dexie/db';
+import { purchaseService } from '../services/purchaseService';
 
 interface SupplierPaymentHistoryProps {
   supplierId: string;
@@ -24,19 +24,8 @@ export function SupplierPaymentHistory({ supplierId, tenantId }: SupplierPayment
     const load = async () => {
       setLoading(true);
       try {
-        const db = getDb();
-        const rows = await db.supplierPayments
-          .where({ tenantId })
-          .filter((p: any) => p.supplierId === supplierId && !p.deletedAt)
-          .toArray();
-        const sorted = rows
-          .map((r: any) => ({
-            id: r.id, amountUsd: r.amountUsd, amountBs: r.amountBs,
-            paymentMethod: r.paymentMethod, reference: r.reference,
-            createdAt: r.createdAt, purchaseOrderId: r.purchaseOrderId,
-          }))
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        setPayments(sorted);
+        const rows = await purchaseService.getSupplierPayments(tenantId, supplierId);
+        setPayments(rows);
       } catch {
         setPayments([]);
       }

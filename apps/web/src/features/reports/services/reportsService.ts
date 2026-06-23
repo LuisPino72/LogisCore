@@ -272,6 +272,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
     salesCache.set(key, cloudResult);
     return cloudResult;
   } catch {
+    logger.warn('Reports', 'fetchSalesWithItems fallback returned empty');
     return [];
   }
 }

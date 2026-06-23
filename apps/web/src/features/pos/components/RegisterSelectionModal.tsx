@@ -5,7 +5,6 @@ import { posService } from '../services/posService';
 import { usePosStore } from '../stores/posStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
-import { getDb } from '../../../services/dexie/db';
 import type { DexieRegisterConfig } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
 
@@ -42,13 +41,9 @@ export function RegisterSelectionModal({ tenantId, isOpen, onClose, onSuccess }:
       const active = result.data.filter((r) => r.isActive);
       setRegisters(active);
 
-      const db = getDb();
       const occMap: Record<string, OccupiedInfo> = {};
       for (const reg of active) {
-        const openSession = await db.cashRegisters
-          .where({ registerId: reg.id, isOpen: true })
-          .filter((r) => !r.deletedAt)
-          .first();
+        const openSession = await posService.getOpenSessionByRegisterId(reg.id);
         if (openSession) {
           const operatorId = openSession.operatorId || openSession.openedBy || '';
           occMap[reg.id] = {

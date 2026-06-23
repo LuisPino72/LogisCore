@@ -1229,6 +1229,24 @@ export const purchaseService = {
     return success({ corrected: false, previousBalance, actualBalance: previousBalance });
   },
 
+  async getSupplierPayments(tenantId: string, supplierId: string): Promise<Array<{
+    id: string; amountUsd: number; amountBs: number; paymentMethod: string;
+    reference?: string; createdAt: string; purchaseOrderId: string;
+  }>> {
+    const db = getDb();
+    const rows = await db.supplierPayments
+      .where({ tenantId, supplierId })
+      .filter((p) => !p.deletedAt)
+      .toArray();
+    return rows
+      .map((r) => ({
+        id: r.id, amountUsd: r.amountUsd, amountBs: r.amountBs,
+        paymentMethod: r.paymentMethod, reference: r.reference,
+        createdAt: r.createdAt, purchaseOrderId: r.purchaseOrderId,
+      }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
   async getPendingPayables(tenantId: string): Promise<number> {
     const db = getDb();
     const suppliers = await db.suppliers

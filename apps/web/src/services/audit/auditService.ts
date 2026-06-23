@@ -86,6 +86,7 @@ function ensureStringValue(value: unknown): string {
   try {
     return JSON.stringify(value);
   } catch {
+    console.debug('[AuditService] sanitizePayload JSON.stringify failed, using String()');
     return String(value);
   }
 }

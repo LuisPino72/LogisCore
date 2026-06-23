@@ -84,6 +84,7 @@ export const imageCacheService = {
       trimCache();
       return imageUrl;
     } catch {
+      console.debug('[ImageCache] fetch failed, using raw URL as fallback');
       resolvedUrlsMemoryCache.set(imageUrl, imageUrl);
       trimCache();
       return imageUrl;

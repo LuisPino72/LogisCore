@@ -3,8 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { preciseRound } from '@logiscore/shared';
 import type { PosState, PaymentMethod, ParkedCart, PresentationSelection, CashRegister } from '../types';
 import type { SaleItem } from '../types';
-import type { Product } from '../../../specs/inventory';
-import type { Presentation } from '../../../specs/inventory';
+import type { Product, Presentation, Category } from '../../../specs/inventory';
 import { type Result, type AppError, success, failure, AppError as AppErrorClass } from '@logiscore/core';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
@@ -18,6 +17,12 @@ import type { Customer } from '../../../specs/customers';
 import { MAX_PARKED_CARTS } from '../../../specs/pos';
 
 interface PosStore extends PosState {
+  categories: Category[];
+  selectedCategory: string | null;
+  lowStockAlert: Product[];
+  loadCategories: (tenantId: string) => Promise<void>;
+  loadLowStockAlert: (tenantId: string) => Promise<void>;
+  setSelectedCategory: (categoryId: string | null) => void;
   fetchPresentations: (tenantId: string) => Promise<void>;
   getPresentations: (productId: string) => Presentation[];
   setDiscount: (type: 'percentage' | 'fixed', value: number) => void;
@@ -53,8 +58,11 @@ interface PosStore extends PosState {
   reset: () => void;
 }
 
-const initialState: PosState = {
+const initialState = {
   products: [],
+  categories: [],
+  selectedCategory: null,
+  lowStockAlert: [],
   cart: [],
   cashRegister: null,
   parkedCarts: [],
@@ -236,6 +244,18 @@ export const usePosStore = create<PosStore>()(
       console.warn('[posStore] restoreFavorites failed:', err);
     }
   },
+
+  loadCategories: async (tenantId) => {
+    const result = await inventoryService.getCategories(tenantId);
+    if (result.ok) set({ categories: result.data });
+  },
+
+  loadLowStockAlert: async (tenantId) => {
+    const result = await inventoryService.getLowStockProducts(tenantId);
+    if (result.ok) set({ lowStockAlert: result.data });
+  },
+
+  setSelectedCategory: (categoryId) => set({ selectedCategory: categoryId }),
 
   fetchSalesHistory: async (tenantId, offset = 0, limit = 50, startDate, endDate) => {
     set({ salesHistoryLoading: true, error: null });

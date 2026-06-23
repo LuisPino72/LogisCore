@@ -172,6 +172,7 @@ export async function getAssemblyProductIds(tenantId: string): Promise<Set<strin
       .toArray();
     return new Set(recipes.map((r) => r.productId));
   } catch {
+    console.debug('[InventoryService] getAssemblyProductIds: error fetching recipes');
     return new Set();
   }
 }

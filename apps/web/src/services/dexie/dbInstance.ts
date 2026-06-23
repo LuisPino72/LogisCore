@@ -188,10 +188,12 @@ export async function destroyDb(): Promise<void> {
     try {
       await Dexie.delete(dbName);
     } catch {
+      console.debug('[DbInstance] destroyDb: first delete attempt failed, retrying...');
       await new Promise((resolve) => setTimeout(resolve, 1000));
       try {
         await Dexie.delete(dbName);
       } catch {
+        console.debug('[DbInstance] destroyDb: second delete attempt failed, giving up');
       }
     }
   }

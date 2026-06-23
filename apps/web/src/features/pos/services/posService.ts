@@ -1,4 +1,4 @@
-import { getSessionById, getOpenCashRegister, getLastClosedCashRegister, openCashRegister, closeCashRegister } from './cashRegisterService';
+import { getSessionById, getOpenCashRegister, getLastClosedCashRegister, getOpenSessionByRegisterId, openCashRegister, closeCashRegister } from './cashRegisterService';
 import { createSale, getSalesHistory, getSaleItems, voidSale } from './saleService';
 import { getParkedCarts, parkCart, deleteParkedCart, toggleFavorite, getFavorites } from './cartService';
 import { getProductsForSale, getTodaySoldProducts, getVerificationProducts } from './productService';
@@ -7,6 +7,7 @@ export const posService = {
   getSessionById,
   getOpenCashRegister,
   getLastClosedCashRegister,
+  getOpenSessionByRegisterId,
   openCashRegister,
   closeCashRegister,
   createSale,

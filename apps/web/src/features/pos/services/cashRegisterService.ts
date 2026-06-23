@@ -269,6 +269,14 @@ export async function getLastClosedCashRegister(tenantId: string): Promise<Resul
   }
 }
 
+export async function getOpenSessionByRegisterId(registerId: string): Promise<DexieCashRegister | undefined> {
+  const db = getDb();
+  return db.cashRegisters
+    .where({ registerId, isOpen: true })
+    .filter((r) => !r.deletedAt)
+    .first();
+}
+
 export async function openCashRegister(input: OpenCashRegisterInput): Promise<Result<CashRegister, AppError>> {
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);

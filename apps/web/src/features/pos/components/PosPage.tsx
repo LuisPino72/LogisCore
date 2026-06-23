@@ -24,7 +24,7 @@ import { buildReorderUrl } from '../../../lib/reorderHelper';
 
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import { CustomerPickerModal } from '../../customers/components/CustomerPickerModal';
-import type { Product, Category } from '../../../specs/inventory';
+import type { Product } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
@@ -57,6 +57,12 @@ export function PosPage({ tenantId }: PosPageProps) {
   const activeSessionId = usePosStore((s) => s.activeSessionId);
   const registerName = usePosStore((s) => s.registerName);
   const clearActiveRegister = usePosStore((s) => s.clearActiveRegister);
+  const categories = usePosStore((s) => s.categories);
+  const selectedCategory = usePosStore((s) => s.selectedCategory);
+  const lowStockAlert = usePosStore((s) => s.lowStockAlert);
+  const setSelectedCategory = usePosStore((s) => s.setSelectedCategory);
+  const loadCategories = usePosStore((s) => s.loadCategories);
+  const loadLowStockAlert = usePosStore((s) => s.loadLowStockAlert);
 
   const { addToast } = useToastStore();
 
@@ -82,9 +88,6 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [lowStockAlert, setLowStockAlert] = useState<Product[]>([]);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [showFullAlert, setShowFullAlert] = useState(false);
@@ -182,16 +185,12 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   useEffect(() => {
     if (!tenantId) return;
-    inventoryService.getCategories(tenantId).then((res) => {
-      if (res.ok) setCategories(res.data);
-    });
-    inventoryService.getLowStockProducts(tenantId).then((res) => {
-      if (res.ok) setLowStockAlert(res.data);
-    });
+    loadCategories(tenantId);
+    loadLowStockAlert(tenantId);
     dashboardService.getTenantInfo(tenantId).then((res) => {
       if (res.ok && res.data) setTenantInfo(res.data);
     });
-  }, [tenantId]);
+  }, [tenantId, loadCategories, loadLowStockAlert]);
 
   useEffect(() => {
     if (!activeSessionId && tenantId) {
