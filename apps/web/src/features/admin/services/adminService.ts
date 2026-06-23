@@ -1140,15 +1140,18 @@ export const adminService = {
   async createRegister(input: { tenantId: string; name: string }): Promise<Result<DexieRegisterConfig, AppError>> {
     const db = getDb();
     const id = crypto.randomUUID();
+    const now = new Date().toISOString();
     const config: DexieRegisterConfig = {
       id,
       tenantId: input.tenantId,
       name: input.name,
       isActive: true,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
     await db.registerConfigs.add(config);
-    await syncQueue.enqueue('registers_config', 'CREATE', id, { ...config, updated_at: config.createdAt }, input.tenantId);
+    await syncQueue.enqueue('registers_config', 'CREATE', id, {
+      id, name: input.name, is_active: true, created_at: now, updated_at: now, tenant_id: input.tenantId,
+    }, input.tenantId);
     return success(config);
   },
 
@@ -1158,7 +1161,10 @@ export const adminService = {
     await db.registerConfigs.update(id, { ...input, updatedAt });
     const updated = await db.registerConfigs.get(id);
     if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
-    await syncQueue.enqueue('registers_config', 'UPDATE', id, { ...input, updated_at: updatedAt }, updated.tenantId);
+    const remoteFields: Record<string, unknown> = { updated_at: updatedAt };
+    if (input.name !== undefined) remoteFields.name = input.name;
+    if (input.isActive !== undefined) remoteFields.is_active = input.isActive;
+    await syncQueue.enqueue('registers_config', 'UPDATE', id, remoteFields, updated.tenantId);
     return success(updated);
   },
 
@@ -1166,7 +1172,6 @@ export const adminService = {
     const db = getDb();
     const config = await db.registerConfigs.get(id);
     if (!config) return success(undefined);
-    // Validar que no haya sesiones activas para esta caja
     const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
     if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
     await db.registerConfigs.delete(id);
