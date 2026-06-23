@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { EventBus } from '@logiscore/core';
+
 import { Package, ListTree, History, AlertTriangle, Plus, Minus, Settings, ShoppingCart, Circle, CheckCircle2, Upload } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, Input, BottomNav, ModuleOnboarding, Tooltip, SearchableSelect } from '../../../common/components';
 import { useInventory } from '../hooks/useInventory';
-import { useInventoryStore } from '../stores/inventoryStore';
+
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
@@ -19,17 +18,9 @@ import { StockAdjustmentModal } from './StockAdjustmentModal';
 import { BulkPriceUpdateModal } from './BulkPriceUpdateModal';
 import { useStockAdjustment } from '../hooks/useStockAdjustment';
 import { useBulkPriceUpdate } from '../hooks/useBulkPriceUpdate';
+import { useInventoryActions } from '../hooks/useInventoryActions';
 
-import type { CreateProductInput, CreatePresentationInput, Product, AdjustmentReason } from '../types';
-
-
-
-
-interface ConfirmDelete {
-  type: 'product' | 'category';
-  id: string;
-  name: string;
-}
+import type { AdjustmentReason, Product } from '../types';
 
 interface InventoryPageProps {
   tenantId: string | null;
@@ -46,121 +37,34 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const { totalLowStock, lowStockProducts } = useStockAlerts(tenantId);
   const { addToast } = useToastStore();
   const isOnline = useOnlineStatus();
-  const [showProductForm, setShowProductForm] = useState(false);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<ConfirmDelete | null>(null);
   const [selectedProductLotsId, setSelectedProductLotsId] = useState<string | null>(null);
-  const [showLowStockModal, setShowLowStockModal] = useState(false);
-  const [selectedForOrder, setSelectedForOrder] = useState<Set<string>>(new Set());
   const [showCsvImport, setShowCsvImport] = useState(false);
-  const [showBulkAdjustment, setShowBulkAdjustment] = useState(false);
-  const [bulkProductIds, setBulkProductIds] = useState<string[]>([]);
-  const [bulkAdjMode, setBulkAdjMode] = useState<'sumar' | 'restar'>('sumar');
-  const [bulkAdjQuantity, setBulkAdjQuantity] = useState('');
-  const [bulkAdjReasonType, setBulkAdjReasonType] = useState<string>('inventario_inicial');
-  const [bulkAdjSubmitting, setBulkAdjSubmitting] = useState(false);
-  const [bulkAdjError, setBulkAdjError] = useState('');
 
-  const handleAdjustStock = async (productId: string, quantity: number, reasonType: AdjustmentReason, costTotal?: number) => {
-    if (!tenantId || !userId) return false;
-    return adjustStock({ productId, quantity, reasonType, costTotal, userId, tenantId });
-  };
-
-  const handleBulkAdjust = (productIds: string[]) => {
-    setBulkProductIds(productIds);
-    setBulkAdjMode('sumar');
-    setBulkAdjQuantity('');
-    setBulkAdjReasonType('inventario_inicial');
-    setBulkAdjError('');
-    setShowBulkAdjustment(true);
-  };
-
-  const handleBulkSubmit = async () => {
-    if (!bulkAdjMode) {
-      setBulkAdjError('Selecciona si quieres sumar o restar stock');
-      return;
-    }
-
-    const rawQty = parseFloat(bulkAdjQuantity);
-    if (isNaN(rawQty) || rawQty <= 0) {
-      setBulkAdjError('Ingresa una cantidad válida mayor a 0');
-      return;
-    }
-
-    if (!bulkAdjReasonType) {
-      setBulkAdjError('Selecciona un motivo para el ajuste');
-      return;
-    }
-
-    if (rawQty > 999999) {
-      setBulkAdjError('La cantidad no puede ser mayor a 999,999');
-      return;
-    }
-
-    const bulkProducts = bulkProductIds
-      .map(id => products.find(p => p.id === id))
-      .filter(Boolean) as Product[];
-
-    if (bulkProducts.length === 0) {
-      setBulkAdjError('No se encontraron los productos seleccionados');
-      return;
-    }
-
-    for (const product of bulkProducts) {
-      if (!product.isWeighted && rawQty !== Math.floor(rawQty)) {
-        setBulkAdjError(`"${product.name}" es por unidad — solo acepta números enteros`);
-        return;
-      }
-      if (product.isWeighted && !/^\d+\.?\d{0,2}$/.test(bulkAdjQuantity)) {
-        setBulkAdjError(`"${product.name}" es pesable — acepta máximo 2 decimales`);
-        return;
-      }
-    }
-
-    if (bulkAdjMode === 'restar') {
-      const exceedsProducts: string[] = [];
-      for (const product of bulkProducts) {
-        const maxStock = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
-          ? (product.stock / 1000) : product.stock;
-        if (rawQty > maxStock) {
-          const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : 'unidades';
-          exceedsProducts.push(`"${product.name}" (max: ${maxStock} ${unitLabel})`);
-        }
-      }
-      if (exceedsProducts.length > 0) {
-        if (exceedsProducts.length === bulkProducts.length) {
-          setBulkAdjError(`Ningún producto tiene suficiente stock para restar ${rawQty}`);
-        } else if (exceedsProducts.length === 1) {
-          setBulkAdjError(`${exceedsProducts[0]} no tiene suficiente stock`);
-        } else {
-          setBulkAdjError(`${exceedsProducts.length} productos no tienen suficiente stock. Reduce la cantidad o quítalos de la selección.`);
-        }
-        return;
-      }
-    }
-
-    setBulkAdjSubmitting(true);
-    setBulkAdjError('');
-    let successCount = 0;
-    let failCount = 0;
-    for (const product of bulkProducts) {
-      const qty = bulkAdjMode === 'restar' ? -rawQty : rawQty;
-      const ok = await handleAdjustStock(product.id, qty, bulkAdjReasonType as AdjustmentReason);
-      if (ok) successCount++;
-      else failCount++;
-    }
-    setBulkAdjSubmitting(false);
-    if (successCount > 0) {
-      const msg = failCount > 0
-        ? `${successCount} ajustado${successCount !== 1 ? 's' : ''}, ${failCount} fallido${failCount !== 1 ? 's' : ''}`
-        : `${successCount} producto${successCount !== 1 ? 's' : ''} ajustado${successCount !== 1 ? 's' : ''}`;
-      addToast({ type: failCount > 0 ? 'warning' : 'success', message: msg, duration: 4000 });
-      setShowBulkAdjustment(false);
-      setBulkProductIds([]);
-    } else {
-      setBulkAdjError('Error al ajustar stock de todos los productos. Verifica tu conexión.');
-    }
-  };
+  const {
+    handleAdjustStock, handleBulkAdjust, handleBulkSubmit, handleToggleProduct,
+    handleRequestOrder, handleCreateProduct, handleEditProduct, handleConfirmDelete,
+    openNewProduct, openEditProduct, openNewCategory,
+    showProductForm, setShowProductForm, editProduct, setEditProduct,
+    confirmDelete, setConfirmDelete, selectedForOrder, setSelectedForOrder,
+    showLowStockModal, setShowLowStockModal,
+    showCategoryForm, setShowCategoryForm,
+    showBulkAdjustment, setShowBulkAdjustment,
+    bulkProductIds, setBulkProductIds,
+    bulkAdjMode, setBulkAdjMode,
+    bulkAdjQuantity, setBulkAdjQuantity,
+    bulkAdjReasonType, setBulkAdjReasonType,
+    bulkAdjSubmitting, bulkAdjError, setBulkAdjError,
+  } = useInventoryActions({
+    tenantId,
+    products,
+    adjustStock,
+    createProduct,
+    createProductWithPresentations,
+    updateProduct,
+    deleteProduct,
+    deleteCategory,
+    uploadProductImage,
+  });
 
   const {
     showAdjustment, adjProductId, adjMode, adjQuantity, adjReasonType,
@@ -178,116 +82,13 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
     tenantId: tenantId || '',
     onSuccess: () => refresh(),
   });
-  
-
-  const navigate = useNavigate();
-
-  const handleToggleProduct = (productId: string) => {
-    setSelectedForOrder((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
-      return next;
-    });
-  };
-
-  const handleRequestOrder = () => {
-    const selectedIds = Array.from(selectedForOrder);
-    if (selectedIds.length === 0) return;
-    setShowLowStockModal(false);
-    setSelectedForOrder(new Set());
-    navigate('/purchases', { state: { preSelectedProductIds: selectedIds } });
-  };
 
   const isOwner = role === 'owner' || role === 'admin';
-
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
-
-  const openNewCategory = () => setShowCategoryForm(true);
-
-  const handleCreateProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => {
-    if (!tenantId || !userId) return false;
-    let product: Product | null = null;
-
-    if (data.presentations && data.presentations.length > 0) {
-      product = await createProductWithPresentations(tenantId, userId, data, data.presentations);
-    } else {
-      product = await createProduct(tenantId, userId, data);
-    }
-
-    if (product) {
-      addToast({ type: 'success', message: 'Producto creado exitosamente.', duration: 3000 });
-      if (imageFile) {
-        const publicUrl = await uploadProductImage(imageFile, tenantId, product.id);
-        if (publicUrl) {
-          EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
-        } else {
-          addToast({ type: 'warning', message: 'Producto creado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });
-        }
-      }
-    } else {
-      const storeError = useInventoryStore.getState().error;
-      addToast({ type: 'error', message: storeError ?? 'Error al crear el producto. Verifica tu conexión e intenta de nuevo.', duration: 5000 });
-    }
-    if (product) setShowProductForm(false);
-    return !!product;
-  };
-
-  const handleEditProduct = async (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => {
-    if (!editProduct || !tenantId) return false;
-
-    // Si hay un nuevo archivo de imagen, preservar la URL existente hasta que uploadProductImage la actualice
-    if (imageFile && editProduct.imageUrl) {
-      data.imageUrl = editProduct.imageUrl;
-    }
-
-    const ok = await updateProduct(editProduct.id, data, tenantId);
-    if (!ok) {
-      addToast({ type: 'error', message: 'Error al actualizar el producto. Verifica que los datos sean correctos y que el SKU no esté duplicado.', duration: 5000 });
-      return false;
-    }
-    addToast({ type: 'success', message: 'Producto actualizado exitosamente.', duration: 3000 });
-    if (imageFile) {
-      const publicUrl = await uploadProductImage(imageFile, tenantId, editProduct.id);
-      if (publicUrl) {
-        setEditProduct(prev => prev ? { ...prev, imageUrl: publicUrl } : null);
-        EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
-      } else {
-        addToast({ type: 'warning', message: 'Producto actualizado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });
-      }
-    }
-    setEditProduct(null);
-    setShowProductForm(false);
-    return true;
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete || !tenantId) return;
-    if (confirmDelete.type === 'product') {
-      const ok = await deleteProduct(confirmDelete.id, tenantId);
-      addToast({ type: ok ? 'success' : 'error', message: ok ? 'Producto eliminado.' : 'No se pudo eliminar el producto. Verifica que el stock esté en 0 y no tenga órdenes de compra activas.', duration: 5000 });
-    } else {
-      const ok = await deleteCategory(confirmDelete.id, tenantId);
-      addToast({ type: ok ? 'success' : 'error', message: ok ? 'Categoría eliminada.' : 'No se pudo eliminar la categoría. Verifica que no tenga productos asociados.', duration: 5000 });
-    }
-    setConfirmDelete(null);
-  };
-
-  const openNewProduct = () => {
-    setEditProduct(null);
-    setShowProductForm(true);
-  };
-
-  const openEditProduct = (product: Product) => {
-    setEditProduct(product);
-    setShowProductForm(true);
-  };
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
   }, [loading, hasLoadedOnce]);
-
   if (!tenantId) {
     return <EmptyState icon={<Package size={48} />} title="Selecciona tu negocio" description="No hay un negocio activo" />;
   }

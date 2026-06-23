@@ -101,9 +101,8 @@ interface SaleWithItems {
 }
 
 // --- Sales fetch cache (dedup identical concurrent calls from useReports Promise.all) ---
-const salesCache = new Map<string, { data: SaleWithItems[]; ts: number }>();
-const SALES_CACHE_TTL_MS = 500;
-
+import { createVolatileCache } from '../../../lib/cache';
+const salesCache = createVolatileCache<SaleWithItems[]>({ ttlMs: 500 });
 function salesCacheKey(tenantId: string, start: string, end: string): string {
   return `${tenantId}:${start}:${end}`;
 }
@@ -111,7 +110,7 @@ function salesCacheKey(tenantId: string, start: string, end: string): string {
 async function fetchSalesWithItems(tenantId: string, start: string, end: string): Promise<SaleWithItems[]> {
   const key = salesCacheKey(tenantId, start, end);
   const cached = salesCache.get(key);
-  if (cached && Date.now() - cached.ts < SALES_CACHE_TTL_MS) return cached.data;
+  if (cached) return cached;
 
   const db = getDb();
   const sales = await db.sales
@@ -160,7 +159,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
           costUsdPerUnit: i.costUsdPerUnit,
         })),
       }));
-      salesCache.set(key, { data: result, ts: Date.now() });
+      salesCache.set(key, result);
       return result;
     }
 
@@ -207,7 +206,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
             costUsdPerUnit: i.cost_usd_per_unit ? Number(i.cost_usd_per_unit) : undefined,
           })),
         }));
-        salesCache.set(key, { data: result, ts: Date.now() });
+        salesCache.set(key, result);
         return result;
       }
     } catch {
@@ -270,7 +269,7 @@ async function fetchSalesWithItems(tenantId: string, start: string, end: string)
         costUsdPerUnit: i.cost_usd_per_unit ? Number(i.cost_usd_per_unit) : undefined,
       })),
     }));
-    salesCache.set(key, { data: cloudResult, ts: Date.now() });
+    salesCache.set(key, cloudResult);
     return cloudResult;
   } catch {
     return [];
@@ -351,12 +350,12 @@ async function getRateForDate(tenantId: string, date: string): Promise<number> {
 }
 
 // Module-level cache for exchange rates to avoid N+1 queries
-const rateCache = new Map<string, number>();
+const rateCache = createVolatileCache<number>({ maxSize: 500 });
 
 async function getRateForDateCached(tenantId: string, date: string, skipZeroCache: boolean = true): Promise<number> {
-  if (rateCache.size > 500) rateCache.clear();
   const key = `${tenantId}:${date}`;
-  if (rateCache.has(key)) return rateCache.get(key)!;
+  const cached = rateCache.get(key);
+  if (cached !== undefined) return cached;
   const rate = await getRateForDate(tenantId, date);
   // MED-2: no cachear rate=0 para que próximas llamadas reintenten
   if (!skipZeroCache || rate > 0) {

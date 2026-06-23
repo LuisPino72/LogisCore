@@ -10,6 +10,7 @@ import type { TenantInfoResponse, SubscriptionResponse, PendingTask } from '../t
 import { startOfDayVzla, startOfNextDayVzla } from '../../../lib/date';
 import type { Product } from '../../../specs/inventory';
 import { inventoryService } from '../../inventory/services/inventoryService';
+import { createPersistentCache } from '../../../lib/cache';
 
 const CACHE_SUB_KEY = (tenantId: string) => `logiscore_cached_subscription:${tenantId}`;
 const CACHE_EMP_KEY = (tenantId: string) => `logiscore_cached_employee_count:${tenantId}`;
@@ -19,39 +20,33 @@ function calcItemCost(quantity: number, costUsdPerUnit: number | undefined, unit
   return quantity * unitMultiplier * costUsdPerUnit;
 }
 
+const tenantInfoCache = createPersistentCache<DexieTenantRef>({ tableName: 'tenantRefs' });
+
 async function cacheTenantInfo(tenantId: string, info: TenantInfoResponse): Promise<void> {
-  if (!isDbReady()) return;
-  try {
-    const db = getDb();
-    const ref: DexieTenantRef = {
-      id: tenantId,
-      slug: info.slug,
-      name: info.name,
-      rif: info.rif,
-      direccion: info.direccion,
-      telefono: info.telefono,
-      logoUrl: info.logoUrl,
-    };
-    await db.tenantRefs.put(ref);
-  } catch { /* best-effort */ }
+  const ref: DexieTenantRef = {
+    id: tenantId,
+    slug: info.slug,
+    name: info.name,
+    rif: info.rif,
+    direccion: info.direccion,
+    telefono: info.telefono,
+    logoUrl: info.logoUrl,
+  };
+  await tenantInfoCache.set(tenantId, ref);
 }
 
 async function readCachedTenantInfo(tenantId: string): Promise<TenantInfoResponse | null> {
-  if (!isDbReady()) return null;
-  try {
-    const db = getDb();
-    const ref = await db.tenantRefs.get(tenantId);
-    if (ref) {
-      return {
-        name: ref.name,
-        slug: ref.slug,
-        rif: ref.rif ?? '',
-        direccion: ref.direccion,
-        telefono: ref.telefono,
-        logoUrl: ref.logoUrl,
-      };
-    }
-  } catch { /* best-effort */ }
+  const ref = await tenantInfoCache.get(tenantId);
+  if (ref) {
+    return {
+      name: ref.name,
+      slug: ref.slug,
+      rif: ref.rif ?? '',
+      direccion: ref.direccion,
+      telefono: ref.telefono,
+      logoUrl: ref.logoUrl,
+    };
+  }
   return null;
 }
 

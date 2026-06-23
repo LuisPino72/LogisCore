@@ -8,7 +8,7 @@ import type { Product, Category, TabState, StockFilter, ProductTypeFilter } from
 import { displayStock } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 import { useInventoryStore } from '../stores/inventoryStore';
-import { getDb } from '@/services/dexie/db';
+import { inventoryService } from '../services/inventoryService';
 
 interface ProductListProps {
   products: Product[];
@@ -217,12 +217,8 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
   useEffect(() => {
     const loadAssembly = async () => {
       try {
-        const db = getDb();
-        const recipes = await db.recipes
-          .where({ tenantId })
-          .filter((r) => !r.deletedAt && r.isActive && r.mode === 'assembly')
-          .toArray();
-        setAssemblyProductIds(new Set(recipes.map((r) => r.productId)));
+        const ids = await inventoryService.getAssemblyProductIds(tenantId);
+        setAssemblyProductIds(ids);
       } catch {
         // silent
       }

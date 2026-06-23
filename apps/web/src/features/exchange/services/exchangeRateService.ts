@@ -9,6 +9,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 import type { ExchangeRateResponse } from '../types';
+import { createPersistentCache } from '../../../lib/cache';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/fetch-bcv-rate`;
@@ -24,11 +25,11 @@ async function getAuthToken(): Promise<Result<string, AppError>> {
   return success(session.access_token);
 }
 
+const exchangeRateCache = createPersistentCache<any>({ tableName: 'exchangeRates' });
+
 async function cacheToDexie(rate: ExchangeRateResponse, tenantId: string): Promise<void> {
-  if (!isDbReady()) return;
   try {
-    const db = getDb();
-    await db.exchangeRates.put({
+    await exchangeRateCache.set(rate.id, {
       id: rate.id,
       tenantId,
       rate: rate.rate,

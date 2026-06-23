@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, type FC } from 'react';
 import { Card, Input, Button, Textarea, Alert, Skeleton } from '../../../common/components';
 import { Upload, X } from 'lucide-react';
-import { supabase } from '../../../services/supabase/client';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { settingsService } from '../services/settingsService';
 import { useToastStore } from '../../../stores/toastStore';
@@ -76,21 +75,9 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     setLogoPreview(null);
     setLogoError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
-    if (logoUrl) {
-      try {
-        const filePath = logoUrl.split('/').pop();
-        if (filePath) {
-          const { data: { session } } = await supabase.auth.getSession();
-          const token = session?.access_token ?? '';
-          const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
-          await fetch(storageUrl, {
-            method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-        }
-      } catch {
+    if (logoUrl && tenantId) {
+      const result = await settingsService.deleteBusinessLogo(tenantId, logoUrl);
+      if (!result.ok) {
         // Best effort — logo will be overwritten on next upload
       }
     }

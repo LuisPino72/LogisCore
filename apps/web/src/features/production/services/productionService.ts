@@ -21,263 +21,20 @@ import { syncQueue } from '../../../services/sync/syncQueue';
 import { emitWithAudit, emitWithPersistence } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
-import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema, type CalculateRecipeCostResult } from '../../../specs/production';
+import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
 import { logger } from '../../../lib/logger';
 import { type Transaction } from 'dexie';
 import { calculateConsumptionCost, selectFifoLots } from './costCalculator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { unitToStorageType, convertToStorage } from '../../inventory/types';
-import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability, ExpandedRecipeLine } from '../types';
-
-/**
- * Convierte la cantidad de un ingrediente (en la unidad declarada en la receta)
- * a la unidad de almacenamiento del producto (gramos para kg, ml para lt, unidades para unidad).
- */
-export function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit: string): number {
-  if (productUnit === 'kg' && recipeUnit === 'g') return qty / 1000;
-  if (productUnit === 'kg' && recipeUnit === 'kg') return qty * 1000;
-  if (productUnit === 'lt' && recipeUnit === 'ml') return qty / 1000;
-  if (productUnit === 'lt' && recipeUnit === 'lt') return qty * 1000;
-  if (productUnit === 'unidad' && recipeUnit === 'unidad') return qty;
-  if (productUnit === 'gr' && recipeUnit === 'g') return qty;
-  if (productUnit === 'm' && recipeUnit === 'ml') return qty;
-  return qty;
-}
-
-/**
- * Convierte la cantidad de un ingrediente a unidades de almacenamiento BASE (gramos/ml/unidades).
- * A diferencia de recipeQtyToStorage que retorna la unidad del producto (kg, lt),
- * esta función retorna SIEMPRE la unidad base (g, ml, unidad) para que coincida con product.stock.
- */
-export function recipeQtyToStorageBase(qty: number, recipeUnit: string, productUnit: string): number {
-  if (productUnit === 'kg' && recipeUnit === 'g') return qty;
-  if (productUnit === 'kg' && recipeUnit === 'kg') return qty * 1000;
-  if (productUnit === 'lt' && recipeUnit === 'ml') return qty;
-  if (productUnit === 'lt' && recipeUnit === 'lt') return qty * 1000;
-  if (productUnit === 'unidad' && recipeUnit === 'unidad') return qty;
-  if (productUnit === 'gr' && recipeUnit === 'g') return qty;
-  if (productUnit === 'm' && recipeUnit === 'ml') return qty;
-  return qty;
-}
+import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability } from '../types';
 import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder, DexieProduct } from '../../../services/dexie/db';
+import { recipeQtyToStorage, recipeQtyToStorageBase, toRecipe, toRecipeLine, toProductionOrder } from './productionMappers';
+import { expandRecipe, validateCycles } from './recipeGraphService';
+import { calculateRecipeCost as calculateRecipeCostFn } from './costService';
 
 const PRODUCTION_MODULE = 'PRODUCTION';
-
-/**
- * Calcula el costo estimado de producción desde las líneas del formulario (puro, sin DB).
- * Usado para preview en tiempo real en RecipeForm.
- */
-export function computeRecipeCostFromLines(
-  lines: Array<{ productId: string; quantity: number; unit: string }>,
-  products: Map<string, { costPrice: number; isWeighted: boolean; unit: string }>,
-  wastePct: number,
-  yieldQuantity: number,
-): { totalCost: number; costPerUnit: number } {
-  const wasteMultiplier = 1 + (wastePct / 100);
-  let totalCost = 0;
-
-  for (const line of lines) {
-    const product = products.get(line.productId);
-    if (!product) continue;
-    const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
-    const costPerStorageUnit = product.isWeighted
-      ? product.costPrice / 1000
-      : product.costPrice;
-    totalCost += neededInStorage * costPerStorageUnit;
-  }
-
-  return {
-    totalCost: preciseRound(totalCost, 2),
-    costPerUnit: yieldQuantity > 0 ? preciseRound(totalCost / yieldQuantity, 4) : 0,
-  };
-}
-
-// PRODUCTION-001: Límite máximo de profundidad de recursión para sub-recetas
-const MAX_RECIPE_DEPTH = 5;
-
-// PRODUCTION-001-001: Función pura para expandir una receta en ingredientes base con DFS
-export async function expandRecipe(
-  recipeId: string,
-  multiplier: number,
-  visited: Set<string> = new Set(),
-  depth: number = 1,
-): Promise<Result<ExpandedRecipeLine[], AppError>> {
-  if (depth > MAX_RECIPE_DEPTH) {
-    return failure(new AppError(
-      ProductionErrors.RECIPE_MAX_DEPTH_EXCEEDED,
-      `La receta tiene ${depth} niveles de anidamiento. Máximo permitido: ${MAX_RECIPE_DEPTH}.`,
-    ));
-  }
-
-  if (visited.has(recipeId)) {
-    return failure(new AppError(
-      ProductionErrors.RECIPE_CYCLE_DETECTED,
-      'La receta forma un ciclo. No se puede expandir.',
-    ));
-  }
-
-  const db = getDb();
-  const recipe = await db.recipes.get(recipeId);
-  if (!recipe || recipe.deletedAt) {
-    return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
-  }
-  if (!recipe.isActive) {
-    return failure(new AppError(ProductionErrors.RECIPE_INACTIVE, 'La receta está inactiva.'));
-  }
-
-  const nextVisited = new Set(visited);
-  nextVisited.add(recipeId);
-
-  const lines = await db.recipeLines
-    .where({ recipeId })
-    .filter((l) => !l.deletedAt)
-    .toArray();
-
-  const result: ExpandedRecipeLine[] = [];
-  const session = useAuthStore.getState().session;
-
-  for (const line of lines) {
-    const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
-    if (!product || product.deletedAt) {
-      return failure(new AppError(
-        ProductionErrors.SUB_RECIPE_NOT_FOUND,
-        'Sub-receta no encontrada para un producto de la receta.',
-      ));
-    }
-
-    const isSubRecipe = product.productType === 'producto_terminado';
-    let subRecipe: DexieRecipe | undefined;
-    if (isSubRecipe) {
-      // Buscar receta activa O inactiva para detectar ambos casos
-      const candidates = await db.recipes
-        .where({ productId: line.productId })
-        .filter((r) => !r.deletedAt)
-        .toArray();
-      subRecipe = candidates[0];
-    }
-
-    if (subRecipe) {
-      if (!subRecipe.isActive) {
-        return failure(new AppError(
-          ProductionErrors.SUB_RECIPE_INACTIVE,
-          `La sub-receta "${product.name}" está inactiva. Actívala o usa otra.`,
-        ));
-      }
-      const subMultiplier = line.quantity * multiplier;
-      const subResult = await expandRecipe(subRecipe.id, subMultiplier, nextVisited, depth + 1);
-      if (!subResult.ok) return subResult;
-      result.push(...subResult.data);
-    } else {
-      result.push({
-        productId: line.productId,
-        quantity: line.quantity * multiplier,
-        unit: line.unit,
-        source: depth === 1 ? 'direct' : 'sub-recipe',
-        path: [...Array.from(nextVisited), line.productId],
-        depth,
-      });
-    }
-  }
-
-  return success(result);
-}
-
-// PRODUCTION-001-002: Validación de ciclos con DFS pre-guardado
-export async function validateCycles(
-  productId: string,
-  lines: Array<{ productId: string; quantity: number; unit: string }>,
-): Promise<Result<true, AppError>> {
-  const db = getDb();
-  const visited = new Set<string>([productId]);
-  const stack: Array<{ pid: string; lines: typeof lines }> = [{ pid: productId, lines }];
-
-  while (stack.length > 0) {
-    const current = stack.pop()!;
-    if (current.lines.length === 0) continue;
-
-    for (const line of current.lines) {
-      if (visited.has(line.productId)) {
-        return failure(new AppError(
-          ProductionErrors.RECIPE_CYCLE_DETECTED,
-          'No se puede guardar: la receta forma un ciclo.',
-        ));
-      }
-
-      const subRecipe = await db.recipes
-        .where({ productId: line.productId })
-        .filter((r) => !r.deletedAt && r.isActive)
-        .first();
-
-      if (subRecipe) {
-        visited.add(line.productId);
-        const subLines = await db.recipeLines
-          .where({ recipeId: subRecipe.id })
-          .filter((l) => !l.deletedAt)
-          .toArray();
-        const nextLines = subLines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit }));
-        stack.push({ pid: line.productId, lines: nextLines });
-      }
-    }
-  }
-
-  return success(true);
-}
-
-function toRecipe(raw: Record<string, unknown>): Recipe {
-  return {
-    id: raw.id as string,
-    tenantId: raw.tenantId as string,
-    name: raw.name as string,
-    productId: raw.productId as string,
-    mode: raw.mode as Recipe['mode'],
-    yieldQuantity: raw.yieldQuantity as number,
-    yieldUnit: raw.yieldUnit as string,
-    wastePct: raw.wastePct as number,
-    isActive: raw.isActive as boolean,
-    notes: raw.notes as string | undefined,
-    createdAt: raw.createdAt as string,
-    updatedAt: raw.updatedAt as string,
-    deletedAt: raw.deletedAt as string | undefined,
-  };
-}
-
-function toRecipeLine(raw: Record<string, unknown>): RecipeLine {
-  return {
-    id: raw.id as string,
-    tenantId: raw.tenantId as string,
-    recipeId: raw.recipeId as string,
-    productId: raw.productId as string,
-    quantity: raw.quantity as number,
-    unit: raw.unit as string,
-    sortOrder: raw.sortOrder as number,
-    createdAt: raw.createdAt as string,
-    deletedAt: raw.deletedAt as string | undefined,
-  };
-}
-
-function toProductionOrder(raw: Record<string, unknown>): ProductionOrder {
-  return {
-    id: raw.id as string,
-    tenantId: raw.tenantId as string,
-    recipeId: raw.recipeId as string,
-    productId: raw.productId as string,
-    batchCount: raw.batchCount as number,
-    quantityTarget: raw.quantityTarget as number,
-    quantityProduced: raw.quantityProduced as number,
-    status: raw.status as ProductionOrder['status'],
-    plannedDate: raw.plannedDate as string | undefined,
-    startedAt: raw.startedAt as string | undefined,
-    completedAt: raw.completedAt as string | undefined,
-    wasteNotes: raw.wasteNotes as string | undefined,
-    createdBy: raw.createdBy as string,
-    createdAt: raw.createdAt as string,
-    updatedAt: raw.updatedAt as string,
-    deletedAt: raw.deletedAt as string | undefined,
-    totalCost: raw.totalCost != null ? (raw.totalCost as number) : undefined,
-    costPerUnit: raw.costPerUnit != null ? (raw.costPerUnit as number) : undefined,
-  };
-}
 
 export const productionService = {
   // ===== RECIPE CRUD =====
@@ -853,60 +610,7 @@ export const productionService = {
     }
   },
 
-  async calculateRecipeCost(
-    recipeId: string,
-    batchCount: number,
-  ): Promise<Result<CalculateRecipeCostResult, AppError>> {
-    try {
-      const db = getDb();
-      const recipe = await db.recipes.get(recipeId);
-      if (!recipe || recipe.deletedAt) {
-        return failure(new AppError(ProductionErrors.RECIPE_NOT_FOUND, 'Receta no encontrada.'));
-      }
-
-      // PRODUCTION-001-004: Expandir receta para resolver sub-recetas
-      const expandResult = await expandRecipe(recipeId, batchCount);
-      if (!expandResult.ok) return expandResult;
-      const expandedLines = expandResult.data;
-
-      if (expandedLines.length === 0) {
-        return failure(new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, 'La receta no tiene ingredientes para calcular costo.'));
-      }
-
-      const wasteMultiplier = 1 + (recipe.wastePct / 100);
-      let totalCost = 0;
-      // PRODUCTION-003 [Paso-5]: acumular warnings de ingredientes sin costo registrado.
-      // Evitamos duplicados via Set para casos donde una sub-receta repita el mismo ingrediente.
-      const warningsSet = new Set<string>();
-
-      for (const line of expandedLines) {
-        const session = useAuthStore.getState().session;
-        const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
-        // BUGFIX-MATHCEIL-001 [Paso-2]: Usar recipeQtyToStorageBase para que calculateRecipeCost
-        // reporte la misma cantidad en storage base units (g/ml) que createOrder consume.
-        // product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
-        const neededInStorage = product
-          ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
-          : line.quantity * wasteMultiplier;
-        const needed = Math.ceil(neededInStorage);
-        // MED-3: calculateRecipeCost usa FIFO real (calculateConsumptionCost) en vez de WAC (costPrice).
-        const ccResult = await calculateConsumptionCost(line.productId, needed);
-        if (!ccResult.ok) return ccResult;
-        totalCost += ccResult.data.totalCost;
-        if (ccResult.data.totalCost === 0 && product) {
-          warningsSet.add(`${product.name} no tiene costo registrado`);
-        }
-      }
-
-      return success({
-        totalCost: preciseRound(totalCost, 2),
-        warnings: Array.from(warningsSet),
-      });
-    } catch (err) {
-      logger.error(PRODUCTION_MODULE, 'Error en calculateRecipeCost:', err);
-      return failure(new AppError(ProductionErrors.COST_CALC_FAILED, 'Error al calcular costo de la receta.'));
-    }
-  },
+  calculateRecipeCost: calculateRecipeCostFn,
 
   async createOrder(
     tenantId: string,
@@ -1889,3 +1593,9 @@ async function consumeFifoInternal(
 
   return success(consumed);
 }
+
+// Re-exports for backward compatibility — all exports unchanged
+export { recipeQtyToStorage, recipeQtyToStorageBase } from './productionMappers';
+export { toRecipe, toRecipeLine, toProductionOrder } from './productionMappers';
+export { expandRecipe, validateCycles } from './recipeGraphService';
+export { computeRecipeCostFromLines } from './costService';

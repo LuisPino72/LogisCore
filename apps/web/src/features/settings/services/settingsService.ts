@@ -14,6 +14,7 @@ import { SettingsErrors } from '../types/errors';
 import type { FiscalSettings, OperationSettings, BusinessInfo, ChangePasswordInput } from '../types';
 import { FiscalSettingsSchema, OperationSettingsSchema, UpdateBusinessInfoSchema, ChangePasswordSchema } from '../types';
 import { useSettingsStore } from '../stores/settingsStore';
+import { createPersistentCache } from '../../../lib/cache';
 
 function toFiscalSettings(row: DexieTenantSettings): FiscalSettings {
   return {
@@ -61,11 +62,11 @@ async function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, opera
 
 const MODULE_NAME = 'SETTINGS';
 
+const settingsCache = createPersistentCache<DexieTenantSettings>({ tableName: 'tenantSettings' });
+
 async function cacheSettings(data: DexieTenantSettings): Promise<void> {
-  if (!isDbReady()) return;
   try {
-    const db = getDb();
-    await db.tenantSettings.put(data);
+    await settingsCache.set(data.tenantId, data);
   } catch (err) {
     logger.warn(MODULE_NAME, 'cacheSettings: error escribiendo a Dexie (best-effort)', err);
   }
@@ -625,5 +626,22 @@ export const settingsService = {
     }
 
     return success(publicUrl);
+  },
+
+  async deleteBusinessLogo(_tenantId: string, logoUrl: string): Promise<Result<void, AppError>> {
+    const session = useAuthStore.getState().session;
+    if (!session || !hasActionPermission(session, 'settings', 'manage')) {
+      return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
+    }
+
+    const filePath = logoUrl.split('/').pop();
+    if (!filePath) return failure(new AppError('LOGO_DELETE_FAILED', 'URL del logo inválida.'));
+
+    const { error } = await supabase.storage
+      .from('Products')
+      .remove([filePath]);
+
+    if (error) return failure(new AppError('LOGO_DELETE_FAILED', error.message));
+    return success(undefined);
   },
 };

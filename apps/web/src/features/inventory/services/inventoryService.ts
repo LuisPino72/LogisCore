@@ -163,6 +163,19 @@ async function getAllPresentations(tenantId: string): Promise<Result<Presentatio
     }
   }
 
+export async function getAssemblyProductIds(tenantId: string): Promise<Set<string>> {
+  try {
+    const db = getDb();
+    const recipes = await db.recipes
+      .where({ tenantId })
+      .filter((r) => !r.deletedAt && r.isActive && r.mode === 'assembly')
+      .toArray();
+    return new Set(recipes.map((r) => r.productId));
+  } catch {
+    return new Set();
+  }
+}
+
 export const inventoryService = {
   async createProduct(
     tenantId: string,
@@ -1747,5 +1760,9 @@ export const inventoryService = {
       return parseFloat(stock) <= parseFloat(stockMin);
     });
     return success(lowStock.map((r) => toProduct(r as unknown as Record<string, unknown>)));
+  },
+
+  async getAssemblyProductIds(tenantId: string): Promise<Set<string>> {
+    return getAssemblyProductIds(tenantId);
   },
 };
