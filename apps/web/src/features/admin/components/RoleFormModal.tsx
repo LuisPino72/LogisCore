@@ -65,7 +65,7 @@ export function RoleFormModal({ role, onClose }: Props) {
   };
 
   const getModuleActions = (module: string): string[] => {
-    const crud = module === 'admin' || module === 'reports' || module === 'dashboard'
+    const crud = module === 'reports' || module === 'dashboard' || module === 'exchange' || module === 'settings'
       ? []
       : CRUD_ACTIONS.map((a) => `${module}:${a}`);
     const special = (SPECIAL_ACTIONS[module] ?? []).map((a) => `${module}:${a}`);

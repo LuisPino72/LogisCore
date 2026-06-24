@@ -13,7 +13,7 @@ interface RolePermissionsModalProps {
 }
 
 function getModulePermissions(mod: string): string[] {
-  const crud = mod === 'admin' || mod === 'reports' || mod === 'dashboard' || mod === 'exchange' || mod === 'settings'
+  const crud = mod === 'reports' || mod === 'dashboard' || mod === 'exchange' || mod === 'settings'
     ? []
     : CRUD_ACTIONS.map((a) => `${mod}:${a}`);
   const special = (SPECIAL_ACTIONS[mod] ?? []).map((a) => `${mod}:${a}`);
@@ -186,7 +186,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
         <div>
           <h3 className="text-sm font-medium text-gray-700 mb-3">Permisos</h3>
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-            {ALL_MODULES.filter((mod) => mod !== 'admin').map((mod) => {
+            {ALL_MODULES.map((mod) => {
               const modPerms = getModulePermissions(mod);
               if (modPerms.length === 0) return null;
               const allSelected = modPerms.every((p) => permissions.has(p));
