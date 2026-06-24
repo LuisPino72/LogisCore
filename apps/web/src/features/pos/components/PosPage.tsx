@@ -33,6 +33,7 @@ import { isSameDayVzla } from '../../../lib/date';
 import { preciseRound } from '@logiscore/shared';
 import { receiptService } from '../services/receiptService';
 import { dashboardService } from '../../dashboard/services/dashboardService';
+import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { failure, AppError } from '@logiscore/core';
@@ -323,6 +324,12 @@ export function PosPage({ tenantId }: PosPageProps) {
     setSharing(true);
     await new Promise((r) => setTimeout(r, 300));
     try {
+      const enrichedTenantInfo = {
+        ...tenantInfo,
+        footerMessage: useSettingsStore.getState().ticketFooterMessage,
+        ivaRate: useSettingsStore.getState().ivaRate,
+        igtfRate: useSettingsStore.getState().igtfRate,
+      };
       if (mode === 'text') {
         const link = receiptService.generateWhatsAppLink(
           {
@@ -347,7 +354,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             totalPriceUsd: i.totalPriceUsd,
           })),
           completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
-          tenantInfo,
+          enrichedTenantInfo,
         );
         if (link) {
           window.open(link, '_blank');
@@ -378,7 +385,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             totalPriceUsd: i.totalPriceUsd,
           })),
           completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
-          tenantInfo,
+          enrichedTenantInfo,
         );
         if (!result.ok) {
           addToast({ type: 'warning', message: result.error.message, duration: 4000 });

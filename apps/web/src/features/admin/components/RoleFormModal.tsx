@@ -167,7 +167,7 @@ export function RoleFormModal({ role, onClose }: Props) {
         <div>
           <h4 className="font-medium text-sm mb-3">Permisos por módulo</h4>
           <div className="space-y-1">
-            {[...ALL_MODULES.filter((m) => m !== 'admin'), 'admin'].map((module) => {
+            {ALL_MODULES.map((module) => {
               const actions = getModuleActions(module);
               const hasCrud = CRUD_ACTIONS.some((a) => actions.includes(`${module}:${a}`));
               return (

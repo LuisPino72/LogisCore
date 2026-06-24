@@ -136,14 +136,20 @@ export function SaleDetailModal({ saleId, tenantId, isOpen, onClose }: SaleDetai
         unitPriceUsd: i.unitPriceUsd,
         totalPriceUsd: i.totalPriceUsd,
       }));
+      const enrichedTenantInfo = {
+        ...tenantInfo,
+        footerMessage: useSettingsStore.getState().ticketFooterMessage,
+        ivaRate: useSettingsStore.getState().ivaRate,
+        igtfRate: useSettingsStore.getState().igtfRate,
+      };
 
       if (mode === 'text') {
-        const link = receiptService.generateWhatsAppLink(saleData, itemsData, customer, tenantInfo);
+        const link = receiptService.generateWhatsAppLink(saleData, itemsData, customer, enrichedTenantInfo);
         if (link) {
           window.open(link, '_blank');
         }
       } else {
-        const result = await receiptService.sharePdfViaWhatsApp(saleData, itemsData, customer, tenantInfo);
+        const result = await receiptService.sharePdfViaWhatsApp(saleData, itemsData, customer, enrichedTenantInfo);
         if (!result.ok) {
           window.open(`https://wa.me`, '_blank');
         }

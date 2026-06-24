@@ -167,9 +167,9 @@ export const adminService = {
       createdAt: u.created_at as string,
     }));
 
-    // Enrich with emails from auth.users — solo si el usuario actual es admin global
+    // Enrich with emails from auth.users — solo si el usuario actual es admin u owner
     const session = useAuthStore.getState().session;
-    if (session?.role === 'admin') {
+    if (session?.role === 'admin' || session?.role === 'owner') {
       const tokenResult = await getAdminToken();
       if (tokenResult.ok) {
         try {
@@ -192,6 +192,13 @@ export const adminService = {
           // fallback: keep email/name empty
         }
       }
+    }
+
+    // Excluir al owner de la lista de empleados
+    const ownerUserId = useAuthStore.getState().session?.userId;
+    if (ownerUserId) {
+      const ownerIdx = users.findIndex((u) => u.userId === ownerUserId);
+      if (ownerIdx !== -1) users.splice(ownerIdx, 1);
     }
 
     return success(users);

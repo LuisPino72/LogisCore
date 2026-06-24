@@ -628,7 +628,7 @@ export const settingsService = {
     return success(publicUrl);
   },
 
-  async deleteBusinessLogo(_tenantId: string, logoUrl: string): Promise<Result<void, AppError>> {
+  async deleteBusinessLogo(tenantId: string, logoUrl: string): Promise<Result<void, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'settings', 'manage')) {
       return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
@@ -642,6 +642,23 @@ export const settingsService = {
       .remove([filePath]);
 
     if (error) return failure(new AppError('LOGO_DELETE_FAILED', error.message));
+
+    if (navigator.onLine) {
+      const { error: updateError } = await supabase
+        .from('tenants')
+        .update({ logo_url: null })
+        .eq('id', tenantId);
+      if (updateError) logger.warn(MODULE_NAME, 'deleteBusinessLogo: Supabase update failed:', updateError);
+    }
+
+    if (isDbReady()) {
+      const db = getDb();
+      const existing = await db.tenantRefs.get(tenantId);
+      if (existing) {
+        await db.tenantRefs.put({ ...existing, logoUrl: undefined });
+      }
+    }
+
     return success(undefined);
   },
 };

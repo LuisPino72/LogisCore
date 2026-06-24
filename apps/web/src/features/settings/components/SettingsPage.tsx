@@ -5,7 +5,6 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useSettings } from '../hooks/useSettings';
 import { FiscalTab } from './FiscalTab';
-import { OperationsTab } from './OperationsTab';
 import { BusinessTab } from './BusinessTab';
 import { TeamTab } from './TeamTab';
 import { SecurityTab } from './SecurityTab';
@@ -18,7 +17,6 @@ interface SettingsPageProps {
 const TABS = [
   { key: 'business', label: 'Mi Negocio' },
   { key: 'team', label: 'Equipo' },
-  { key: 'operations', label: 'Operaciones' },
   { key: 'fiscal', label: 'Fiscal' },
   { key: 'security', label: 'Seguridad' },
   { key: 'subscription', label: 'Suscripción' },
@@ -85,11 +83,6 @@ export const SettingsPage: FC<SettingsPageProps> = ({ tenantId }) => {
         {activeTab === 'fiscal' && (
           <div className="animate-fade-in">
             <FiscalTab tenantId={tenantId} />
-          </div>
-        )}
-        {activeTab === 'operations' && (
-          <div className="animate-fade-in">
-            <OperationsTab tenantId={tenantId} />
           </div>
         )}
         {activeTab === 'business' && (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Users, ShoppingBag, Plus } from 'lucide-react';
+import { Users, ShoppingBag, Plus, Shield } from 'lucide-react';
 import { Card, Button, DataTable, Skeleton, Alert, Badge, Select, Modal, Input } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
@@ -7,6 +7,7 @@ import { adminService } from '../../admin/services/adminService';
 import { settingsService } from '../services/settingsService';
 import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
 import { RegisterManagerModal } from '../../../common/components/RegisterManagerModal';
+import { RolePermissionsModal } from '../../../common/components/RolePermissionsModal';
 import { useAuthStore } from '../../auth/stores/authStore';
 import type { UserRole } from '../../admin/types';
 import type { DexieRegisterConfig } from '../../../services/dexie/db';
@@ -40,6 +41,8 @@ export function TeamTab({ tenantId }: TeamTabProps) {
   const [deletingUser, setDeletingUser] = useState<UserRole | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<UserRole | null>(null);
   const [newResetPassword, setNewResetPassword] = useState('');
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -147,7 +150,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
               onChange={(e) => setEditingRoleId(e.target.value)}
               className="text-xs"
             >
-              {roles.filter((r) => r.name !== 'admin').map((r) => (
+              {roles.filter((r) => r.name !== 'admin' && r.name !== 'owner').map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </Select>
@@ -246,6 +249,51 @@ export function TeamTab({ tenantId }: TeamTabProps) {
               renderCardOnMobile
             />
           )}
+        </div>
+      </Card>
+
+      <Card className="hover:shadow-md transition-shadow duration-200">
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+                <Shield size={20} className="text-primary" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">Roles</h2>
+                <Badge variant="neutral" className="text-xs">{roles.filter(r => r.name !== 'admin' && r.name !== 'owner').length}</Badge>
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              className="min-h-11 transition-all duration-200"
+              onClick={() => { setEditingRole(null); setShowRoleModal(true); }}
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline ml-1">Crear rol</span>
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {roles.filter(r => r.name !== 'admin' && r.name !== 'owner').map((role) => (
+              <div key={role.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Badge variant={role.rlsTier === 'owner' ? 'info' : 'neutral'}>{role.rlsTier}</Badge>
+                  <div>
+                    <div className="font-medium text-sm">{role.name}</div>
+                    {role.description && <div className="text-xs text-gray-500">{role.description}</div>}
+                  </div>
+                  <Badge variant="neutral" className="text-xs">{(role as any).permissionCount ?? 0} permisos</Badge>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => { setEditingRole(role); setShowRoleModal(true); }}>
+                    Editar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -356,6 +404,13 @@ export function TeamTab({ tenantId }: TeamTabProps) {
           />
         </div>
       </Modal>
+
+      <RolePermissionsModal
+        isOpen={showRoleModal}
+        onClose={() => { setShowRoleModal(false); setEditingRole(null); }}
+        role={editingRole}
+        onSave={() => { loadRoles(); setShowRoleModal(false); setEditingRole(null); }}
+      />
     </div>
   );
 }

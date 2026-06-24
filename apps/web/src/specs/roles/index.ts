@@ -85,6 +85,8 @@ export const ALL_MODULES = [
   'gastos',
   'customers',
   'reports',
+  'exchange',
+  'settings',
   'admin',
 ] as const;
 
@@ -95,18 +97,20 @@ export const CRUD_ACTIONS = ['create', 'read', 'update', 'delete'] as const;
 
 /** Special actions per module */
 export const SPECIAL_ACTIONS: Record<string, string[]> = {
+  dashboard: ['read'],
   inventory: ['adjust_stock', 'import_csv', 'manage_categories'],
   production: ['produce_batch'],
   purchases: ['receive_order', 'pay_debt'],
   pos: ['void_sale', 'close_box', 'open_box', 'apply_discount'],
   customers: ['collect_debt'],
-  reports: ['export', 'view_financials'],
-  admin: ['manage_tenants', 'manage_roles', 'manage_users', 'manage_subscriptions'],
+  reports: ['read', 'export', 'view_financials'],
+  exchange: ['update'],
+  settings: ['manage'],
 };
 
 /** Get all possible permissions for a module */
 export function getModulePermissions(module: string): string[] {
-  const crud = module === 'admin' || module === 'reports' || module === 'dashboard'
+  const crud = module === 'admin' || module === 'reports' || module === 'dashboard' || module === 'exchange' || module === 'settings'
     ? []
     : CRUD_ACTIONS.map((a) => `${module}:${a}`);
   const special = (SPECIAL_ACTIONS[module] ?? []).map((a) => `${module}:${a}`);

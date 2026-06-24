@@ -39,6 +39,9 @@ export interface ReceiptTenantInfo {
   direccion?: string;
   telefono?: string;
   logoUrl?: string;
+  footerMessage?: string;
+  ivaRate?: number;
+  igtfRate?: number;
 }
 
 function formatDate(dateStr: string): string {
@@ -118,14 +121,14 @@ function buildTicketHtml(sale: ReceiptSaleData, items: ReceiptItemData[], custom
       </div>
       <div style="border-top:1px dashed #999;margin:8px 0;padding-top:6px;font-size:9pt;">
         <div style="display:flex;justify-content:space-between;"><span>Subtotal:</span><span>${formatUsd(sale.subtotalUsd)}</span></div>
-        ${sale.ivaUsd > 0 ? `<div style="display:flex;justify-content:space-between;"><span>IVA 16%:</span><span>${formatUsd(sale.ivaUsd)}</span></div>` : ''}
-        ${sale.igtfUsd > 0 ? `<div style="display:flex;justify-content:space-between;"><span>IGTF 3%:</span><span>${formatUsd(sale.igtfUsd)}</span></div>` : ''}
+        ${sale.ivaUsd > 0 ? `<div style="display:flex;justify-content:space-between;"><span>IVA ${((tenant.ivaRate ?? 0.16) * 100).toFixed(0)}%:</span><span>${formatUsd(sale.ivaUsd)}</span></div>` : ''}
+        ${sale.igtfUsd > 0 ? `<div style="display:flex;justify-content:space-between;"><span>IGTF ${((tenant.igtfRate ?? 0.03) * 100).toFixed(0)}%:</span><span>${formatUsd(sale.igtfUsd)}</span></div>` : ''}
         <div style="display:flex;justify-content:space-between;font-weight:700;font-size:11pt;"><span>TOTAL:</span><span>${formatUsd(sale.totalUsd)}</span></div>
         ${sale.exchangeRate > 0 ? `<div style="font-size:8pt;color:#555;">Tasa: ${sale.exchangeRate.toFixed(2)} Bs/$</div>` : ''}
         ${sale.totalBs > 0 ? `<div style="display:flex;justify-content:space-between;font-weight:700;font-size:10pt;"><span>TOTAL:</span><span>${formatBs(sale.totalBs)}</span></div>` : ''}
       </div>
       <div style="text-align:center;margin-top:12px;padding-top:8px;border-top:1px dashed #999;font-size:8pt;color:#777;">
-        ¡Gracias por su compra!<br/>Sasa ERP
+        ${escapeHtml(tenant.footerMessage || '¡Gracias por su compra!')}<br/>Sasa ERP
       </div>
     </div>`;
 }
@@ -232,7 +235,7 @@ function buildWhatsAppText(
     lines.push(`Total: ${formatBs(sale.totalBs)}`);
   }
   lines.push('');
-  lines.push('¡Gracias por su compra!');
+  lines.push(tenantInfo.footerMessage || '¡Gracias por su compra!');
 
   return lines.join('\n');
 }

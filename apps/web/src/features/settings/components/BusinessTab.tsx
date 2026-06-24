@@ -3,6 +3,7 @@ import { Building2, Upload, X } from 'lucide-react';
 import { Card, Input, Button, Textarea, Alert, Skeleton } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { settingsService } from '../services/settingsService';
+import { useSettingsStore } from '../stores/settingsStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { sanitizeValue } from '../../../lib/validation';
 import { formatPhone, unformatPhone } from '../../../lib/utils';
@@ -17,11 +18,13 @@ const LOGO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
   const { addToast } = useToastStore();
   const userId = useAuthStore((s) => s.session?.userId);
+  const store = useSettingsStore();
 
   const [name, setName] = useState('');
   const [rif, setRif] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [ticketFooterMessage, setTicketFooterMessage] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -51,6 +54,10 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     });
     return () => { cancelled = true; };
   }, [tenantId]);
+
+  useEffect(() => {
+    setTicketFooterMessage(store.ticketFooterMessage);
+  }, [store.ticketFooterMessage]);
 
   const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,6 +135,16 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
       setLogoUrl(finalLogoUrl);
       setLogoFile(null);
       setLogoPreview(null);
+      if (ticketFooterMessage !== store.ticketFooterMessage) {
+        await settingsService.updateOperationSettings(tenantId, userId, {
+          maxDiscountPct: store.maxDiscountPct,
+          defaultMinStock: store.defaultMinStock,
+          defaultCreditLimit: store.defaultCreditLimit,
+          mandatoryCustomerId: store.mandatoryCustomerId,
+          lowStockThreshold: store.lowStockThreshold,
+          ticketFooterMessage,
+        });
+      }
       addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });
     } else {
       setLocalError(result.error.message);
@@ -195,6 +212,16 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
             hint="Ej: 0412-1234567"
           />
         </div>
+
+        <Textarea
+          label="Mensaje pie de ticket"
+          value={ticketFooterMessage}
+          onChange={(e) => setTicketFooterMessage(e.target.value)}
+          validation={{ maxLength: 25 }}
+          hint="Texto que aparece al final del ticket de venta (máx. 25 caracteres)."
+          autoResize
+          maxRows={3}
+        />
 
         <Textarea
           label="Dirección"
