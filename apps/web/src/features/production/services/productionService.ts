@@ -202,6 +202,8 @@ export const productionService = {
           if (!resolvedProductId) {
             createdProductId = generateId();
             const isIngredient = input.newProductIsIngredient ?? false;
+            const productUnit = (input.yieldUnit || 'unidad') as 'kg' | 'gr' | 'lt' | 'm' | 'unidad';
+            const isWeighted = productUnit === 'kg' || productUnit === 'lt' || productUnit === 'm';
             newProductRecord = {
               id: createdProductId,
               tenantId,
@@ -209,11 +211,11 @@ export const productionService = {
               sku: input.newProductSku!,
               priceUsd: isIngredient ? 0 : input.newProductPriceUsd!,
               categoryId: input.newProductCategoryId,
-              isWeighted: false,
+              isWeighted,
               isTaxable: input.newProductIsTaxable ?? false,
               isSellable: !isIngredient,
               isIngredient,
-              unit: 'unidad',
+              unit: productUnit,
               stock: 0,
               costPrice: 0,
               productType: 'producto_terminado',
