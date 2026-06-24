@@ -848,14 +848,23 @@ export const productionService = {
           await syncQueue.enqueue('inventory_lots', 'CREATE', finishedLotId, toSnake(finishedLot as unknown as Record<string, unknown>), tenantId);
 
           // e. Update finished product stock + WAC
+          // Nota: costPrice se almacena en $/display-unit (ej: $/kg para pesables).
+          // El stock en storage units (g) necesita dividir costPrice entre 1000 para
+          // obtener $/g. newWac se calcula en $/g y luego se multiplica ×1000 para
+          // almacenar en formato $/display-unit (consistente con stockService.adjustStock).
           const prevStock = finishedProduct.stock ?? 0;
-          const prevCostPrice = finishedProduct.costPrice ?? 0;
+          const prevCostPriceStorage = finishedProduct.isWeighted
+            ? (finishedProduct.costPrice ?? 0) / 1000
+            : (finishedProduct.costPrice ?? 0);
           const newStock = prevStock + quantityTargetInStorage;
-          const previousValue = prevStock * prevCostPrice;
           const newValue = quantityTargetInStorage * costPerStorageUnit;
-          const newWac = newStock > 0
+          const previousValue = prevStock * prevCostPriceStorage;
+          const newWacStorage = newStock > 0
             ? preciseRound((previousValue + newValue) / newStock, 4)
             : 0;
+          const newWac = finishedProduct.isWeighted
+            ? preciseRound(newWacStorage * 1000, 4)
+            : newWacStorage;
           await db.products.update(recipe.productId, { stock: newStock, costPrice: newWac });
           await syncQueue.enqueue('products', 'UPDATE', recipe.productId, toSnake({ ...finishedProduct, stock: newStock, costPrice: newWac } as unknown as Record<string, unknown>), tenantId);
 
