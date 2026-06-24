@@ -613,7 +613,7 @@ export function useRecipeForm() {
       newProductName: form.newProductName.trim(),
       newProductSku: form.newProductSku.trim(),
       newProductIsIngredient: form.newProductIsIngredient,
-      newProductPriceUsd: form.newProductIsIngredient ? 0 : form.newProductPriceUsd,
+      newProductPriceUsd: form.newProductIsIngredient ? undefined : form.newProductPriceUsd,
       newProductCategoryId: form.newProductCategoryId || undefined,
       newProductIsTaxable: form.newProductIsTaxable,
     };

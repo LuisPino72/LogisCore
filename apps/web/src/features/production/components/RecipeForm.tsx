@@ -534,7 +534,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   }}
                   className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                 />
-                <span className="text-sm text-gray-700">Producto intermedio (no se vende en POS)</span>
+                <span className="text-sm text-gray-700">¿ Es ingrediente ? (no se vende en POS)</span>
               </label>
 
               <Input

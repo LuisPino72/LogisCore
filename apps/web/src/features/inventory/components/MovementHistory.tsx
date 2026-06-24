@@ -2,9 +2,9 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { History, Package, ArrowDownLeft, ArrowUpRight, Minus } from 'lucide-react';
 import { Card, SearchInput, Pagination } from '../../../common/components';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
+import { useMovementHistory } from '../hooks/useMovementHistory';
 import type { Product } from '../types';
 import { displayStock } from '../types';
-import { inventoryService } from '../services/inventoryService';
 import type { InventoryMovement } from '../../../specs/inventory';
 
 interface MovementHistoryProps {
@@ -78,17 +78,10 @@ function formatDate(dateStr: string): { date: string; time: string } {
 const MOVEMENTS_PAGE_SIZE = 20;
 
 export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [movements, setMovements] = useState<InventoryMovement[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const { selectedProductId, movements, page, setPage, loading, handleProductChange, clearSelection } = useMovementHistory({ tenantId });
   const [productSearch, setProductSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setPage(1);
-  }, [movements.length]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -104,16 +97,10 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
 
   const productMap = useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
 
-  const handleProductChange = async (productId: string) => {
-    setSelectedProductId(productId);
-    setPage(1);
+  const handleSelectProduct = async (productId: string) => {
+    await handleProductChange(productId);
     setShowDropdown(false);
     setProductSearch('');
-    if (!productId) { setMovements([]); return; }
-    setLoading(true);
-    const result = await inventoryService.getMovementHistory(productId, tenantId);
-    if (result.ok) setMovements(result.data);
-    setLoading(false);
   };
 
   const totalPages = Math.max(1, Math.ceil(movements.length / MOVEMENTS_PAGE_SIZE));
@@ -213,22 +200,19 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
             : productSearch}
           onChange={(e) => {
             if (selectedProductId) {
-              setSelectedProductId('');
-              setMovements([]);
+              clearSelection();
             }
             setProductSearch(e.target.value);
             setShowDropdown(true);
           }}
           onClear={() => {
-            setSelectedProductId('');
-            setMovements([]);
+            clearSelection();
             setProductSearch('');
             setShowDropdown(false);
           }}
           onFocus={() => {
             if (selectedProductId) {
-              setSelectedProductId('');
-              setMovements([]);
+              clearSelection();
               setProductSearch('');
             }
             setShowDropdown(true);
@@ -237,7 +221,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
         {selectedProductId && (
           <button
             type="button"
-            onClick={() => { setSelectedProductId(''); setMovements([]); setProductSearch(''); }}
+            onClick={() => { clearSelection(); setProductSearch(''); }}
             className="text-xs text-primary font-medium hover:underline min-h-11 py-2 px-3"
           >
             Limpiar selección
@@ -254,7 +238,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
-                onClick={() => handleProductChange(p.id)}
+                onClick={() => handleSelectProduct(p.id)}
               >
                 <span className="font-medium">{p.name}</span>
               </button>

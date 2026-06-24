@@ -88,7 +88,7 @@ export const productionService = {
       if (!input.newProductSku) {
         return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_SKU_REQUIRED, 'SKU del producto requerido.'));
       }
-      if (!input.newProductIsIngredient && input.newProductPriceUsd == null) {
+      if (!input.newProductIsIngredient && (input.newProductPriceUsd == null || input.newProductPriceUsd <= 0)) {
         return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_PRICE_REQUIRED, 'Precio del producto requerido.'));
       }
       // Validar SKU único por tenant (UNIQUE INDEX products(tenant_id, sku) en BD)

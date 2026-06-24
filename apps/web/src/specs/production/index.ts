@@ -75,7 +75,7 @@ export const CreateRecipeInputSchema = z.object({
   newProductSku: z.string().min(1, 'SKU del producto requerido').max(18).optional(),
   /** Si es ingrediente intermedio, no se vende en POS ni requiere precio */
   newProductIsIngredient: z.boolean().optional(),
-  newProductPriceUsd: z.number().positive('El precio debe ser mayor a 0').optional(),
+  newProductPriceUsd: z.number().positive('El precio de venta debe ser mayor a 0').optional(),
   newProductCategoryId: z.string().uuid().optional(),
   newProductIsTaxable: z.boolean().optional(),
   mode: RecipeModeSchema,
