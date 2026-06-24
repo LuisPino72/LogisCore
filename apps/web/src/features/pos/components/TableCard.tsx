@@ -17,14 +17,14 @@ export const TableCard = memo(function TableCard({ number, isOccupied, totalUsd,
     <button
       onClick={onClick}
       onContextMenu={(e) => { e.preventDefault(); onDelete?.(); }}
-      className={`relative flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 min-h-[88px] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+      className={`relative flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 min-h-[88px] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger/50 ${
         isOccupied
-          ? 'border-primary/40 bg-primary/4 hover:bg-primary/8 hover:shadow-md hover:scale-[1.02] cursor-pointer shadow-xs'
+          ? 'border-danger/60 bg-danger/5 hover:bg-danger/10 hover:shadow-md hover:scale-[1.02] cursor-pointer shadow-xs'
           : 'border-emerald-200/60 bg-white hover:bg-emerald-50/50 hover:border-emerald-300/80 hover:shadow-sm cursor-pointer border-dashed'
       }`}
       aria-label={isOccupied ? `Mesa ${number} ocupada` : `Mesa ${number} libre`}
     >
-      <span className={`text-lg font-bold ${isOccupied ? 'text-primary' : 'text-emerald-600'}`}>
+      <span className={`text-lg font-bold ${isOccupied ? 'text-danger' : 'text-emerald-600'}`}>
         {number}
       </span>
       {isOccupied ? (
