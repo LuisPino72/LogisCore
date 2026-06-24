@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
@@ -96,6 +96,18 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
   const [showRegisterSelection, setShowRegisterSelection] = useState(false);
+  const [externalSaleId, setExternalSaleId] = useState<string | null>(null);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { entityId?: string; entityType?: string } | null;
+    if (state?.entityId && state?.entityType?.startsWith('sale_')) {
+      switchToHistory();
+      setExternalSaleId(state.entityId);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, switchToHistory]);
 
   // Global Barcode Listener State
   const SCAN_TIMEOUT_MS = 120;
@@ -683,6 +695,8 @@ export function PosPage({ tenantId }: PosPageProps) {
               onVoid={(saleId) => setVoidConfirmId(saleId)}
               loading={salesHistoryLoading}
               canVoid={role === 'owner' || role === 'admin'}
+              initialSaleId={externalSaleId}
+              onClearExternalSale={() => setExternalSaleId(null)}
             />
           </div>
         )}

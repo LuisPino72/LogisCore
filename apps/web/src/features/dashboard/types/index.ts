@@ -37,6 +37,7 @@ export interface ActivityEntry {
   timestamp: string;
   icon: string;
   route?: string;
+  entityId?: string;
 }
 
 export interface DashboardState {

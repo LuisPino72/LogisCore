@@ -136,13 +136,13 @@ export const gastosService = {
       await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
         await db.expenses.add(expense);
         await syncQueue.enqueue('expenses', 'CREATE', expense.id, toSnake(expense as unknown as Record<string, unknown>), tenantId);
-        await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category });
+        await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category, amountUsd: expense.amountUsd });
       });
       // AUDIT-CRUD-006: audit post-tx (outbox único emisor per Regla #17)
       await logAuditEventOnly({
         eventName: 'EXPENSES.CREATED',
         module: 'gastos',
-        payload: { expenseId: expense.id, category: expense.category },
+        payload: { expenseId: expense.id, category: expense.category, amountUsd: expense.amountUsd },
         context: { userId, tenantId },
       });
       return success(mapExpense(expense));

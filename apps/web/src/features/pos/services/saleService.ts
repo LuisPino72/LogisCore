@@ -544,7 +544,7 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
     await logAuditEventOnly({
       eventName: 'SALE.COMPLETED',
       module: MODULE_NAME,
-      payload: { saleId, tenantSlug: tenantId, totalBs, paymentMethod, itemsCount: items.length },
+      payload: { saleId, tenantSlug: tenantId, totalBs, totalUsd, paymentMethod, itemsCount: items.length },
       context: { userId, tenantId, tenantUuid },
     });
 

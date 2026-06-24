@@ -13,6 +13,7 @@ const EVENT_MAP: Record<string, { type: ActivityEntry['type']; icon: string; get
   'EXPENSES.CANCELLED': { type: 'expense_created', icon: 'Receipt', getMessage: (p) => `Gasto ${p.category ?? ''} cancelado`, route: '/gastos' },
   'PURCHASE.RECEIVED': { type: 'purchase_received', icon: 'Package', getMessage: (p) => `Orden #${String(p.orderId ?? '').slice(0, 8)} recibida`, route: '/purchases' },
   'PURCHASE.SUPPLIER_PAID': { type: 'supplier_paid', icon: 'DollarSign', getMessage: (p) => `Pago a ${p.supplierName ?? 'proveedor'} $${Number(p.amount ?? 0).toFixed(2)}`, route: '/purchases' },
+  'SUPPLIER.PAYMENT_CREATED': { type: 'supplier_paid', icon: 'DollarSign', getMessage: (p) => `Pago a proveedor $${Number(p.amountUsd ?? 0).toFixed(2)}`, route: '/purchases' },
   'CUSTOMER.CREATED': { type: 'debt_collected', icon: 'UserPlus', getMessage: (p) => `Cliente ${p.customerName ?? ''} registrado`, route: '/customers' },
 };
 
@@ -21,6 +22,14 @@ interface AuditTrailRow {
   event_name: string;
   payload: Record<string, unknown>;
   created_at: string;
+}
+
+function getEntityId(eventName: string, payload: Record<string, unknown>): string | undefined {
+  if (eventName.startsWith('SALE.')) return String(payload.saleId ?? '');
+  if (eventName.startsWith('EXPENSES.')) return String(payload.expenseId ?? '');
+  if (eventName.startsWith('PURCHASE.') || eventName === 'SUPPLIER.PAYMENT_CREATED') return String(payload.purchaseOrderId ?? payload.orderId ?? '');
+  if (eventName.startsWith('CUSTOMER.')) return String(payload.customerId ?? '');
+  return undefined;
 }
 
 function mapAuditEvent(row: AuditTrailRow): ActivityEntry | null {
@@ -34,6 +43,7 @@ function mapAuditEvent(row: AuditTrailRow): ActivityEntry | null {
     timestamp: row.created_at,
     icon: config.icon,
     route: config.route,
+    entityId: getEntityId(row.event_name, payload),
   };
 }
 
