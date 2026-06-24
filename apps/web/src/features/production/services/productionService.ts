@@ -158,6 +158,7 @@ export const productionService = {
     // DINERO-011 (M1): validar ciclos en backend (defensa en profundidad: UI ya valida con useRecipeForm)
     if (resolvedProductId) {
       const cycleCheck = await validateCycles(
+        tenantId,
         resolvedProductId,
         input.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
       );
@@ -351,6 +352,7 @@ export const productionService = {
     // DINERO-011 (M1): validar ciclos en updateRecipe
     if (input.lines) {
       const cycleCheck = await validateCycles(
+        tenantId,
         existing.productId,
         input.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
       );
@@ -566,6 +568,7 @@ export const productionService = {
   // ===== PRODUCTION ORDERS (BATCH) =====
 
   async checkIngredientsAvailability(
+    tenantId: string,
     recipeId: string,
     batchCount: number,
   ): Promise<Result<IngredientAvailability[], AppError>> {
@@ -587,8 +590,7 @@ export const productionService = {
       for (const line of expandedLines) {
         // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
         // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
-        const session = useAuthStore.getState().session;
-        const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
+        const product = await db.products.where({ id: line.productId, tenantId }).first();
         const neededInStorage = product
           ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
           : line.quantity * wasteMultiplier;

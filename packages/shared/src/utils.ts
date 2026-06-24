@@ -3,7 +3,7 @@ import { MONEY_DECIMALS } from './constants';
 /** Redondea a precisión monetaria (2 decimales). */
 export function preciseRound(value: number, decimals: number = MONEY_DECIMALS): number {
   const factor = Math.pow(10, decimals);
-  return Math.round(value * factor) / factor;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 /** Formatea un número como moneda Bs. */

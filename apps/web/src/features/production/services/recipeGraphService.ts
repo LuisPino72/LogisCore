@@ -92,6 +92,7 @@ export async function expandRecipe(
 }
 
 export async function validateCycles(
+  tenantId: string,
   productId: string,
   lines: Array<{ productId: string; quantity: number; unit: string }>,
 ): Promise<Result<true, AppError>> {
@@ -112,7 +113,7 @@ export async function validateCycles(
       }
 
       const subRecipe = await db.recipes
-        .where({ productId: line.productId })
+        .where({ productId: line.productId, tenantId })
         .filter((r) => !r.deletedAt && r.isActive)
         .first();
 

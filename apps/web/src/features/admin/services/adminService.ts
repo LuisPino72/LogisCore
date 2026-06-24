@@ -14,6 +14,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import type { DexieRegisterConfig, DexieCashRegister } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -1131,6 +1132,11 @@ export const adminService = {
     const networkResult = await requireNetwork();
     if (!networkResult.ok) return networkResult;
 
+    const _fcSession = useAuthStore.getState().session;
+    if (!_fcSession || !hasActionPermission(_fcSession, 'pos', 'manager_close')) {
+      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    }
+
     const db = getDb();
     const session = await db.cashRegisters.get(sessionId);
     if (!session) return failure(new AppError('SESSION_NOT_FOUND', 'Sesión no encontrada'));
@@ -1147,7 +1153,7 @@ export const adminService = {
       isOpen: false,
     };
     await db.cashRegisters.update(sessionId, updated);
-    await syncQueue.enqueue('cashRegisters', 'UPDATE', sessionId, updated as Record<string, unknown>, session.tenantId);
+    await syncQueue.enqueue('cash_registers', 'UPDATE', sessionId, updated as Record<string, unknown>, session.tenantId);
     const updatedSession = await db.cashRegisters.get(sessionId);
     return success(updatedSession!);
   },
@@ -1193,8 +1199,9 @@ export const adminService = {
     if (!config) return success(undefined);
     const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
     if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
-    await db.registerConfigs.delete(id);
-    await syncQueue.enqueue('registers_config', 'DELETE', id, { id, deleted_at: new Date().toISOString() }, config.tenantId);
+    const now = new Date().toISOString();
+    await db.registerConfigs.update(id, { deletedAt: now });
+    await syncQueue.enqueue('registers_config', 'UPDATE', id, { id, deleted_at: now }, config.tenantId);
     return success(undefined);
   },
 

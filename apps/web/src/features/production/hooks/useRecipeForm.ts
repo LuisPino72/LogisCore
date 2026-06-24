@@ -215,7 +215,9 @@ export function useRecipeForm() {
     // Solo si hay un productId real (no sentinel)
     const realProductId = isNewProduct ? '' : form.productId;
     if (realProductId && form.lines.length > 0) {
+      const session = useAuthStore.getState().session;
       const cycleCheck = await validateCycles(
+        session?.tenantId || '',
         realProductId,
         form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
       );
@@ -256,7 +258,9 @@ export function useRecipeForm() {
 
         const realProductId = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '' ? '' : form.productId;
         if (realProductId && form.lines.length > 0) {
+          const _sess = useAuthStore.getState().session;
           const cycleCheck = await validateCycles(
+            _sess?.tenantId || '',
             realProductId,
             form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
           );
@@ -364,7 +368,9 @@ export function useRecipeForm() {
 
         const realProductId = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '' ? '' : form.productId;
         if (realProductId && form.lines.length > 0) {
+          const _sess = useAuthStore.getState().session;
           const cycleCheck = await validateCycles(
+            _sess?.tenantId || '',
             realProductId,
             form.lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
           );

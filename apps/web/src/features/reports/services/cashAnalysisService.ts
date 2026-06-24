@@ -139,16 +139,6 @@ export async function getCashAnalysis(tenantId: string, filters: ReportFilters):
     const userNameMap = new Map<string, string>();
     if (userIds.length > 0) {
       try {
-        const { data: userRoles } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('tenant_id', tenantUuid)
-          .is('deleted_at', null);
-        if (userRoles) {
-          for (const ur of userRoles) {
-            userNameMap.set(ur.user_id, ur.user_id);
-          }
-        }
         const tokenResult = await supabase.auth.getSession();
         if (tokenResult.data.session?.access_token) {
           const resp = await fetch(
@@ -160,6 +150,21 @@ export async function getCashAnalysis(tenantId: string, filters: ReportFilters):
             for (const u of allUsers) {
               if (userIds.includes(u.userId)) {
                 userNameMap.set(u.userId, u.name || u.email || u.userId);
+              }
+            }
+          }
+        }
+        // Fallback: map remaining userIds from user_roles table
+        if (userIds.some((uid) => !userNameMap.has(uid))) {
+          const { data: userRoles } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('tenant_id', tenantUuid)
+            .is('deleted_at', null);
+          if (userRoles) {
+            for (const ur of userRoles) {
+              if (!userNameMap.has(ur.user_id)) {
+                userNameMap.set(ur.user_id, ur.user_id);
               }
             }
           }

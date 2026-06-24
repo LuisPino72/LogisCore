@@ -171,6 +171,7 @@ export interface DexieRegisterConfig {
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
+  deletedAt?: string;
 }
 
 export interface DexieTenantSettings {

@@ -306,7 +306,7 @@ describe('PRODUCTION-001-RECURSIVIDAD: Sub-recetas', () => {
 
     const { validateCycles } = await import('../services/productionService');
 
-    const result = await validateCycles('p-a', [{ productId: 'p-a', quantity: 1, unit: 'unidad' }]);
+    const result = await validateCycles('test-tenant', 'p-a', [{ productId: 'p-a', quantity: 1, unit: 'unidad' }]);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -438,7 +438,7 @@ describe('PRODUCTION-001-RECURSIVIDAD: Sub-recetas', () => {
 
     const { validateCycles } = await import('../services/productionService');
 
-    const result = await validateCycles('p-combo', [{ productId: 'p-masa', quantity: 1, unit: 'unidad' }]);
+    const result = await validateCycles('test-tenant', 'p-combo', [{ productId: 'p-masa', quantity: 1, unit: 'unidad' }]);
 
     expect(result.ok).toBe(true);
   });

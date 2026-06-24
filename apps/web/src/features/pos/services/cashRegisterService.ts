@@ -136,10 +136,11 @@ export async function getOpenCashRegister(tenantId: string): Promise<Result<Cash
   try {
     const db = getDb();
 
-    let row = await db.cashRegisters
+    const matching = await db.cashRegisters
       .where({ tenantId })
       .filter((r) => !r.deletedAt && r.isOpen)
-      .first();
+      .sortBy('openedAt');
+    let row = matching.length > 0 ? matching[matching.length - 1] : null;
 
     if (!row) {
       if (!navigator.onLine) return success(null);
@@ -298,7 +299,12 @@ export async function openCashRegister(input: OpenCashRegisterInput): Promise<Re
   }
 
   let resolvedRegisterId = registerId;
-  if (!resolvedRegisterId) {
+  if (resolvedRegisterId) {
+    const configExists = await db.registerConfigs.get(resolvedRegisterId);
+    if (!configExists) {
+      return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'La caja seleccionada no existe.'));
+    }
+  } else {
     const configs = await db.registerConfigs
       .where({ tenantId })
       .filter((c) => c.isActive)

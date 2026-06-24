@@ -64,7 +64,7 @@ import { ProductionErrors } from '../../specs/production/errors';
 
 describe('DINERO-011 (M1): validateCycles detecta ciclos A→B→A', () => {
   it('Given: producto A con sub-receta B (BFS debe alcanzar A). When: validateCycles. Then: failure(RECIPE_CYCLE_DETECTED)', async () => {
-    const result = await validateCycles('prod-A', [
+    const result = await validateCycles('test-tenant', 'prod-A', [
       { productId: 'prod-B', quantity: 1, unit: 'unidad' },
     ]);
     expect(result.ok).toBe(false);

@@ -36,7 +36,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
     setIsChecking(true);
     try {
       const [availability, cost] = await Promise.all([
-        checkIngredientsAvailability(recipe.id, count),
+        checkIngredientsAvailability(tenantId!, recipe.id, count),
         calculateRecipeCost(recipe.id, count),
       ]);
       setIngredientAvailability(availability);

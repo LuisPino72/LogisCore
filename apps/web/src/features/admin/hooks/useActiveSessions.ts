@@ -20,8 +20,8 @@ export function useActiveSessions(tenantId: string | null) {
     try {
       const db = getDb();
       const activeSessions = await db.cashRegisters
-        .where({ isOpen: true })
-        .filter((s) => s.tenantId === tenantId)
+        .where({ tenantId, isOpen: true })
+        .filter((s) => !s.deletedAt)
         .toArray();
 
       const registerIds = activeSessions.map((s) => s.registerId).filter(Boolean) as string[];

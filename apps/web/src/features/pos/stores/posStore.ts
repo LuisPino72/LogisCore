@@ -123,7 +123,7 @@ export const usePosStore = create<PosStore>()(
     }),
     {
       name: 'logiscore-pos-cart',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         cart: state.cart,
         activeParkedCartId: state.activeParkedCartId,
