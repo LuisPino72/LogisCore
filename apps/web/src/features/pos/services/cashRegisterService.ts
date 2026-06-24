@@ -157,13 +157,20 @@ export async function getOpenCashRegister(tenantId: string): Promise<Result<Cash
       if (data) {
         const result = cashRegisterFromSupabase(data, tenantId);
         if (result.ok) {
-          row = result.data as unknown as DexieCashRegister;
-          const pendingCount = await db.syncQueue
-            .where('recordId').equals(row!.id)
-            .filter((i) => i.status === 'pending' || i.status === 'failed')
-            .count();
-          if (pendingCount === 0 && row) {
-            await db.cashRegisters.put(row);
+          const freshRow = result.data as unknown as DexieCashRegister;
+          // Re-check Dexie to avoid race with another tab/instance
+          const alreadyStored = freshRow && await db.cashRegisters.get(freshRow.id);
+          if (alreadyStored) {
+            row = alreadyStored;
+          } else {
+            const pendingCount = await db.syncQueue
+              .where('recordId').equals(freshRow!.id)
+              .filter((i) => i.status === 'pending' || i.status === 'failed')
+              .count();
+            if (pendingCount === 0 && freshRow) {
+              await db.cashRegisters.put(freshRow);
+              row = freshRow;
+            }
           }
         }
       }
@@ -328,7 +335,11 @@ export async function openCashRegister(input: OpenCashRegisterInput): Promise<Re
       if (openedDate && isSameDayVzla(openedDate, new Date())) {
         return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, `La caja ya está abierta por ${operatorLabel}.`));
       }
-      await autoCloseRegister(db, existing, tenantId, userId);
+      try {
+        await autoCloseRegister(db, existing, tenantId, userId);
+      } catch {
+        return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Error al cerrar sesión anterior. Intenta de nuevo.'));
+      }
     }
   } else {
     const existing = await db.cashRegisters
@@ -341,7 +352,11 @@ export async function openCashRegister(input: OpenCashRegisterInput): Promise<Re
       if (openedDate && isSameDayVzla(openedDate, new Date())) {
         return failure(new AppError(PosErrors.BOX_ALREADY_OPEN, 'Ya existe una caja abierta para hoy.'));
       }
-      await autoCloseRegister(db, existing, tenantId, userId);
+      try {
+        await autoCloseRegister(db, existing, tenantId, userId);
+      } catch {
+        return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Error al cerrar sesión anterior. Intenta de nuevo.'));
+      }
     }
   }
 
@@ -540,16 +555,22 @@ export async function closeCashRegister(input: CloseCashRegisterInput): Promise<
   const now = new Date().toISOString();
   const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
-  const expectedClosingBs = preciseRound(
-    (cashReg.openingBalanceBs ?? 0) + cashReg.totalSalesBs + (cashReg.collectedDebtBs ?? 0),
-    2,
-  );
-
-  const rawDiff = preciseRound(declaredClosingBalanceBs - expectedClosingBs, 2);
-  const differenceBs = Math.abs(rawDiff) <= MAX_CENTS_DIFFERENCE ? 0 : rawDiff;
+  let expectedClosingBs = 0;
+  let differenceBs = 0;
 
   try {
     await db.transaction('rw', [db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
+      const freshReg = await db.cashRegisters.get(cashReg.id);
+      if (!freshReg || !freshReg.isOpen) throw new Error('Cash register not found or already closed');
+
+      expectedClosingBs = preciseRound(
+        (freshReg.openingBalanceBs ?? 0) + freshReg.totalSalesBs + (freshReg.collectedDebtBs ?? 0),
+        2,
+      );
+
+      const rawDiff = preciseRound(declaredClosingBalanceBs - expectedClosingBs, 2);
+      differenceBs = Math.abs(rawDiff) <= MAX_CENTS_DIFFERENCE ? 0 : rawDiff;
+
       await db.cashRegisters.update(cashReg.id, {
         isOpen: false,
         closedBy: userId,
@@ -560,9 +581,6 @@ export async function closeCashRegister(input: CloseCashRegisterInput): Promise<
         differenceBs,
         updatedAt: now,
       });
-
-      const freshReg = await db.cashRegisters.get(cashReg.id);
-      if (!freshReg) throw new Error('Cash register not found after update');
 
       const closePayload: Record<string, unknown> = {
         id: freshReg.id,

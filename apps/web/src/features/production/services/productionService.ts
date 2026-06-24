@@ -1070,7 +1070,7 @@ export const productionService = {
 
         // C4: Revert finished product lot — buscar por FK productionOrderId en vez de ventana temporal
         const prodMovement = await db.inventoryMovements
-          .where({ productionOrderId: orderId })
+          .where({ productionOrderId: orderId, tenantId })
           .filter((m) => m.type === 'production_output')
           .first();
         let lotToRevert: DexieInventoryLot | undefined;
@@ -1347,7 +1347,7 @@ export const productionService = {
       // Fetch inventory movements for this order to get real FIFO costs
       // We need the raw movements with costUsd field
       let movements = await db.inventoryMovements
-        .where({ productionOrderId: orderId })
+        .where({ productionOrderId: orderId, tenantId })
         .toArray();
 
       // Fallback: if no movements with FK, use temporal window (legacy orders)
@@ -1490,7 +1490,7 @@ export const productionService = {
       // con fallback a ventana temporal de 60s para órdenes legacy (pre-FUGA-3)
       // MED-4: la FK es más precisa que la ventana temporal que entremezclaba órdenes cercanas
       let movements = await db.inventoryMovements
-        .where({ productionOrderId: orderId })
+        .where({ productionOrderId: orderId, tenantId })
         .toArray();
 
       // Fallback: si no hay movimientos con FK, usar ventana temporal (órdenes legacy)
