@@ -15,7 +15,6 @@
  */
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
-import { TenantTranslator } from '../../../services/tenantTranslator';
 import { getDb, type DexieInventoryLot } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { emitWithAudit, emitWithPersistence } from '../../../services/audit/emitWithAudit';
@@ -373,7 +372,7 @@ export const productionService = {
     };
 
     try {
-      const ev = emitWithPersistence('PRODUCTION.UPDATED', PRODUCTION_MODULE, { recipeId: id, changes: Object.keys(input) }, { userId: undefined, tenantId });
+      const ev = emitWithPersistence('PRODUCTION.UPDATED', PRODUCTION_MODULE, { recipeId: id, changes: Object.keys(input) }, { userId: session?.userId, tenantId });
       await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
         await db.recipes.put(updated);
         await syncQueue.enqueue('recipes', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
@@ -873,7 +872,7 @@ export const productionService = {
           const newValue = quantityTargetInStorage * costPerStorageUnit;
           const previousValue = prevStock * prevCostPriceStorage;
           const newWacStorage = newStock > 0
-            ? preciseRound((previousValue + newValue) / newStock, 4)
+            ? preciseRound((previousValue + newValue) / newStock, 6)
             : 0;
           const newWac = finishedProduct.isWeighted
             ? preciseRound(newWacStorage * 1000, 4)
@@ -937,19 +936,21 @@ export const productionService = {
     if (!order) {
       return failure(new AppError(ProductionErrors.ORDER_NOT_FOUND, 'Orden de producción no encontrada.'));
     }
-    if (order.status !== 'confirmed') {
-      return failure(new AppError(ProductionErrors.ORDER_INVALID_STATUS, 'Solo se pueden cancelar órdenes confirmadas.'));
-    }
-
     const now = new Date().toISOString();
 
     try {
-      const ev = emitWithPersistence('PRODUCTION.ORDER_CANCELLED', PRODUCTION_MODULE, { orderId }, { userId: undefined, tenantId });
+      const ev = emitWithPersistence('PRODUCTION.ORDER_CANCELLED', PRODUCTION_MODULE, { orderId }, { userId: session?.userId, tenantId });
       await db.transaction('rw', [
         db.productionOrders, db.products, db.inventoryMovements,
         db.inventoryLots, db.recipes, db.recipeLines,
         db.syncQueue, db.outbox,
       ], async (tx) => {
+        // C4: Verificar status dentro de la transacción
+        const currentOrder = await db.productionOrders.get(orderId);
+        if (!currentOrder || currentOrder.status !== 'confirmed') {
+          throw new AppError(ProductionErrors.ORDER_INVALID_STATUS, 'La orden ya no está en estado confirmado.');
+        }
+
         // FUGA-3: Revert ingredient con productionOrderId
         const ingredientMovements = await db.inventoryMovements
           .filter((m) => m.productionOrderId === orderId && m.type === 'adjustment' && m.reasonType === 'consumo_interno')
@@ -1187,7 +1188,6 @@ export const productionService = {
     }
     const db = getDb();
     const now = new Date().toISOString();
-    const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
     if (!Number.isFinite(quantity) || quantity <= 0) {
       return failure(new AppError(ProductionErrors.ASSEMBLY_INVALID_QUANTITY, 'La cantidad de ensamblaje debe ser mayor a cero.'));
@@ -1226,7 +1226,7 @@ export const productionService = {
 
         const calcResult = await calculateConsumptionCost(line.productId, needed, { allowOverride: options.allowOverride });
         if (!calcResult.ok) throw calcResult.error;
-        const { totalCost: lineTotalCost, consumedLots } = calcResult.data;
+        const { totalCost: lineTotalCost } = calcResult.data;
 
         const isInsufficient = ingredient.stock < needed;
         const previousStock = ingredient.stock;
@@ -1244,19 +1244,10 @@ export const productionService = {
         await db.products.update(line.productId, { stock: newStock });
         await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
-        for (const detail of consumedLots) {
-          const currentLot = await db.inventoryLots.get(detail.lotId);
-          if (!currentLot || currentLot.remainingQuantity <= 0) continue;
-          if ((currentLot.version ?? 0) !== (detail.version ?? 0)) {
-            throw new AppError('INVENTORY_LOT_FIFO_CONFLICT', 'Conflicto de inventario. Reintente la operación.');
-          }
-          const newRemaining = currentLot.remainingQuantity - detail.quantity;
-          const newVersion = (currentLot.version ?? 0) + 1;
-          assemblyConsumedLots.push({ lotId: detail.lotId, quantity: detail.quantity });
-          await db.inventoryLots.update(detail.lotId, { remainingQuantity: newRemaining, version: newVersion });
-          await syncQueue.enqueue('inventory_lots', 'UPDATE', detail.lotId, toSnake({
-            ...currentLot, remainingQuantity: newRemaining, version: newVersion,
-          } as unknown as Record<string, unknown>), tenantId);
+        const fifoResult = await consumeFifoInternal(line.productId, needed, tenantId);
+        if (!fifoResult.ok) throw fifoResult.error;
+        for (const cl of fifoResult.data) {
+          assemblyConsumedLots.push({ lotId: cl.lotId, quantity: cl.quantity });
         }
 
         totalIngredientCost += lineTotalCost;
@@ -1270,9 +1261,9 @@ export const productionService = {
           reasonType, costUsd: movementCostUsd, createdAt: now,
         });
         await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
-          id: movementId, tenant_id: tenantUuid, product_id: line.productId, user_id: userId,
-          type: 'adjustment', quantity: -needed, previous_stock: previousStock, new_stock: newStock,
-          reason_type: reasonType, cost_usd: movementCostUsd, created_at: now,
+          id: movementId, tenantId, productId: line.productId, userId,
+          type: 'adjustment', quantity: -needed, previousStock, newStock,
+          reasonType, costUsd: movementCostUsd, createdAt: now,
         } as unknown as Record<string, unknown>), tenantId);
       }
 

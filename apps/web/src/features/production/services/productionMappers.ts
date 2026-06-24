@@ -7,7 +7,7 @@ export function recipeQtyToStorage(qty: number, recipeUnit: string, productUnit:
   if (productUnit === 'lt' && recipeUnit === 'lt') return qty * 1000;
   if (productUnit === 'unidad' && recipeUnit === 'unidad') return qty;
   if (productUnit === 'gr' && recipeUnit === 'g') return qty;
-  if (productUnit === 'm' && recipeUnit === 'ml') return qty;
+  if (productUnit === 'gr' && recipeUnit === 'kg') return qty * 1000;
   return qty;
 }
 
@@ -18,7 +18,7 @@ export function recipeQtyToStorageBase(qty: number, recipeUnit: string, productU
   if (productUnit === 'lt' && recipeUnit === 'lt') return qty * 1000;
   if (productUnit === 'unidad' && recipeUnit === 'unidad') return qty;
   if (productUnit === 'gr' && recipeUnit === 'g') return qty;
-  if (productUnit === 'm' && recipeUnit === 'ml') return qty;
+  if (productUnit === 'gr' && recipeUnit === 'kg') return qty * 1000;
   return qty;
 }
 
