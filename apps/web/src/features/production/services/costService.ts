@@ -67,7 +67,7 @@ export async function computeRecipeCostAsync(
             quantity: l.quantity * line.quantity * wasteMultiplier,
             unit: l.unit,
           })),
-          subRecipe.wastePct || 0,
+          0, // sin merma adicional — la merma se aplica UNA vez al final (padre)
           subYield,
         );
         totalCost += subCost.totalCost;
