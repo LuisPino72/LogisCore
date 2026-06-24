@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ShoppingBag, AlertTriangle } from 'lucide-react';
 import { Badge, Modal, Button } from '../../../common/components';
 import { TableCard } from './TableCard';
@@ -16,6 +16,13 @@ interface TableGridProps {
 
 type ViewMode = 'list' | 'tables';
 
+const fmtTime = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+};
+
+const tables = Array.from({ length: TABLE_COUNT }, (_, i) => i + 1);
+
 export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('pos_view_mode') as ViewMode) || 'list';
@@ -26,24 +33,21 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
     localStorage.setItem('pos_view_mode', mode);
   };
 
-  const fmtTime = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const tableMap = new Map<number, ParkedCart>();
-  carts.forEach((cart) => {
-    const match = cart.name.match(/^Mesa (\d+)$/i);
-    if (match) {
-      const n = parseInt(match[1], 10);
-      if (n >= 1 && n <= TABLE_COUNT) {
-        tableMap.set(n, cart);
+  const tableMap = useMemo(() => {
+    const map = new Map<number, ParkedCart>();
+    carts.forEach((cart) => {
+      const match = cart.name.match(/^Mesa (\d+)$/i);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (n >= 1 && n <= TABLE_COUNT) {
+          map.set(n, cart);
+        }
       }
-    }
-  });
+    });
+    return map;
+  }, [carts]);
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; number: number } | null>(null);
-  const tables = Array.from({ length: TABLE_COUNT }, (_, i) => i + 1);
 
   return (
     <div className="px-3 pb-2">
@@ -58,7 +62,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
         <div className="flex bg-gray-100 p-0.5 rounded-xl">
           <button
             onClick={() => handleViewModeChange('list')}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+            className={`px-3 py-2.5 text-xs font-medium rounded-lg transition-all min-h-11 ${
               viewMode === 'list' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -66,7 +70,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
           </button>
           <button
             onClick={() => handleViewModeChange('tables')}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+            className={`px-3 py-2.5 text-xs font-medium rounded-lg transition-all min-h-11 ${
               viewMode === 'tables' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -78,7 +82,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
       {viewMode === 'list' ? (
         <ParkedCartsList carts={carts} onLoad={onLoad} onDelete={onDelete} />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 animate-card-in">
           {tables.map((n) => {
             const cart = tableMap.get(n);
             if (cart) {

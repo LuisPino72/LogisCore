@@ -1,5 +1,6 @@
 import { useState, type FC } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 import { Tabs, Skeleton, Alert, Button } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
@@ -23,6 +24,8 @@ const TABS = [
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
+
+const tabsData = TABS.map((t) => ({ key: t.key, label: t.label }));
 
 export const SettingsPage: FC<SettingsPageProps> = ({ tenantId }) => {
   const [activeTab, setActiveTab] = useState<TabKey>('fiscal');
@@ -70,11 +73,16 @@ export const SettingsPage: FC<SettingsPageProps> = ({ tenantId }) => {
   return (
     <div className="app-shell-content app-shell-content--with-bottom-nav">
       <div className="@container w-full max-w-4xl mx-auto p-4 md:p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Ajustes del Sistema</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+            <Settings size={20} className="text-primary" />
+          </div>
+          <h1 className="text-2xl font-title font-bold text-gray-900">Ajustes</h1>
+        </div>
 
         <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0 mb-6">
           <Tabs
-            tabs={TABS.map((t) => ({ key: t.key, label: t.label }))}
+            tabs={tabsData}
             activeKey={activeTab}
             onChange={(key) => setActiveTab(key as TabKey)}
           />

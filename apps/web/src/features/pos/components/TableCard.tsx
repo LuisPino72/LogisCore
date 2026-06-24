@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Clock, ShoppingBag } from 'lucide-react';
 import { formatUsd } from '@/lib/formatBs';
 
@@ -11,7 +12,7 @@ interface TableCardProps {
   onDelete?: () => void;
 }
 
-export function TableCard({ number, isOccupied, totalUsd, totalItems, time, onClick, onDelete }: TableCardProps) {
+export const TableCard = memo(function TableCard({ number, isOccupied, totalUsd, totalItems, time, onClick, onDelete }: TableCardProps) {
   return (
     <button
       onClick={onClick}
@@ -47,4 +48,4 @@ export function TableCard({ number, isOccupied, totalUsd, totalItems, time, onCl
       )}
     </button>
   );
-}
+});

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Lock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Lock, Check } from 'lucide-react';
 import { Card, Input, Button, Alert } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { settingsService } from '../services/settingsService';
@@ -17,6 +17,33 @@ const emptyForm: PasswordForm = {
   confirmPassword: '',
 };
 
+function PasswordStrengthIndicator({ password, confirmPassword }: { password: string; confirmPassword: string }) {
+  const checks = useMemo(() => [
+    { label: 'Al menos 8 caracteres', met: password.length >= 8 },
+    { label: 'Máximo 14 caracteres', met: password.length <= 14 && password.length > 0 },
+    { label: 'Una mayúscula', met: /[A-Z]/.test(password) },
+    { label: 'Una minúscula', met: /[a-z]/.test(password) },
+    { label: 'Un número', met: /\d/.test(password) },
+    { label: 'Un símbolo (!@#$%^&*)', met: /[!@#$%^&*]/.test(password) },
+    { label: 'Las contraseñas coinciden', met: password.length > 0 && password === confirmPassword },
+  ], [password, confirmPassword]);
+
+  if (!password && !confirmPassword) return null;
+
+  return (
+    <div className="space-y-1.5">
+      {checks.map((check) => (
+        <div key={check.label} className="flex items-center gap-2 text-xs">
+          <div className={`flex items-center justify-center w-4 h-4 rounded-full ${check.met ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+            <Check size={10} className={check.met ? 'text-emerald-600' : 'text-gray-400'} />
+          </div>
+          <span className={check.met ? 'text-emerald-700' : 'text-gray-500'}>{check.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SecurityTab() {
   const { addToast } = useToastStore();
   const userId = useAuthStore((s) => s.session?.userId);
@@ -25,7 +52,7 @@ export function SecurityTab() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const getFieldError = (): string | null => {
+  const getFieldError = useMemo(() => (): string | null => {
     if (form.newPassword.length < 8) return 'La nueva contraseña debe tener al menos 8 caracteres.';
     if (form.newPassword.length > 14) return 'La nueva contraseña no puede tener más de 14 caracteres.';
     if (!/[A-Z]/.test(form.newPassword)) return 'Debe contener al menos una mayúscula.';
@@ -34,7 +61,7 @@ export function SecurityTab() {
     if (!/[!@#$%^&*]/.test(form.newPassword)) return 'Debe contener al menos un símbolo (!@#$%^&*).';
     if (form.newPassword !== form.confirmPassword) return 'Las contraseñas no coinciden.';
     return null;
-  };
+  }, [form.newPassword, form.confirmPassword]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -114,6 +141,8 @@ export function SecurityTab() {
           autoComplete="new-password"
           hint="Repite la nueva contraseña para confirmar"
         />
+
+        <PasswordStrengthIndicator password={form.newPassword} confirmPassword={form.confirmPassword} />
 
         <Button
           variant="primary"

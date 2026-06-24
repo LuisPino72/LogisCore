@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FC } from 'react';
+import { useState, useEffect, useRef, useCallback, type FC } from 'react';
 import { Building2, Upload, X } from 'lucide-react';
 import { Card, Input, Button, Textarea, Alert, Skeleton } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -59,7 +59,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     setTicketFooterMessage(store.ticketFooterMessage);
   }, [store.ticketFooterMessage]);
 
-  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setLogoError(null);
@@ -75,9 +75,9 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     const reader = new FileReader();
     reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const handleRemoveLogo = async () => {
+  const handleRemoveLogo = useCallback(async () => {
     setLogoFile(null);
     setLogoPreview(null);
     setLogoError(null);
@@ -88,9 +88,9 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
         // Best effort — logo will be overwritten on next upload
       }
     }
-  };
+  }, [logoUrl, tenantId]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setLocalError(null);
     if (!tenantId || !userId) return;
 
@@ -149,7 +149,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     } else {
       setLocalError(result.error.message);
     }
-  };
+  }, [tenantId, userId, name, rif, address, phone, logoFile, logoUrl, ticketFooterMessage, store.ticketFooterMessage, store.maxDiscountPct, store.defaultMinStock, store.defaultCreditLimit, store.mandatoryCustomerId, store.lowStockThreshold, addToast]);
 
   if (loading) {
     return (
@@ -233,9 +233,10 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Logo del negocio</label>
+          <label htmlFor="logo-upload" className="block text-sm font-medium text-gray-700 mb-2">Logo del negocio</label>
           <input
             ref={fileInputRef}
+            id="logo-upload"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             className="hidden"
@@ -247,6 +248,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
               <Button
                 variant="ghost"
                 onClick={handleRemoveLogo}
+                aria-label="Eliminar logo del negocio"
                 className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center transition-all duration-200"
               >
                 <X size={16} />
@@ -258,6 +260,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
               <Button
                 variant="ghost"
                 onClick={handleRemoveLogo}
+                aria-label="Eliminar logo del negocio"
                 className="absolute -top-2 -right-2 p-0! min-w-[44px] min-h-[44px] w-[44px] h-[44px] rounded-full bg-danger text-white hover:bg-danger-dark flex items-center justify-center transition-all duration-200"
               >
                 <X size={16} />

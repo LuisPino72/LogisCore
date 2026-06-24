@@ -177,13 +177,13 @@ export function TeamTab({ tenantId }: TeamTabProps) {
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }}>
+                <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }} aria-label={`Editar rol de ${u.name || u.email}`}>
                   Editar rol
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setResetPasswordUser(u)}>
+                <Button variant="ghost" size="sm" onClick={() => setResetPasswordUser(u)} aria-label={`Restablecer contraseña de ${u.name || u.email}`}>
                   Restablecer contraseña
                 </Button>
-                <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeletingUser(u)}>
+                <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeletingUser(u)} aria-label={`Eliminar a ${u.name || u.email}`}>
                   Eliminar
                 </Button>
               </>
@@ -284,7 +284,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
                     <div className="font-medium text-sm">{role.name}</div>
                     {role.description && <div className="text-xs text-gray-500">{role.description}</div>}
                   </div>
-                  <Badge variant="neutral" className="text-xs">{(role as any).permissionCount ?? 0} permisos</Badge>
+                  <Badge variant="neutral" className="text-xs">{(role as Role & { permissionCount?: number }).permissionCount ?? 0} permisos</Badge>
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => { setEditingRole(role); setShowRoleModal(true); }}>

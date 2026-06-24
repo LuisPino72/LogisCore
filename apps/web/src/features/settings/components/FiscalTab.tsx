@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, useCallback, type FC } from 'react';
 import { Calculator } from 'lucide-react';
 import { Card, Input, Toggle, Button, Alert } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -28,7 +28,7 @@ export const FiscalTab: FC<FiscalTabProps> = ({ tenantId }) => {
     setIgtfEnabled(store.igtfEnabled);
   }, [store.ivaRate, store.igtfRate, store.igtfEnabled]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setLocalError(null);
 
     const ivaNum = parseFloat(ivaRate);
@@ -60,7 +60,7 @@ export const FiscalTab: FC<FiscalTabProps> = ({ tenantId }) => {
     } else {
       setLocalError(result.error.message);
     }
-  };
+  }, [ivaRate, igtfRate, igtfEnabled, tenantId, userId, addToast]);
 
   const isFiscalBlocked = localError === SettingsErrors.SETTINGS_FISCAL_BLOCKED;
 

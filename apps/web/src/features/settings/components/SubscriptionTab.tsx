@@ -108,6 +108,7 @@ export function SubscriptionTab({ tenantId }: SubscriptionTabProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium underline underline-offset-2 transition-colors duration-200"
+                aria-label="Contactar soporte técnico por WhatsApp"
               >
                 <ExternalLink size={16} />
                 Contactar a Soporte Técnico
