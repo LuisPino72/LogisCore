@@ -77,6 +77,8 @@ interface RecipeFormState {
   // PRODUCTION-003 [Paso-2]: campos para auto-creación de producto_terminado
   newProductName: string;
   newProductSku: string;
+  /** Si es ingrediente intermedio, no necesita precio de venta ni aparece en POS */
+  newProductIsIngredient: boolean;
   newProductPriceUsd: number;
   newProductCategoryId: string;
   newProductIsTaxable: boolean;
@@ -99,6 +101,7 @@ const INITIAL_STATE: RecipeFormState = {
   lines: [],
   newProductName: '',
   newProductSku: '',
+  newProductIsIngredient: false,
   newProductPriceUsd: 0,
   newProductCategoryId: '',
   newProductIsTaxable: false,
@@ -180,7 +183,7 @@ export function useRecipeForm() {
       if (form.newProductName.length > 25) newErrors.newProductName = 'Máximo 25 caracteres';
       if (!form.newProductSku.trim()) newErrors.newProductSku = 'SKU del producto requerido';
       if (form.newProductSku.length > 18) newErrors.newProductSku = 'Máximo 18 caracteres';
-      if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
+      if (!form.newProductIsIngredient && (!form.newProductPriceUsd || form.newProductPriceUsd <= 0)) {
         newErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
       }
     }
@@ -315,7 +318,7 @@ export function useRecipeForm() {
         if (form.newProductName.length > 25) stepErrors.newProductName = 'Máximo 25 caracteres';
         if (!form.newProductSku.trim()) stepErrors.newProductSku = 'SKU del producto requerido';
         if (form.newProductSku.length > 18) stepErrors.newProductSku = 'Máximo 18 caracteres';
-        if (!form.newProductPriceUsd || form.newProductPriceUsd <= 0) {
+        if (!form.newProductIsIngredient && (!form.newProductPriceUsd || form.newProductPriceUsd <= 0)) {
           stepErrors.newProductPriceUsd = 'Precio debe ser mayor a 0';
         }
 
@@ -609,7 +612,8 @@ export function useRecipeForm() {
       })),
       newProductName: form.newProductName.trim(),
       newProductSku: form.newProductSku.trim(),
-      newProductPriceUsd: form.newProductPriceUsd,
+      newProductIsIngredient: form.newProductIsIngredient,
+      newProductPriceUsd: form.newProductIsIngredient ? 0 : form.newProductPriceUsd,
       newProductCategoryId: form.newProductCategoryId || undefined,
       newProductIsTaxable: form.newProductIsTaxable,
     };

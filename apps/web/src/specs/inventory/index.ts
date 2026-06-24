@@ -24,6 +24,8 @@ export const ProductSchema = z.object({
   isWeighted: z.boolean(),
   isTaxable: z.boolean().default(true),
   isSellable: z.boolean().default(true),
+  /** Producto intermedio creado desde receta batch. No se vende en POS, no requiere precio de venta. */
+  isIngredient: z.boolean().optional(),
   unit: z.union([z.enum(PESABLE_UNITS), z.literal('unidad')]),
   /** Stock en unidades de almacenamiento (gramos para kg, mililitros para lt, unidades para unidad) */
   stock: z.number().int().min(0),

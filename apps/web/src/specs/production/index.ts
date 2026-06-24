@@ -73,6 +73,8 @@ export const CreateRecipeInputSchema = z.object({
   productId: z.string().uuid('Selecciona un producto terminado').optional(),
   newProductName: z.string().min(1, 'Nombre del producto requerido').max(25).optional(),
   newProductSku: z.string().min(1, 'SKU del producto requerido').max(18).optional(),
+  /** Si es ingrediente intermedio, no se vende en POS ni requiere precio */
+  newProductIsIngredient: z.boolean().optional(),
   newProductPriceUsd: z.number().positive('El precio debe ser mayor a 0').optional(),
   newProductCategoryId: z.string().uuid().optional(),
   newProductIsTaxable: z.boolean().optional(),
@@ -84,8 +86,13 @@ export const CreateRecipeInputSchema = z.object({
   notes: z.string().max(25).optional(),
   lines: z.array(CreateRecipeLineInputSchema).min(1, 'Debe agregar al menos un ingrediente'),
 }).refine(
-  (data) => data.productId || (data.newProductName && data.newProductSku && data.newProductPriceUsd != null),
-  { message: 'Debes seleccionar un producto existente o proporcionar nombre, SKU y precio del nuevo producto.', path: ['productId'] },
+  (data) => {
+    if (data.productId) return true;
+    if (!data.newProductName || !data.newProductSku) return false;
+    if (data.newProductIsIngredient) return true; // ingrediente intermedio no requiere precio
+    return data.newProductPriceUsd != null;
+  },
+  { message: 'Debes seleccionar un producto existente o proporcionar nombre y SKU.', path: ['productId'] },
 );
 
 export type CreateRecipeInput = z.infer<typeof CreateRecipeInputSchema>;

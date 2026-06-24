@@ -514,16 +514,34 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             <Card className="p-3 bg-linear-to-br from-teal-50 to-teal-100/80 border-teal-200 space-y-3">
               <div className="flex items-center gap-2 text-teal-700">
                 <Package size={16} />
-                <span className="text-sm font-semibold wrap-break-word">Nuevo producto terminado</span>
+                <span className="text-sm font-semibold wrap-break-word">
+                  {form.newProductIsIngredient ? 'Nuevo ingrediente intermedio' : 'Nuevo producto terminado'}
+                </span>
               </div>
               <p className="text-xs text-teal-600 wrap-break-word">
-                Se creará un nuevo producto que empezará sin stock. Al ejecutar la receta, se generarán lotes con su costo.
+                {form.newProductIsIngredient
+                  ? 'Se usará como ingrediente en otras recetas. No aparecerá en POS ni requiere precio de venta.'
+                  : 'Se creará un nuevo producto que empezará sin stock. Al ejecutar la receta, se generarán lotes con su costo.'}
               </p>
+
+              <label className="flex items-center gap-2 cursor-pointer py-1">
+                <input
+                  type="checkbox"
+                  checked={form.newProductIsIngredient}
+                  onChange={(e) => {
+                    updateField('newProductIsIngredient', e.target.checked);
+                    if (e.target.checked) updateField('newProductPriceUsd', 0);
+                  }}
+                  className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span className="text-sm text-gray-700">Producto intermedio (no se vende en POS)</span>
+              </label>
+
               <Input
                 label="Nombre del producto"
                 value={form.newProductName}
                 onChange={(e) => updateField('newProductName', e.target.value)}
-                placeholder="Ej: Pan de jamón"
+                placeholder="Ej: Masa de empanada"
                 error={errors.newProductName}
                 validation={{ required: true, maxLength: 25 }}
                 autoComplete="off"
@@ -533,23 +551,25 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   label="SKU"
                   value={form.newProductSku}
                   onChange={(e) => updateField('newProductSku', e.target.value.toUpperCase())}
-                  placeholder="Ej: PAN-001"
+                  placeholder="Ej: MASA-001"
                   error={errors.newProductSku}
                   validation={{ required: true, maxLength: 18 }}
                   autoComplete="off"
                 />
-                <Input
-                  label="Precio de venta ($)"
-                  type="number"
-                  inputMode="decimal"
-                  value={form.newProductPriceUsd || ''}
-                  onChange={(e) => updateField('newProductPriceUsd', Number(e.target.value) || 0)}
-                  placeholder="0.00"
-                  min={0.01}
-                  step={0.01}
-                  error={errors.newProductPriceUsd}
-                  validation={{ required: true, min: 0.01 }}
-                />
+                {!form.newProductIsIngredient && (
+                  <Input
+                    label="Precio de venta ($)"
+                    type="number"
+                    inputMode="decimal"
+                    value={form.newProductPriceUsd || ''}
+                    onChange={(e) => updateField('newProductPriceUsd', Number(e.target.value) || 0)}
+                    placeholder="0.00"
+                    min={0.01}
+                    step={0.01}
+                    error={errors.newProductPriceUsd}
+                    validation={{ required: true, min: 0.01 }}
+                  />
+                )}
               </div>
               {categoryOptions.length > 0 && (
                 <div>

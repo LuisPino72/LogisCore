@@ -115,7 +115,7 @@ export async function getProductsForSale(tenantId: string): Promise<Result<Produ
           rows = await db.products
           .where({ tenantId })
           .filter((p) => {
-            if (p.deletedAt || p.isSellable === false) return false;
+        if (p.deletedAt || p.isSellable === false || p.isIngredient) return false;
             if (p.stock > 0) return true;
             if (assemblyProductIds.has(p.id)) return true;
             return allRecipes.some(r => r.productId === p.id && !r.deletedAt && r.isActive);

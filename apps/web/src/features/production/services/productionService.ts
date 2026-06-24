@@ -88,7 +88,7 @@ export const productionService = {
       if (!input.newProductSku) {
         return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_SKU_REQUIRED, 'SKU del producto requerido.'));
       }
-      if (input.newProductPriceUsd == null) {
+      if (!input.newProductIsIngredient && input.newProductPriceUsd == null) {
         return failure(new AppError(ProductionErrors.RECIPE_PRODUCT_PRICE_REQUIRED, 'Precio del producto requerido.'));
       }
       // Validar SKU único por tenant (UNIQUE INDEX products(tenant_id, sku) en BD)
@@ -201,16 +201,18 @@ export const productionService = {
           // 1. Auto-crear producto_terminado si no se proporcionó productId
           if (!resolvedProductId) {
             createdProductId = generateId();
+            const isIngredient = input.newProductIsIngredient ?? false;
             newProductRecord = {
               id: createdProductId,
               tenantId,
               name: input.newProductName!,
               sku: input.newProductSku!,
-              priceUsd: input.newProductPriceUsd!,
+              priceUsd: isIngredient ? 0 : input.newProductPriceUsd!,
               categoryId: input.newProductCategoryId,
               isWeighted: false,
               isTaxable: input.newProductIsTaxable ?? false,
-              isSellable: true,
+              isSellable: !isIngredient,
+              isIngredient,
               unit: 'unidad',
               stock: 0,
               costPrice: 0,
