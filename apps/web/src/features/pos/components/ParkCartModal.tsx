@@ -7,17 +7,18 @@ interface ParkCartModalProps {
   onConfirm: (name: string) => void;
   loading: boolean;
   defaultTableNumber?: number;
+  existingNames?: string[];
 }
 
-export function ParkCartModal({ isOpen, onClose, onConfirm, loading, defaultTableNumber }: ParkCartModalProps) {
+export function ParkCartModal({ isOpen, onClose, onConfirm, loading, defaultTableNumber, existingNames }: ParkCartModalProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen && defaultTableNumber) {
+    if (isOpen && defaultTableNumber != null) {
       setName(`Mesa ${defaultTableNumber}`);
       setError('');
-    } else if (isOpen && !defaultTableNumber) {
+    } else if (isOpen && defaultTableNumber == null) {
       setName('');
     }
   }, [isOpen, defaultTableNumber]);
@@ -26,6 +27,14 @@ export function ParkCartModal({ isOpen, onClose, onConfirm, loading, defaultTabl
     const trimmed = name.trim();
     if (!trimmed) {
       setError('Ingrese un nombre o descripción.');
+      return;
+    }
+    if (trimmed.length > 15) {
+      setError('Máximo 15 caracteres.');
+      return;
+    }
+    if (existingNames?.some((n) => n.toLowerCase() === trimmed.toLowerCase())) {
+      setError('Ya existe una venta con ese nombre.');
       return;
     }
     setError('');

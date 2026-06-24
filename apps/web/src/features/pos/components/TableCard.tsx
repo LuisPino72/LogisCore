@@ -5,6 +5,7 @@ import { formatUsd } from '@/lib/formatBs';
 interface TableCardProps {
   number: number;
   isOccupied: boolean;
+  isSelected?: boolean;
   totalUsd?: number;
   totalItems?: number;
   time?: string;
@@ -12,19 +13,22 @@ interface TableCardProps {
   onDelete?: () => void;
 }
 
-export const TableCard = memo(function TableCard({ number, isOccupied, totalUsd, totalItems, time, onClick, onDelete }: TableCardProps) {
+export const TableCard = memo(function TableCard({ number, isOccupied, isSelected, totalUsd, totalItems, time, onClick, onDelete }: TableCardProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
       onContextMenu={(e) => { e.preventDefault(); onDelete?.(); }}
       className={`relative flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 min-h-[88px] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger/50 ${
-        isOccupied
-          ? 'border-danger/60 bg-danger/5 hover:bg-danger/10 hover:shadow-md hover:scale-[1.02] cursor-pointer shadow-xs'
-          : 'border-emerald-200/60 bg-white hover:bg-emerald-50/50 hover:border-emerald-300/80 hover:shadow-sm cursor-pointer border-dashed'
+        isSelected
+          ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+          : isOccupied
+            ? 'border-danger/60 bg-danger/5 hover:bg-danger/10 hover:shadow-md hover:scale-[1.02] cursor-pointer shadow-xs'
+            : 'border-emerald-200/60 bg-white hover:bg-emerald-50/50 hover:border-emerald-300/80 hover:shadow-sm cursor-pointer border-dashed'
       }`}
-      aria-label={isOccupied ? `Mesa ${number} ocupada` : `Mesa ${number} libre`}
+      aria-label={isOccupied ? `Mesa ${number} ocupada` : isSelected ? `Mesa ${number} seleccionada` : `Mesa ${number} libre`}
     >
-      <span className={`text-lg font-bold ${isOccupied ? 'text-danger' : 'text-emerald-600'}`}>
+      <span className={`text-lg font-bold ${isSelected ? 'text-primary' : isOccupied ? 'text-danger' : 'text-emerald-600'}`}>
         {number}
       </span>
       {isOccupied ? (
@@ -52,7 +56,9 @@ export const TableCard = memo(function TableCard({ number, isOccupied, totalUsd,
           </div>
         </>
       ) : (
-        <span className="text-[11px] text-emerald-500 font-medium">Libre</span>
+        <span className={`text-[11px] font-medium ${isSelected ? 'text-primary' : 'text-emerald-500'}`}>
+          {isSelected ? 'Seleccionada' : 'Libre'}
+        </span>
       )}
     </button>
   );

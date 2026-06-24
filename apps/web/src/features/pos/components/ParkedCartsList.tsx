@@ -3,7 +3,7 @@ import { Button, Badge, Modal } from '../../../common/components';
 import { ShoppingBag, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import type { ParkedCart } from '../types';
 import { formatUsd, formatTime } from '@/lib/formatBs';
-import { TABLE_COUNT } from './TableGrid';
+import { TABLE_COUNT } from '../constants';
 
 interface ParkedCartsListProps {
   carts: ParkedCart[];
@@ -23,7 +23,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
         <h4 className="text-sm font-semibold text-gray-700">Ventas en cola</h4>
         <Badge variant="info">{carts.length}/{TABLE_COUNT}</Badge>
       </div>
-      <div className="flex flex-col gap-2 max-h-48 md:max-h-48 overflow-y-auto" style={{ scrollSnapType: 'y proximity' }}>
+      <div className="flex flex-col gap-2 max-h-48 md:max-h-48 overflow-y-auto snap-y snap-proximity">
         {carts.map((cart) => {
           const totalItems = cart.cart.reduce((sum, item) => sum + item.quantity, 0);
           const totalUsd = cart.cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);

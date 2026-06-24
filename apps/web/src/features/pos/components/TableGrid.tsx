@@ -5,21 +5,21 @@ import { TableCard } from './TableCard';
 import { ParkedCartsList } from './ParkedCartsList';
 import type { ParkedCart } from '../types';
 import { formatTime } from '@/lib/formatBs';
-
-export const TABLE_COUNT = 10;
+import { TABLE_COUNT } from '../constants';
 
 interface TableGridProps {
   carts: ParkedCart[];
   onLoad: (cart: ParkedCart) => void;
   onDelete: (id: string) => void;
   onParkTable: (tableNumber: number) => void;
+  selectedTableNumber?: number | null;
 }
 
 type ViewMode = 'list' | 'tables';
 
 const tables = Array.from({ length: TABLE_COUNT }, (_, i) => i + 1);
 
-export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridProps) {
+export function TableGrid({ carts, onLoad, onDelete, onParkTable, selectedTableNumber }: TableGridProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('pos_view_mode') as ViewMode) || 'list';
   });
@@ -32,7 +32,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
   const tableMap = useMemo(() => {
     const map = new Map<number, ParkedCart>();
     carts.forEach((cart) => {
-      const match = cart.name.match(/^Mesa (\d+)$/i);
+      const match = cart.name.match(/Mesa\s*(\d+)/i);
       if (match) {
         const n = parseInt(match[1], 10);
         if (n >= 1 && n <= TABLE_COUNT) {
@@ -81,6 +81,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 animate-card-in">
           {tables.map((n) => {
             const cart = tableMap.get(n);
+            const isSelected = selectedTableNumber === n;
             if (cart) {
               const totalUsd = cart.cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
               const totalItems = cart.cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -89,6 +90,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
                   key={n}
                   number={n}
                   isOccupied
+                  isSelected={isSelected}
                   totalUsd={totalUsd}
                   totalItems={totalItems}
                   time={formatTime(cart.createdAt)}
@@ -98,7 +100,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
               );
             }
             return (
-              <TableCard key={n} number={n} isOccupied={false} onClick={() => onParkTable(n)} />
+              <TableCard key={n} number={n} isOccupied={false} isSelected={isSelected} onClick={() => onParkTable(n)} />
             );
           })}
         </div>

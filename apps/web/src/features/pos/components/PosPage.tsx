@@ -499,6 +499,10 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleParkConfirm = useCallback(
     async (name: string) => {
       if (!tenantId) return;
+      if (cart.length === 0) {
+        addToast({ type: 'warning', message: 'Agrega productos al carrito antes de poner en cola.', duration: 4000 });
+        return;
+      }
       setProcessing(true);
       const ok = await parkCart(tenantId, name);
       setProcessing(false);
@@ -509,7 +513,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         setParkTableNumber(null);
       }
     },
-    [tenantId, parkCart, closeParkModal, closeMobileCart],
+    [tenantId, cart.length, parkCart, closeParkModal, closeMobileCart, addToast],
   );
 
   const handleLoadParked = useCallback(
@@ -643,6 +647,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               onLoad={handleLoadParked}
               onDelete={(id) => { if (tenantId) deleteParkedCart(tenantId, id); }}
               onParkTable={handleParkTable}
+              selectedTableNumber={parkTableNumber}
             />
             <div className="flex-1 overflow-hidden relative">
               {(!isOpen || isFromPreviousDay) && (
@@ -820,6 +825,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         onConfirm={handleParkConfirm}
         loading={processing}
         defaultTableNumber={parkTableNumber ?? undefined}
+        existingNames={parkedCarts.map((c) => c.name)}
       />
 
       <Modal
