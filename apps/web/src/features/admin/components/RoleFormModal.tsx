@@ -153,15 +153,14 @@ export function RoleFormModal({ role, onClose }: Props) {
             placeholder="Breve descripción del rol"
             maxLength={200}
           />
-          <Select
-            label="Nivel de acceso en base de datos"
-            value={rlsTier}
-            onChange={(e) => setRlsTier(e.target.value)}
-          >
-            <option value="employee">Empleado — solo lectura de su tenant</option>
-            <option value="owner">Dueño — acceso completo a su tenant</option>
-            <option value="admin">Admin — acceso global (solo para super-admins)</option>
-          </Select>
+           <Select
+             label="Nivel de acceso en base de datos"
+             value={rlsTier}
+             onChange={(e) => setRlsTier(e.target.value)}
+           >
+             <option value="employee">Empleado — solo lectura de su tenant</option>
+             <option value="owner">Dueño — acceso completo a su tenant</option>
+           </Select>
         </div>
 
         <div>

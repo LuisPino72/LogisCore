@@ -969,6 +969,10 @@ export const adminService = {
       return failure(new AppError('ROLE_NAME_RESERVED', `El nombre "${name}" es un rol reservado del sistema y no puede ser creado.`));
     }
 
+    if (rlsTier === 'admin') {
+      return failure(new AppError('ROLE_TIER_RESERVED', 'El nivel de acceso "admin" es reservado y no puede ser asignado a roles personalizados.'));
+    }
+
     const { data: role, error: roleError } = await supabase
       .from('roles')
       .insert({ name, description: description ?? null, rls_tier: rlsTier, is_system: false })
@@ -1030,6 +1034,10 @@ export const adminService = {
     const RESERVED_NAMES = ['admin', 'owner', 'employee'];
     if (parsed.data.name && RESERVED_NAMES.includes(parsed.data.name.toLowerCase())) {
       return failure(new AppError('ROLE_NAME_RESERVED', `El nombre "${parsed.data.name}" es un rol reservado del sistema.`));
+    }
+
+    if (parsed.data.rlsTier === 'admin') {
+      return failure(new AppError('ROLE_TIER_RESERVED', 'El nivel de acceso "admin" es reservado y no puede ser asignado.'));
     }
 
     const updateData: Record<string, unknown> = {};
