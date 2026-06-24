@@ -4,7 +4,8 @@ import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
 import { getDb, isDbReady } from '../../../services/dexie/db';
 import type { DexieTenantSettings } from '../../../services/dexie/db';
-import { outboxService } from '../../../services/outbox/outboxService';
+import { syncQueue } from '../../../services/sync/syncQueue';
+import { toSnake } from '@logiscore/shared';
 import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
@@ -179,15 +180,8 @@ export const settingsService = {
       const db = getDb();
       const row = await buildSettingsRow(tenantId, parsed.data);
 
-      await db.transaction('rw', [db.tenantSettings, db.outbox], async (tx) => {
-        await db.tenantSettings.put(row);
-        await outboxService.enqueue('SETTINGS.FISCAL.UPDATED', MODULE_NAME, {
-          tenantId,
-          ivaRate: parsed.data.ivaRate,
-          igtfRate: parsed.data.igtfRate,
-          igtfEnabled: parsed.data.igtfEnabled,
-        }, tx);
-      });
+      await db.tenantSettings.put(row);
+      await syncQueue.enqueue('tenant_settings', 'UPDATE', tenantId, toSnake(row as unknown as Record<string, unknown>), tenantId);
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
@@ -197,6 +191,7 @@ export const settingsService = {
         context: { userId, tenantId, tenantUuid: tenantUuid ?? undefined },
       });
 
+      useSettingsStore.getState().setLastUpdatedAt(Date.now());
       return success(parsed.data);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en updateFiscalSettings:', err);
@@ -286,18 +281,8 @@ export const settingsService = {
       const db = getDb();
       const row = await buildSettingsRow(tenantId, undefined, parsed.data);
 
-      await db.transaction('rw', [db.tenantSettings, db.outbox], async (tx) => {
-        await db.tenantSettings.put(row);
-        await outboxService.enqueue('SETTINGS.OPERATIONS.UPDATED', MODULE_NAME, {
-          tenantId,
-          maxDiscountPct: parsed.data.maxDiscountPct,
-          defaultMinStock: parsed.data.defaultMinStock,
-          defaultCreditLimit: parsed.data.defaultCreditLimit,
-          mandatoryCustomerId: parsed.data.mandatoryCustomerId,
-          lowStockThreshold: parsed.data.lowStockThreshold,
-          ticketFooterMessage: parsed.data.ticketFooterMessage,
-        }, tx);
-      });
+      await db.tenantSettings.put(row);
+      await syncQueue.enqueue('tenant_settings', 'UPDATE', tenantId, toSnake(row as unknown as Record<string, unknown>), tenantId);
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
@@ -307,6 +292,7 @@ export const settingsService = {
         context: { userId, tenantId, tenantUuid: tenantUuid ?? undefined },
       });
 
+      useSettingsStore.getState().setLastUpdatedAt(Date.now());
       return success(parsed.data);
     } catch (err) {
       logger.error(MODULE_NAME, 'Error en updateOperationSettings:', err);
@@ -465,26 +451,12 @@ export const settingsService = {
             .eq('id', tenantId);
 
           if (updateError) {
-            logger.warn(MODULE_NAME, 'updateBusinessInfo: Supabase update failed, enqueuing outbox:', updateError);
-            if (isDbReady()) {
-              const db = getDb();
-              await db.transaction('rw', [db.outbox], async (tx) => {
-                await outboxService.enqueue('SETTINGS.BUSINESS.UPDATED', MODULE_NAME, {
-                  tenantId, ...parsed.data, ...payload,
-                }, tx);
-              });
-            }
+            logger.warn(MODULE_NAME, 'updateBusinessInfo: Supabase update failed, enqueuing sync:', updateError);
+            await syncQueue.enqueue('tenants', 'UPDATE', tenantId, payload, tenantId);
           }
         } else {
-          // Offline: enqueue outbox for later sync
-          if (isDbReady()) {
-            const db = getDb();
-            await db.transaction('rw', [db.outbox], async (tx) => {
-              await outboxService.enqueue('SETTINGS.BUSINESS.UPDATED', MODULE_NAME, {
-                tenantId, ...parsed.data, ...payload,
-              }, tx);
-            });
-          }
+          // Offline: enqueue sync for later
+          await syncQueue.enqueue('tenants', 'UPDATE', tenantId, payload, tenantId);
         }
       }
 
@@ -581,7 +553,7 @@ export const settingsService = {
     const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
     const filePath = `logos/${tenantUuid}.${ext}`;
     const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-    const storageUrl = `${SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
+    const storageUrl = `${SUPABASE_URL}/storage/v1/object/logos/${filePath}`;
 
     try {
       const buffer = await file.arrayBuffer();
@@ -606,7 +578,7 @@ export const settingsService = {
       return failure(new AppError('LOGO_UPLOAD_FAILED', 'Error de red al subir el logo.'));
     }
 
-    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/Products/${filePath}`;
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/logos/${filePath}`;
 
     const { error: updateError } = await supabase
       .from('tenants')
@@ -638,7 +610,7 @@ export const settingsService = {
     if (!filePath) return failure(new AppError('LOGO_DELETE_FAILED', 'URL del logo inválida.'));
 
     const { error } = await supabase.storage
-      .from('Products')
+      .from('logos')
       .remove([filePath]);
 
     if (error) return failure(new AppError('LOGO_DELETE_FAILED', error.message));

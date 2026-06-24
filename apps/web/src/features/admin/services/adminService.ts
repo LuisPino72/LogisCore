@@ -1116,6 +1116,21 @@ export const adminService = {
       return failure(new AppError(RoleErrors.ROLE_IS_SYSTEM, 'No se puede eliminar un rol del sistema'));
     }
 
+    // Verificar que no haya usuarios con este rol
+    const { data: usersWithRole, error: usersError } = await supabase
+      .from('user_roles')
+      .select('id', { count: 'exact', head: true })
+      .eq('role_id', id)
+      .limit(1);
+
+    if (usersError) {
+      return failure(new AppError('ROLE_CHECK_FAILED', 'Error al verificar usuarios del rol'));
+    }
+
+    if (usersWithRole && usersWithRole.length > 0) {
+      return failure(new AppError(RoleErrors.ROLE_HAS_USERS, ROLE_ERROR_MESSAGES[RoleErrors.ROLE_HAS_USERS]));
+    }
+
     const { error } = await supabase
       .from('roles')
       .update({ deleted_at: new Date().toISOString() })
