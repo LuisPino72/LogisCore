@@ -28,6 +28,8 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   const [confirmStep, setConfirmStep] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
   const [excessiveStockWarning, setExcessiveStockWarning] = useState<string | null>(null);
+  const [showOverrideConfirm, setShowOverrideConfirm] = useState(false);
+  const [missingIngredients, setMissingIngredients] = useState<{ name: string; needed: number; available: number; unit: string }[]>([]);
 
   const fetchAvailability = useCallback(async (count: number) => {
     if (!recipe || count <= 0) return;
@@ -78,11 +80,22 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
   const allIngredientsAvailable = ingredientAvailability.length > 0 && ingredientAvailability.every((i) => i.sufficient);
 
   const handleConfirm = () => {
-    if (!allIngredientsAvailable) return;
-    setConfirmStep(true);
+    if (allIngredientsAvailable) {
+      setConfirmStep(true);
+    } else {
+      // Show override confirmation with missing ingredients list
+      const missing = ingredientAvailability.filter(i => !i.sufficient).map(i => ({
+        name: i.productName,
+        needed: i.needed,
+        available: i.available,
+        unit: i.unit,
+      }));
+      setMissingIngredients(missing);
+      setShowOverrideConfirm(true);
+    }
   };
 
-  const handleProduce = async () => {
+  const handleProduce = async (override = false) => {
     if (!tenantId || !userId) return;
     setIsProducing(true);
     setError(null);
@@ -90,7 +103,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
     const result = await createOrder(tenantId, userId, {
       recipeId: recipe.id,
       batchCount,
-    });
+    }, { allowOverride: override });
 
     if (result) {
       addToast({
@@ -134,9 +147,9 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
             <Button
               variant="primary"
               onClick={handleConfirm}
-              disabled={isProducing || isChecking || !allIngredientsAvailable}
+              disabled={isProducing || isChecking}
               className="flex items-center gap-2"
-              title={!allIngredientsAvailable && !isChecking && ingredientAvailability.length > 0 ? 'No hay stock suficiente de los ingredientes' : undefined}
+              title={!allIngredientsAvailable && !isChecking && ingredientAvailability.length > 0 ? 'Algunos ingredientes tienen stock bajo. Toca para ver opciones.' : undefined}
             >
               {isProducing ? <Spinner size="sm" /> : <Utensils size={16} />}
               Producir
@@ -268,6 +281,58 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
           </Alert>
         )}
           </>
+        )}
+        
+        {/* Override Confirmation Modal */}
+        {showOverrideConfirm && missingIngredients.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-fade-in">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={24} className="text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Stock insuficiente</h3>
+                  <p className="text-sm text-gray-500">Algunos ingredientes no tienen stock suficiente.</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                {missingIngredients.map((item, i) => (
+                  <div key={i} className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="font-medium text-amber-800">{item.name}</p>
+                    <p className="text-sm text-amber-600">
+                      Necesitas: {item.needed} {item.unit} · Disponible: {item.available} {item.unit}
+                      {item.available > 0 && (
+                        <span className="ml-2 text-[10px] font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                          Se consumirá lo disponible
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                El costo se calculará solo sobre lo realmente consumido. ¿Deseas producir de todas formas?
+              </p>
+              
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" onClick={() => setShowOverrideConfirm(false)} disabled={isProducing}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => { setShowOverrideConfirm(false); handleProduce(true); }}
+                  disabled={isProducing}
+                  className="flex items-center gap-2"
+                >
+                  {isProducing ? <Spinner size="sm" /> : <Utensils size={16} />}
+                  Producir de todas formas
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </Modal>

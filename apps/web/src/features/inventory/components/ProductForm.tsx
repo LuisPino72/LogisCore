@@ -143,6 +143,12 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   }, [isEditing, presentations, creationType]);
 
   useEffect(() => {
+    if (creationType === 'variants' && presentations.length === 0) {
+      addPresentation();
+    }
+  }, [creationType]);
+
+  useEffect(() => {
     if (showImagePicker) {
       hasCamera().then(setCameraAvailable);
     }

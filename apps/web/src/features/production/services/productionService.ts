@@ -122,7 +122,7 @@ export const productionService = {
         .filter((r) => !r.deletedAt)
         .first();
       if (existingSameMode) {
-        const modeLabel = input.mode === 'batch' ? 'produccion por lotes' : 'ensamblaje';
+        const modeLabel = input.mode === 'batch' ? 'Producir y Guardar' : 'Preparar al Momento';
         return failure(new AppError(ProductionErrors.RECIPE_DUPLICATE_PRODUCT, `Este producto ya tiene una receta de ${modeLabel}.`));
       }
     }
@@ -620,6 +620,7 @@ export const productionService = {
     tenantId: string,
     userId: string,
     input: CreateProductionOrderInput,
+    options: { allowOverride?: boolean } = {},
   ): Promise<Result<ProductionOrder, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'production', 'produce_batch')) {
@@ -671,16 +672,24 @@ export const productionService = {
     const wasteMultiplier = 1 + (recipe.wastePct / 100);
     const quantityTarget = recipe.yieldQuantity * input.batchCount;
 
-    // 4. Check ingredient availability
+    // 4. Check ingredient availability (with override support)
+    const missingIngredients: { name: string; needed: number; available: number; unit: string }[] = [];
     for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
-      // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
       const product = await db.products.where({ id: line.productId, tenantId }).first();
       const neededInStorage = product
         ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
         : line.quantity * wasteMultiplier;
       const needed = Math.ceil(neededInStorage);
       if (!product || product.stock < needed) {
+        if (options.allowOverride) {
+          missingIngredients.push({
+            name: product?.name || 'Desconocido',
+            needed,
+            available: product?.stock || 0,
+            unit: product?.unit || '',
+          });
+          continue;
+        }
         const productName = product?.name || 'Desconocido';
         const available = product?.stock || 0;
         return failure(
@@ -692,18 +701,16 @@ export const productionService = {
       }
     }
 
-    // 5. Calculate cost of ingredients consumed
-    // PRODUCTION-003 [Paso-3]: Reemplazado cálculo manual con helper FIFO real.
+    // 5. Calculate cost of ingredients consumed (with override support)
     let totalIngredientCost = 0;
     for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Pasar cantidad en storage base units (g/ml) al helper FIFO.
-      // NOTA: product.stock SIEMPRE está en unidades base (gramos/ml), NO en kg/lt.
       const product = await db.products.where({ id: line.productId, tenantId }).first();
       const neededInStorage = product
         ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit)
         : line.quantity * wasteMultiplier;
       const needed = Math.ceil(neededInStorage);
-      const result = await calculateConsumptionCost(line.productId, needed);
+      const costOptions = { allowOverride: options.allowOverride };
+      const result = await calculateConsumptionCost(line.productId, needed, costOptions);
       if (!result.ok) return failure(result.error);
       totalIngredientCost += result.data.totalCost;
     }
@@ -718,22 +725,22 @@ export const productionService = {
     // 6. Atomic transaction
     // Re-validate stock right before transaction (concurrency guard)
     for (const line of expandedLines) {
-      // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
-      // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
       const freshProduct = await db.products.where({ id: line.productId, tenantId }).first();
       const neededInStorage = freshProduct
         ? recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, freshProduct.unit)
         : line.quantity * wasteMultiplier;
       const needed = Math.ceil(neededInStorage);
       if (!freshProduct || freshProduct.stock < needed) {
-        const productName = freshProduct?.name || 'Desconocido';
-        const available = freshProduct?.stock || 0;
-        return failure(
-          new AppError(
-            ProductionErrors.ORDER_INSUFFICIENT_STOCK,
-            `Stock insuficiente de "${productName}" (verificación final): necesitas ${needed}, tienes ${available}.`,
-          ),
-        );
+        if (!options.allowOverride) {
+          const productName = freshProduct?.name || 'Desconocido';
+          const available = freshProduct?.stock || 0;
+          return failure(
+            new AppError(
+              ProductionErrors.ORDER_INSUFFICIENT_STOCK,
+              `Stock insuficiente de "${productName}" (verificación final): necesitas ${needed}, tienes ${available}.`,
+            ),
+          );
+        }
       }
     }
 
@@ -777,19 +784,25 @@ export const productionService = {
           const product = await db.products.where({ id: line.productId, tenantId }).first();
           if (!product) throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado.');
 
-          // BUGFIX-MATHCEIL-001 [Paso-1]: Convertir a storage base units (g/ml) antes del Math.ceil.
-          // NOTA: product.stock siempre está en unidades base (gramos/ml), NO en kg/lt.
           const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
           const needed = Math.ceil(neededInStorage);
 
           const previousStock = product.stock;
-          const newStock = previousStock - needed;
+          let actualConsumed = needed;
+          let newStock: number;
+
+          if (options.allowOverride && previousStock < needed) {
+            actualConsumed = previousStock;
+            newStock = 0;
+          } else {
+            newStock = previousStock - needed;
+          }
 
           await db.products.update(line.productId, { stock: newStock });
           await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...product, stock: newStock } as unknown as Record<string, unknown>), tenantId);
 
-          // Consume FIFO lots
-          const fifoResult = await consumeFifoInternal(line.productId, needed, tenantId);
+          // Consume FIFO lots (with override support)
+          const fifoResult = await consumeFifoInternal(line.productId, actualConsumed, tenantId);
           if (!fifoResult.ok) throw fifoResult.error;
 
           // AUDIT-FLOW-11-011A: Calcular costUsd del movement desde FIFO consumido.
@@ -806,14 +819,14 @@ export const productionService = {
             productId: line.productId,
             userId,
             type: 'adjustment' as const,
-            quantity: -needed,
+            quantity: -actualConsumed,
             previousStock,
             newStock,
-            reasonType: 'consumo_interno',
+            reasonType: options.allowOverride && previousStock < needed ? 'ajuste_manual' : 'consumo_interno',
             costUsd,
             createdAt: now,
-            productionOrderId: orderId, // FUGA-3
-            consumedLots: JSON.stringify(fifoResult.data), // FUGA-3
+            productionOrderId: orderId,
+            consumedLots: JSON.stringify(fifoResult.data),
           };
           await db.inventoryMovements.add(movement);
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);

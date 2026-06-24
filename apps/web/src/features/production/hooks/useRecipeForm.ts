@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
-import { validateCycles, computeRecipeCostFromLines } from '../services/productionService';
+import { validateCycles } from '../services/productionService';
+import { computeRecipeCostAsync } from '../services/costService';
 import { getDb } from '@/services/dexie/db';
 import { useAuthStore } from '../../auth/stores/authStore';
 
@@ -94,7 +95,7 @@ const INITIAL_STATE: RecipeFormState = {
   name: '',
   productId: '',
   mode: 'batch',
-  yieldQuantity: 1,
+  yieldQuantity: 0,
   yieldUnit: 'unidad',
   wastePct: 0,
   notes: '',
@@ -112,7 +113,10 @@ export function useRecipeForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [ingredientAvailability, setIngredientAvailability] = useState<IngredientAvailability[]>([]);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [modeSelected, setModeSelected] = useState(false);
+  const [estimatedCost, setEstimatedCost] = useState<{ totalCost: number; costPerUnit: number }>({ totalCost: 0, costPerUnit: 0 });
+  const [isCalculatingCost, setIsCalculatingCost] = useState(false);
 
   const { products, categories, fetchCategories } = useInventoryStore();
 
@@ -123,7 +127,7 @@ export function useRecipeForm() {
     }
   }, [fetchCategories]);
 
-  const TOTAL_STEPS = 3;
+  const TOTAL_STEPS = 4;
 
   const updateField = useCallback(<K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => {
     setForm((prev) => {
@@ -146,7 +150,7 @@ export function useRecipeForm() {
   const addLine = useCallback(() => {
     setForm((prev) => ({
       ...prev,
-      lines: [...prev.lines, { productId: '', quantity: 1, unit: 'unidad' }],
+      lines: [...prev.lines, { productId: '', quantity: 0, unit: 'unidad' }],
     }));
   }, []);
 
@@ -449,19 +453,46 @@ export function useRecipeForm() {
     return Object.keys(stepErrors).length === 0;
   }, [form]);
 
+  const selectMode = useCallback((mode: 'batch' | 'assembly') => {
+    setForm(prev => ({
+      ...prev,
+      mode,
+      yieldQuantity: mode === 'assembly' ? 1 : prev.yieldQuantity,
+      yieldUnit: mode === 'assembly' ? 'unidad' : prev.yieldUnit,
+    }));
+    setModeSelected(true);
+    setCurrentStep(1);
+  }, []);
+
   const nextStep = useCallback(async (isEdit = false) => {
-    const maxSteps = isEdit ? 2 : TOTAL_STEPS;
-    if (currentStep < maxSteps) {
-      const valid = await validateStep(currentStep, isEdit);
-      if (valid) {
+    const maxSteps = isEdit ? 2 : 3;
+    if (isEdit) {
+      if (currentStep < maxSteps) {
+        const valid = await validateStep(currentStep, isEdit);
+        if (valid) {
+          setErrors({});
+          setCurrentStep((s) => s + 1);
+        }
+      }
+    } else {
+      if (currentStep === 0) {
         setErrors({});
-        setCurrentStep((s) => s + 1);
+        setCurrentStep(1);
+      } else if (currentStep < maxSteps) {
+        const valid = await validateStep(currentStep, isEdit);
+        if (valid) {
+          setErrors({});
+          setCurrentStep((s) => s + 1);
+        }
       }
     }
   }, [currentStep, validateStep]);
 
   const prevStep = useCallback(() => {
-    if (currentStep > 1) {
+    if (currentStep === 1) {
+      setErrors({});
+      setCurrentStep(0);
+    } else if (currentStep > 1) {
       setErrors({});
       setCurrentStep((s) => s - 1);
     }
@@ -502,7 +533,7 @@ export function useRecipeForm() {
 
     // Assembly mode: yield must be 1
     if (form.mode === 'assembly' && form.yieldQuantity !== 1) {
-      w.push({ field: 'yieldQuantity', message: 'En modo ensamblaje, la cantidad producida siempre es 1 unidad.', type: 'info' });
+      w.push({ field: 'yieldQuantity', message: 'En modo Preparar al Momento, la cantidad siempre es 1 unidad.', type: 'info' });
     }
 
     // PRODUCTION-003 [Paso-5] — Ingredient cost warnings (espejo del warning en calculateRecipeCost)
@@ -529,11 +560,27 @@ export function useRecipeForm() {
     return w;
   }, [form.productId, form.mode, form.yieldQuantity, form.lines, products, form.wastePct]);
 
-  const estimatedCost = useMemo(() => {
-    const yieldQty = form.mode === 'batch' ? form.yieldQuantity : 1;
-    const productMap = new Map(products.map(p => [p.id, { costPrice: p.costPrice ?? 0, isWeighted: p.isWeighted, unit: p.unit }]));
-    return computeRecipeCostFromLines(form.lines, productMap, form.wastePct, yieldQty);
-  }, [form.lines, form.wastePct, form.yieldQuantity, form.mode, products]);
+  useEffect(() => {
+    let cancelled = false;
+    const calc = async () => {
+      if (form.lines.length === 0) {
+        setEstimatedCost({ totalCost: 0, costPerUnit: 0 });
+        return;
+      }
+      setIsCalculatingCost(true);
+      try {
+        const yieldQty = form.mode === 'batch' ? form.yieldQuantity : 1;
+        const result = await computeRecipeCostAsync(form.lines, form.wastePct, yieldQty);
+        if (!cancelled) setEstimatedCost(result);
+      } catch {
+        if (!cancelled) setEstimatedCost({ totalCost: 0, costPerUnit: 0 });
+      } finally {
+        if (!cancelled) setIsCalculatingCost(false);
+      }
+    };
+    calc();
+    return () => { cancelled = true; };
+  }, [form.lines, form.wastePct, form.yieldQuantity, form.mode]);
 
   const getAvailableIngredients = useCallback(() => {
     return products.filter((p) =>
@@ -567,7 +614,8 @@ export function useRecipeForm() {
     setForm(INITIAL_STATE);
     setErrors({});
     setIngredientAvailability([]);
-    setCurrentStep(1);
+    setCurrentStep(0);
+    setModeSelected(false);
   }, []);
 
   const getUnitOptions = useCallback((productId: string) => {
@@ -632,10 +680,13 @@ export function useRecipeForm() {
     errors,
     warnings,
     estimatedCost,
+    isCalculatingCost,
     ingredientAvailability,
     isCheckingAvailability,
     currentStep,
     totalSteps: TOTAL_STEPS,
+    modeSelected,
+    selectMode,
     updateField,
     addLine,
     updateLine,
@@ -653,6 +704,7 @@ export function useRecipeForm() {
     getUnitOptions,
     setIngredientAvailability,
     setIsCheckingAvailability,
+    setCurrentStep,
     categories,
   };
 }

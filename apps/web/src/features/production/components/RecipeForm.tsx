@@ -69,10 +69,10 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const isEdit = !!recipe;
 
   const {
-    form, errors, warnings, estimatedCost,
-    currentStep, totalSteps,
+    form, errors, warnings, estimatedCost, isCalculatingCost,
+    currentStep, selectMode,
     updateField, addLine, updateLine, removeLine,
-    nextStep, prevStep,
+    nextStep, prevStep, setCurrentStep,
     toInput,
     getAvailableIngredients,
     getExpandPreview, categories,
@@ -84,7 +84,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const { addToast } = useToastStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(!!recipe);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const { ivaRate } = useSettingsStore();
 
   useEffect(() => {
@@ -234,7 +234,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <Lock size={12} />
                   <span className="wrap-break-word">
-                    Modo: <strong>{recipe.mode === 'batch' ? 'Lote' : 'Ensamblaje'}</strong>
+                    Modo: <strong>{recipe.mode === 'batch' ? 'Producir y Guardar' : 'Preparar al Momento'}</strong>
                     {recipe.mode === 'batch' && (
                       <> · Rendimiento: <strong>{recipe.yieldQuantity} {recipe.yieldUnit}</strong></>
                     )}
@@ -246,10 +246,6 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-gray-700">Ingredientes</h3>
-                  <Button variant="ghost" size="sm" onClick={addLine} className="flex items-center gap-1">
-                    <Plus size={14} />
-                    Agregar
-                  </Button>
                 </div>
 
                 {errors.lines && (
@@ -279,10 +275,10 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                           <Input
                             type="number"
                             inputMode="decimal"
-                            value={line.quantity}
+                            value={line.quantity || ''}
                             onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
                             step={0.01}
-                            placeholder="Cantidad"
+                            placeholder="0"
                             validation={{ required: true, min: 0.01, max: 99999 }}
                             error={errors[`line_${index}_quantity`]}
                           />
@@ -320,6 +316,11 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     Agrega al menos un ingrediente para continuar
                   </p>
                 )}
+
+                <Button variant="ghost" onClick={addLine} className="w-full flex items-center justify-center gap-1">
+                  <Plus size={14} />
+                  Agregar
+                </Button>
 
                 {form.lines.length > 0 && (
                   <div className="mt-3">
@@ -392,10 +393,11 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 label="Merma %"
                 type="number"
                 inputMode="decimal"
-                value={form.wastePct}
+                value={form.wastePct || ''}
                 onChange={(e) => updateField('wastePct', Number(e.target.value))}
                 min={0}
                 max={100}
+                placeholder="0"
                 error={errors.wastePct}
                 validation={{ min: 0, max: 100 }}
               />
@@ -425,13 +427,18 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                       <span className="font-medium text-warning">{form.wastePct}%</span>
                     </div>
                   )}
-                  {estimatedCost.totalCost > 0 && (
+                  {isCalculatingCost ? (
+                    <div className="flex justify-between">
+                      <span>Costo estimado:</span>
+                      <span className="font-medium text-gray-400">Calculando...</span>
+                    </div>
+                  ) : estimatedCost.totalCost > 0 && (
                     <div className="flex justify-between">
                       <span>Costo estimado:</span>
                       <span className="font-medium text-gray-800">{formatUsd(estimatedCost.totalCost)}</span>
                     </div>
                   )}
-                  {form.mode === 'batch' && estimatedCost.costPerUnit > 0 && (
+                  {!isCalculatingCost && form.mode === 'batch' && estimatedCost.costPerUnit > 0 && (
                     <div className="flex justify-between">
                       <span>Costo/unidad:</span>
                       <span className="font-semibold text-primary">{formatUsd(estimatedCost.costPerUnit)}</span>
@@ -447,11 +454,55 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   }
 
   // ═══════════════════════════════════════════════════════════
-  // CREATE MODE — Full wizard: 3 steps (info, ingredients, config)
+  // CREATE MODE — Full wizard: 4 steps (mode, info, ingredients, config)
   // ═══════════════════════════════════════════════════════════
+
+  // Paso 0: Selección de modo (solo CREATE)
+  if (!isEdit && currentStep === 0) {
+    return (
+      <Modal isOpen={true} onClose={onClose} title="Nueva Receta">
+        <div className="space-y-4 animate-fade-in">
+          <p className="text-sm text-gray-600 text-center">¿Qué quieres hacer?</p>
+
+          <button
+            onClick={() => selectMode('batch')}
+            className="w-full p-4 border-2 border-primary/20 rounded-xl text-left hover:border-primary hover:bg-primary/5 transition-all duration-200 min-h-[80px]"
+          >
+            <div className="flex items-center gap-3">
+              <Package size={24} className="text-primary" />
+              <div>
+                <p className="font-semibold text-gray-800">Producir y Guardar</p>
+                <p className="text-xs text-gray-500">Crear stock de un producto para tenerlo listo</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => selectMode('assembly')}
+            className="w-full p-4 border-2 border-success/20 rounded-xl text-left hover:border-success hover:bg-success/5 transition-all duration-200 min-h-[80px]"
+          >
+            <div className="flex items-center gap-3">
+              <ChefHat size={24} className="text-success" />
+              <div>
+                <p className="font-semibold text-gray-800">Preparar al Momento</p>
+                <p className="text-xs text-gray-500">Hacerlo cuando el cliente lo pida</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div className="flex justify-end mt-4">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+        </div>
+      </Modal>
+    );
+  }
+
   const categoryOptions = categories
     .filter((c) => !('deletedAt' in c) || !c.deletedAt)
     .map((c) => ({ value: c.id, label: c.name }));
+
+  const createTotalSteps = 3;
 
   return (
     <Modal
@@ -461,8 +512,8 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
       footer={
         <div className="flex gap-2 justify-between flex-wrap">
           <div>
-            {currentStep > 1 && (
-              <Button variant="ghost" onClick={prevStep} className="flex items-center gap-1">
+            {currentStep >= 1 && (
+              <Button variant="ghost" onClick={() => setCurrentStep(0)} className="flex items-center gap-1">
                 <ArrowLeft size={14} />
                 Atrás
               </Button>
@@ -472,7 +523,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             <Button variant="ghost" onClick={onClose}>
               Cancelar
             </Button>
-            {currentStep < totalSteps ? (
+            {currentStep < createTotalSteps ? (
               <Button variant="primary" onClick={handleNext} className="flex items-center gap-1">
                 Siguiente
                 <ArrowRight size={14} />
@@ -492,7 +543,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
         </div>
       }
     >
-      <ProgressBar currentStep={currentStep} totalSteps={totalSteps} isEdit={false} />
+      <ProgressBar currentStep={currentStep} totalSteps={createTotalSteps} isEdit={false} />
 
       <div className="space-y-4">
         {/* ═══════════════ PASO 1: Info Básica ═══════════════ */}
@@ -606,7 +657,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   onClick={() => updateField('mode', 'batch')}
                   className="flex-1"
                 >
-                  Lote
+                  Producir y Guardar
                 </Button>
                 <Button
                   variant={form.mode === 'assembly' ? 'primary' : 'ghost'}
@@ -614,12 +665,12 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   onClick={() => updateField('mode', 'assembly')}
                   className="flex-1"
                 >
-                  Ensamblaje
+                  Preparar al Momento
                 </Button>
               </div>
               {form.mode === 'assembly' && (
                 <p className="text-xs text-info mt-1 wrap-break-word">
-                  En modo ensamblaje, el producto se consume al vender. No se genera stock.
+                  En modo Preparar al Momento, el producto se consume al vender. No se genera stock.
                 </p>
               )}
             </div>
@@ -644,14 +695,10 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
         )}
 
         {/* ═══════════════ PASO 2: Ingredientes ═══════════════ */}
-        {currentStep === 2 && (
+          {currentStep === 2 && (
           <div className="space-y-3 animate-fade-in">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-700">Ingredientes</h3>
-              <Button variant="ghost" size="sm" onClick={addLine} className="flex items-center gap-1">
-                <Plus size={14} />
-                Agregar
-              </Button>
             </div>
 
             {errors.lines && (
@@ -681,11 +728,11 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                       <Input
                         type="number"
                         inputMode="decimal"
-                        value={line.quantity}
+                        value={line.quantity || ''}
                         onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
                         min={0.01}
                         step={0.01}
-                        placeholder="Cantidad"
+                        placeholder="0"
                         error={errors[`line_${index}_quantity`]}
                       />
                       <div>
@@ -722,6 +769,11 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 Agrega al menos un ingrediente para continuar
               </p>
             )}
+
+            <Button variant="ghost" onClick={addLine} className="w-full flex items-center justify-center gap-1">
+              <Plus size={14} />
+              Agregar
+            </Button>
 
             {form.lines.length > 0 && (
               <div className="mt-3">
@@ -794,10 +846,11 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 label="Merma %"
                 type="number"
                 inputMode="decimal"
-                value={form.wastePct}
+                value={form.wastePct || ''}
                 onChange={(e) => updateField('wastePct', Number(e.target.value))}
                 min={0}
                 max={100}
+                placeholder="0"
                 error={errors.wastePct}
                 validation={{ min: 0, max: 100 }}
               />
@@ -807,10 +860,11 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     label="Cantidad producida"
                     type="number"
                     inputMode="numeric"
-                    value={form.yieldQuantity}
+                    value={form.yieldQuantity || ''}
                     onChange={(e) => updateField('yieldQuantity', Number(e.target.value))}
                     min={1}
                     max={10000}
+                    placeholder="0"
                     error={errors.yieldQuantity}
                     validation={{ required: true, min: 1, max: 10000 }}
                   />
@@ -867,7 +921,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 </div>
                 <div className="flex justify-between">
                   <span>Modo:</span>
-                  <span className="font-medium text-gray-800">{form.mode === 'batch' ? 'Lote' : 'Ensamblaje'}</span>
+                  <span className="font-medium text-gray-800">                  {form.mode === 'batch' ? 'Producir y Guardar' : 'Preparar al Momento'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Ingredientes:</span>
@@ -885,13 +939,18 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     <span className="font-medium text-warning">{form.wastePct}%</span>
                   </div>
                 )}
-                {estimatedCost.totalCost > 0 && (
+                {isCalculatingCost ? (
+                  <div className="flex justify-between">
+                    <span>Costo estimado:</span>
+                    <span className="font-medium text-gray-400">Calculando...</span>
+                  </div>
+                ) : estimatedCost.totalCost > 0 && (
                   <div className="flex justify-between">
                     <span>Costo estimado:</span>
                     <span className="font-medium text-gray-800">{formatUsd(estimatedCost.totalCost)}</span>
                   </div>
                 )}
-                {form.mode === 'batch' && estimatedCost.costPerUnit > 0 && (
+                {!isCalculatingCost && form.mode === 'batch' && estimatedCost.costPerUnit > 0 && (
                   <div className="flex justify-between">
                     <span>Costo/unidad:</span>
                     <span className="font-semibold text-primary">{formatUsd(estimatedCost.costPerUnit)}</span>

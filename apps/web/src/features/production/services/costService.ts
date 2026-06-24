@@ -34,6 +34,62 @@ export function computeRecipeCostFromLines(
   };
 }
 
+export async function computeRecipeCostAsync(
+  lines: Array<{ productId: string; quantity: number; unit: string }>,
+  wastePct: number,
+  yieldQuantity: number,
+): Promise<{ totalCost: number; costPerUnit: number }> {
+  const wasteMultiplier = 1 + (wastePct / 100);
+  let totalCost = 0;
+  const db = getDb();
+  const session = useAuthStore.getState().session;
+
+  for (const line of lines) {
+    const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
+    if (!product) continue;
+
+    const isSubRecipe = product.productType === 'producto_terminado';
+
+    if (isSubRecipe) {
+      const subRecipe = await db.recipes
+        .where({ productId: line.productId })
+        .filter(r => !r.deletedAt && r.isActive)
+        .first();
+      if (subRecipe) {
+        const subLines = await db.recipeLines
+          .where({ recipeId: subRecipe.id })
+          .filter(l => !l.deletedAt)
+          .toArray();
+        const subYield = subRecipe.mode === 'batch' ? subRecipe.yieldQuantity : 1;
+        const subCost = await computeRecipeCostAsync(
+          subLines.map(l => ({
+            productId: l.productId,
+            quantity: l.quantity * line.quantity * wasteMultiplier,
+            unit: l.unit,
+          })),
+          subRecipe.wastePct || 0,
+          subYield,
+        );
+        totalCost += subCost.totalCost;
+      }
+    } else {
+      const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
+      const needed = Math.ceil(neededInStorage);
+      if (needed > 0) {
+        const ccResult = await calculateConsumptionCost(line.productId, needed);
+        if (ccResult.ok) {
+          totalCost += ccResult.data.totalCost;
+        }
+      }
+    }
+  }
+
+  return {
+    totalCost: preciseRound(totalCost, 2),
+    costPerUnit: yieldQuantity > 0 ? preciseRound(totalCost / yieldQuantity, 4) : 0,
+  };
+}
+
 export async function calculateRecipeCost(
   recipeId: string,
   batchCount: number,

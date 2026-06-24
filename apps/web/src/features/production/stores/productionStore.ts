@@ -151,9 +151,9 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
     }
   },
 
-  createOrder: async (tenantId, userId, input) => {
+  createOrder: async (tenantId, userId, input, options: { allowOverride?: boolean } = {}) => {
     set({ loading: true, error: null });
-    const result = await productionService.createOrder(tenantId, userId, input);
+    const result = await productionService.createOrder(tenantId, userId, input, options);
     if (result.ok) {
       set((s) => ({ productionOrders: [result.data, ...s.productionOrders], loading: false }));
       return result.data;
