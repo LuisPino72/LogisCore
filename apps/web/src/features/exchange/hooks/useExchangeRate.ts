@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useExchangeRateStore } from '../stores/exchangeRateStore';
+import { isVenezuelanHoliday } from '@/lib/venezuelanHolidays';
 
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 horas — BCV actualiza 1x/día (lun-vie)
 const STALE_CRITICAL_MS = 48 * 60 * 60 * 1000; // 48 horas — dos días sin actualizar
@@ -35,7 +36,10 @@ export function useExchangeRate(tenantId: string | null) {
         } else {
           const lastFetch = new Date(state.fetchedAt).getTime();
           const ageMs = Date.now() - lastFetch;
-          const isStale = ageMs > STALE_THRESHOLD_MS;
+          const now = new Date();
+          const day = now.getDay();
+          const isRateValidPeriod = day === 0 || day === 1 || day === 5 || day === 6 || isVenezuelanHoliday(now);
+          const isStale = !isRateValidPeriod && ageMs > STALE_THRESHOLD_MS;
 
           if (isStale && state.source !== 'manual') {
             updateFromBcv(tenantId);
@@ -62,6 +66,12 @@ function emitStaleAlertIfChanged(
   ageMs: number,
   tenantId: string,
 ): void {
+  // En feriados bancarios el BCV no publica, la tasa se mantiene → no emitir alerta stale
+  const now = new Date();
+  const day = now.getDay();
+  const isRateValidPeriod = day === 0 || day === 1 || day === 5 || day === 6 || isVenezuelanHoliday(now);
+  if (isRateValidPeriod) return;
+
   let level: 0 | 1 | 2 = 0;
   if (ageMs > STALE_CRITICAL_MS) level = 2;
   else if (ageMs > STALE_THRESHOLD_MS) level = 1;

@@ -88,10 +88,13 @@ Table products {
   is_weighted boolean [not null, default: false]
   is_taxable boolean [not null, default: true]
   is_sellable boolean [not null, default: true]
+  is_ingredient boolean [not null, default: false]
   unit text [not null]
   stock integer [not null, default: 0]
   stock_min integer
+  stock_in_carts integer [not null, default: 0]
   image_url text
+  cost_price numeric(12,4)
   product_type text [not null, default: 'materia_prima']
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]

@@ -22,6 +22,7 @@ import { Sidebar } from './common/components/Sidebar';
 import { ErrorBoundary } from './common/components/ErrorBoundary';
 import type { SidebarModule } from './common/components/Sidebar';
 import { OfflineBanner } from './common/components/OfflineBanner';
+import { isVenezuelanHoliday } from './lib/venezuelanHolidays';
 import {
   ShoppingCart,
   Package,
@@ -211,10 +212,12 @@ function RateBadgeMobile() {
 
   // Calcular estado para color y mensaje
   // La tasa BCV se actualiza de martes a viernes. Viernes noche → lunes noche se mantiene igual.
+  // En feriados bancarios el BCV no publica, por lo que la tasa se mantiene igual al último día hábil.
   const isMissing = !rate;
   const ageMs = fetchedAt ? Date.now() - new Date(fetchedAt).getTime() : Infinity;
-  const day = new Date().getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
-  const isRateValidPeriod = day === 0 || day === 1 || day === 5 || day === 6; // Vie, Sáb, Dom, Lun.
+  const now = new Date();
+  const day = now.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
+  const isRateValidPeriod = day === 0 || day === 1 || day === 5 || day === 6 || isVenezuelanHoliday(now); // Vie, Sáb, Dom, Lun, o feriado bancario
   const isStale = !isRateValidPeriod && ageMs > 24 * 60 * 60 * 1000;
   const isCritical = !isRateValidPeriod && ageMs > 48 * 60 * 60 * 1000;
 

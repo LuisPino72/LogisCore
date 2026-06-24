@@ -4,6 +4,7 @@ import { Button, Input, Modal, Spinner } from '../../../common/components';
 import { useExchangeRate } from '../hooks/useExchangeRate';
 import { formatBs } from '@/lib/formatBs';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
+import { isVenezuelanHoliday } from '@/lib/venezuelanHolidays';
 
 interface ExchangeRateWidgetProps {
   tenantId: string | null;
@@ -67,8 +68,9 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
   const getRateStatus = (): 'fresh' | 'stale' | 'critical' | 'missing' => {
     if (!rate || !fetchedAt) return 'missing';
     const ageMs = Date.now() - new Date(fetchedAt).getTime();
-    const day = new Date().getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
-    const isRateValidPeriod = day === 0 || day === 1 || day === 5 || day === 6; // Vie, Sáb, Dom, Lun.
+    const now = new Date();
+    const day = now.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
+    const isRateValidPeriod = day === 0 || day === 1 || day === 5 || day === 6 || isVenezuelanHoliday(now); // Vie, Sáb, Dom, Lun, o feriado bancario
     if (!isRateValidPeriod && ageMs > STALE_CRITICAL_MS) return 'critical';
     if (!isRateValidPeriod && ageMs > STALE_THRESHOLD_MS) return 'stale';
     return 'fresh';
