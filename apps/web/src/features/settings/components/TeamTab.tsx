@@ -89,7 +89,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
   const handleAddEmployee = useCallback(async (payload: unknown) => {
     const result = await adminService.addEmployee(payload);
     if (result.ok) {
-      addToast({ type: 'success', message: 'Empleado invitado correctamente.', duration: 4000 });
+      addToast({ type: 'success', message: 'Empleado creado correctamente.', duration: 4000 });
       await loadUsers();
     }
     return result;
@@ -225,7 +225,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
               onClick={() => setShowAddEmployee(true)}
             >
               <Plus size={16} />
-              <span className="hidden sm:inline ml-1">Invitar empleado</span>
+              <span className="hidden sm:inline ml-1">Crear empleado</span>
             </Button>
           </div>
 

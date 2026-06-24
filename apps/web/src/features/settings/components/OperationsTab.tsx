@@ -45,23 +45,23 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
     const thresholdNum = parseFloat(lowStockThreshold);
 
     if (isNaN(discountNum) || discountNum < 0 || discountNum > 100) {
-      setLocalError('Descuento m\u00e1ximo debe estar entre 0% y 100%');
+      setLocalError('El descuento máximo debe estar entre 0% y 100%');
       return;
     }
     if (isNaN(stockNum) || stockNum < 0) {
-      setLocalError('Stock m\u00ednimo no puede ser negativo');
+      setLocalError('El stock mínimo no puede ser negativo');
       return;
     }
     if (isNaN(creditNum) || creditNum < 0) {
-      setLocalError('L\u00edmite de cr\u00e9dito no puede ser negativo');
+      setLocalError('El límite de crédito no puede ser negativo');
       return;
     }
     if (isNaN(thresholdNum) || thresholdNum < 0) {
-      setLocalError('Umbral de stock bajo no puede ser negativo');
+      setLocalError('El umbral de stock bajo no puede ser negativo');
       return;
     }
     if (ticketFooterMessage.length > 100) {
-      setLocalError('Mensaje de pie de ticket demasiado largo (m\u00e1x 100 caracteres)');
+      setLocalError('Mensaje de pie de ticket demasiado largo (máximo 25 caracteres)');
       return;
     }
 
@@ -110,32 +110,32 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Descuento m\u00e1ximo POS (%)"
+            label="Descuento máximo POS (%)"
             type="number"
             step="1"
             min="0"
             max="100"
             value={maxDiscountPct}
             onChange={(e) => setMaxDiscountPct(e.target.value)}
-            hint="Porcentaje m\u00e1ximo de descuento permitido por venta."
+            hint="Porcentaje máximo de descuento permitido por venta."
           />
           <Input
-            label="Stock m\u00ednimo por defecto"
+            label="Stock mínimo por defecto"
             type="number"
             step="1"
             min="0"
             value={defaultMinStock}
             onChange={(e) => setDefaultMinStock(e.target.value)}
-            hint="Cantidad m\u00ednima sugerida al crear productos."
+            hint="Cantidad mínima sugerida al crear productos."
           />
           <Input
-            label="L\u00edmite de cr\u00e9dito por defecto ($)"
+            label="Límite de crédito por defecto ($)"
             type="number"
             step="1"
             min="0"
             value={defaultCreditLimit}
             onChange={(e) => setDefaultCreditLimit(e.target.value)}
-            hint="Monto m\u00e1ximo de cr\u00e9dito para clientes nuevos."
+            hint="Monto máximo de crédito para clientes nuevos."
           />
           <Input
             label="Umbral de stock bajo"
@@ -144,7 +144,7 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
             min="0"
             value={lowStockThreshold}
             onChange={(e) => setLowStockThreshold(e.target.value)}
-            hint="Cantidad m\u00ednima para mostrar alerta de stock bajo."
+            hint="Cantidad mínima para mostrar alerta de stock bajo."
           />
         </div>
 
@@ -153,13 +153,13 @@ export const OperationsTab: FC<OperationsTabProps> = ({ tenantId }) => {
           value={ticketFooterMessage}
           onChange={(e) => setTicketFooterMessage(e.target.value)}
           validation={{ maxLength: 25 }}
-          hint="Texto que aparece al final del ticket de venta (máx 100 caracteres)."
+          hint="Texto que aparece al final del ticket de venta (máx 25 caracteres)."
           autoResize
           maxRows={3}
         />
 
         <Toggle
-          label="Obligar identificaci\u00f3n del cliente en ventas"
+          label="Obligar identificación del cliente en ventas"
           checked={mandatoryCustomerId}
           onChange={(e) => setMandatoryCustomerId(e.target.checked)}
         />
