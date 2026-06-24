@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { validateCycles, computeRecipeCostFromLines } from '../services/productionService';
@@ -114,7 +114,14 @@ export function useRecipeForm() {
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const { products, categories } = useInventoryStore();
+  const { products, categories, fetchCategories } = useInventoryStore();
+
+  useEffect(() => {
+    const session = useAuthStore.getState().session;
+    if (session?.tenantId) {
+      fetchCategories(session.tenantId, true);
+    }
+  }, [fetchCategories]);
 
   const TOTAL_STEPS = 3;
 
