@@ -16,12 +16,12 @@ interface SettingsPageProps {
 }
 
 const TABS = [
-  { key: 'fiscal', label: 'Fiscal' },
-  { key: 'operations', label: 'Operaciones' },
   { key: 'business', label: 'Mi Negocio' },
   { key: 'team', label: 'Equipo' },
+  { key: 'operations', label: 'Operaciones' },
+  { key: 'fiscal', label: 'Fiscal' },
   { key: 'security', label: 'Seguridad' },
-  { key: 'subscription', label: 'Suscripci\u00f3n' },
+  { key: 'subscription', label: 'Suscripción' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -58,12 +58,10 @@ export const SettingsPage: FC<SettingsPageProps> = ({ tenantId }) => {
     return (
       <div className="app-shell-content app-shell-content--with-bottom-nav">
         <div className="@container w-full max-w-4xl mx-auto p-4 md:p-6">
-          <Alert variant="error" className="mb-4">{error}</Alert>
-          <Button
-            variant="secondary"
-            onClick={refresh}
-            className="min-h-11"
-          >
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+          <Button variant="secondary" onClick={refresh} className="min-h-11">
             Reintentar
           </Button>
         </div>
