@@ -24,7 +24,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
   const { addToast } = useToastStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [rlsTier, setRlsTier] = useState<string>(role?.rlsTier ?? 'employee');
+  const [rlsTier, setRlsTier] = useState<string>('employee');
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(ALL_MODULES));
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
     if (role) {
       setName(role.name);
       setDescription(role.description ?? '');
-      setRlsTier(role.rlsTier);
+      setRlsTier('employee');
       setLoading(true);
       adminService.fetchRolePermissions(role.id).then((result) => {
         if (result.ok) {
@@ -99,7 +99,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
         const updateResult = await adminService.updateRole(role.id, {
           name: name.trim(),
           description: description.trim() || undefined,
-          rlsTier: rlsTier as 'admin' | 'owner' | 'employee',
+          rlsTier: 'employee',
         });
         if (!updateResult.ok) {
           setError(updateResult.error.message);
@@ -117,7 +117,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
         const createResult = await adminService.createRole({
           name: name.trim(),
           description: description.trim() || undefined,
-          rlsTier: rlsTier as 'admin' | 'owner' | 'employee',
+          rlsTier: 'employee',
           permissions: Array.from(permissions),
         });
         if (!createResult.ok) {
@@ -178,9 +178,9 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
           label="Nivel de acceso (RLS Tier)"
           value={rlsTier}
           onChange={(e) => setRlsTier(e.target.value)}
+          disabled
         >
-          <option value="employee">Empleado — solo lectura de su tenant</option>
-          <option value="owner">Dueño — acceso completo a su tenant</option>
+          <option value="employee">Employee</option>
         </Select>
 
         <div>
