@@ -131,7 +131,7 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
             </Button>
             <Button
               variant="primary"
-              onClick={handleProduce}
+              onClick={() => handleProduce(false)}
               disabled={isProducing}
               className="flex items-center gap-2"
             >

@@ -15,7 +15,7 @@ interface ProductionStore extends ProductionState {
   // Production Orders
   productionOrders: ProductionOrder[];
   fetchOrders: (tenantId: string, filters?: ProductionOrderFilters, silent?: boolean) => Promise<void>;
-  createOrder: (tenantId: string, userId: string, input: CreateProductionOrderInput) => Promise<ProductionOrder | null>;
+  createOrder: (tenantId: string, userId: string, input: CreateProductionOrderInput, options?: { allowOverride?: boolean }) => Promise<ProductionOrder | null>;
   cancelOrder: (orderId: string, tenantId: string) => Promise<boolean>;
 
   // Order Details
