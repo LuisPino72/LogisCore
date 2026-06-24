@@ -200,6 +200,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
                       type="button"
                       onClick={() => toggleModule(mod)}
                       className="flex items-center gap-1 text-sm font-medium text-gray-700"
+                      aria-expanded={expandedModules.has(mod)}
                     >
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       <Shield size={14} className="text-gray-500" />
@@ -213,6 +214,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
                         checked={allSelected}
                         ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
                         onChange={() => toggleModuleAll(mod)}
+                        aria-checked={someSelected && !allSelected ? 'mixed' : allSelected}
                       />
                     </div>
                   </div>

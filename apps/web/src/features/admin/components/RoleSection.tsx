@@ -100,11 +100,11 @@ export function RoleSection() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost-primary" size="sm" onClick={() => handleEdit(role)}>
+                    <Button variant="ghost-primary" size="sm" onClick={() => handleEdit(role)} aria-label="Editar rol">
                       <Pencil size={14} />
                     </Button>
                     {!role.isSystem && (
-                      <Button variant="ghost-danger" size="sm" onClick={() => setDeletingId(role.id)}>
+                      <Button variant="ghost-danger" size="sm" onClick={() => setDeletingId(role.id)} aria-label="Eliminar rol">
                         <Trash2 size={14} />
                       </Button>
                     )}

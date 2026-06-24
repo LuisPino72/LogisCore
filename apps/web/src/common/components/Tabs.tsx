@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useRef, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { Badge } from './Badge';
 
@@ -17,11 +17,34 @@ interface TabsProps {
 }
 
 export function Tabs({ tabs, activeKey, onChange, className }: TabsProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const activeButton = containerRef.current.querySelector(
+      `[id="tab-${activeKey}"]`,
+    ) as HTMLElement | null;
+    if (activeButton) {
+      activeButton.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [activeKey]);
+
   return (
-    <div className={cn('flex overflow-x-auto gap-1 border-b border-gray-200', className)}>
+    <div
+      ref={containerRef}
+      role="tablist"
+      className={cn('flex overflow-x-auto gap-1 border-b border-gray-200', className)}
+    >
       {tabs.map((tab) => (
         <button
           key={tab.key}
+          role="tab"
+          aria-selected={activeKey === tab.key}
+          id={`tab-${tab.key}`}
           onClick={() => onChange(tab.key)}
           className={cn(
             'flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors min-h-[44px]',

@@ -4,8 +4,9 @@ import { Badge, Modal, Button } from '../../../common/components';
 import { TableCard } from './TableCard';
 import { ParkedCartsList } from './ParkedCartsList';
 import type { ParkedCart } from '../types';
+import { formatTime } from '@/lib/formatBs';
 
-const TABLE_COUNT = 10;
+export const TABLE_COUNT = 10;
 
 interface TableGridProps {
   carts: ParkedCart[];
@@ -15,11 +16,6 @@ interface TableGridProps {
 }
 
 type ViewMode = 'list' | 'tables';
-
-const fmtTime = (iso: string) => {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-};
 
 const tables = Array.from({ length: TABLE_COUNT }, (_, i) => i + 1);
 
@@ -95,7 +91,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable }: TableGridPro
                   isOccupied
                   totalUsd={totalUsd}
                   totalItems={totalItems}
-                  time={fmtTime(cart.createdAt)}
+                  time={formatTime(cart.createdAt)}
                   onClick={() => onLoad(cart)}
                   onDelete={() => setDeleteTarget({ id: cart.id, number: n })}
                 />

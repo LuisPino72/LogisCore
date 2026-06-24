@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button, Badge, Modal } from '../../../common/components';
 import { ShoppingBag, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import type { ParkedCart } from '../types';
-import { formatUsd } from '@/lib/formatBs';
+import { formatUsd, formatTime } from '@/lib/formatBs';
+import { TABLE_COUNT } from './TableGrid';
 
 interface ParkedCartsListProps {
   carts: ParkedCart[];
@@ -15,19 +16,14 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
 
   if (carts.length === 0) return null;
 
-  const fmtTime = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-  };
-
   return (
     <div className="px-3 pb-2">
       <div className="flex items-center gap-2 mb-2">
         <ShoppingBag size={16} className="text-primary" />
         <h4 className="text-sm font-semibold text-gray-700">Ventas en cola</h4>
-        <Badge variant="info">{carts.length}/10</Badge>
+        <Badge variant="info">{carts.length}/{TABLE_COUNT}</Badge>
       </div>
-      <div className="flex flex-col gap-2 max-h-32 md:max-h-48 overflow-y-auto" style={{ scrollSnapType: 'y proximity' }}>
+      <div className="flex flex-col gap-2 max-h-48 md:max-h-48 overflow-y-auto" style={{ scrollSnapType: 'y proximity' }}>
         {carts.map((cart) => {
           const totalItems = cart.cart.reduce((sum, item) => sum + item.quantity, 0);
           const totalUsd = cart.cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
@@ -52,7 +48,7 @@ export function ParkedCartsList({ carts, onLoad, onDelete }: ParkedCartsListProp
                   <span className="text-gray-300">·</span>
                   <span className="inline-flex items-center gap-0.5">
                     <Clock size={10} />
-                    {fmtTime(cart.createdAt)}
+                    {formatTime(cart.createdAt)}
                   </span>
                 </p>
               </div>

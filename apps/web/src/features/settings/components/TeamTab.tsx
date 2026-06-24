@@ -286,7 +286,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
                   </div>
                   <Badge variant="neutral" className="text-xs">{(role as Role & { permissionCount?: number }).permissionCount ?? 0} permisos</Badge>
                 </div>
-                <div className="flex gap-1">
+          <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => { setEditingRole(role); setShowRoleModal(true); }}>
                     Editar
                   </Button>

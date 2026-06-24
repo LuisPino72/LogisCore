@@ -52,7 +52,7 @@ export function SecurityTab() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const getFieldError = useMemo(() => (): string | null => {
+  const getFieldError = (): string | null => {
     if (form.newPassword.length < 8) return 'La nueva contraseña debe tener al menos 8 caracteres.';
     if (form.newPassword.length > 14) return 'La nueva contraseña no puede tener más de 14 caracteres.';
     if (!/[A-Z]/.test(form.newPassword)) return 'Debe contener al menos una mayúscula.';
@@ -61,7 +61,7 @@ export function SecurityTab() {
     if (!/[!@#$%^&*]/.test(form.newPassword)) return 'Debe contener al menos un símbolo (!@#$%^&*).';
     if (form.newPassword !== form.confirmPassword) return 'Las contraseñas no coinciden.';
     return null;
-  }, [form.newPassword, form.confirmPassword]);
+  };
 
   const handleSubmit = async () => {
     setError(null);

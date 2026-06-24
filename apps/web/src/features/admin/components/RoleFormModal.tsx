@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
-import { Button, Input, Modal, Select, Spinner } from '../../../common/components';
+import { Button, Checkbox, Input, Modal, Select, Spinner } from '../../../common/components';
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { ALL_MODULES, CRUD_ACTIONS, SPECIAL_ACTIONS } from '../../../specs/roles';
 import { useToastStore } from '../../../stores/toastStore';
@@ -135,7 +135,7 @@ export function RoleFormModal({ role, onClose }: Props) {
       <div className="p-4 sm:p-6 space-y-5 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{role ? 'Editar Rol' : 'Crear Nuevo Rol'}</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded min-w-11 min-h-11 flex items-center justify-center" aria-label="Cerrar"><X size={18} /></button>
         </div>
 
         <div className="space-y-3">
@@ -175,11 +175,9 @@ export function RoleFormModal({ role, onClose }: Props) {
                     <span className="font-medium text-sm capitalize">{module}</span>
                     {hasCrud && (
                       <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={isModuleCrudFullySelected(module)}
                           onChange={(e) => toggleModuleCrud(module, e.target.checked)}
-                          className="rounded"
                         />
                         CRUD completo
                       </label>
@@ -194,7 +192,7 @@ export function RoleFormModal({ role, onClose }: Props) {
                           key={perm}
                           onClick={() => togglePermission(perm)}
                           className={`
-                            inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
+                            inline-flex items-center gap-1 px-2.5 py-2 min-h-10 rounded-full text-xs font-medium
                             transition-all active:scale-95
                             ${selectedPermissions.has(perm)
                               ? 'bg-primary/10 text-primary border border-primary/30'

@@ -89,27 +89,27 @@ export const SettingsPage: FC<SettingsPageProps> = ({ tenantId }) => {
         </div>
 
         {activeTab === 'fiscal' && (
-          <div className="animate-fade-in">
+          <div role="tabpanel" aria-labelledby="tab-fiscal" className="animate-fade-in">
             <FiscalTab tenantId={tenantId} />
           </div>
         )}
         {activeTab === 'business' && (
-          <div className="animate-fade-in">
+          <div role="tabpanel" aria-labelledby="tab-business" className="animate-fade-in">
             <BusinessTab tenantId={tenantId} />
           </div>
         )}
         {activeTab === 'team' && tenantId && (
-          <div className="animate-fade-in">
+          <div role="tabpanel" aria-labelledby="tab-team" className="animate-fade-in">
             <TeamTab tenantId={tenantId} />
           </div>
         )}
         {activeTab === 'security' && (
-          <div className="animate-fade-in">
+          <div role="tabpanel" aria-labelledby="tab-security" className="animate-fade-in">
             <SecurityTab />
           </div>
         )}
         {activeTab === 'subscription' && tenantId && (
-          <div className="animate-fade-in">
+          <div role="tabpanel" aria-labelledby="tab-subscription" className="animate-fade-in">
             <SubscriptionTab tenantId={tenantId} />
           </div>
         )}

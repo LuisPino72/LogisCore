@@ -10,6 +10,7 @@ import type { Role, CreateRoleInput, UpdateRoleInput } from '../../../specs/role
 import { CreateRoleInputSchema, UpdateRoleInputSchema } from '../../../specs/roles';
 import { RoleErrors, ROLE_ERROR_MESSAGES } from '../../../specs/roles/errors';
 import { getDb } from '../../../services/dexie/db';
+import { requireNetwork } from '../../../services/network/requireNetwork';
 import type { DexieRegisterConfig, DexieCashRegister } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { useAuthStore } from '../../../features/auth/stores/authStore';
@@ -1127,6 +1128,9 @@ export const adminService = {
   },
 
   async forceCloseSession(sessionId: string): Promise<Result<DexieCashRegister, AppError>> {
+    const networkResult = await requireNetwork();
+    if (!networkResult.ok) return networkResult;
+
     const db = getDb();
     const session = await db.cashRegisters.get(sessionId);
     if (!session) return failure(new AppError('SESSION_NOT_FOUND', 'Sesión no encontrada'));

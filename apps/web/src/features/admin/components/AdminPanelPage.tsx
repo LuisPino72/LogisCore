@@ -156,6 +156,8 @@ export function AdminPanelPage() {
           <button
             key={tab.id}
             type="button"
+            role="tab"
+            aria-selected={activeSheet === tab.id}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-title font-medium border-b-2 transition-all active:scale-[0.98] ${
               activeSheet === tab.id
                 ? 'border-primary text-primary admin-tab-active'

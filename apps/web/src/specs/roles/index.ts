@@ -100,7 +100,7 @@ export const SPECIAL_ACTIONS: Record<string, string[]> = {
   inventory: ['adjust_stock', 'import_csv', 'manage_categories'],
   production: ['produce_batch'],
   purchases: ['receive_order', 'pay_debt'],
-  pos: ['void_sale', 'close_box', 'open_box', 'apply_discount'],
+  pos: ['void_sale', 'close_box', 'open_box', 'apply_discount', 'manager_close', 'manage_registers'],
   customers: ['collect_debt'],
   reports: ['read', 'export', 'view_financials'],
   exchange: ['update'],

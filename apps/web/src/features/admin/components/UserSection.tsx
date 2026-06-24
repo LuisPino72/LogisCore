@@ -95,7 +95,7 @@ export function UserSection({
         if (editingRole?.id === u.id) {
           return (
             <select
-              className="select text-sm py-1 px-2 min-w-[130px]"
+              className="select text-sm py-2.5 px-2 min-w-[130px] min-h-11"
               value=""
               onChange={(e) => {
                 if (e.target.value) {
@@ -137,6 +137,7 @@ export function UserSection({
               variant="ghost-primary"
               size="sm"
               className="min-h-11 admin-ripple"
+              aria-label="Restablecer contraseña"
               onClick={() => setResetTarget({ userId: u.userId, email: u.email ?? u.id, name: u.name ?? u.email ?? u.id })}
             >
               <KeyRound size={16} />
@@ -148,6 +149,7 @@ export function UserSection({
                 variant="ghost-danger"
                 size="sm"
                 className="min-h-11 admin-ripple"
+                aria-label="Eliminar empleado"
                 onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
               >
                 <Trash2 size={16} />

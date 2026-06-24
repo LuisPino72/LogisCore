@@ -107,7 +107,7 @@ export function SubscriptionTab({ tenantId }: SubscriptionTabProps) {
                 href="https://wa.me/584145180265?text=Hola%20Luis,%20necesito%20soporte%20con%20mi%20cuenta%20de%20LogisCore"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium underline underline-offset-2 transition-colors duration-200"
+                className="min-h-11 py-2.5 inline-flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium underline underline-offset-2 transition-colors duration-200"
                 aria-label="Contactar soporte técnico por WhatsApp"
               >
                 <ExternalLink size={16} />

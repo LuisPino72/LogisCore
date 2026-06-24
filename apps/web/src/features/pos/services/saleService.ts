@@ -270,6 +270,7 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
       if (discountBs > 0) saleSnakePayload.discount_bs = discountBs;
       if (discountUsd > 0) saleSnakePayload.discount_usd = discountUsd;
       if (input.customerId) saleSnakePayload.customer_id = input.customerId;
+      if (cashReg.id) saleSnakePayload.cash_register_id = cashReg.id;
       if (isCreditSale) {
         saleSnakePayload.is_credit_sale = true;
         saleSnakePayload.credit_collected = false;
@@ -494,6 +495,9 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
       if (!isCreditSale) {
         const txCashReg = await db.cashRegisters.get(cashReg.id);
         if (txCashReg) {
+          if (!txCashReg.isOpen) {
+            throw new AppError('SALE_REGISTER_CLOSED', 'La caja seleccionada ya está cerrada. Selecciona otra caja.');
+          }
           const newTotalSalesCount = (txCashReg.totalSalesCount ?? 0) + 1;
           const newTotalSalesBs = preciseRound((txCashReg.totalSalesBs ?? 0) + totalBs, 2);
           const newTotalIgtfBs = preciseRound((txCashReg.totalIgtfBs ?? 0) + igtfBs, 2);

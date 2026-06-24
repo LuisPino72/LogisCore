@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Input, Button } from '../../../common/components';
+import { Modal, Input, Button } from '@/common/components';
 
 interface ParkCartModalProps {
   isOpen: boolean;

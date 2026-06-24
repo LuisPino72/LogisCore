@@ -74,6 +74,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
     >
       <div className="space-y-4 admin-section-reveal">
         <Input
+          label="Nombre"
           placeholder="Nombre"
           value={employee.name}
           onChange={(e) => setEmployee((p) => ({ ...p, name: e.target.value }))}
@@ -81,6 +82,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           autoComplete="name"
         />
         <Input
+          label="Correo electrónico"
           placeholder="Email"
           type="email"
           value={employee.email}
@@ -89,6 +91,7 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           autoComplete="email"
         />
         <Input
+          label="Contraseña"
           placeholder="Contraseña"
           type="password"
           showPassword
