@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Upload, Trash2, Edit3, Star, Image as ImageIcon } from 'lucide-react';
-import { Button, SearchInput, Input, Modal, EmptyState, Select, Spinner } from '../../../common/components';
+import { Button, SearchInput, Input, Modal, EmptyState, SearchableSelect, Spinner } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { getLibraryImages, uploadLibraryImage, updateLibraryImage, deleteLibraryImage, adminGetLibraryImages, adminUploadImage, adminUpdateImage, adminDeleteImage } from '../services/imageLibraryService';
@@ -212,18 +212,17 @@ export function ImageLibraryManager({ tenantId: tenantIdProp, adminMode = false 
             onClear={() => setSearch('')}
           />
         </div>
-        <Select
+        <SearchableSelect
           value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
+          onChange={(val) => setFilterCategory(val)}
+          placeholder="Todas las categorías"
+          searchPlaceholder="Buscar categoría..."
           className="w-full sm:w-48"
-        >
-          <option value="all">Todas las categorías</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </Select>
+          options={[
+            { value: 'all', label: 'Todas las categorías' },
+            ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+          ]}
+        />
       </div>
 
       <div className="text-xs text-text-secondary px-1">
@@ -325,17 +324,16 @@ export function ImageLibraryManager({ tenantId: tenantIdProp, adminMode = false 
 
           <div className="input-wrapper">
             <label className="input-label">Categoría</label>
-            <Select
+            <SearchableSelect
               value={uploadCategoryId ?? ''}
-              onChange={(e) => setUploadCategoryId(e.target.value || null)}
-            >
-              <option value="">Sin categoría</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </Select>
+              onChange={(val) => setUploadCategoryId(val || null)}
+              placeholder="Sin categoría"
+              searchPlaceholder="Buscar categoría..."
+              options={[
+                { value: '', label: 'Sin categoría' },
+                ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+              ]}
+            />
           </div>
 
           <div className="flex items-center gap-2">
@@ -395,17 +393,16 @@ export function ImageLibraryManager({ tenantId: tenantIdProp, adminMode = false 
 
           <div className="input-wrapper">
             <label className="input-label">Categoría</label>
-            <Select
+            <SearchableSelect
               value={editCategoryId ?? ''}
-              onChange={(e) => setEditCategoryId(e.target.value || null)}
-            >
-              <option value="">Sin categoría</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </Select>
+              onChange={(val) => setEditCategoryId(val || null)}
+              placeholder="Sin categoría"
+              searchPlaceholder="Buscar categoría..."
+              options={[
+                { value: '', label: 'Sin categoría' },
+                ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+              ]}
+            />
           </div>
 
           <div className="flex items-center gap-2">
