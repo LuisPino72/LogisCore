@@ -10,7 +10,7 @@ import type { Category } from '../types';
 
 export function ImageLibraryManager() {
   const session = useAuthStore((s) => s.session);
-  const tenantId = session?.tenantSlug ?? '';
+  const tenantId = session?.tenantId ?? '';
   const isOwner = session?.role === 'admin' || session?.role === 'owner';
   const canManage = isOwner && hasActionPermission(session!, 'inventory', 'manage_library');
 
