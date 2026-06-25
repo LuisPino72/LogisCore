@@ -1337,7 +1337,6 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           setImageFile(null);
           setShowLibraryModal(false);
         }}
-        currentCategoryId={formData.categoryId}
       />
 
       <input

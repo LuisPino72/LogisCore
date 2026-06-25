@@ -9,14 +9,12 @@ interface ImageLibraryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (imageUrl: string) => void;
-  currentCategoryId?: string | null;
 }
 
 export function ImageLibraryModal({
   isOpen,
   onClose,
   onSelect,
-  currentCategoryId,
 }: ImageLibraryModalProps) {
   const [images, setImages] = useState<ImageLibrary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,14 +23,14 @@ export function ImageLibraryModal({
     if (isOpen) {
       setLoading(true);
       setSearch('');
-      adminGetLibraryImages(currentCategoryId ?? undefined).then((result) => {
+      adminGetLibraryImages().then((result) => {
         if (result.ok) {
           setImages(result.data);
         }
         setLoading(false);
       });
     }
-  }, [isOpen, currentCategoryId]);
+  }, [isOpen]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return images;
