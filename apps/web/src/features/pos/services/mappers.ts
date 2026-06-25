@@ -54,6 +54,10 @@ export function saleFromSupabase(raw: SupabaseSale, tenantId: string): Result<Sa
       igtfUsd: raw.igtf_usd,
       totalUsd: raw.total_usd,
       discountUsd: raw.discount_usd,
+      cashRegisterId: raw.cash_register_id ?? undefined,
+      isCreditSale: raw.is_credit_sale ?? false,
+      creditCollected: raw.credit_collected ?? false,
+      collectedAt: raw.collected_at ?? undefined,
     }));
   } catch (err) {
     return failure(toFailureFromZod(err, 'Sale'));

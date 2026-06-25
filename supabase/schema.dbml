@@ -210,6 +210,7 @@ Table sales {
   deleted_at timestamptz
   // PLAN-112: cliente asociado (opcional). SET NULL al eliminar cliente (preserva venta).
   customer_id uuid [ref: > customers.id, note: 'ON DELETE SET NULL']
+  cash_register_id uuid [ref: > cash_registers.id, note: 'FK para multicaja; SET NULL al cerrar caja']
 }
 
 Table sale_items {

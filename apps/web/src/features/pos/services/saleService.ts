@@ -596,25 +596,28 @@ export async function getSalesHistory(
   try {
     const db = getDb();
 
+    const saleFilter = (r: { deletedAt?: string | null; status?: string; createdAt?: string }) => {
+      if (r.deletedAt || r.status !== 'completed') return false;
+      if (startDate) {
+        const saleDate = new Date(r.createdAt ?? '');
+        if (saleDate < new Date(startOfDayFromDateStringVzla(startDate))) return false;
+      }
+      if (endDate) {
+        const saleDate = new Date(r.createdAt ?? '');
+        if (saleDate > new Date(endOfDayFromDateStringVzla(endDate))) return false;
+      }
+      return true;
+    };
+
     const localSales = await db.sales
       .where({ tenantId })
-      .filter((r) => {
-        if (r.deletedAt || r.status !== 'completed') return false;
-        if (startDate) {
-          const saleDate = new Date(r.createdAt);
-          if (saleDate < new Date(startOfDayFromDateStringVzla(startDate))) return false;
-        }
-        if (endDate) {
-          const saleDate = new Date(r.createdAt);
-          if (saleDate > new Date(endOfDayFromDateStringVzla(endDate))) return false;
-        }
-        return true;
-      })
+      .filter(saleFilter)
       .toArray();
 
-    const total = localSales.length;
+    const localIds = new Set(localSales.map((s) => s.id));
 
-    if (total === 0) {
+    const cloudSales: typeof localSales = [];
+    try {
       const uuid = await TenantTranslator.slugToUuid(tenantId);
       let query = supabase
         .from('sales')
@@ -623,7 +626,7 @@ export async function getSalesHistory(
         .is('deleted_at', null)
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (startDate) {
         query = query.gte('created_at', startOfDayFromDateStringVzla(startDate));
@@ -636,19 +639,24 @@ export async function getSalesHistory(
 
       if (data) {
         for (const raw of data) {
+          if (localIds.has(raw.id)) continue;
           const result = saleFromSupabase(raw, tenantId);
           if (!result.ok) continue;
           await db.sales.put(result.data);
+          cloudSales.push(result.data as unknown as typeof localSales[number]);
         }
       }
+    } catch (err) {
+      logger.warn(MODULE_NAME, 'Supabase fallback offlined, using local only:', err);
     }
 
-    localSales.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const merged = [...localSales, ...cloudSales];
+    merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    const paged = localSales.slice(offset, offset + limit);
+    const paged = merged.slice(offset, offset + limit);
 
     return success({
-      total: localSales.length,
+      total: merged.length,
       sales: paged.map((r) => ({
         id: r.id,
         tenantId: r.tenantId,
@@ -672,6 +680,7 @@ export async function getSalesHistory(
         isCreditSale: r.isCreditSale ?? false,
         creditCollected: r.creditCollected ?? false,
         collectedAt: r.collectedAt ?? undefined,
+        cashRegisterId: r.cashRegisterId ?? undefined,
       })),
     });
   } catch (err) {
