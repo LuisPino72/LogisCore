@@ -50,28 +50,18 @@ interface SupabaseProductRow {
   product_type?: Product['productType'];
 }
 
-async function deleteStorageImage(imageUrl: string, token?: string): Promise<void> {
+async function deleteStorageImage(imageUrl: string): Promise<void> {
   try {
-    if (!token) {
-      const { data: { session } } = await supabase.auth.getSession();
-      token = session?.access_token ?? '';
-    }
-    if (!token) return;
-
     const parts = imageUrl.split('/Products/');
     if (parts.length < 2) return;
     const filePath = parts[1];
 
-    const storageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
-    const res = await fetch(storageUrl, {
-      method: 'DELETE',
-      headers: {
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) {
-      logger.error(INVENTORY_MODULE, `Error al eliminar imagen de storage: HTTP ${res.status}`, imageUrl);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const { error } = await supabase.storage.from('Products').remove([filePath]);
+    if (error) {
+      logger.error(INVENTORY_MODULE, `Error al eliminar imagen de storage: ${error.message}`, imageUrl);
     }
   } catch (err) {
     logger.error(INVENTORY_MODULE, 'Error al eliminar imagen de storage:', err);

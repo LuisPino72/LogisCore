@@ -898,16 +898,8 @@ export const adminService = {
       if (parts.length < 2) return;
       const filePath = parts[1];
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? '';
-      if (!token) return;
-      const storageUrl = `${SUPABASE_URL}/storage/v1/object/Products/${filePath}`;
-      await fetch(storageUrl, {
-        method: 'DELETE',
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      if (!session?.access_token) return;
+      await supabase.storage.from('Products').remove([filePath]);
     } catch { /* best-effort */ }
   },
 
