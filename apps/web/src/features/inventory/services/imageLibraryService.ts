@@ -166,10 +166,6 @@ export async function uploadLibraryImage(
 
     const publicUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filePath}`;
 
-    if (isDefault && categoryId) {
-      await unsetDefaultForCategory(categoryId, tenantId, db);
-    }
-
     const now = new Date().toISOString();
     const record: DexieImageLibrary = {
       id,
@@ -184,7 +180,10 @@ export async function uploadLibraryImage(
       deletedAt: null,
     };
 
-    await db.transaction('rw', [db.imageLibrary, db.syncQueue, db.outbox], async () => {
+    await db.transaction('rw', [db.imageLibrary, db.categories, db.syncQueue, db.outbox], async () => {
+      if (isDefault && categoryId) {
+        await unsetDefaultForCategory(categoryId, tenantId, db);
+      }
       await db.imageLibrary.add(record);
       await syncQueue.enqueue(SYNC_TABLE, 'CREATE', id, {
         id,
@@ -200,6 +199,9 @@ export async function uploadLibraryImage(
         name,
         categoryId,
       });
+      if (isDefault && categoryId) {
+        await updateCategoryDefaultImage(categoryId, publicUrl, tenantId, db);
+      }
     });
 
     await logAuditEventOnly({
@@ -208,10 +210,6 @@ export async function uploadLibraryImage(
       payload: { imageId: id, name, categoryId },
       context: { tenantId },
     });
-
-    if (isDefault && categoryId) {
-      await updateCategoryDefaultImage(categoryId, publicUrl, tenantId, db);
-    }
 
     return success(record as unknown as ImageLibrary);
   } catch (e) {

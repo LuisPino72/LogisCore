@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { SearchInput, EmptyState, Skeleton, Modal, Button, Pagination } from '../../../common/components';
 import { Package, ListTree } from 'lucide-react';
 import { ProductCard } from './ProductCard';
@@ -23,6 +23,7 @@ interface ProductGridProps {
   exchangeRateBs: number;
   role?: UserRole | null;
   onReorder?: (product: Product) => void;
+  tenantId: string | null;
 }
 
 const PAGE_SIZE = 20;
@@ -49,6 +50,14 @@ export const ProductGrid = memo(function ProductGrid({
   useEffect(() => {
     setPage(1);
   }, [searchQuery, selectedCategory]);
+
+  const catNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const cat of categories) {
+      map.set(cat.id, cat.name);
+    }
+    return map;
+  }, [categories]);
 
   const fuzzyResults = useFuzzySearch(products, searchQuery, {
     keys: ['name', 'sku'],
@@ -212,6 +221,8 @@ export const ProductGrid = memo(function ProductGrid({
                 onReorder={onReorder}
                 hasAssemblyRecipe={product.hasAssemblyRecipe}
                 index={index}
+                categoryDefaults={undefined}
+                categoryName={product.categoryId ? (catNameMap.get(product.categoryId) ?? null) : null}
               />
             ))}
           </div>

@@ -16,9 +16,11 @@ interface ProductCardProps {
   onReorder?: (product: Product) => void;
   hasAssemblyRecipe?: boolean;
   index?: number;
+  categoryDefaults?: Map<string, string>;
+  categoryName?: string | null;
 }
 
-export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount, onReorder, hasAssemblyRecipe, index = 0 }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleFavorite, isFavorite, exchangeRateBs, presentationCount, onReorder, hasAssemblyRecipe, index = 0, categoryDefaults, categoryName }: ProductCardProps) {
   const priceBs = exchangeRateBs > 0
     ? formatBs(product.priceUsd * exchangeRateBs)
     : null;
@@ -81,6 +83,9 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
           alt={product.name}
           className="absolute inset-0"
           skeletonClassName="rounded-none"
+          categoryId={product.categoryId ?? null}
+          categoryName={categoryName ?? null}
+          categoryDefaults={categoryDefaults}
         />
 
         {product.isTaxable && (

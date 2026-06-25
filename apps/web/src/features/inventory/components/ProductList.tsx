@@ -230,6 +230,22 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
     setPage(1);
   }, [searchQuery, filterCategory]);
 
+  const defaultsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const cat of categories) {
+      if (cat.defaultImageUrl) map.set(cat.id, cat.defaultImageUrl);
+    }
+    return map;
+  }, [categories]);
+
+  const catNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const cat of categories) {
+      map.set(cat.id, cat.name);
+    }
+    return map;
+  }, [categories]);
+
   const handleSearch = (value: string) => {
     setSearchQuery(value);
     onSaveTabState({ searchQuery: value, filterCategory, page });
@@ -296,6 +312,9 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
             alt={product.name}
             className="shrink-0 rounded-lg object-cover w-full h-full md:w-20 md:h-20"
             skeletonClassName="rounded-lg"
+            categoryId={product.categoryId ?? null}
+            categoryName={product.categoryId ? (catNameMap.get(product.categoryId) ?? null) : null}
+            categoryDefaults={defaultsMap}
           />
         ),
       },
@@ -607,6 +626,9 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                   imageUrl={product.imageUrl}
                   alt={product.name}
                   className="shrink-0 rounded-lg object-cover w-full h-full"
+                  categoryId={product.categoryId ?? null}
+                  categoryName={product.categoryId ? (catNameMap.get(product.categoryId) ?? null) : null}
+                  categoryDefaults={defaultsMap}
                 />
               </div>
               <div className="text-sm font-semibold text-gray-900 text-center w-full wrap-break-word">

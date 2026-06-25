@@ -688,6 +688,7 @@ export function PosPage({ tenantId }: PosPageProps) {
                 exchangeRateBs={exchangeRateBs}
                 role={role}
                 onReorder={handleReorder}
+                tenantId={tenantId}
               />
             </div>
           </div>
