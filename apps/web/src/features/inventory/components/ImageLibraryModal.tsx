@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo, useCallback, memo, startTransition } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Modal } from '@/common/components/Modal';
 import { SearchInput } from '@/common/components/SearchInput';
 import { Spinner } from '@/common/components/Loading';
-import { getLibraryImages } from '../services/imageLibraryService';
-import { useAuthStore } from '../../auth/stores/authStore';
+import { adminGetLibraryImages } from '../services/imageLibraryService';
 import type { ImageLibrary } from '../../../specs/image-library';
 
 interface ImageLibraryModalProps {
@@ -22,26 +21,18 @@ export function ImageLibraryModal({
   const [images, setImages] = useState<ImageLibrary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const tenantId = useAuthStore((s) => s.session?.tenantId);
-
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
       setSearch('');
-      if (!tenantId) {
+      adminGetLibraryImages(currentCategoryId ?? undefined).then((result) => {
+        if (result.ok) {
+          setImages(result.data);
+        }
         setLoading(false);
-        return;
-      }
-      startTransition(() => {
-        getLibraryImages(tenantId, currentCategoryId ?? undefined).then((result) => {
-          if (result.ok) {
-            setImages(result.data);
-          }
-          setLoading(false);
-        });
       });
     }
-  }, [isOpen, currentCategoryId, tenantId]);
+  }, [isOpen, currentCategoryId]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return images;

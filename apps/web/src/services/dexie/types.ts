@@ -422,7 +422,7 @@ export interface DexieCreditPayment {
 
 export interface DexieImageLibrary {
   id: string;
-  tenantId: string;
+  tenantId: string | null;
   name: string;
   categoryId: string | null;
   imageUrl: string;

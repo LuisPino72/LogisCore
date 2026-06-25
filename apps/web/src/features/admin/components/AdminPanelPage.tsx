@@ -269,7 +269,7 @@ export function AdminPanelPage() {
 
         {activeSheet === 'library' && (
           <div className="admin-section-reveal">
-            <ImageLibraryManager />
+            <ImageLibraryManager adminMode={true} />
           </div>
         )}
       </div>

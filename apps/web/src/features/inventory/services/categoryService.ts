@@ -184,3 +184,36 @@ export async function deleteCategory(id: string, tenantId: string): Promise<Resu
   });
   return success(undefined);
 }
+
+// ============================================================
+// ADMIN MODE — Categorías globales (Supabase directo)
+// ============================================================
+
+export async function adminGetGlobalCategories(): Promise<Result<Category[], AppError>> {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, created_at, updated_at, default_image_url')
+      .is('tenant_id', null)
+      .is('deleted_at', null)
+      .order('name');
+
+    if (error) {
+      logger.error(INVENTORY_MODULE, 'adminGetGlobalCategories error:', error);
+      return failure(new AppError('CATEGORIES_FETCH_FAILED', 'Error al cargar categorías.'));
+    }
+
+    const categories: Category[] = (data || []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      isPredefined: true,
+      tenantId: '',
+      defaultImageUrl: row.default_image_url,
+    }));
+
+    return success(categories);
+  } catch (e) {
+    logger.error(INVENTORY_MODULE, 'adminGetGlobalCategories error:', e);
+    return failure(new AppError('CATEGORIES_FETCH_FAILED', 'Error al cargar categorías.'));
+  }
+}

@@ -137,9 +137,7 @@ export class LogisCoreDB extends Dexie {
     this.version(31).stores({
       tenantSettings: 'tenantId',
     });
-    this.version(32).stores({
-      imageLibrary: 'id, tenantId, categoryId, isDefault, deletedAt, sortOrder',
-    }).upgrade(() => Promise.resolve());
+
   }
 }
 

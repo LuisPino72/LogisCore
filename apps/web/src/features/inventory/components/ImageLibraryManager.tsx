@@ -3,14 +3,19 @@ import { Upload, Trash2, Edit3, Star, Image as ImageIcon } from 'lucide-react';
 import { Button, SearchInput, Input, Modal, EmptyState, Select, Spinner } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
-import { getLibraryImages, uploadLibraryImage, updateLibraryImage, deleteLibraryImage } from '../services/imageLibraryService';
-import { getCategories } from '../services/categoryService';
+import { getLibraryImages, uploadLibraryImage, updateLibraryImage, deleteLibraryImage, adminGetLibraryImages, adminUploadImage, adminUpdateImage, adminDeleteImage } from '../services/imageLibraryService';
+import { getCategories, adminGetGlobalCategories } from '../services/categoryService';
 import type { ImageLibrary } from '../../../specs/image-library';
 import type { Category } from '../types';
 
-export function ImageLibraryManager() {
+interface ImageLibraryManagerProps {
+  tenantId?: string;
+  adminMode?: boolean;
+}
+
+export function ImageLibraryManager({ tenantId: tenantIdProp, adminMode = false }: ImageLibraryManagerProps = {}) {
   const session = useAuthStore((s) => s.session);
-  const tenantId = session?.tenantId ?? '';
+  const tenantId = tenantIdProp || session?.tenantId || '';
   const isOwner = session?.role === 'admin' || session?.role === 'owner';
   const canManage = isOwner && hasActionPermission(session!, 'inventory', 'manage_library');
 
@@ -40,17 +45,17 @@ export function ImageLibraryManager() {
 
   useEffect(() => {
     loadData();
-  }, [tenantId]);
+  }, [tenantId, adminMode]);
 
   const loadData = async () => {
-    if (!tenantId) {
+    if (!adminMode && !tenantId) {
       setLoading(false);
       return;
     }
     setLoading(true);
     const [imagesResult, categoriesResult] = await Promise.all([
-      getLibraryImages(tenantId),
-      getCategories(tenantId),
+      adminMode ? adminGetLibraryImages() : getLibraryImages(tenantId),
+      adminMode ? adminGetGlobalCategories() : getCategories(tenantId),
     ]);
     if (imagesResult.ok) {
       setImages(imagesResult.data);
@@ -101,13 +106,9 @@ export function ImageLibraryManager() {
     setUploading(true);
     setUploadError('');
 
-    const result = await uploadLibraryImage(
-      uploadFile,
-      uploadName.trim(),
-      uploadCategoryId,
-      uploadIsDefault,
-      tenantId
-    );
+    const result = adminMode
+      ? await adminUploadImage(uploadFile, uploadName.trim(), uploadCategoryId, uploadIsDefault)
+      : await uploadLibraryImage(uploadFile, uploadName.trim(), uploadCategoryId, uploadIsDefault, tenantId);
 
     setUploading(false);
     if (result.ok) {
@@ -141,15 +142,9 @@ export function ImageLibraryManager() {
     setEditing(true);
     setEditError('');
 
-    const result = await updateLibraryImage(
-      selectedImage.id,
-      {
-        name: editName.trim(),
-        categoryId: editCategoryId,
-        isDefault: editIsDefault,
-      },
-      tenantId
-    );
+    const result = adminMode
+      ? await adminUpdateImage(selectedImage.id, { name: editName.trim(), categoryId: editCategoryId, isDefault: editIsDefault })
+      : await updateLibraryImage(selectedImage.id, { name: editName.trim(), categoryId: editCategoryId, isDefault: editIsDefault }, tenantId);
 
     setEditing(false);
     if (result.ok) {
@@ -162,7 +157,9 @@ export function ImageLibraryManager() {
   };
 
   const handleDelete = async (id: string) => {
-    const result = await deleteLibraryImage(id, tenantId);
+    const result = adminMode
+      ? await adminDeleteImage(id)
+      : await deleteLibraryImage(id, tenantId);
     if (result.ok) {
       setDeleteConfirmId(null);
       await loadData();
