@@ -10,6 +10,7 @@ import type {
   DexieSupplier, DexieCustomer, DexiePurchaseOrder, DexiePurchaseOrderItem,
   DexieNotification, DexieExpense, DexieRecipe, DexieRecipeLine,
   DexieProductionOrder, DexieRolePermission, DexieSupplierPayment, DexieCreditPayment,
+  DexieImageLibrary,
 } from './types';
 
 export class LogisCoreDB extends Dexie {
@@ -44,6 +45,7 @@ export class LogisCoreDB extends Dexie {
   supplierPayments!: Table<DexieSupplierPayment, string>;
   registerConfigs!: Table<DexieRegisterConfig, string>;
   tenantSettings!: Table<DexieTenantSettings, string>;
+  imageLibrary!: Table<DexieImageLibrary, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -135,6 +137,9 @@ export class LogisCoreDB extends Dexie {
     this.version(31).stores({
       tenantSettings: 'tenantId',
     });
+    this.version(32).stores({
+      imageLibrary: 'id, tenantId, categoryId, isDefault, deletedAt, sortOrder',
+    }).upgrade(() => Promise.resolve());
   }
 }
 

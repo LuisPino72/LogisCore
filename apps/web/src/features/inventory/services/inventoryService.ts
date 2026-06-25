@@ -2,6 +2,7 @@ import { createProduct, createProductWithPresentations, updateProduct, softDelet
 import { getPresentationsForProduct, updatePresentation, deletePresentation, getPresentationByBarcode, getAllPresentations } from './presentationService';
 import { createCategory, updateCategory, getCategories, deleteCategory } from './categoryService';
 import { adjustStock, getProductLots, consumeFifo, getMovementHistory, getLowStockProducts, getAssemblyProductIds as getAssemblyProductIdsSvc } from './stockService';
+export { getLibraryImages, uploadLibraryImage, updateLibraryImage, deleteLibraryImage, getDefaultForCategory } from './imageLibraryService';
 
 export async function getAssemblyProductIds(tenantId: string): Promise<Set<string>> {
   return getAssemblyProductIdsSvc(tenantId);

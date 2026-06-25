@@ -92,6 +92,7 @@ export const CategorySchema = z.object({
   name: z.string().min(1).max(25),
   tenantId: z.string().uuid().nullable().optional(),
   isPredefined: z.boolean().optional(),
+  defaultImageUrl: z.string().nullable().optional(),
 });
 
 export type Category = z.infer<typeof CategorySchema>;
@@ -118,8 +119,10 @@ export type InventoryMovement = z.infer<typeof InventoryMovementSchema>;
 export const CreateCategoryInputSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(25, 'Máximo 25 caracteres'),
   tenantId: z.string().uuid().nullable().optional(),
+  defaultImageUrl: z.string().nullable().optional(),
 });
 
 export const UpdateCategoryInputSchema = z.object({
   name: z.string().min(1, 'Nombre requerido').max(25, 'Máximo 25 caracteres'),
+  defaultImageUrl: z.string().nullable().optional(),
 });

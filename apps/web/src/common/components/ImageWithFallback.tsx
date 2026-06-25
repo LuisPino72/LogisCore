@@ -2,10 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { imageCacheService } from '../../services/imageCache/imageCacheService';
+import { getCategorySvg } from './CategoryPlaceholders';
 
 interface ImageWithFallbackProps {
   productId: string;
   imageUrl?: string | null;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  categoryDefaults?: Map<string, string>;
   alt: string;
   className?: string;
   skeletonClassName?: string;
@@ -16,6 +20,9 @@ const globalImageUrlCache = new Map<string, string>();
 export function ImageWithFallback({
   productId,
   imageUrl,
+  categoryId,
+  categoryName,
+  categoryDefaults,
   alt,
   className,
   skeletonClassName,
@@ -25,10 +32,14 @@ export function ImageWithFallback({
   }
   const effectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
 
+  // Fallback de 4 niveles: imagen -> default categoría (via Map) -> SVG placeholder -> Package icon
+  const resolvedUrl = effectiveImageUrl || (categoryId ? categoryDefaults?.get(categoryId) ?? null : null);
+  const CategorySvg = !resolvedUrl ? getCategorySvg(categoryName) : null;
+
   const prevProductIdRef = useRef<string | null>(null);
   const prevImageUrlRef = useRef<string | null>(null);
 
-  const cachedResolved = effectiveImageUrl ? imageCacheService.getResolvedUrl(effectiveImageUrl) : null;
+  const cachedResolved = resolvedUrl ? imageCacheService.getResolvedUrl(resolvedUrl) : null;
 
   const [src, setSrc] = useState<string | null>(cachedResolved || null);
   const [loading, setLoading] = useState(!cachedResolved);
@@ -39,7 +50,7 @@ export function ImageWithFallback({
     if (imageUrl) {
       globalImageUrlCache.set(productId, imageUrl);
     }
-    const currentEffectiveImageUrl = imageUrl || globalImageUrlCache.get(productId);
+    const currentEffectiveImageUrl = effectiveImageUrl || (categoryId ? categoryDefaults?.get(categoryId) ?? null : null);
 
     if (!currentEffectiveImageUrl) {
       setLoading(false);
@@ -59,7 +70,6 @@ export function ImageWithFallback({
 
     let isActive = true;
 
-    // Timeout: si acquireImageUrl tarda > 3s, usa la URL original como fallback
     const timeoutId = setTimeout(() => {
       if (!isActive) return;
       setSrc(currentEffectiveImageUrl);
@@ -78,7 +88,7 @@ export function ImageWithFallback({
       isActive = false;
       clearTimeout(timeoutId);
     };
-  }, [productId, imageUrl]);
+  }, [productId, imageUrl, categoryId, categoryDefaults, effectiveImageUrl]);
 
   useEffect(() => {
     if (prevProductIdRef.current !== productId || prevImageUrlRef.current !== (imageUrl || null)) {
@@ -98,6 +108,14 @@ export function ImageWithFallback({
   const handleError = () => {
     setError(true);
   };
+
+  if (CategorySvg && !resolvedUrl) {
+    return (
+      <div className={cn('flex items-center justify-center bg-surface-alt overflow-hidden', className)}>
+        <CategorySvg className="w-full h-full" />
+      </div>
+    );
+  }
 
   if (error || (!src && !loading)) {
     return (

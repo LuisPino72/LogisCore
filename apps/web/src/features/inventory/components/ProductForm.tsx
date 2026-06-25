@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect, Tooltip } from '../../../common/components';
-import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check, Camera, Image } from 'lucide-react';
+import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check, Camera, Image, BookOpen } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
+import { ImageLibraryModal } from './ImageLibraryModal';
 import { hasCamera } from '../../../lib/camera';
 import { useToastStore } from '../../../stores/toastStore';
 import type { CreateProductInput, CreatePresentationInput } from '../types';
@@ -50,7 +51,7 @@ function StepIndicator({ current, steps }: { current: number; steps: { id: strin
 interface ProductFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null) => Promise<boolean>;
+  onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null, imagePreview?: string | null) => Promise<boolean>;
   categories: { id: string; name: string; isPredefined?: boolean }[];
   editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string; costPrice?: number; productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both' } | null;
   onCreateCategory?: (name: string) => Promise<string | null>;
@@ -70,6 +71,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
   const [categorySubmitting, setCategorySubmitting] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [cameraAvailable, setCameraAvailable] = useState(true);
   const [imageError, setImageError] = useState('');
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +112,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
     if (!imageFile && !imagePreview && editProduct?.imageUrl) {
       data.imageUrl = '';
     }
-    const result = await onSubmit(data, imageFile);
+    const result = await onSubmit(data, imageFile, imagePreview);
     if (result && !imageFile) {
       setImageFile(null);
       setImagePreview(null);
@@ -1285,7 +1287,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               </div>
               <div>
                 <span className="block text-sm font-semibold text-gray-800">Tomar foto</span>
-                <span className="block text-xs text-gray-500">Usa la cámara del dispositivo</span>
+                <span className="block text-xs text-gray-500">Usa la camara del dispositivo</span>
               </div>
             </button>
           )}
@@ -1301,15 +1303,42 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               <Image size={18} className="text-primary" />
             </div>
             <div>
-              <span className="block text-sm font-semibold text-gray-800">Elegir de galería</span>
+              <span className="block text-sm font-semibold text-gray-800">Elegir de galeria</span>
               <span className="block text-xs text-gray-500">Selecciona una imagen guardada</span>
             </div>
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowImagePicker(false);
+              setShowLibraryModal(true);
+            }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+              <BookOpen size={18} className="text-primary" />
+            </div>
+            <div>
+              <span className="block text-sm font-semibold text-gray-800">Biblioteca</span>
+              <span className="block text-xs text-gray-500">Selecciona de imagenes predefinidas</span>
+            </div>
+          </button>
           {!cameraAvailable && (
-            <p className="text-[11px] text-gray-600 text-center pt-1">No se detectó cámara. Selecciona una imagen de la galería.</p>
+            <p className="text-[11px] text-gray-600 text-center pt-1">No se detecto camara. Selecciona una imagen de la galeria.</p>
           )}
         </div>
       </Modal>
+
+      <ImageLibraryModal
+        isOpen={showLibraryModal}
+        onClose={() => setShowLibraryModal(false)}
+        onSelect={(url) => {
+          setImagePreview(url);
+          setImageFile(null);
+          setShowLibraryModal(false);
+        }}
+        currentCategoryId={formData.categoryId}
+      />
 
       <input
         ref={cameraInputRef}

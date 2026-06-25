@@ -19,6 +19,10 @@ function sanitizeNulls(raw: Record<string, unknown>): Record<string, unknown> {
   if (out.costPrice == null) delete out.costPrice;
   if (out.productType == null) delete out.productType;
   if (out.hasAssemblyRecipe == null) delete out.hasAssemblyRecipe;
+  if (out.default_image_url != null) {
+    out.defaultImageUrl = out.default_image_url;
+    delete out.default_image_url;
+  }
   return out;
 }
 

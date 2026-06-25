@@ -4,6 +4,8 @@ import { EventBus } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { useInventoryStore } from '../stores/inventoryStore';
+import { getDb } from '../../../services/dexie/db';
+import { syncQueue } from '../../../services/sync/syncQueue';
 import type { Product, CreateProductInput, CreatePresentationInput, AdjustmentReason, AdjustStockInput } from '../types';
 
 export interface ConfirmDelete {
@@ -168,6 +170,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
   const handleCreateProduct = useCallback(async (
     data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' },
     imageFile?: File | null,
+    imagePreview?: string | null,
   ) => {
     if (!tenantId || !userId) return false;
     let product: Product | null = null;
@@ -185,12 +188,18 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
         if (publicUrl) {
           EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
         } else {
-          addToast({ type: 'warning', message: 'Producto creado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });
+          addToast({ type: 'warning', message: 'Producto creado. La imagen no se pudo subir, pero puedes agregarla despues desde "Editar".', duration: 5000 });
         }
+      } else if (imagePreview && !imagePreview.startsWith('blob:')) {
+        // URL de biblioteca — usar directamente
+        const db = getDb();
+        await db.products.update(product.id, { imageUrl: imagePreview });
+        await syncQueue.enqueue('products', 'UPDATE', product.id, { imageUrl: imagePreview }, tenantId);
+        EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
       }
     } else {
       const storeError = useInventoryStore.getState().error;
-      addToast({ type: 'error', message: storeError ?? 'Error al crear el producto. Verifica tu conexión e intenta de nuevo.', duration: 5000 });
+      addToast({ type: 'error', message: storeError ?? 'Error al crear el producto. Verifica tu conexion e intenta de nuevo.', duration: 5000 });
     }
     if (product) setShowProductForm(false);
     return !!product;
@@ -199,6 +208,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
   const handleEditProduct = useCallback(async (
     data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' },
     imageFile?: File | null,
+    imagePreview?: string | null,
   ) => {
     if (!editProduct || !tenantId) return false;
 
@@ -208,7 +218,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
 
     const ok = await updateProduct(editProduct.id, data, tenantId);
     if (!ok) {
-      addToast({ type: 'error', message: 'Error al actualizar el producto. Verifica que los datos sean correctos y que el SKU no esté duplicado.', duration: 5000 });
+      addToast({ type: 'error', message: 'Error al actualizar el producto. Verifica que los datos sean correctos y que el SKU no este duplicado.', duration: 5000 });
       return false;
     }
     addToast({ type: 'success', message: 'Producto actualizado exitosamente.', duration: 3000 });
@@ -218,8 +228,15 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
         setEditProduct(prev => prev ? { ...prev, imageUrl: publicUrl } : null);
         EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
       } else {
-        addToast({ type: 'warning', message: 'Producto actualizado. La imagen no se pudo subir, pero puedes agregarla después desde "Editar".', duration: 5000 });
+        addToast({ type: 'warning', message: 'Producto actualizado. La imagen no se pudo subir, pero puedes agregarla despues desde "Editar".', duration: 5000 });
       }
+    } else if (imagePreview && !imagePreview.startsWith('blob:') && imagePreview !== editProduct.imageUrl) {
+      // URL de biblioteca — usar directamente
+      const db = getDb();
+      await db.products.update(editProduct.id, { imageUrl: imagePreview });
+      await syncQueue.enqueue('products', 'UPDATE', editProduct.id, { imageUrl: imagePreview }, tenantId);
+      setEditProduct(prev => prev ? { ...prev, imageUrl: imagePreview } : null);
+      EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
     }
     setEditProduct(null);
     setShowProductForm(false);

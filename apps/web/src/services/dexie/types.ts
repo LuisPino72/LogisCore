@@ -52,6 +52,7 @@ export interface DexieCategory {
   tenantId: string | null;
   name: string;
   isPredefined?: boolean;
+  defaultImageUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
   deletedAt?: string;
@@ -417,4 +418,17 @@ export interface DexieCreditPayment {
   reference?: string;
   createdAt: string;
   deletedAt?: string;
+}
+
+export interface DexieImageLibrary {
+  id: string;
+  tenantId: string;
+  name: string;
+  categoryId: string | null;
+  imageUrl: string;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 }

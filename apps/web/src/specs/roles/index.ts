@@ -97,7 +97,7 @@ export const CRUD_ACTIONS = ['create', 'read', 'update', 'delete'] as const;
 /** Special actions per module */
 export const SPECIAL_ACTIONS: Record<string, string[]> = {
   dashboard: ['read'],
-  inventory: ['adjust_stock', 'import_csv', 'manage_categories'],
+  inventory: ['adjust_stock', 'import_csv', 'manage_categories', 'manage_library'],
   production: ['produce_batch'],
   purchases: ['receive_order', 'pay_debt'],
   pos: ['void_sale', 'close_box', 'open_box', 'apply_discount', 'manager_close', 'manage_registers'],

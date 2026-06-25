@@ -106,6 +106,20 @@ Table categories {
   tenant_id uuid [ref: > tenants.id]         -- nullable for global predefined categories
   name text [not null]
   is_predefined boolean [not null, default: false]
+  default_image_url text
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  deleted_at timestamptz
+}
+
+Table image_library {
+  id uuid [pk]
+  name text [not null]
+  category_id uuid [ref: > categories.id]
+  image_url text [not null]
+  is_default boolean [not null, default: false]
+  sort_order integer [not null, default: 0]
+  tenant_id uuid [ref: > tenants.id]
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
   deleted_at timestamptz
@@ -244,6 +258,8 @@ Ref: exchange_rates.tenant_id - tenants.id
 Ref: products.tenant_id - tenants.id
 Ref: products.category_id - categories.id
 Ref: categories.tenant_id - tenants.id
+Ref: image_library.tenant_id - tenants.id
+Ref: image_library.category_id - categories.id
 Ref: inventory_movements.tenant_id - tenants.id
 Ref: inventory_movements.product_id - products.id
 Ref: inventory_movements.user_id - auth.users.id

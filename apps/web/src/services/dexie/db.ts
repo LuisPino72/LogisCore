@@ -31,6 +31,7 @@ export type {
   DexieRolePermission,
   DexieSupplierPayment,
   DexieCreditPayment,
+  DexieImageLibrary,
 } from './types';
 
 export type { SyncQueueItem, SyncMeta } from '../sync/types';
