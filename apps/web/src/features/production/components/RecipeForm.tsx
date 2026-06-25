@@ -88,6 +88,12 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const { ivaRate } = useSettingsStore();
 
   useEffect(() => {
+    if (!recipe && currentStep === 2 && form.lines.length === 0) {
+      addLine();
+    }
+  }, [currentStep, recipe, form.lines.length, addLine]);
+
+  useEffect(() => {
     if (recipe) {
       getRecipeWithLines(tenantId!, recipe.id).then((data) => {
         if (data) {
