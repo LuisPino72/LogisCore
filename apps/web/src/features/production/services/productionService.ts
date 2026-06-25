@@ -218,6 +218,7 @@ export const productionService = {
               unit: productUnit,
               stock: 0,
               costPrice: 0,
+              stockMin: input.newProductStockMin ?? 0,
               productType: 'producto_terminado',
             };
             await db.products.add(newProductRecord);

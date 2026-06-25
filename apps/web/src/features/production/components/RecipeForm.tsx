@@ -629,20 +629,34 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   />
                 )}
               </div>
-              {categoryOptions.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Categoría <span className="text-danger">*</span>
-                  </label>
-                  <SearchableSelect
-                    options={[{ value: '', label: 'Seleccionar categoría...' }, ...categoryOptions]}
-                    value={form.newProductCategoryId}
-                    onChange={(value) => updateField('newProductCategoryId', value)}
-                    placeholder="Seleccionar categoría..."
-                    searchPlaceholder="Buscar categoría..."
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {categoryOptions.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Categoría <span className="text-danger">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={[{ value: '', label: 'Seleccionar categoría...' }, ...categoryOptions]}
+                      value={form.newProductCategoryId}
+                      onChange={(value) => updateField('newProductCategoryId', value)}
+                      placeholder="Seleccionar categoría..."
+                      searchPlaceholder="Buscar categoría..."
+                    />
+                  </div>
+                )}
+                {form.mode === 'batch' && !form.newProductIsIngredient && (
+                  <Input
+                    label="Stock mínimo"
+                    type="number"
+                    inputMode="numeric"
+                    value={form.newProductStockMin || ''}
+                    onChange={(e) => updateField('newProductStockMin', Number(e.target.value) || 0)}
+                    placeholder="0"
+                    min={0}
+                    step={1}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </Card>
 
             {!form.newProductIsIngredient && (

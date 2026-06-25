@@ -84,6 +84,7 @@ interface RecipeFormState {
   newProductPriceUsd: number;
   newProductCategoryId: string;
   newProductIsTaxable: boolean;
+  newProductStockMin: number;
 }
 
 export interface FormWarning {
@@ -107,6 +108,7 @@ const INITIAL_STATE: RecipeFormState = {
   newProductPriceUsd: 0,
   newProductCategoryId: '',
   newProductIsTaxable: false,
+  newProductStockMin: 0,
 };
 
 export function useRecipeForm() {
@@ -678,6 +680,7 @@ export function useRecipeForm() {
       newProductPriceUsd: form.newProductIsIngredient ? undefined : form.newProductPriceUsd,
       newProductCategoryId: form.newProductCategoryId || undefined,
       newProductIsTaxable: form.newProductIsTaxable,
+      newProductStockMin: form.newProductStockMin || undefined,
     };
     return input;
   }, [form, validate]);

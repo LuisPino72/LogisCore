@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
+import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner, SaleDetailModal } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
 import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, User } from 'lucide-react';
@@ -704,8 +704,6 @@ export function PosPage({ tenantId }: PosPageProps) {
               onVoid={(saleId) => setVoidConfirmId(saleId)}
               loading={salesHistoryLoading}
               canVoid={role === 'owner' || role === 'admin'}
-              initialSaleId={externalSaleId}
-              onClearExternalSale={() => setExternalSaleId(null)}
             />
           </div>
         )}
@@ -976,6 +974,15 @@ export function PosPage({ tenantId }: PosPageProps) {
           }
         }}
       />
+
+      {tenantId && externalSaleId && (
+        <SaleDetailModal
+          saleId={externalSaleId}
+          tenantId={tenantId}
+          isOpen={true}
+          onClose={() => setExternalSaleId(null)}
+        />
+      )}
 
       <ModuleOnboarding
         moduleId="pos"

@@ -120,10 +120,10 @@ export function mmToM(mm: number): number {
 }
 
 export function displayStock(stock: number, unit: string): string {
-  if (unit === 'kg') return gramsToKg(stock).toFixed(2);
-  if (unit === 'lt') return mlToLt(stock).toFixed(2);
+  if (unit === 'kg') return gramsToKg(stock).toFixed(2).replace(/\.00$/, '');
+  if (unit === 'lt') return mlToLt(stock).toFixed(2).replace(/\.00$/, '');
   if (unit === 'gr') return stock.toFixed(0);
-  if (unit === 'm') return mmToM(stock).toFixed(2);
+  if (unit === 'm') return mmToM(stock).toFixed(2).replace(/\.00$/, '');
   return stock.toString();
 }
 
