@@ -50,7 +50,7 @@ const defaultFormData: ProductFormData = {
   priceUsd: 0,
   categoryId: undefined,
   isWeighted: false,
-  isTaxable: true,
+  isTaxable: false,
   isSellable: true,
   isRawMaterial: false,
   productionType: undefined,

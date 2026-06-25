@@ -555,23 +555,20 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 const unit = e.target.value;
                 setField('unit', unit);
                 if (creationType === 'raw_material') {
-                  // Materia prima pesada (kg/lt/m) SÍ necesita isWeighted para conversión stock
-                  setField('isWeighted', unit === 'kg' || unit === 'lt' || unit === 'm');
+                  setField('isWeighted', unit === 'kg' || unit === 'lt');
                 } else {
-                  setField('isWeighted', unit === 'kg' || unit === 'lt' || unit === 'm');
-                  setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : unit === 'm' ? 'pesable_m' : 'unidad');
+                  setField('isWeighted', unit === 'kg' || unit === 'lt');
+                  setField('productType', unit === 'kg' ? 'pesable_kg' : unit === 'lt' ? 'pesable_lt' : 'unidad');
                 }
               }}
             >
               <option value="kg">Kilogramos (Kg)</option>
               <option value="lt">Litros (Lt)</option>
-              <option value="m">Metros (m)</option>
               <option value="unidad">Unidad</option>
             </Select>
             <p className="text-xs text-gray-600 mt-0.5">
               {formData.unit === 'kg' && 'Se guardará en gramos (Ej: 3.5 Kg = 3500 g)'}
               {formData.unit === 'lt' && 'Se guardará en mililitros (Ej: 1.5 Lt = 1500 ml)'}
-              {formData.unit === 'm' && 'Se guardará en milímetros (Ej: 1.5 m = 1500 mm)'}
               {formData.unit === 'unidad' && 'Se guarda como unidades enteras'}
             </p>
           </div>

@@ -74,7 +74,7 @@ export function OrderForm({ isOpen, onClose, onSubmit, suppliers, tenantId, edit
   useEffect(() => {
     if (isOpen) {
       usePurchaseStore.getState().fetchProductsForOrder(tenantId).then((res) => {
-        if (res.ok) setProducts(res.data.filter((p) => p.productType !== 'producto_terminado'));
+        if (res.ok) setProducts(res.data.filter((p) => p.productType === 'resale' || p.productType === 'materia_prima' || p.productType === 'both'));
       });
       if (editOrder) {
         setSupplierId(editOrder.supplierId);
