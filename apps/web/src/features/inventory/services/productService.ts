@@ -831,7 +831,7 @@ export async function uploadProductImage(file: File, tenantId: string, productId
     const oldProduct = await db.products.where({ id: productId, tenantId }).first();
     if (oldProduct?.imageUrl) {
       await imageCacheService.invalidate(oldProduct.imageUrl);
-      await deleteStorageImage(oldProduct.imageUrl, token);
+      await deleteStorageImage(oldProduct.imageUrl);
     }
     await db.transaction('rw', [db.products, db.syncQueue], async () => {
       await db.products.update(productId, { imageUrl: publicUrl });

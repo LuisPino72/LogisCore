@@ -638,42 +638,17 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               )}
             </Card>
 
-            <label className="flex items-center gap-2 cursor-pointer py-2">
-              <input
-                type="checkbox"
-                checked={form.newProductIsTaxable}
-                onChange={(e) => updateField('newProductIsTaxable', e.target.checked)}
-                className="rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span className="text-sm text-gray-700">Cobrar IVA ({(ivaRate * 100).toFixed(0)}%) al producto terminado</span>
-            </label>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Modo</label>
-              <div className="flex gap-2">
-                <Button
-                  variant={form.mode === 'batch' ? 'primary' : 'ghost'}
-                  size="sm"
-                  onClick={() => updateField('mode', 'batch')}
-                  className="flex-1"
-                >
-                  Producir y Guardar
-                </Button>
-                <Button
-                  variant={form.mode === 'assembly' ? 'primary' : 'ghost'}
-                  size="sm"
-                  onClick={() => updateField('mode', 'assembly')}
-                  className="flex-1"
-                >
-                  Preparar al Momento
-                </Button>
-              </div>
-              {form.mode === 'assembly' && (
-                <p className="text-xs text-info mt-1 wrap-break-word">
-                  En modo Preparar al Momento, el producto se consume al vender. No se genera stock.
-                </p>
-              )}
-            </div>
+            {!form.newProductIsIngredient && (
+              <label className="flex items-center gap-2 cursor-pointer py-2">
+                <input
+                  type="checkbox"
+                  checked={form.newProductIsTaxable}
+                  onChange={(e) => updateField('newProductIsTaxable', e.target.checked)}
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-gray-700">Cobrar IVA ({(ivaRate * 100).toFixed(0)}%) al producto terminado</span>
+              </label>
+            )}
 
             {warnings.length > 0 && (
               <div className="space-y-1">
