@@ -10,7 +10,7 @@ import type { Category } from '../types';
 
 export function ImageLibraryManager() {
   const session = useAuthStore((s) => s.session);
-  const tenantId = session?.tenantId ?? '';
+  const tenantId = session?.tenantSlug ?? '';
   const isOwner = session?.role === 'admin' || session?.role === 'owner';
   const canManage = isOwner && hasActionPermission(session!, 'inventory', 'manage_library');
 
@@ -43,7 +43,10 @@ export function ImageLibraryManager() {
   }, [tenantId]);
 
   const loadData = async () => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const [imagesResult, categoriesResult] = await Promise.all([
       getLibraryImages(tenantId),
