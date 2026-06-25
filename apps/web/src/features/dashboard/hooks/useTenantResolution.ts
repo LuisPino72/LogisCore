@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TenantTranslator } from '../../../services/tenantTranslator';
+import { initDb } from '../../../services/dexie/dbInstance';
 import type { UserSession } from '@logiscore/core';
 
 interface UseTenantResolutionInput {
@@ -20,6 +21,7 @@ export function useTenantResolution({
     if (session?.tenantId) {
       setEffectiveTenantId(session.tenantId);
     } else if (isAdminViewingTenant && selectedTenantSlug) {
+      initDb(selectedTenantSlug);
       TenantTranslator.slugToUuid(selectedTenantSlug)
         .then((uuid) => { if (!cancelled) setEffectiveTenantId(uuid); })
         .catch(() => { if (!cancelled) setEffectiveTenantId(null); });

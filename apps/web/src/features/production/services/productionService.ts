@@ -1401,8 +1401,9 @@ export const productionService = {
           : line.quantity * wasteMultiplier;
         const needed = Math.ceil(neededInStorage);
         // BUG-PROD-006: Display quantity in product's native unit (e.g., 0.5 kg not 500 g)
+        // Fix display quantity to use native unit (div 1000 for weighted)
         const displayQty = product
-          ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit)
+          ? (product.isWeighted ? recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit) / 1000 : recipeQtyToStorage(line.quantity * wasteMultiplier, line.unit, product.unit))
           : line.quantity * wasteMultiplier;
         const displayUnit = product?.unit || line.unit;
 

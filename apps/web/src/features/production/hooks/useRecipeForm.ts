@@ -3,6 +3,7 @@ import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { validateCycles } from '../services/productionService';
 import { computeRecipeCostAsync } from '../services/costService';
+import { recipeQtyToStorageBase } from '../services/productionMappers';
 import { getDb } from '@/services/dexie/db';
 import { useAuthStore } from '../../auth/stores/authStore';
 
@@ -433,7 +434,7 @@ export function useRecipeForm() {
           const isSubRecipe = ingredient.productType === 'producto_terminado';
           if (!isSubRecipe && ingredient.stock !== undefined) {
             const wasteMultiplier = 1 + (form.wastePct / 100);
-            const needed = Math.ceil(line.quantity * wasteMultiplier);
+            const needed = Math.ceil(recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, ingredient.unit));
             if (ingredient.stock < needed) {
               // Warning no bloqueante - se muestra en warnings useMemo
             }
@@ -554,7 +555,7 @@ export function useRecipeForm() {
           const isSubRecipe = ingredient.productType === 'producto_terminado';
           if (!isSubRecipe) {
             const wasteMultiplier = 1 + (form.wastePct / 100);
-            const needed = Math.ceil(line.quantity * wasteMultiplier);
+            const needed = Math.ceil(recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, ingredient.unit));
             if (ingredient.stock < needed) {
               w.push({ field: `line_${i}_stock`, message: `Stock bajo de "${ingredient.name}": ${ingredient.stock} disponible, se necesitan ${needed} (con merma ${form.wastePct}%)`, type: 'warning' });
             }
