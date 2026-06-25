@@ -857,7 +857,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
             {form.mode === 'batch' && (
               <div>
                 <Select
-                  label="Unidad"
+                  label="Tipo de Unidad"
                   value={form.yieldUnit}
                   onChange={(e) => updateField('yieldUnit', e.target.value)}
                   error={errors.yieldUnit}

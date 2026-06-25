@@ -96,12 +96,10 @@ export const RecentActivityWidget: FC<RecentActivityWidgetProps> = ({ activity, 
               role="button"
               tabIndex={0}
               onClick={() => { if (entry.route) { 
-                const entityType = entry.type === 'sale_completed' ? 'sale_completed' : entry.type;
-                navigate(entry.route, { state: { entityId: entry.entityId, entityType } }); 
+                navigate(`${entry.route}?saleId=${entry.entityId}`); 
               }}}
               onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && entry.route) { e.preventDefault(); 
-                const entityType = entry.type === 'sale_completed' ? 'sale_completed' : entry.type;
-                navigate(entry.route, { state: { entityId: entry.entityId, entityType } }); } }}
+                navigate(`${entry.route}?saleId=${entry.entityId}`); } }}
             >
               <div className="flex flex-col items-center shrink-0 pt-1.5 ml-[-21px]">
                 <div className={`w-2 h-2 rounded-full ${dotColor} ring-2 ring-white`} />

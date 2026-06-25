@@ -96,7 +96,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                 <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
                   <DollarSign size={16} className="text-success" />
                 </div>
-                <h3 className="text-sm font-title font-bold text-gray-900">Ganancias de hoy</h3>
+                <h3 className="text-sm font-title font-bold text-gray-900">Ganancia Neta del día</h3>
               </div>
               {todayEarningsLoading ? (
                 <div className="space-y-3">
