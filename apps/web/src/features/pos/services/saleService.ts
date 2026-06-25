@@ -538,6 +538,7 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
         saleId,
         tenantSlug: tenantId,
         totalBs,
+        totalUsd,
         paymentMethod,
         itemsCount: items.length,
         isCreditSale,

@@ -59,7 +59,7 @@ function ProgressBar({ currentStep, totalSteps, isEdit }: { currentStep: number;
         ))}
       </div>
       <p className="text-xs text-gray-500 text-center sm:text-left">
-        Paso {currentStep} de {totalSteps} — {steps[currentStep - 1].label}
+        Paso {currentStep} de {totalSteps} — {steps[Math.max(0, currentStep - 1)]?.label ?? ''}
       </p>
     </div>
   );
@@ -113,9 +113,10 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           updateField('lines', lines);
         }
         setLoadingRecipe(false);
+        setCurrentStep(1);
       });
     }
-  }, [recipe, getRecipeWithLines, updateField]);
+  }, [recipe, getRecipeWithLines, updateField, setCurrentStep]);
 
   const availableIngredients = getAvailableIngredients();
 

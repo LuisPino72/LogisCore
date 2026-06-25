@@ -102,12 +102,15 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   useEffect(() => {
     const state = location.state as { entityId?: string; entityType?: string } | null;
-    if (state?.entityId && state?.entityType?.startsWith('sale_')) {
+    const params = new URLSearchParams(location.search);
+    const querySaleId = params.get('saleId');
+    const saleId = querySaleId || state?.entityId;
+    if (saleId && ((state?.entityType?.startsWith('sale_') || state?.entityType === 'sale_completed') || querySaleId)) {
       switchToHistory();
-      setExternalSaleId(state.entityId);
+      setExternalSaleId(saleId);
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, switchToHistory]);
+  }, [location.state, location.search, switchToHistory]);
 
   // Global Barcode Listener State
   const SCAN_TIMEOUT_MS = 120;

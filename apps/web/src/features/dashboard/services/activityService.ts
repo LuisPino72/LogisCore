@@ -7,7 +7,10 @@ import { ValidateDashboardTenantSchema } from '../../../specs/dashboard/index';
 import type { ActivityEntry } from '../types';
 
 const EVENT_MAP: Record<string, { type: ActivityEntry['type']; icon: string; getMessage: (p: Record<string, unknown>) => string; route?: string }> = {
-  'SALE.COMPLETED': { type: 'sale_completed', icon: 'ShoppingCart', getMessage: (p) => `Venta #${String(p.saleId ?? '').slice(0, 8)} — $${Number(p.totalUsd ?? 0).toFixed(2)}`, route: '/pos' },
+  'SALE.COMPLETED': { type: 'sale_completed', icon: 'ShoppingCart', getMessage: (p) => {
+    const payload = typeof p === 'string' ? JSON.parse(p) : p;
+    return `Venta #${String(payload.saleId ?? '').slice(0, 8)} — $${Number(payload.totalUsd ?? 0).toFixed(2)}`;
+  }, route: '/pos' },
   'SALE.VOIDED': { type: 'sale_voided', icon: 'RotateCcw', getMessage: (p) => `Venta #${String(p.saleId ?? '').slice(0, 8)} anulada`, route: '/pos' },
   'EXPENSES.CREATED': { type: 'expense_created', icon: 'Receipt', getMessage: (p) => `Gasto ${p.category ?? ''} $${Number(p.amountUsd ?? 0).toFixed(2)}`, route: '/gastos' },
   'EXPENSES.CANCELLED': { type: 'expense_created', icon: 'Receipt', getMessage: (p) => `Gasto ${p.category ?? ''} cancelado`, route: '/gastos' },
