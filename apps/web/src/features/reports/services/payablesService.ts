@@ -26,5 +26,5 @@ export async function getPendingPayables(tenantId: string): Promise<number> {
       { balanceSum: roundedBalanceSum, orderTotal: roundedOrderTotal });
   }
 
-  return roundedBalanceSum;
+  return roundedOrderTotal;
 }

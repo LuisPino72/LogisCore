@@ -14,7 +14,9 @@ export function useChartReady(): [boolean, (node: HTMLDivElement | null) => void
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-          setReady(true);
+          requestAnimationFrame(() => {
+            setReady(true);
+          });
           ro.disconnect();
           observerRef.current = null;
           break;
