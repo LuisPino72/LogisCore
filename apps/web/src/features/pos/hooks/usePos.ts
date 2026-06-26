@@ -85,8 +85,8 @@ export function usePos(tenantId: string | null) {
 
   const refreshFull = useDebouncedCallback(() => {
     if (!tenantId) return;
-    fetchProducts(tenantId);
-    fetchCashRegister(tenantId);
+    fetchProducts(tenantId, true);
+    fetchCashRegister(tenantId, true);
     fetchLatestRate(tenantId);
     fetchPresentations(tenantId);
   }, 300, 1000);
@@ -96,7 +96,7 @@ export function usePos(tenantId: string | null) {
 
     const refreshCashRegister = () => {
       fetchProducts(tenantId, true);
-      fetchCashRegister(tenantId);
+      fetchCashRegister(tenantId, true);
     };
 
     const subs = [
