@@ -7,6 +7,7 @@ import { useInventory } from '../hooks/useInventory';
 import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
+import { getDb } from '../../../services/dexie/db';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
 import { ProductLots } from './ProductLots';
@@ -86,9 +87,31 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   const isOwner = role === 'owner' || role === 'admin';
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [producedProductIds, setProducedProductIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
   }, [loading, hasLoadedOnce]);
+
+  // Load recipe product IDs to identify produced products
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const db = getDb();
+        const recipes = await db.recipes
+          .where({ tenantId })
+          .filter((r) => !r.deletedAt && r.isActive)
+          .toArray();
+        if (!cancelled) {
+          setProducedProductIds(new Set(recipes.map((r) => r.productId)));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantId]);
   if (!tenantId) {
     return <EmptyState icon={<Package size={48} />} title="Selecciona tu negocio" description="No hay un negocio activo" />;
   }
@@ -573,21 +596,26 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
               const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : '';
               const isSelected = selectedForOrder.has(product.id);
               const isZero = product.stock <= 0;
+              const isProduced = producedProductIds.has(product.id);
 
               return (
                 <div
                   key={product.id}
-                  onClick={() => handleToggleProduct(product.id)}
-                  className={`rounded-lg p-3 border cursor-pointer transition-all duration-200 ${
-                    isSelected
-                      ? 'border-primary ring-1 ring-primary/30 bg-primary/2'
-                      : 'border-border hover:border-primary/30 hover:bg-gray-50/50'
-                  } ${isZero ? 'low-stock-card--danger' : ''}`}
-                  style={!isSelected && !isZero ? { borderLeftColor: 'var(--color-warning)' } : undefined}
+                  onClick={() => !isProduced && handleToggleProduct(product.id)}
+                  className={`rounded-lg p-3 border transition-all duration-200 ${
+                    isProduced
+                      ? 'opacity-50 cursor-not-allowed border-gray-200 bg-gray-50'
+                      : isSelected
+                        ? 'border-primary ring-1 ring-primary/30 bg-primary/2 cursor-pointer'
+                        : 'border-border hover:border-primary/30 hover:bg-gray-50/50 cursor-pointer'
+                  } ${isZero && !isProduced ? 'low-stock-card--danger' : ''}`}
+                  style={!isSelected && !isZero && !isProduced ? { borderLeftColor: 'var(--color-warning)' } : undefined}
                 >
                   <div className="flex items-center gap-3">
                     <div className="shrink-0">
-                      {isSelected ? (
+                      {isProduced ? (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-info/10 text-info text-[10px] font-bold" title="Se produce, no se compra">P</span>
+                      ) : isSelected ? (
                         <CheckCircle2 size={20} className="text-primary" />
                       ) : (
                         <Circle size={20} className="text-gray-600" />
@@ -599,6 +627,9 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                         Stock: <span className={`font-medium ${isZero ? 'text-danger' : ''}`}>{displayStock_val} {unitLabel}</span>
                         {' / '}Mín: {displayMin} {unitLabel}
                       </p>
+                      {isProduced && (
+                        <p className="text-[10px] text-info mt-0.5 font-medium">Se produce, no se puede comprar</p>
+                      )}
                     </div>
                     <div className={`p-1.5 rounded-lg shrink-0 ${isZero ? 'bg-danger/10' : 'bg-warning/10'}`}>
                       <AlertTriangle size={16} className={isZero ? 'text-danger' : 'text-warning'} />

@@ -11,6 +11,7 @@ import { EmptyState, Card, Badge, Tooltip } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
 import { formatUsd } from '../../../lib/formatBs';
+import { getDb } from '../../../services/dexie/db';
 
 interface DashboardPageProps {
   tenantId?: string | null;
@@ -67,12 +68,34 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   const { activity: recentActivity, loading: activityLoading } = useRecentActivity(tenantId);
 
   const [showAllLowStock, setShowAllLowStock] = useState(false);
+  const [producedProductIds, setProducedProductIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!tenantId) return;
     fetchTopProducts(tenantId);
     fetchLowStock(tenantId);
   }, [tenantId, fetchTopProducts, fetchLowStock]);
+
+  // Load recipe product IDs to identify produced products
+  useEffect(() => {
+    if (!tenantId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const db = getDb();
+        const recipes = await db.recipes
+          .where({ tenantId })
+          .filter((r) => !r.deletedAt && r.isActive)
+          .toArray();
+        if (!cancelled) {
+          setProducedProductIds(new Set(recipes.map((r) => r.productId)));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantId]);
 
   const top5LowStock = useMemo(() => lowStockProducts.slice(0, 5), [lowStockProducts]);
 
@@ -261,6 +284,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                     const isZero = p.stock <= 0;
                     const stockMin = p.stockMin ?? 1;
                     const pct = stockMin > 0 ? Math.min((p.stock / stockMin) * 100, 100) : 0;
+                    const isProduced = producedProductIds.has(p.id);
 
                     return (
                       <div key={p.id} className={`low-stock-card ${isZero ? 'low-stock-card--danger' : 'low-stock-card--warning'}`}>
@@ -270,15 +294,22 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                             <Badge variant={isZero ? 'danger' : 'warning'}>
                               {displayStock(p.stock, p.unit)} {p.unit}
                             </Badge>
-                            <Tooltip content="Crear orden de compra" variant="help">
-                              <button
-                                type="button"
-                                onClick={() => navigate('/purchases')}
-                                className="inline-flex items-center justify-center w-11 h-11 rounded-lg text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"
-                              >
-                                <ShoppingCart size={16} />
-                              </button>
-                            </Tooltip>
+                            {!isProduced && (
+                              <Tooltip content="Crear orden de compra" variant="help">
+                                <button
+                                  type="button"
+                                  onClick={() => navigate('/purchases')}
+                                  className="inline-flex items-center justify-center w-11 h-11 rounded-lg text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"
+                                >
+                                  <ShoppingCart size={16} />
+                                </button>
+                              </Tooltip>
+                            )}
+                            {isProduced && (
+                              <Tooltip content="Se produce, no se compra" variant="help">
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-info/10 text-info text-[10px] font-bold">P</span>
+                              </Tooltip>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
