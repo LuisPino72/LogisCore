@@ -121,7 +121,13 @@ export async function logAuditEvent(payload: {
   if (payload.userId) insertPayload.user_id = payload.userId;
   if (payload.tenantUuid) insertPayload.tenant_id = payload.tenantUuid;
 
-  const safeInsertPayload = sanitizeInsertPayload(insertPayload);
+  // Sanitize all fields except payload (already sanitized, keep as jsonb)
+  const { payload: _payload, ...rest } = insertPayload;
+  const safeInsertPayload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rest)) {
+    safeInsertPayload[key] = ensureStringValue(value);
+  }
+  safeInsertPayload.payload = _payload;
 
   if (!navigator.onLine) {
     return queueAuditLocally(safeInsertPayload);

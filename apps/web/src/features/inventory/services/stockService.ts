@@ -387,7 +387,7 @@ export async function getLowStockProducts(tenantId: string): Promise<Result<Prod
 
   let rows = await db.products
     .where({ tenantId })
-    .filter((p) => !p.deletedAt && !assemblyProductIds.has(p.id) && p.isSellable !== false && p.stockMin != null && p.stockMin > 0)
+    .filter((p) => !p.deletedAt && !assemblyProductIds.has(p.id) && p.stockMin != null && p.stockMin > 0)
     .toArray();
 
   if (rows.length === 0) {
