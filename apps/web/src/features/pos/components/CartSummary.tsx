@@ -7,6 +7,7 @@ import { preciseRound } from '@logiscore/shared';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useToastStore } from '../../../stores/toastStore';
+import { usePosStore } from '../stores/posStore';
 
 interface CartSummaryProps {
   items: CartItem[];
@@ -52,6 +53,7 @@ export function CartSummary({
   const [showCreditInfo, setShowCreditInfo] = useState(false);
   const { addToast } = useToastStore();
   const { ivaRate, igtfRate, igtfEnabled, maxDiscountPct } = useSettingsStore();
+  const activeParkedCartId = usePosStore((s) => s.activeParkedCartId);
 
   const totals = useMemo(
     () => calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount, {
@@ -333,11 +335,11 @@ export function CartSummary({
         <Button
           variant="secondary"
           className="flex-1 min-h-11"
-          disabled={items.length === 0}
+          disabled={items.length === 0 || !!activeParkedCartId}
           onClick={onPark}
         >
           <Pause size={16} />
-          Pausar
+          {activeParkedCartId ? 'Ya pausada' : 'Pausar'}
         </Button>
         <Button
           variant={isCreditSale ? 'ghost-danger' : isOpen ? 'primary' : 'ghost'}

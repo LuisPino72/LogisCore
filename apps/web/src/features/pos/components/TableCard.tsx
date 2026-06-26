@@ -14,11 +14,19 @@ interface TableCardProps {
 }
 
 export const TableCard = memo(function TableCard({ number, isOccupied, isSelected, totalUsd, totalItems, time, onClick, onDelete }: TableCardProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      onContextMenu={(e) => { e.preventDefault(); onDelete?.(); }}
+      onKeyDown={handleKeyDown}
       className={`relative flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 min-h-[88px] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger/50 ${
         isSelected
           ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
@@ -60,6 +68,6 @@ export const TableCard = memo(function TableCard({ number, isOccupied, isSelecte
           {isSelected ? 'Seleccionada' : 'Libre'}
         </span>
       )}
-    </button>
+    </div>
   );
 });

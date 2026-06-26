@@ -98,6 +98,7 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
     await posService.deleteParkedCart(tenantId, id);
     set((state: HistoryGetter) => ({
       parkedCarts: state.parkedCarts.filter((p: ParkedCart) => p.id !== id),
+      ...(state.activeParkedCartId === id ? { cart: [], activeParkedCartId: null } : {}),
     }));
   },
 
