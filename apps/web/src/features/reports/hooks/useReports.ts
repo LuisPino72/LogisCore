@@ -52,6 +52,7 @@ export function useReports(tenantId: string | null) {
   const dataCache = useRef<Map<string, Partial<ReportsState>>>(new Map());
   const cacheOrder = useRef<string[]>([]);
   const debounceRefetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   const pruneCache = () => {
     while (cacheOrder.current.length > MAX_CACHE_SIZE) {
@@ -228,6 +229,7 @@ export function useReports(tenantId: string | null) {
   const refetch = useCallback((table?: string) => {
     if (debounceRefetchTimer.current) clearTimeout(debounceRefetchTimer.current);
     debounceRefetchTimer.current = setTimeout(() => {
+      if (!mountedRef.current) return;
       // Granular invalidation: only clear cache keys affected by the synced table
       if (table && table !== '*') {
         const affectedTabs: ReportTab[] = [];
@@ -257,6 +259,7 @@ export function useReports(tenantId: string | null) {
 
   useEffect(() => {
     return () => {
+      mountedRef.current = false;
       if (debounceRefetchTimer.current) clearTimeout(debounceRefetchTimer.current);
     };
   }, []);
@@ -269,9 +272,17 @@ export function useReports(tenantId: string | null) {
       EventBus.on(SystemEvents.BOX_CLOSED, () => refetch()),
       EventBus.on('PURCHASE.RECEIVED', () => refetch()),
       EventBus.on('INVENTORY.ADJUSTMENT', () => refetch()),
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, () => refetch('products')),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => refetch()),
       EventBus.on('EXPENSES.CREATED', () => refetch()),
       EventBus.on('EXPENSES.UPDATED', () => refetch()),
       EventBus.on('EXPENSES.DELETED', () => refetch()),
+      EventBus.on('EXPENSES.CANCELLED', () => refetch()),
+      EventBus.on(SystemEvents.BOX_OPENED, () => refetch('cash_registers')),
+      EventBus.on(SystemEvents.CUSTOMER_CREATED, () => refetch('customers')),
+      EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => refetch('customers')),
+      EventBus.on(SystemEvents.CUSTOMER_DELETED, () => refetch('customers')),
+      EventBus.on('DEBT.COLLECTED', () => refetch()),
       EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (!table || table === '*' || REPORTS_TABLES.includes(table)) {
