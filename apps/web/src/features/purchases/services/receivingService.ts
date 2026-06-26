@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, EventBus } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, type DexieExpense } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -243,6 +243,7 @@ export async function receiveOrder(
       payload: { orderId: id, status: newStatus },
       context: { userId, tenantId },
     });
+    EventBus.emit('PURCHASE.RECEIVED', { orderId: id, status: newStatus });
     return success(toOrder({ ...order, status: newStatus, updatedAt: now } as unknown as Record<string, unknown>));
   } catch (err) {
     logger.error('receiveOrder', 'Error:', err);

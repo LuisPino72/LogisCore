@@ -161,6 +161,39 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
       }),
     );
 
+    // Re-evaluar stock bajo/agotado cuando se recibe una compra
+    subs.push(
+      EventBus.on('PURCHASE.RECEIVED', () => {
+        if (!tenantId) return;
+        useNotificationStore.getState().dismissByType('low_stock');
+        useNotificationStore.getState().dismissByType('product_agotado');
+        checkLowStock(tenantId);
+        checkLowStockZero(tenantId);
+      }),
+    );
+
+    // Re-evaluar cuando se actualiza inventario (ajuste manual, edición)
+    subs.push(
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, () => {
+        if (!tenantId) return;
+        useNotificationStore.getState().dismissByType('low_stock');
+        useNotificationStore.getState().dismissByType('product_agotado');
+        checkLowStock(tenantId);
+        checkLowStockZero(tenantId);
+      }),
+    );
+
+    // Re-evaluar cuando se completa una producción
+    subs.push(
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => {
+        if (!tenantId) return;
+        useNotificationStore.getState().dismissByType('low_stock');
+        useNotificationStore.getState().dismissByType('product_agotado');
+        checkLowStock(tenantId);
+        checkLowStockZero(tenantId);
+      }),
+    );
+
     return () => subs.forEach((s) => EventBus.off(s));
   }, [tenantId, role]);
 }

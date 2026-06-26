@@ -21,6 +21,7 @@ interface NotificationState {
   addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   dismissNotification: (id: string) => Promise<void>;
+  dismissByType: (type: string) => Promise<void>;
   clearAll: () => Promise<void>;
   unreadCount: () => number;
 }
@@ -73,6 +74,18 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     await notificationService.dismissNotification(id);
     set((s) => ({
       notifications: s.notifications.filter((n) => n.id !== id),
+    }));
+  },
+
+  dismissByType: async (type: string) => {
+    const { tenantId } = get();
+    if (!tenantId) return;
+    const toDismiss = get().notifications.filter((n) => n.type === type);
+    for (const n of toDismiss) {
+      await notificationService.dismissNotification(n.id);
+    }
+    set((s) => ({
+      notifications: s.notifications.filter((n) => n.type !== type),
     }));
   },
 
