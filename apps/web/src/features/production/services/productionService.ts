@@ -13,7 +13,7 @@
  * (g/ml para pesables, unidad para no pesables). Esta convención debe
  * respetarse en todos los call-sites que calculan `needed` para inventario.
  */
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, type DexieInventoryLot } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -188,7 +188,7 @@ export const productionService = {
     try {
       // Crear eventos ANTES de la tx (enqueueInTransaction los mete en la tx)
       const evRecipe = emitWithPersistence(
-        'PRODUCTION.RECIPE_CREATED',
+        SystemEvents.PRODUCTION_RECIPE_CREATED,
         PRODUCTION_MODULE,
         { recipeId, productId: resolvedProductId, name: input.name },
         { userId, tenantId },
@@ -256,7 +256,7 @@ export const productionService = {
           if (newProductRecord) {
             // Si auto-creamos producto, emitimos INVENTORY.PRODUCT_CREATED
             const evProduct = emitWithPersistence(
-              'INVENTORY.PRODUCT_CREATED',
+              SystemEvents.INVENTORY_PRODUCT_CREATED,
               PRODUCTION_MODULE,
               { productId: createdProductId, source: 'production', name: input.newProductName, sku: input.newProductSku },
               { userId, tenantId },
@@ -375,7 +375,7 @@ export const productionService = {
     };
 
     try {
-      const ev = emitWithPersistence('PRODUCTION.UPDATED', PRODUCTION_MODULE, { recipeId: id, changes: Object.keys(input) }, { userId: session?.userId, tenantId });
+      const ev = emitWithPersistence(SystemEvents.PRODUCTION_UPDATED, PRODUCTION_MODULE, { recipeId: id, changes: Object.keys(input) }, { userId: session?.userId, tenantId });
       await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
         await db.recipes.put(updated);
         await syncQueue.enqueue('recipes', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
@@ -474,7 +474,7 @@ export const productionService = {
     const lines = await db.recipeLines.where({ recipeId: id }).filter((l) => !l.deletedAt).toArray();
 
     try {
-      const ev = emitWithPersistence('PRODUCTION.DELETED', PRODUCTION_MODULE, { recipeId: id, cascadeLines: lines.length }, { userId: undefined, tenantId });
+      const ev = emitWithPersistence(SystemEvents.PRODUCTION_DELETED, PRODUCTION_MODULE, { recipeId: id, cascadeLines: lines.length }, { userId: undefined, tenantId });
       await db.transaction('rw', [db.recipes, db.recipeLines, db.syncQueue, db.outbox], async (tx) => {
         for (const line of lines) {
           await db.recipeLines.update(line.id, { deletedAt });
@@ -748,7 +748,7 @@ export const productionService = {
 
     try {
       const orderId = generateId();
-      const ev = emitWithPersistence('PRODUCTION.COMPLETED', PRODUCTION_MODULE, {
+      const ev = emitWithPersistence(SystemEvents.PRODUCTION_COMPLETED, PRODUCTION_MODULE, {
         orderId,
         recipeId: input.recipeId,
         productId: recipe.productId,
@@ -942,7 +942,7 @@ export const productionService = {
     const now = new Date().toISOString();
 
     try {
-      const ev = emitWithPersistence('PRODUCTION.ORDER_CANCELLED', PRODUCTION_MODULE, { orderId }, { userId: session?.userId, tenantId });
+      const ev = emitWithPersistence(SystemEvents.PRODUCTION_ORDER_CANCELLED, PRODUCTION_MODULE, { orderId }, { userId: session?.userId, tenantId });
       await db.transaction('rw', [
         db.productionOrders, db.products, db.inventoryMovements,
         db.inventoryLots, db.recipes, db.recipeLines,
@@ -1295,7 +1295,7 @@ export const productionService = {
     }
 
     await emitWithAudit({
-      eventName: 'PRODUCTION.ASSEMBLY_CONSUMED',
+      eventName: SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED,
       module: PRODUCTION_MODULE,
       payload: { productId, quantity, tenantId },
       context: { userId, tenantId },

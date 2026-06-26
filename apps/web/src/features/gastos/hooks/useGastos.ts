@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { type Result, failure, AppError, EventBus } from '@logiscore/core';
+import { type Result, failure, AppError, EventBus, SystemEvents } from '@logiscore/core';
 import { useGastosStore } from '../stores/gastosStore';
 import { gastosService } from '../services/gastosService';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -42,25 +42,25 @@ export function useGastos(tenantId: string | null) {
     if (!tenantId) return;
 
     const subscriptions = [
-      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (table === 'expenses' || table === '*') {
           fetchGastos();
         }
       }),
-      EventBus.on('PURCHASE.RECEIVED', () => {
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => {
         fetchGastos();
       }),
-      EventBus.on('EXPENSES.CREATED', () => {
+      EventBus.on(SystemEvents.EXPENSES_CREATED, () => {
         fetchGastos();
       }),
-      EventBus.on('EXPENSES.UPDATED', () => {
+      EventBus.on(SystemEvents.EXPENSES_UPDATED, () => {
         fetchGastos();
       }),
-      EventBus.on('EXPENSES.DELETED', () => {
+      EventBus.on(SystemEvents.EXPENSES_DELETED, () => {
         fetchGastos();
       }),
-      EventBus.on('EXPENSES.CANCELLED', () => {
+      EventBus.on(SystemEvents.EXPENSES_CANCELLED, () => {
         fetchGastos();
       }),
     ];

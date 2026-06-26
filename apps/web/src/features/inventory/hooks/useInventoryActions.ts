@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { useInventoryStore } from '../stores/inventoryStore';
@@ -186,7 +186,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
       if (imageFile) {
         const publicUrl = await uploadProductImage(imageFile, tenantId, product.id);
         if (publicUrl) {
-          EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
+          EventBus.emit(SystemEvents.INVENTORY_UPDATED, { productId: product.id });
         } else {
           addToast({ type: 'warning', message: 'Producto creado. La imagen no se pudo subir, pero puedes agregarla despues desde "Editar".', duration: 5000 });
         }
@@ -195,7 +195,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
         const db = getDb();
         await db.products.update(product.id, { imageUrl: imagePreview });
         await syncQueue.enqueue('products', 'UPDATE', product.id, { imageUrl: imagePreview }, tenantId);
-        EventBus.emit('INVENTORY.UPDATED', { productId: product.id });
+        EventBus.emit(SystemEvents.INVENTORY_UPDATED, { productId: product.id });
       }
     } else {
       const storeError = useInventoryStore.getState().error;
@@ -226,7 +226,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
       const publicUrl = await uploadProductImage(imageFile, tenantId, editProduct.id);
       if (publicUrl) {
         setEditProduct(prev => prev ? { ...prev, imageUrl: publicUrl } : null);
-        EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
+        EventBus.emit(SystemEvents.INVENTORY_UPDATED, { productId: editProduct.id });
       } else {
         addToast({ type: 'warning', message: 'Producto actualizado. La imagen no se pudo subir, pero puedes agregarla despues desde "Editar".', duration: 5000 });
       }
@@ -236,7 +236,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
       await db.products.update(editProduct.id, { imageUrl: imagePreview });
       await syncQueue.enqueue('products', 'UPDATE', editProduct.id, { imageUrl: imagePreview }, tenantId);
       setEditProduct(prev => prev ? { ...prev, imageUrl: imagePreview } : null);
-      EventBus.emit('INVENTORY.UPDATED', { productId: editProduct.id });
+      EventBus.emit(SystemEvents.INVENTORY_UPDATED, { productId: editProduct.id });
     }
     setEditProduct(null);
     setShowProductForm(false);

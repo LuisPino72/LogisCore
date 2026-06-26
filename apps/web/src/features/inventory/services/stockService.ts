@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
 import { type Transaction } from 'dexie';
@@ -166,14 +166,14 @@ export async function adjustStock(input: AdjustStockInput & { userId: string; te
       if (updatedProduct) {
         await syncQueue.enqueue('products', 'UPDATE', input.productId, toSnake(updatedProduct as unknown as Record<string, unknown>), input.tenantId);
       }
-      await outboxService.enqueue('INVENTORY.ADJUSTMENT', INVENTORY_MODULE, {
+      await outboxService.enqueue(SystemEvents.INVENTORY_ADJUSTMENT, INVENTORY_MODULE, {
         productId: input.productId, quantity: input.quantity, reasonType: input.reasonType,
         previousStock, newStock, costUsd: movementCostUsd,
       });
     });
 
     await logAuditEventOnly({
-      eventName: 'INVENTORY.ADJUSTMENT',
+      eventName: SystemEvents.INVENTORY_ADJUSTMENT,
       module: INVENTORY_MODULE,
       payload: {
         productId: input.productId, quantity: input.quantity, reasonType: input.reasonType,

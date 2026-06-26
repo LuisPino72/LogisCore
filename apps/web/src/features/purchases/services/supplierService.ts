@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -87,10 +87,10 @@ export async function createSupplier(
     await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
       await db.suppliers.add({ ...supplier, tenantId, updatedAt: now });
       await syncQueue.enqueue('suppliers', 'CREATE', id, toSnake({ ...supplier, tenantId } as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.SUPPLIER_CREATED', PURCHASES_MODULE, { supplierId: id, name: input.name });
+      await outboxService.enqueue(SystemEvents.PURCHASE_SUPPLIER_CREATED, PURCHASES_MODULE, { supplierId: id, name: input.name });
     });
     await logAuditEventOnly({
-      eventName: 'PURCHASE.SUPPLIER_CREATED',
+      eventName: SystemEvents.PURCHASE_SUPPLIER_CREATED,
       module: PURCHASES_MODULE,
       payload: { supplierId: id, name: input.name },
       context: { userId, tenantId },
@@ -147,10 +147,10 @@ export async function updateSupplier(
     await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
       await db.suppliers.put(updated);
       await syncQueue.enqueue('suppliers', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.SUPPLIER_UPDATED', PURCHASES_MODULE, { supplierId: id });
+      await outboxService.enqueue(SystemEvents.PURCHASE_SUPPLIER_UPDATED, PURCHASES_MODULE, { supplierId: id });
     });
     await logAuditEventOnly({
-      eventName: 'PURCHASE.SUPPLIER_UPDATED',
+      eventName: SystemEvents.PURCHASE_SUPPLIER_UPDATED,
       module: PURCHASES_MODULE,
       payload: { supplierId: id },
       context: { tenantId },
@@ -189,10 +189,10 @@ export async function softDeleteSupplier(id: string, tenantId: string): Promise<
     await db.transaction('rw', [db.suppliers, db.syncQueue, db.outbox], async () => {
       await db.suppliers.update(id, { deletedAt });
       await syncQueue.enqueue('suppliers', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-      await outboxService.enqueue('PURCHASE.SUPPLIER_DELETED', PURCHASES_MODULE, { supplierId: id });
+      await outboxService.enqueue(SystemEvents.PURCHASE_SUPPLIER_DELETED, PURCHASES_MODULE, { supplierId: id });
     });
     await logAuditEventOnly({
-      eventName: 'PURCHASE.SUPPLIER_DELETED',
+      eventName: SystemEvents.PURCHASE_SUPPLIER_DELETED,
       module: PURCHASES_MODULE,
       payload: { supplierId: id },
       context: { tenantId },

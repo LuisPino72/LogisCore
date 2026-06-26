@@ -36,38 +36,38 @@ export function useProduction(tenantId: string | null) {
   useEffect(() => {
     if (!tenantId) return;
 
-    const sub1 = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+    const sub1 = EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
       const { table } = payload as { table?: string };
       if (!table || table === '*' || ['recipes', 'recipe_lines', 'production_orders', 'products'].includes(table)) {
         doFetch(true);
       }
     });
 
-    const sub2 = EventBus.on('PRODUCTION.COMPLETED', () => {
+    const sub2 = EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => {
       doFetch(true);
     });
 
-    const sub3 = EventBus.on('PRODUCTION.ORDER_CANCELLED', () => {
+    const sub3 = EventBus.on(SystemEvents.PRODUCTION_ORDER_CANCELLED, () => {
       doFetch(true);
     });
 
-    // PRODUCTION-003 [Paso-2]: escuchar también el nuevo nombre semántico
-    const sub4b = EventBus.on('PRODUCTION.RECIPE_CREATED', () => {
+    const sub4b = EventBus.on(SystemEvents.PRODUCTION_RECIPE_CREATED, () => {
       doFetch(true);
     });
 
-    const sub5 = EventBus.on('PRODUCTION.UPDATED', () => {
+    const sub5 = EventBus.on(SystemEvents.PRODUCTION_UPDATED, () => {
       doFetch(true);
     });
 
-    const sub6 = EventBus.on('PRODUCTION.DELETED', () => {
+    const sub6 = EventBus.on(SystemEvents.PRODUCTION_DELETED, () => {
       doFetch(true);
     });
 
-    const sub7 = EventBus.on('INVENTORY.UPDATED', () => { doFetch(true); });
-    const sub8 = EventBus.on('INVENTORY.ADJUSTMENT', () => { doFetch(true); });
-    const sub9 = EventBus.on('PURCHASE.RECEIVED', () => { doFetch(true); });
+    const sub7 = EventBus.on(SystemEvents.INVENTORY_UPDATED, () => { doFetch(true); });
+    const sub8 = EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, () => { doFetch(true); });
+    const sub9 = EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => { doFetch(true); });
     const sub10 = EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => { doFetch(true); });
+    const sub11 = EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, () => { doFetch(true); });
 
     return () => {
       EventBus.off(sub1);
@@ -80,6 +80,7 @@ export function useProduction(tenantId: string | null) {
       EventBus.off(sub8);
       EventBus.off(sub9);
       EventBus.off(sub10);
+      EventBus.off(sub11);
     };
   }, [tenantId, doFetch]);
 

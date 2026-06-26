@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError, EventBus } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, type DexieExpense } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -180,7 +180,7 @@ export async function receiveOrder(
       const updatedOrder = { ...order, status: newStatus, updatedAt: now };
       await db.purchaseOrders.put(updatedOrder);
       await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updatedOrder, tenantId } as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.RECEIVED', PURCHASES_MODULE, { orderId: id, status: newStatus });
+      await outboxService.enqueue(SystemEvents.PURCHASE_RECEIVED, PURCHASES_MODULE, { orderId: id, status: newStatus });
 
       let totalReceivedUsd = 0;
       for (const rec of input.items) {
@@ -217,7 +217,7 @@ export async function receiveOrder(
           };
           await db.expenses.add(expense);
           await syncQueue.enqueue('expenses', 'CREATE', expenseId, toSnake(expense as unknown as Record<string, unknown>), tenantId);
-          await outboxService.enqueue('EXPENSES.CREATED', PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
+          await outboxService.enqueue(SystemEvents.EXPENSES_CREATED, PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
         }
       }
 
@@ -238,12 +238,11 @@ export async function receiveOrder(
     });
 
     await logAuditEventOnly({
-      eventName: 'PURCHASE.RECEIVED',
+      eventName: SystemEvents.PURCHASE_RECEIVED,
       module: PURCHASES_MODULE,
       payload: { orderId: id, status: newStatus },
       context: { userId, tenantId },
     });
-    EventBus.emit('PURCHASE.RECEIVED', { orderId: id, status: newStatus });
     return success(toOrder({ ...order, status: newStatus, updatedAt: now } as unknown as Record<string, unknown>));
   } catch (err) {
     logger.error('receiveOrder', 'Error:', err);

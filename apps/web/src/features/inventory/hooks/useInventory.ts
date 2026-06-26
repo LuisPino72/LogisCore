@@ -59,7 +59,7 @@ export function useInventory(tenantId: string | null) {
   useEffect(() => {
     if (!tenantId) return;
     const handler = () => doFetch(undefined, true);
-    const sub1 = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+    const sub1 = EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
       const { table } = payload as { table?: string };
       if (!table || table === '*' || ['products','categories','inventory_movements','inventory_lots'].includes(table)) {
         handler();
@@ -67,10 +67,11 @@ export function useInventory(tenantId: string | null) {
     });
     const subs = [
       sub1,
-      EventBus.on('SALE.COMPLETED', handler),
-      EventBus.on('SALE.VOIDED', handler),
-      EventBus.on('PURCHASE.RECEIVED', handler),
+      EventBus.on(SystemEvents.SALE_COMPLETED, handler),
+      EventBus.on(SystemEvents.SALE_VOIDED, handler),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, handler),
       EventBus.on(SystemEvents.PRODUCTION_COMPLETED, handler),
+      EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, handler),
     ];
     return () => { subs.forEach(s => EventBus.off(s)); };
   }, [tenantId, doFetch]);

@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing, type DexiePurchaseOrderItem } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -153,11 +153,11 @@ export async function createOrder(
       for (const item of items) {
         await syncQueue.enqueue('purchase_order_items', 'CREATE', item.id, toSnake({ ...item, tenantId } as unknown as Record<string, unknown>), tenantId);
       }
-      await outboxService.enqueue('PURCHASE.CREATED', PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd });
+      await outboxService.enqueue(SystemEvents.PURCHASE_CREATED, PURCHASES_MODULE, { orderId: id, supplierId: input.supplierId, totalUsd });
     });
 
     await logAuditEventOnly({
-      eventName: 'PURCHASE.CREATED',
+      eventName: SystemEvents.PURCHASE_CREATED,
       module: PURCHASES_MODULE,
       payload: { orderId: id, supplierId: input.supplierId, totalUsd },
       context: { userId, tenantId },
@@ -256,11 +256,11 @@ export async function updateOrder(
       for (const item of newItems) {
         await syncQueue.enqueue('purchase_order_items', 'CREATE', item.id, toSnake({ ...item, tenantId } as unknown as Record<string, unknown>), tenantId);
       }
-      await outboxService.enqueue('PURCHASE.UPDATED', PURCHASES_MODULE, { orderId: id });
+      await outboxService.enqueue(SystemEvents.PURCHASE_UPDATED, PURCHASES_MODULE, { orderId: id });
     });
 
     await logAuditEventOnly({
-      eventName: 'PURCHASE.UPDATED',
+      eventName: SystemEvents.PURCHASE_UPDATED,
       module: PURCHASES_MODULE,
       payload: { orderId: id },
       context: { userId, tenantId },
@@ -295,10 +295,10 @@ export async function softDeleteOrder(id: string, tenantId: string): Promise<Res
     await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
       await db.purchaseOrders.update(id, { deletedAt });
       await syncQueue.enqueue('purchase_orders', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-      await outboxService.enqueue('PURCHASE.DELETED', PURCHASES_MODULE, { orderId: id });
+      await outboxService.enqueue(SystemEvents.PURCHASE_DELETED, PURCHASES_MODULE, { orderId: id });
     });
     await logAuditEventOnly({
-      eventName: 'PURCHASE.DELETED',
+      eventName: SystemEvents.PURCHASE_DELETED,
       module: PURCHASES_MODULE,
       payload: { orderId: id },
       context: { tenantId },
@@ -334,10 +334,10 @@ export async function confirmOrder(id: string, tenantId: string): Promise<Result
     await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
       await db.purchaseOrders.put(updated);
       await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.CONFIRMED', PURCHASES_MODULE, { orderId: id });
+      await outboxService.enqueue(SystemEvents.PURCHASE_CONFIRMED, PURCHASES_MODULE, { orderId: id });
     });
     await logAuditEventOnly({
-      eventName: 'PURCHASE.CONFIRMED',
+      eventName: SystemEvents.PURCHASE_CONFIRMED,
       module: PURCHASES_MODULE,
       payload: { orderId: id },
       context: { tenantId },
@@ -370,10 +370,10 @@ export async function cancelOrder(id: string, tenantId: string): Promise<Result<
     await db.transaction('rw', [db.purchaseOrders, db.syncQueue, db.outbox], async () => {
       await db.purchaseOrders.put(updated);
       await syncQueue.enqueue('purchase_orders', 'UPDATE', id, toSnake({ ...updated, tenantId } as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('PURCHASE.CANCELLED', PURCHASES_MODULE, { orderId: id });
+      await outboxService.enqueue(SystemEvents.PURCHASE_CANCELLED, PURCHASES_MODULE, { orderId: id });
     });
     await logAuditEventOnly({
-      eventName: 'PURCHASE.CANCELLED',
+      eventName: SystemEvents.PURCHASE_CANCELLED,
       module: PURCHASES_MODULE,
       payload: { orderId: id },
       context: { tenantId },

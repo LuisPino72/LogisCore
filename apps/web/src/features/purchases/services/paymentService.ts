@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -133,21 +133,21 @@ export async function paySupplierDebt(
         paid_amount_usd: newOrderPaidAmount,
       } as unknown as Record<string, unknown>), tenantId);
 
-      await outboxService.enqueue('SUPPLIER.PAYMENT_CREATED', PURCHASES_MODULE, {
+      await outboxService.enqueue(SystemEvents.SUPPLIER_PAYMENT_CREATED, PURCHASES_MODULE, {
         supplierId, purchaseOrderId, paymentId,
         amountUsd: preciseRound(amountUsd, 2),
         tenantSlug: tenantId,
       }, tx);
 
       if (isFullPayment) {
-        await outboxService.enqueue('EXPENSE.UPDATED', PURCHASES_MODULE, {
+        await outboxService.enqueue(SystemEvents.EXPENSES_UPDATED, PURCHASES_MODULE, {
           purchaseOrderId, status: 'paid',
         }, tx);
       }
     });
 
     await logAuditEventOnly({
-      eventName: 'SUPPLIER.PAYMENT_CREATED',
+      eventName: SystemEvents.SUPPLIER_PAYMENT_CREATED,
       module: PURCHASES_MODULE,
       payload: { supplierId, purchaseOrderId, paymentId, amountUsd: preciseRound(amountUsd, 2) },
       context: { tenantId },

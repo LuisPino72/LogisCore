@@ -52,23 +52,28 @@ export function usePurchases(tenantId: string | null) {
     const fetchPayables = () => fetchPendingPayables(tenantId);
 
     const subscriptions = [
-      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (!table || ['purchase_orders', 'purchase_order_items', 'suppliers', 'products', 'inventory_lots'].includes(table)) {
           fetchAll();
         }
       }),
-      EventBus.on('INVENTORY.UPDATED', fetchAll),
-      EventBus.on('INVENTORY.CREATED', fetchAll),
-      EventBus.on('INVENTORY.DELETED', fetchAll),
-      EventBus.on('INVENTORY.ADJUSTMENT', fetchAll),
-      EventBus.on('INVENTORY.PRODUCT_CREATED', fetchAll),
-      EventBus.on('PURCHASE.RECEIVED', fetchAll),
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, fetchAll),
+      EventBus.on(SystemEvents.INVENTORY_CREATED, fetchAll),
+      EventBus.on(SystemEvents.INVENTORY_DELETED, fetchAll),
+      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, fetchAll),
+      EventBus.on(SystemEvents.INVENTORY_PRODUCT_CREATED, fetchAll),
+      EventBus.on(SystemEvents.PURCHASE_CREATED, fetchAll),
+      EventBus.on(SystemEvents.PURCHASE_UPDATED, fetchAll),
+      EventBus.on(SystemEvents.PURCHASE_DELETED, fetchAll),
+      EventBus.on(SystemEvents.PURCHASE_CONFIRMED, fetchAll),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, fetchAll),
+      EventBus.on(SystemEvents.PURCHASE_CANCELLED, fetchAll),
       EventBus.on(SystemEvents.PRODUCTION_COMPLETED, fetchAll),
-      EventBus.on('PURCHASE.SUPPLIER_CREATED', fetchSuppliersFn),
-      EventBus.on('PURCHASE.SUPPLIER_UPDATED', fetchSuppliersFn),
-      EventBus.on('PURCHASE.SUPPLIER_DELETED', fetchSuppliersFn),
-      EventBus.on('SUPPLIER.PAYMENT_CREATED', () => {
+      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_CREATED, fetchSuppliersFn),
+      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_UPDATED, fetchSuppliersFn),
+      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_DELETED, fetchSuppliersFn),
+      EventBus.on(SystemEvents.SUPPLIER_PAYMENT_CREATED, () => {
         Promise.all([fetchSuppliersFn(), fetchPayables()]);
       }),
     ];

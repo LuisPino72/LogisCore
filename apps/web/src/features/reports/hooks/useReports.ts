@@ -267,23 +267,23 @@ export function useReports(tenantId: string | null) {
   useEffect(() => {
     if (!tenantId) return;
     const subs = [
-      EventBus.on('SALE.COMPLETED', () => refetch()),
-      EventBus.on('SALE.VOIDED', () => refetch()),
+      EventBus.on(SystemEvents.SALE_COMPLETED, () => refetch()),
+      EventBus.on(SystemEvents.SALE_VOIDED, () => refetch()),
       EventBus.on(SystemEvents.BOX_CLOSED, () => refetch()),
-      EventBus.on('PURCHASE.RECEIVED', () => refetch()),
-      EventBus.on('INVENTORY.ADJUSTMENT', () => refetch()),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => refetch()),
+      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, () => refetch()),
       EventBus.on(SystemEvents.INVENTORY_UPDATED, () => refetch('products')),
       EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => refetch()),
-      EventBus.on('EXPENSES.CREATED', () => refetch()),
-      EventBus.on('EXPENSES.UPDATED', () => refetch()),
-      EventBus.on('EXPENSES.DELETED', () => refetch()),
-      EventBus.on('EXPENSES.CANCELLED', () => refetch()),
+      EventBus.on(SystemEvents.EXPENSES_CREATED, () => refetch()),
+      EventBus.on(SystemEvents.EXPENSES_UPDATED, () => refetch()),
+      EventBus.on(SystemEvents.EXPENSES_DELETED, () => refetch()),
+      EventBus.on(SystemEvents.EXPENSES_CANCELLED, () => refetch()),
       EventBus.on(SystemEvents.BOX_OPENED, () => refetch('cash_registers')),
       EventBus.on(SystemEvents.CUSTOMER_CREATED, () => refetch('customers')),
       EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => refetch('customers')),
       EventBus.on(SystemEvents.CUSTOMER_DELETED, () => refetch('customers')),
-      EventBus.on('DEBT.COLLECTED', () => refetch()),
-      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+      EventBus.on(SystemEvents.DEBT_COLLECTED, () => refetch()),
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (!table || table === '*' || REPORTS_TABLES.includes(table)) {
           refetch(table);

@@ -89,7 +89,7 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
     const subs: ReturnType<typeof EventBus.on>[] = [];
 
     subs.push(
-      EventBus.on('SALE.VOIDED', (payload: unknown) => {
+      EventBus.on(SystemEvents.SALE_VOIDED, (payload: unknown) => {
         const data = payload as { saleId?: string };
         if (!data.saleId || notifiedSales.current.has(data.saleId)) return;
         notifiedSales.current.add(data.saleId);
@@ -163,7 +163,7 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
 
     // Re-evaluar stock bajo/agotado cuando se recibe una compra
     subs.push(
-      EventBus.on('PURCHASE.RECEIVED', () => {
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => {
         if (!tenantId) return;
         useNotificationStore.getState().dismissByType('low_stock');
         useNotificationStore.getState().dismissByType('product_agotado');

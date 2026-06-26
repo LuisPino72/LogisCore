@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { IVA_RATE, IGTF_RATE } from '@logiscore/shared';
 import { supabase } from '../../../services/supabase/client';
 import { logger } from '../../../lib/logger';
@@ -185,7 +185,7 @@ export const settingsService = {
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
-        eventName: 'SETTINGS.FISCAL.UPDATED',
+        eventName: SystemEvents.SETTINGS_FISCAL_UPDATED,
         module: MODULE_NAME,
         payload: { tenantId, ivaRate: parsed.data.ivaRate, igtfRate: parsed.data.igtfRate, igtfEnabled: parsed.data.igtfEnabled },
         context: { userId, tenantId, tenantUuid: tenantUuid ?? undefined },
@@ -286,7 +286,7 @@ export const settingsService = {
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
-        eventName: 'SETTINGS.OPERATIONS.UPDATED',
+        eventName: SystemEvents.SETTINGS_OPERATIONS_UPDATED,
         module: MODULE_NAME,
         payload: { tenantId, ...parsed.data },
         context: { userId, tenantId, tenantUuid: tenantUuid ?? undefined },
@@ -462,7 +462,7 @@ export const settingsService = {
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
-        eventName: 'SETTINGS.BUSINESS.UPDATED',
+        eventName: SystemEvents.SETTINGS_BUSINESS_UPDATED,
         module: MODULE_NAME,
         payload: { tenantId, ...parsed.data },
         context: { userId, tenantId, tenantUuid: tenantUuid ?? undefined },
@@ -513,7 +513,7 @@ export const settingsService = {
       tenantUuid = undefined;
     }
     await logAuditEventOnly({
-      eventName: 'USER.PASSWORD_CHANGED',
+      eventName: SystemEvents.USER_PASSWORD_CHANGED,
       module: MODULE_NAME,
       payload: { userId },
       context: { userId, tenantId: session.tenantId ?? undefined, tenantUuid },

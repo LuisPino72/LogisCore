@@ -28,11 +28,10 @@ export function useRecentActivity(tenantId: string | null) {
     const subs = [
       EventBus.on(SystemEvents.SALE_COMPLETED, handler),
       EventBus.on(SystemEvents.EXPENSES_CREATED, handler),
-      EventBus.on('PURCHASE.RECEIVED', handler),
-      EventBus.on('PURCHASE.SUPPLIER_PAID', handler),
-      EventBus.on('SUPPLIER.PAYMENT_CREATED', handler),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, handler),
+      EventBus.on(SystemEvents.SUPPLIER_PAYMENT_CREATED, handler),
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, handler),
-      EventBus.on('SALE.VOIDED', handler),
+      EventBus.on(SystemEvents.SALE_VOIDED, handler),
       EventBus.on(SystemEvents.PRODUCTION_COMPLETED, handler),
       EventBus.on(SystemEvents.CUSTOMER_CREATED, handler),
     ];

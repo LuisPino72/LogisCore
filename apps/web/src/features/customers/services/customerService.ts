@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import type { DexieCustomer } from '../../../services/dexie/db';
@@ -120,14 +120,14 @@ export const customerService = {
           toSnake({ ...customer, tenantId } as unknown as Record<string, unknown>),
           tenantId,
         );
-        await outboxService.enqueue('CUSTOMER.CREATED', MODULE_NAME, {
+        await outboxService.enqueue(SystemEvents.CUSTOMER_CREATED, MODULE_NAME, {
           customerId: id,
           name: customer.name,
         });
       });
 
       await logAuditEventOnly({
-        eventName: 'CUSTOMER.CREATED',
+        eventName: SystemEvents.CUSTOMER_CREATED,
         module: MODULE_NAME,
         payload: { customerId: id, name: customer.name },
         context: { tenantId, userId: useAuthStore.getState().session?.userId },
@@ -213,11 +213,11 @@ export const customerService = {
           toSnake(updated as unknown as Record<string, unknown>),
           tenantId,
         );
-        await outboxService.enqueue('CUSTOMER.UPDATED', MODULE_NAME, { customerId: id });
+        await outboxService.enqueue(SystemEvents.CUSTOMER_UPDATED, MODULE_NAME, { customerId: id });
       });
 
       await logAuditEventOnly({
-        eventName: 'CUSTOMER.UPDATED',
+        eventName: SystemEvents.CUSTOMER_UPDATED,
         module: MODULE_NAME,
         payload: { customerId: id, name: updated.name },
         context: { tenantId, userId: useAuthStore.getState().session?.userId },
@@ -284,11 +284,11 @@ export const customerService = {
           { id, deleted_at: deletedAt },
           tenantId,
         );
-        await outboxService.enqueue('CUSTOMER.DELETED', MODULE_NAME, { customerId: id });
+        await outboxService.enqueue(SystemEvents.CUSTOMER_DELETED, MODULE_NAME, { customerId: id });
       });
 
       await logAuditEventOnly({
-        eventName: 'CUSTOMER.DELETED',
+        eventName: SystemEvents.CUSTOMER_DELETED,
         module: MODULE_NAME,
         payload: { customerId: id, name: customer.name },
         context: { tenantId, userId: useAuthStore.getState().session?.userId },
@@ -830,7 +830,7 @@ export const customerService = {
           }
         }
 
-        await outboxService.enqueue('DEBT.COLLECTED', MODULE_NAME, {
+        await outboxService.enqueue(SystemEvents.DEBT_COLLECTED, MODULE_NAME, {
           customerId,
           saleId,
           paymentId,
@@ -840,7 +840,7 @@ export const customerService = {
       });
 
       await logAuditEventOnly({
-        eventName: 'DEBT.COLLECTED',
+        eventName: SystemEvents.DEBT_COLLECTED,
         module: MODULE_NAME,
         payload: { customerId, saleId, paymentId, amountUsd: preciseRound(amountUsd, 2) },
         context: { tenantId, userId: useAuthStore.getState().session?.userId },

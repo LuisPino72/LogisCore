@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake } from '@logiscore/shared';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -179,11 +179,11 @@ export async function updatePresentation(
     await db.transaction('rw', [db.productPresentations, db.products, db.syncQueue, db.outbox], async () => {
       await db.productPresentations.put(updated);
       await syncQueue.enqueue('product_presentations', 'UPDATE', presentationId, toSnake(updated as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, changes: Object.keys(input) });
+      await outboxService.enqueue(SystemEvents.INVENTORY_UPDATED, INVENTORY_MODULE, { presentationId, changes: Object.keys(input) });
     });
 
     await logAuditEventOnly({
-      eventName: 'INVENTORY.UPDATED',
+      eventName: SystemEvents.INVENTORY_UPDATED,
       module: INVENTORY_MODULE,
       payload: { presentationId, changes: Object.keys(input) },
       context: { tenantId },
@@ -217,11 +217,11 @@ export async function deletePresentation(
     await db.transaction('rw', [db.productPresentations, db.products, db.syncQueue, db.outbox], async () => {
       await db.productPresentations.update(presentationId, { deletedAt });
       await syncQueue.enqueue('product_presentations', 'DELETE', presentationId, { id: presentationId, deleted_at: deletedAt }, tenantId);
-      await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { presentationId, action: 'deleted' });
+      await outboxService.enqueue(SystemEvents.INVENTORY_UPDATED, INVENTORY_MODULE, { presentationId, action: 'deleted' });
     });
 
     await logAuditEventOnly({
-      eventName: 'INVENTORY.UPDATED',
+      eventName: SystemEvents.INVENTORY_UPDATED,
       module: INVENTORY_MODULE,
       payload: { presentationId, action: 'deleted' },
       context: { tenantId },

@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { generateId } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -45,10 +45,10 @@ export async function createCategory(input: { name: string; tenantId: string }):
   await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
     await db.categories.add(cat);
     await syncQueue.enqueue('categories', 'CREATE', id, { id, name: input.name }, input.tenantId);
-    await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { categoryId: id, name: input.name });
+    await outboxService.enqueue(SystemEvents.INVENTORY_CREATED, INVENTORY_MODULE, { categoryId: id, name: input.name });
   });
   await logAuditEventOnly({
-    eventName: 'INVENTORY.CREATED',
+    eventName: SystemEvents.INVENTORY_CREATED,
     module: INVENTORY_MODULE,
     payload: { categoryId: id, name: input.name },
     context: { tenantId: input.tenantId },
@@ -90,10 +90,10 @@ export async function updateCategory(id: string, name: string, tenantId: string)
   await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
     await db.categories.update(id, updated);
     await syncQueue.enqueue('categories', 'UPDATE', id, { id, name }, tenantId);
-    await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { categoryId: id, name });
+    await outboxService.enqueue(SystemEvents.INVENTORY_UPDATED, INVENTORY_MODULE, { categoryId: id, name });
   });
   await logAuditEventOnly({
-    eventName: 'INVENTORY.UPDATED',
+    eventName: SystemEvents.INVENTORY_UPDATED,
     module: INVENTORY_MODULE,
     payload: { categoryId: id, name },
     context: { tenantId },
@@ -174,10 +174,10 @@ export async function deleteCategory(id: string, tenantId: string): Promise<Resu
   await db.transaction('rw', [db.categories, db.syncQueue, db.outbox], async () => {
     await db.categories.update(id, { deletedAt });
     await syncQueue.enqueue('categories', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-    await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { categoryId: id });
+    await outboxService.enqueue(SystemEvents.INVENTORY_DELETED, INVENTORY_MODULE, { categoryId: id });
   });
   await logAuditEventOnly({
-    eventName: 'INVENTORY.DELETED',
+    eventName: SystemEvents.INVENTORY_DELETED,
     module: INVENTORY_MODULE,
     payload: { categoryId: id },
     context: { tenantId },

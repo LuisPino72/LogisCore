@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useCustomerStore } from '../stores/customerStore';
 import type {
@@ -45,27 +45,27 @@ export function useCustomers(tenantId: string | null) {
   useEffect(() => {
     if (!tenantId) return;
 
-    const sub = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+    const sub = EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
       const { table } = payload as { table?: string };
       if (!table || table === 'customers' || table === 'sales') {
         fetchCustomers(tenantId, true);
       }
     });
 
-    const subCreated = EventBus.on('CUSTOMER.CREATED', () => {
+    const subCreated = EventBus.on(SystemEvents.CUSTOMER_CREATED, () => {
       fetchCustomers(tenantId, true);
     });
-    const subUpdated = EventBus.on('CUSTOMER.UPDATED', () => {
+    const subUpdated = EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => {
       fetchCustomers(tenantId, true);
     });
-    const subDeleted = EventBus.on('CUSTOMER.DELETED', () => {
+    const subDeleted = EventBus.on(SystemEvents.CUSTOMER_DELETED, () => {
       fetchCustomers(tenantId, true);
     });
 
-    const subSale = EventBus.on('SALE.COMPLETED', () => {
+    const subSale = EventBus.on(SystemEvents.SALE_COMPLETED, () => {
       fetchCustomers(tenantId, true);
     });
-    const subDebt = EventBus.on('DEBT.COLLECTED', () => {
+    const subDebt = EventBus.on(SystemEvents.DEBT_COLLECTED, () => {
       fetchCustomers(tenantId, true);
     });
 

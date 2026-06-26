@@ -15,7 +15,6 @@ const EVENT_MAP: Record<string, { type: ActivityEntry['type']; icon: string; get
   'EXPENSES.CREATED': { type: 'expense_created', icon: 'Receipt', getMessage: (p) => `Gasto ${p.category ?? ''} $${Number(p.amountUsd ?? 0).toFixed(2)}`, route: '/gastos' },
   'EXPENSES.CANCELLED': { type: 'expense_created', icon: 'Receipt', getMessage: (p) => `Gasto ${p.category ?? ''} cancelado`, route: '/gastos' },
   'PURCHASE.RECEIVED': { type: 'purchase_received', icon: 'Package', getMessage: () => `Orden recibida`, route: '/purchases' },
-  'PURCHASE.SUPPLIER_PAID': { type: 'supplier_paid', icon: 'DollarSign', getMessage: (p) => `Pago a ${p.supplierName ?? 'proveedor'} $${Number(p.amount ?? 0).toFixed(2)}`, route: '/purchases' },
   'SUPPLIER.PAYMENT_CREATED': { type: 'supplier_paid', icon: 'DollarSign', getMessage: (p) => `Pago a proveedor $${Number(p.amountUsd ?? 0).toFixed(2)}`, route: '/purchases' },
   'CUSTOMER.CREATED': { type: 'debt_collected', icon: 'UserPlus', getMessage: (p) => `Cliente ${p.customerName ?? ''} registrado`, route: '/customers' },
 };

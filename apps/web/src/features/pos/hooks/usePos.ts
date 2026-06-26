@@ -99,7 +99,7 @@ export function usePos(tenantId: string | null) {
       }, 300);
     };
 
-    subs.push(EventBus.on('SALE.COMPLETED', () => {
+    subs.push(EventBus.on(SystemEvents.SALE_COMPLETED, () => {
       if (tenantId) {
         fetchProducts(tenantId);
         fetchCashRegister(tenantId);
@@ -107,13 +107,13 @@ export function usePos(tenantId: string | null) {
       }
     }));
 
-    subs.push(EventBus.on('INVENTORY.UPDATED', debouncedRefreshProducts));
-    subs.push(EventBus.on('INVENTORY.CREATED', debouncedRefreshProducts));
-    subs.push(EventBus.on('INVENTORY.DELETED', debouncedRefreshProducts));
-    subs.push(EventBus.on('INVENTORY.PRODUCT_CREATED', debouncedRefreshProducts));
-    subs.push(EventBus.on('INVENTORY.ADJUSTMENT', debouncedRefreshProducts));
-    subs.push(EventBus.on('PURCHASE.RECEIVED', debouncedRefreshProducts));
-    subs.push(EventBus.on('PRODUCTION.RECIPE_CREATED', debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.INVENTORY_UPDATED, debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.INVENTORY_CREATED, debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.INVENTORY_DELETED, debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.INVENTORY_PRODUCT_CREATED, debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.PURCHASE_RECEIVED, debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.PRODUCTION_RECIPE_CREATED, debouncedRefreshProducts));
 
     subs.push(EventBus.on(SystemEvents.BOX_OPENED, debouncedRefresh));
     subs.push(EventBus.on(SystemEvents.BOX_CLOSED, debouncedRefresh));
@@ -131,14 +131,14 @@ export function usePos(tenantId: string | null) {
       }
     }));
 
-    subs.push(EventBus.on('CUSTOMER.UPDATED', () => {
+    subs.push(EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => {
       if (!tenantId) return;
-      // Refrescar productos (por si el cliente afecta precios o descuentos)
       fetchProducts(tenantId);
     }));
 
-    // PRODUCTION.COMPLETED — productos terminados afectan stock disponible en POS
-    subs.push(EventBus.on('PRODUCTION.COMPLETED', debouncedRefreshProducts));
+    subs.push(EventBus.on(SystemEvents.PRODUCTION_COMPLETED, debouncedRefreshProducts));
+    // PRODUCTION.ASSEMBLY_CONSUMED — ensamblaje consume ingredientes, afecta stock
+    subs.push(EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, debouncedRefreshProducts));
 
     // EXCHANGE.RATE_UPDATED — tasa cambia, precios en Bs se actualizan
     subs.push(EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => {

@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { supabase } from '../../../services/supabase/client';
 import { startOfDayVzla } from '../../../lib/date';
 import type { Tenant, TenantPlan, UserRole, GlobalUser, CreateTenantResponse, SubscriptionView, DashboardStats, TenantAnalytics, GlobalCategory } from '../types';
@@ -78,7 +78,7 @@ export const adminService = {
 
     try {
       await emitWithAudit({
-        eventName: 'ADMIN.TENANT.DELETE',
+        eventName: SystemEvents.ADMIN_TENANT_DELETE,
         module: 'ADMIN',
         payload: {
           tenantId: id,
@@ -101,7 +101,7 @@ export const adminService = {
     // Audit BEFORE delete (tenant must exist for FK)
     try {
       await emitWithAudit({
-        eventName: 'ADMIN.TENANT.HARD_DELETE',
+        eventName: SystemEvents.ADMIN_TENANT_HARD_DELETE,
         module: 'ADMIN',
         payload: {
           tenantId: id,
@@ -257,7 +257,7 @@ export const adminService = {
       const result: CreateTenantResponse = await response.json();
 
       await emitWithAudit({
-        eventName: 'ADMIN.TENANT.CREATE',
+        eventName: SystemEvents.ADMIN_TENANT_CREATE,
         module: 'ADMIN',
         payload: {
           tenantId: result.tenant.id,
@@ -992,7 +992,7 @@ export const adminService = {
     }
 
     await emitWithAudit({
-      eventName: 'ADMIN.ROLE.CREATE',
+      eventName: SystemEvents.ADMIN_ROLE_CREATE,
       module: 'ADMIN',
       payload: { roleId: role.id, name: role.name, permissionsCount: permissions.length },
       context: { userId: (await supabase.auth.getUser()).data.user?.id ?? '', tenantId: '', tenantUuid: '' },

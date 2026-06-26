@@ -1,4 +1,4 @@
-import { AppError, failure, success, type Result } from '@logiscore/core';
+import { AppError, failure, success, type Result, SystemEvents } from '@logiscore/core';
 import { generateId } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -194,7 +194,7 @@ export async function uploadLibraryImage(
         is_default: isDefault,
         sort_order: 0,
       }, tenantId);
-      await outboxService.enqueue('IMAGE_LIBRARY.CREATED', INVENTORY_MODULE, {
+      await outboxService.enqueue(SystemEvents.IMAGE_LIBRARY_CREATED, INVENTORY_MODULE, {
         imageId: id,
         name,
         categoryId,
@@ -205,7 +205,7 @@ export async function uploadLibraryImage(
     });
 
     await logAuditEventOnly({
-      eventName: 'IMAGE_LIBRARY.CREATED',
+      eventName: SystemEvents.IMAGE_LIBRARY_CREATED,
       module: INVENTORY_MODULE,
       payload: { imageId: id, name, categoryId },
       context: { tenantId },
@@ -280,11 +280,11 @@ export async function deleteLibraryImage(id: string, tenantId: string): Promise<
     await db.transaction('rw', [db.imageLibrary, db.syncQueue, db.outbox], async () => {
       await db.imageLibrary.update(id, { deletedAt: now });
       await syncQueue.enqueue(SYNC_TABLE, 'DELETE', id, { id, deleted_at: now }, tenantId);
-      await outboxService.enqueue('IMAGE_LIBRARY.DELETED', INVENTORY_MODULE, { imageId: id });
+      await outboxService.enqueue(SystemEvents.IMAGE_LIBRARY_DELETED, INVENTORY_MODULE, { imageId: id });
     });
 
     await logAuditEventOnly({
-      eventName: 'IMAGE_LIBRARY.DELETED',
+      eventName: SystemEvents.IMAGE_LIBRARY_DELETED,
       module: INVENTORY_MODULE,
       payload: { imageId: id },
       context: { tenantId },
@@ -528,7 +528,7 @@ export async function adminUploadImage(
     };
 
     await logAuditEventOnly({
-      eventName: 'IMAGE_LIBRARY.CREATED',
+      eventName: SystemEvents.IMAGE_LIBRARY_CREATED,
       module: INVENTORY_MODULE,
       payload: { imageId: id, name, categoryId },
       context: { tenantId: 'admin' },
@@ -632,7 +632,7 @@ export async function adminDeleteImage(id: string): Promise<Result<void, AppErro
     }
 
     await logAuditEventOnly({
-      eventName: 'IMAGE_LIBRARY.DELETED',
+      eventName: SystemEvents.IMAGE_LIBRARY_DELETED,
       module: INVENTORY_MODULE,
       payload: { imageId: id },
       context: { tenantId: 'admin' },

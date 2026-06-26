@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { preciseRound, toSnake, generateId } from '@logiscore/shared';
 import { productionService, recipeQtyToStorageBase } from '../../production/services/productionService';
 import { getDb } from '../../../services/dexie/db';
@@ -534,7 +534,7 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
         }
       }
 
-      await outboxService.enqueue('SALE.COMPLETED', MODULE_NAME, {
+      await outboxService.enqueue(SystemEvents.SALE_COMPLETED, MODULE_NAME, {
         saleId,
         tenantSlug: tenantId,
         totalBs,
@@ -547,7 +547,7 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
     });
 
     await logAuditEventOnly({
-      eventName: 'SALE.COMPLETED',
+      eventName: SystemEvents.SALE_COMPLETED,
       module: MODULE_NAME,
       payload: { saleId, tenantSlug: tenantId, totalBs, totalUsd, paymentMethod, itemsCount: items.length },
       context: { userId, tenantId, tenantUuid },
@@ -1065,7 +1065,7 @@ export async function voidSale(saleId: string, tenantId: string, userId: string)
         } as unknown as Record<string, unknown>), tenantId);
       }
 
-      await outboxService.enqueue('SALE.VOIDED', MODULE_NAME, { saleId, tenantSlug: tenantId }, tx);
+      await outboxService.enqueue(SystemEvents.SALE_VOIDED, MODULE_NAME, { saleId, tenantSlug: tenantId }, tx);
 
       await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
         id: saleId, tenant_id: tenantUuid, status: 'voided', voided_at: now,
@@ -1086,7 +1086,7 @@ export async function voidSale(saleId: string, tenantId: string, userId: string)
     });
 
     await logAuditEventOnly({
-      eventName: 'SALE.VOIDED',
+      eventName: SystemEvents.SALE_VOIDED,
       module: MODULE_NAME,
       payload: { saleId, tenantSlug: tenantId },
       context: { userId, tenantId, tenantUuid },

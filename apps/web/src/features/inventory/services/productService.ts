@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing, type DexieProductPresentation } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -201,11 +201,11 @@ export async function createProduct(
         await syncQueue.enqueue('inventory_lots', 'CREATE', lot.id, toSnake(lot as unknown as Record<string, unknown>), tenantId);
       }
 
-      await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial });
+      await outboxService.enqueue(SystemEvents.INVENTORY_CREATED, INVENTORY_MODULE, { productId: id, name: input.name, sku: input.sku, stockInicial });
     });
 
     await logAuditEventOnly({
-      eventName: 'INVENTORY.CREATED',
+      eventName: SystemEvents.INVENTORY_CREATED,
       module: INVENTORY_MODULE,
       payload: { productId: id, name: input.name, sku: input.sku, stockInicial },
       context: { userId, tenantId },
@@ -373,7 +373,7 @@ export async function createProductWithPresentations(
         createdPresentations.push(toPresentation(pres as unknown as Record<string, unknown>));
       }
 
-      await outboxService.enqueue('INVENTORY.CREATED', INVENTORY_MODULE, {
+      await outboxService.enqueue(SystemEvents.INVENTORY_CREATED, INVENTORY_MODULE, {
         productId,
         name: input.name,
         sku: input.sku,
@@ -383,7 +383,7 @@ export async function createProductWithPresentations(
     });
 
     await logAuditEventOnly({
-      eventName: 'INVENTORY.CREATED',
+      eventName: SystemEvents.INVENTORY_CREATED,
       module: INVENTORY_MODULE,
       payload: {
         productId, name: input.name, sku: input.sku,
@@ -455,7 +455,7 @@ export async function updateProduct(id: string, input: Partial<Product>, tenantI
     ], async () => {
       await db.products.put(updated);
       await syncQueue.enqueue('products', 'UPDATE', id, toSnake(updated as unknown as Record<string, unknown>), tenantId);
-      await outboxService.enqueue('INVENTORY.UPDATED', INVENTORY_MODULE, { productId: id, changes: Object.keys(input) });
+      await outboxService.enqueue(SystemEvents.INVENTORY_UPDATED, INVENTORY_MODULE, { productId: id, changes: Object.keys(input) });
 
       if (presentationsInput) {
         const existingPres = await db.productPresentations
@@ -518,7 +518,7 @@ export async function updateProduct(id: string, input: Partial<Product>, tenantI
       }
     });
     await logAuditEventOnly({
-      eventName: 'INVENTORY.UPDATED',
+      eventName: SystemEvents.INVENTORY_UPDATED,
       module: INVENTORY_MODULE,
       payload: { productId: id, changes: Object.keys(input) },
       context: { tenantId },
@@ -736,10 +736,10 @@ export async function softDeleteProduct(id: string, tenantId: string): Promise<R
 
     await db.products.update(id, { deletedAt });
     await syncQueue.enqueue('products', 'DELETE', id, { id, deleted_at: deletedAt }, tenantId);
-    await outboxService.enqueue('INVENTORY.DELETED', INVENTORY_MODULE, { productId: id });
+    await outboxService.enqueue(SystemEvents.INVENTORY_DELETED, INVENTORY_MODULE, { productId: id });
   });
   await logAuditEventOnly({
-    eventName: 'INVENTORY.DELETED',
+    eventName: SystemEvents.INVENTORY_DELETED,
     module: INVENTORY_MODULE,
     payload: { productId: id, cascadePresentations: presentations.length },
     context: { tenantId },

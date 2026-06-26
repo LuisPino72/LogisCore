@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { getDb, type DexieExpense } from '../../../services/dexie/db';
 import { preciseRound, generateId, toSnake } from '@logiscore/shared';
 import type { Gasto } from '../types';
@@ -136,11 +136,11 @@ export const gastosService = {
       await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
         await db.expenses.add(expense);
         await syncQueue.enqueue('expenses', 'CREATE', expense.id, toSnake(expense as unknown as Record<string, unknown>), tenantId);
-        await outboxService.enqueue('EXPENSES.CREATED', 'gastos', { expenseId: expense.id, category: expense.category, amountUsd: expense.amountUsd });
+        await outboxService.enqueue(SystemEvents.EXPENSES_CREATED, 'gastos', { expenseId: expense.id, category: expense.category, amountUsd: expense.amountUsd });
       });
       // AUDIT-CRUD-006: audit post-tx (outbox único emisor per Regla #17)
       await logAuditEventOnly({
-        eventName: 'EXPENSES.CREATED',
+        eventName: SystemEvents.EXPENSES_CREATED,
         module: 'gastos',
         payload: { expenseId: expense.id, category: expense.category, amountUsd: expense.amountUsd },
         context: { userId, tenantId },
@@ -193,7 +193,7 @@ export const gastosService = {
       await db.transaction('rw', [db.expenses, db.syncQueue, db.outbox], async () => {
         await db.expenses.update(id, updated);
         await syncQueue.enqueue('expenses', 'UPDATE', id, { id, ...toSnake(updated as unknown as Record<string, unknown>) }, tenantId);
-        await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: Object.keys(data) });
+        await outboxService.enqueue(SystemEvents.EXPENSES_UPDATED, 'gastos', { expenseId: id, changes: Object.keys(data) });
 
         // Si es un template recurrente y se marca como pagado, propagar a instancias pendientes hijas
         if (isPayingPending && existing.isRecurring && !existing.parentExpenseId) {
@@ -210,13 +210,13 @@ export const gastosService = {
               updatedAt: now,
             });
             await syncQueue.enqueue('expenses', 'UPDATE', child.id, { id: child.id, status: 'paid', updated_at: now }, tenantId);
-            await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: child.id, changes: ['status'] });
+            await outboxService.enqueue(SystemEvents.EXPENSES_UPDATED, 'gastos', { expenseId: child.id, changes: ['status'] });
           }
         }
       });
       // AUDIT-CRUD-007: audit post-tx
       await logAuditEventOnly({
-        eventName: 'EXPENSES.UPDATED',
+        eventName: SystemEvents.EXPENSES_UPDATED,
         module: 'gastos',
         payload: { expenseId: id, changes: Object.keys(data) },
         context: { userId: undefined, tenantId },
@@ -258,15 +258,15 @@ export const gastosService = {
         for (const child of childInstances) {
           await db.expenses.update(child.id, { deletedAt: now, updatedAt: now });
           await syncQueue.enqueue('expenses', 'DELETE', child.id, { id: child.id, deleted_at: now }, tenantId);
-          await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: child.id });
+          await outboxService.enqueue(SystemEvents.EXPENSES_DELETED, 'gastos', { expenseId: child.id });
         }
         await db.expenses.update(id, { deletedAt: now, updatedAt: now });
         await syncQueue.enqueue('expenses', 'DELETE', id, { id, deleted_at: now }, tenantId);
-        await outboxService.enqueue('EXPENSES.DELETED', 'gastos', { expenseId: id });
+        await outboxService.enqueue(SystemEvents.EXPENSES_DELETED, 'gastos', { expenseId: id });
       });
       // AUDIT-CRUD-008: audit post-tx
       await logAuditEventOnly({
-        eventName: 'EXPENSES.DELETED',
+        eventName: SystemEvents.EXPENSES_DELETED,
         module: 'gastos',
         payload: { expenseId: id },
         context: { userId: undefined, tenantId },
@@ -308,7 +308,7 @@ export const gastosService = {
             for (const exp of toFix) {
               await db.expenses.update(exp.id, { status: 'paid', updatedAt: now });
               await syncQueue.enqueue('expenses', 'UPDATE', exp.id, { id: exp.id, status: 'paid', updated_at: now }, tenantId);
-              await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: exp.id, changes: ['status'] });
+              await outboxService.enqueue(SystemEvents.EXPENSES_UPDATED, 'gastos', { expenseId: exp.id, changes: ['status'] });
             }
           });
           for (const exp of toFix) {
@@ -442,7 +442,7 @@ export const gastosService = {
       // AUDIT-CRUD-010: audit post-tx
       if (generated.length > 0) {
         await emitWithAudit({
-          eventName: 'EXPENSES.RECURRING_GENERATED',
+          eventName: SystemEvents.EXPENSES_RECURRING_GENERATED,
           module: 'gastos',
           payload: { count: generated.length, date: today },
           context: { userId: undefined, tenantId },
@@ -485,7 +485,7 @@ export const gastosService = {
             updatedAt: now,
           });
           await syncQueue.enqueue('expenses', 'UPDATE', id, { id, status: 'paid', exchange_rate: currentRate, amount_bs: amountBs, updated_at: now }, tenantId);
-          await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: id, changes: ['status', 'exchangeRate'] });
+          await outboxService.enqueue(SystemEvents.EXPENSES_UPDATED, 'gastos', { expenseId: id, changes: ['status', 'exchangeRate'] });
 
           // Si es un template recurrente, propagar pago a instancias pendientes hijas
           if (existing.isRecurring && !existing.parentExpenseId) {
@@ -502,7 +502,7 @@ export const gastosService = {
                 updatedAt: now,
               });
               await syncQueue.enqueue('expenses', 'UPDATE', child.id, { id: child.id, status: 'paid', exchange_rate: currentRate, amount_bs: childAmountBs, updated_at: now }, tenantId);
-              await outboxService.enqueue('EXPENSES.UPDATED', 'gastos', { expenseId: child.id, changes: ['status', 'exchangeRate'] });
+              await outboxService.enqueue(SystemEvents.EXPENSES_UPDATED, 'gastos', { expenseId: child.id, changes: ['status', 'exchangeRate'] });
             }
           }
         }
@@ -549,12 +549,12 @@ export const gastosService = {
         for (const inst of instances) {
           await db.expenses.update(inst.id, { status: 'cancelled', updatedAt: now });
           await syncQueue.enqueue('expenses', 'UPDATE', inst.id, { id: inst.id, status: 'cancelled', updated_at: now }, tenantId);
-          await outboxService.enqueue('EXPENSES.CANCELLED', 'gastos', { expenseId: inst.id, parentExpenseId: templateId });
+          await outboxService.enqueue(SystemEvents.EXPENSES_CANCELLED, 'gastos', { expenseId: inst.id, parentExpenseId: templateId });
         }
       });
       // AUDIT-CRUD-009: audit post-tx
       await logAuditEventOnly({
-        eventName: 'EXPENSES.CANCELLED',
+        eventName: SystemEvents.EXPENSES_CANCELLED,
         module: 'gastos',
         payload: { templateId, occurrenceDate, cancelledCount: instances.length },
         context: { userId: undefined, tenantId },

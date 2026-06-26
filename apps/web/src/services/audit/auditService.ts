@@ -6,20 +6,20 @@ import { getDb, isDbReady } from '../dexie/db';
 // completo de eventos de mutación de LogisCore. Decisión conservadora: lista
 // explícita (no "todos") para evitar inflado de tabla por eventos internos.
 export const CRITICAL_EVENTS = [
+  // POS / Ventas
   'SALE.COMPLETED',
   'SALE.VOIDED',
-  'INVOICE.ISSUED',
-  'INVOICE.VOIDED',
-  'BOX.OPENED',
-  'BOX.CLOSED',
+  'POS.BOX_OPENED',
+  'POS.BOX_CLOSED',
+  // Inventario
   'INVENTORY.ADJUSTMENT',
   'INVENTORY.CREATED',
   'INVENTORY.UPDATED',
   'INVENTORY.DELETED',
-  'USER.LOGIN',
-  'USER.LOGIN_FAILED',
-  'USER.LOGOUT',
-  // Purchases (7)
+  'INVENTORY.PRODUCT_CREATED',
+  'IMAGE_LIBRARY.CREATED',
+  'IMAGE_LIBRARY.DELETED',
+  // Compras
   'PURCHASE.SUPPLIER_CREATED',
   'PURCHASE.SUPPLIER_UPDATED',
   'PURCHASE.SUPPLIER_DELETED',
@@ -29,37 +29,39 @@ export const CRITICAL_EVENTS = [
   'PURCHASE.CONFIRMED',
   'PURCHASE.RECEIVED',
   'PURCHASE.CANCELLED',
-  // Expenses (5)
-  'EXPENSES.CREATED',
-  'EXPENSES.UPDATED',
-  'EXPENSES.DELETED',
-  'EXPENSES.RECURRING_GENERATED',
-  'EXPENSES.CANCELLED',
-  // Production (6)
-  'PRODUCTION.CREATED',
-  // PRODUCTION-003 [Paso-2]: nuevo nombre semántico (alias de PRODUCTION.CREATED)
+  'SUPPLIER.PAYMENT_CREATED',
+  // Producción
   'PRODUCTION.RECIPE_CREATED',
   'PRODUCTION.UPDATED',
   'PRODUCTION.DELETED',
   'PRODUCTION.COMPLETED',
   'PRODUCTION.ORDER_CANCELLED',
-  // PRODUCTION-003 [Paso-2]: producto auto-creado desde producción
-  'INVENTORY.PRODUCT_CREATED',
-  // Customers (3)
+  'PRODUCTION.ASSEMBLY_CONSUMED',
+  // Gastos
+  'EXPENSES.CREATED',
+  'EXPENSES.UPDATED',
+  'EXPENSES.DELETED',
+  'EXPENSES.RECURRING_GENERATED',
+  'EXPENSES.CANCELLED',
+  // Clientes
   'CUSTOMER.CREATED',
   'CUSTOMER.UPDATED',
   'CUSTOMER.DELETED',
-  // Admin (3)
+  'DEBT.COLLECTED',
+  // Admin
   'ADMIN.TENANT.CREATE',
   'ADMIN.TENANT.DELETE',
   'ADMIN.TENANT.HARD_DELETE',
-  // Exchange (1)
+  'ADMIN.ROLE.CREATE',
+  // Exchange
   'EXCHANGE.RATE_UPDATED',
-  // Settings (4)
+  // Settings
   'SETTINGS.FISCAL.UPDATED',
   'SETTINGS.OPERATIONS.UPDATED',
   'SETTINGS.BUSINESS.UPDATED',
-  'USER.PASSWORD_CHANGED',
+  // Auth
+  'USER.LOGIN',
+  'USER.LOGOUT',
 ] as const;
 
 export function sanitizePayload(payload: Record<string, unknown> = {}): Record<string, unknown> {
