@@ -9,12 +9,12 @@ import type { ActivityEntry } from '../types';
 const EVENT_MAP: Record<string, { type: ActivityEntry['type']; icon: string; getMessage: (p: Record<string, unknown>) => string; route?: string }> = {
   'SALE.COMPLETED': { type: 'sale_completed', icon: 'ShoppingCart', getMessage: (p) => {
     const payload = typeof p === 'string' ? JSON.parse(p) : p;
-    return `Venta #${String(payload.saleId ?? '').slice(0, 8)} — $${Number(payload.totalUsd ?? 0).toFixed(2)}`;
+    return `Venta — $${Number(payload.totalUsd ?? 0).toFixed(2)}`;
   }, route: '/pos' },
-  'SALE.VOIDED': { type: 'sale_voided', icon: 'RotateCcw', getMessage: (p) => `Venta #${String(p.saleId ?? '').slice(0, 8)} anulada`, route: '/pos' },
+  'SALE.VOIDED': { type: 'sale_voided', icon: 'RotateCcw', getMessage: () => `Venta anulada`, route: '/pos' },
   'EXPENSES.CREATED': { type: 'expense_created', icon: 'Receipt', getMessage: (p) => `Gasto ${p.category ?? ''} $${Number(p.amountUsd ?? 0).toFixed(2)}`, route: '/gastos' },
   'EXPENSES.CANCELLED': { type: 'expense_created', icon: 'Receipt', getMessage: (p) => `Gasto ${p.category ?? ''} cancelado`, route: '/gastos' },
-  'PURCHASE.RECEIVED': { type: 'purchase_received', icon: 'Package', getMessage: (p) => `Orden #${String(p.orderId ?? '').slice(0, 8)} recibida`, route: '/purchases' },
+  'PURCHASE.RECEIVED': { type: 'purchase_received', icon: 'Package', getMessage: () => `Orden recibida`, route: '/purchases' },
   'PURCHASE.SUPPLIER_PAID': { type: 'supplier_paid', icon: 'DollarSign', getMessage: (p) => `Pago a ${p.supplierName ?? 'proveedor'} $${Number(p.amount ?? 0).toFixed(2)}`, route: '/purchases' },
   'SUPPLIER.PAYMENT_CREATED': { type: 'supplier_paid', icon: 'DollarSign', getMessage: (p) => `Pago a proveedor $${Number(p.amountUsd ?? 0).toFixed(2)}`, route: '/purchases' },
   'CUSTOMER.CREATED': { type: 'debt_collected', icon: 'UserPlus', getMessage: (p) => `Cliente ${p.customerName ?? ''} registrado`, route: '/customers' },

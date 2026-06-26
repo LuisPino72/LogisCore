@@ -85,13 +85,13 @@ export const RecentActivityWidget: FC<RecentActivityWidgetProps> = ({ activity, 
         </div>
         <h3 className="text-sm font-title font-bold text-gray-900">Actividad Reciente</h3>
       </div>
-      <div className="space-y-0 relative pl-4 border-l-2 border-gray-200">
+      <div className="space-y-0 relative pl-3 border-l-2 border-gray-200">
         {visible.map((entry, idx) => {
           const dotColor = DOT_COLORS[entry.type] ?? 'bg-gray-400';
           return (
             <div
               key={entry.id}
-              className="flex items-start gap-3 py-2.5 min-h-[44px] rounded-lg px-2 -ml-4 transition-colors duration-150 hover:bg-gray-50 cursor-pointer animate-slide-up"
+              className="flex items-start gap-2.5 py-1.5 min-h-[32px] rounded-lg px-2 -ml-3 transition-colors duration-150 hover:bg-gray-50 cursor-pointer animate-slide-up"
               style={{ animationDelay: `${idx * 0.03}s` }}
               role="button"
               tabIndex={0}
@@ -101,12 +101,12 @@ export const RecentActivityWidget: FC<RecentActivityWidgetProps> = ({ activity, 
               onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && entry.route) { e.preventDefault(); 
                 navigate(`${entry.route}?saleId=${entry.entityId}`); } }}
             >
-              <div className="flex flex-col items-center shrink-0 pt-1.5 ml-[-21px]">
-                <div className={`w-2 h-2 rounded-full ${dotColor} ring-2 ring-white`} />
+              <div className="flex flex-col items-center shrink-0 pt-1 ml-[-17px]">
+                <div className={`w-1.5 h-1.5 rounded-full ${dotColor} ring-2 ring-white`} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 truncate leading-snug">{entry.message}</p>
-                <span className="text-[11px] text-text-secondary">{getRelativeTime(entry.timestamp)}</span>
+                <p className="text-[13px] text-gray-700 truncate leading-snug">{entry.message}</p>
+                <span className="text-[10px] text-text-secondary">{getRelativeTime(entry.timestamp)}</span>
               </div>
             </div>
           );
