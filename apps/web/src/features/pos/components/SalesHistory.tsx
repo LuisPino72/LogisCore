@@ -20,11 +20,9 @@ interface SalesHistoryProps {
   onVoid: (saleId: string) => void;
   loading: boolean;
   canVoid: boolean;
-  initialSaleId?: string | null;
-  onClearExternalSale?: () => void;
 }
 
-export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid, initialSaleId, onClearExternalSale }: SalesHistoryProps) {
+export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total, onVoid, loading, canVoid }: SalesHistoryProps) {
   const [page, setPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [sortKey, setSortKey] = useState<string>('createdAt');
@@ -77,15 +75,6 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
     });
     return () => EventBus.off(sub);
   }, [page, tenantId, fetchSalesHistory, debouncedStartDate, debouncedEndDate]);
-
-  useEffect(() => {
-    if (!initialSaleId) return;
-    const sale = sales.find((s) => s.id === initialSaleId);
-    if (sale) {
-      setSelectedSale(sale);
-      onClearExternalSale?.();
-    }
-  }, [initialSaleId, sales, onClearExternalSale]);
 
   const handleView = (sale: Sale) => {
     setSelectedSale(sale);

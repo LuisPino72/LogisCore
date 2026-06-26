@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner, SaleDetailModal } from '../../../common/components';
+import { useNavigate } from 'react-router-dom';
+import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
 import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, User } from 'lucide-react';
@@ -96,21 +96,6 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
   const [showRegisterSelection, setShowRegisterSelection] = useState(false);
-  const [externalSaleId, setExternalSaleId] = useState<string | null>(null);
-
-  const location = useLocation();
-
-  useEffect(() => {
-    const state = location.state as { entityId?: string; entityType?: string } | null;
-    const params = new URLSearchParams(location.search);
-    const querySaleId = params.get('saleId');
-    const saleId = querySaleId || state?.entityId;
-    if (saleId && ((state?.entityType?.startsWith('sale_') || state?.entityType === 'sale_completed') || querySaleId)) {
-      switchToHistory();
-      setExternalSaleId(saleId);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state, location.search, switchToHistory]);
 
   // Global Barcode Listener State
   const SCAN_TIMEOUT_MS = 120;
@@ -974,15 +959,6 @@ export function PosPage({ tenantId }: PosPageProps) {
           }
         }}
       />
-
-      {tenantId && externalSaleId && (
-        <SaleDetailModal
-          saleId={externalSaleId}
-          tenantId={tenantId}
-          isOpen={true}
-          onClose={() => setExternalSaleId(null)}
-        />
-      )}
 
       <ModuleOnboarding
         moduleId="pos"
