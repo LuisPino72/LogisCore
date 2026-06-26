@@ -1,15 +1,23 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { type Result, failure, AppError, EventBus, SystemEvents } from '@logiscore/core';
 import { useGastosStore } from '../stores/gastosStore';
 import { gastosService } from '../services/gastosService';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
+import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 import type { Gasto, CreateGastoInput, UpdateGastoInput } from '../types';
 
 export function useGastos(tenantId: string | null) {
   const {
     gastos, loading, filters, setGastos, setLoading, setFilters, setRecurringTemplates,
   } = useGastosStore();
+
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const fetchGastos = useCallback(async () => {
     if (!tenantId) return;
@@ -28,7 +36,7 @@ export function useGastos(tenantId: string | null) {
       startDate,
       endDate,
     });
-    if (result.ok) {
+    if (result.ok && mountedRef.current) {
       setGastos(result.data);
     }
     setLoading(false);
@@ -38,6 +46,10 @@ export function useGastos(tenantId: string | null) {
     fetchGastos();
   }, [fetchGastos]);
 
+  const refresh = useDebouncedCallback(() => {
+    fetchGastos();
+  }, 300, 1000);
+
   useEffect(() => {
     if (!tenantId) return;
 
@@ -45,30 +57,20 @@ export function useGastos(tenantId: string | null) {
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (table === 'expenses' || table === '*') {
-          fetchGastos();
+          refresh();
         }
       }),
-      EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => {
-        fetchGastos();
-      }),
-      EventBus.on(SystemEvents.EXPENSES_CREATED, () => {
-        fetchGastos();
-      }),
-      EventBus.on(SystemEvents.EXPENSES_UPDATED, () => {
-        fetchGastos();
-      }),
-      EventBus.on(SystemEvents.EXPENSES_DELETED, () => {
-        fetchGastos();
-      }),
-      EventBus.on(SystemEvents.EXPENSES_CANCELLED, () => {
-        fetchGastos();
-      }),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, refresh),
+      EventBus.on(SystemEvents.EXPENSES_CREATED, refresh),
+      EventBus.on(SystemEvents.EXPENSES_UPDATED, refresh),
+      EventBus.on(SystemEvents.EXPENSES_DELETED, refresh),
+      EventBus.on(SystemEvents.EXPENSES_CANCELLED, refresh),
     ];
 
     return () => {
       subscriptions.forEach((sub) => EventBus.off(sub));
     };
-  }, [tenantId, fetchGastos]);
+  }, [tenantId, refresh]);
 
   const createGasto = useCallback(async (input: CreateGastoInput): Promise<Result<Gasto, AppError>> => {
     if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay negocio activo.'));

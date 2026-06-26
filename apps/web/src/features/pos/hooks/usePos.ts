@@ -5,6 +5,7 @@ import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { settingsService } from '../../settings/services/settingsService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
+import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 import type { Customer } from '../../../specs/customers';
 
 export function usePos(tenantId: string | null) {
@@ -72,84 +73,65 @@ export function usePos(tenantId: string | null) {
     initialFetchDone.current = true;
     doRefresh();
     fetchParkedCarts(tenantId);
-    // Preload settings for POS (prevents sale blocking when settings haven't been loaded yet)
     if (!useSettingsStore.getState().loaded) {
       settingsService.loadTenantSettings(tenantId);
     }
   }, [tenantId, doRefresh, fetchParkedCarts]);
 
+  const refreshProducts = useDebouncedCallback(() => {
+    if (!tenantId) return;
+    fetchProducts(tenantId, true);
+  }, 300, 1000);
+
+  const refreshFull = useDebouncedCallback(() => {
+    if (!tenantId) return;
+    fetchProducts(tenantId);
+    fetchCashRegister(tenantId);
+    fetchLatestRate(tenantId);
+    fetchPresentations(tenantId);
+  }, 300, 1000);
+
   useEffect(() => {
-    const subs: ReturnType<typeof EventBus.on>[] = [];
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    if (!tenantId) return;
 
-    const debouncedRefresh = () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => {
-        if (tenantId) {
-          fetchProducts(tenantId);
-          fetchCashRegister(tenantId);
+    const refreshCashRegister = () => {
+      fetchProducts(tenantId, true);
+      fetchCashRegister(tenantId);
+    };
+
+    const subs = [
+      EventBus.on(SystemEvents.SALE_COMPLETED, refreshFull),
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, refreshProducts),
+      EventBus.on(SystemEvents.INVENTORY_CREATED, refreshProducts),
+      EventBus.on(SystemEvents.INVENTORY_DELETED, refreshProducts),
+      EventBus.on(SystemEvents.INVENTORY_PRODUCT_CREATED, refreshProducts),
+      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, refreshProducts),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, refreshProducts),
+      EventBus.on(SystemEvents.PRODUCTION_RECIPE_CREATED, refreshProducts),
+      EventBus.on(SystemEvents.BOX_OPENED, refreshCashRegister),
+      EventBus.on(SystemEvents.BOX_CLOSED, refreshCashRegister),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, refreshProducts),
+      EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, refreshProducts),
+      EventBus.on(SystemEvents.CUSTOMER_UPDATED, refreshProducts),
+      EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => {
+        if (tenantId) fetchLatestRate(tenantId);
+      }),
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if ((table === '*' || table === 'products') && tenantId) {
+          fetchProducts(tenantId, true);
         }
-      }, 300);
-    };
+        if ((table === '*' || table === 'product_presentations') && tenantId) {
+          fetchPresentations(tenantId);
+        }
+        if ((table === '*' || table === 'cash_registers') && tenantId) {
+          fetchCashRegister(tenantId, true);
+        }
+      }),
+    ];
 
-    const debouncedRefreshProducts = () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => {
-        if (tenantId) fetchProducts(tenantId, true);
-      }, 300);
-    };
-
-    subs.push(EventBus.on(SystemEvents.SALE_COMPLETED, () => {
-      if (tenantId) {
-        fetchProducts(tenantId);
-        fetchCashRegister(tenantId);
-        fetchLatestRate(tenantId);
-      }
-    }));
-
-    subs.push(EventBus.on(SystemEvents.INVENTORY_UPDATED, debouncedRefreshProducts));
-    subs.push(EventBus.on(SystemEvents.INVENTORY_CREATED, debouncedRefreshProducts));
-    subs.push(EventBus.on(SystemEvents.INVENTORY_DELETED, debouncedRefreshProducts));
-    subs.push(EventBus.on(SystemEvents.INVENTORY_PRODUCT_CREATED, debouncedRefreshProducts));
-    subs.push(EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, debouncedRefreshProducts));
-    subs.push(EventBus.on(SystemEvents.PURCHASE_RECEIVED, debouncedRefreshProducts));
-    subs.push(EventBus.on(SystemEvents.PRODUCTION_RECIPE_CREATED, debouncedRefreshProducts));
-
-    subs.push(EventBus.on(SystemEvents.BOX_OPENED, debouncedRefresh));
-    subs.push(EventBus.on(SystemEvents.BOX_CLOSED, debouncedRefresh));
-
-    subs.push(EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
-      const { table } = payload as { table?: string };
-      if ((table === '*' || table === 'products') && tenantId) {
-        fetchProducts(tenantId, true);
-      }
-      if ((table === '*' || table === 'product_presentations') && tenantId) {
-        fetchPresentations(tenantId);
-      }
-      if ((table === '*' || table === 'cash_registers') && tenantId) {
-        fetchCashRegister(tenantId, true);
-      }
-    }));
-
-    subs.push(EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => {
-      if (!tenantId) return;
-      fetchProducts(tenantId);
-    }));
-
-    subs.push(EventBus.on(SystemEvents.PRODUCTION_COMPLETED, debouncedRefreshProducts));
-    // PRODUCTION.ASSEMBLY_CONSUMED — ensamblaje consume ingredientes, afecta stock
-    subs.push(EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, debouncedRefreshProducts));
-
-    // EXCHANGE.RATE_UPDATED — tasa cambia, precios en Bs se actualizan
-    subs.push(EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => {
-      if (tenantId) fetchLatestRate(tenantId);
-    }));
-
-    return () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      subs.forEach((s) => EventBus.off(s));
-    };
-  }, [tenantId, fetchProducts, fetchCashRegister, fetchLatestRate, fetchPresentations]);
+    return () => { subs.forEach((s) => EventBus.off(s)); };
+  }, [tenantId, fetchProducts, fetchCashRegister, fetchLatestRate, fetchPresentations, refreshProducts, refreshFull]);
 
   const searchRef = useRef(0);
 

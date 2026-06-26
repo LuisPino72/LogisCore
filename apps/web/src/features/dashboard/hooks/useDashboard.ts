@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useDashboardStore } from '../stores/dashboardStore';
+import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 
 export function useDashboard(tenantId: string | null) {
   const tenantInfo = useDashboardStore((s) => s.tenantInfo);
@@ -33,55 +34,36 @@ export function useDashboard(tenantId: string | null) {
     };
   }, [tenantId, fetchDashboard, fetchPendingTasks, reset]);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    const handler = () => {
-      if (mountedRef.current) {
-        fetchDashboard(tenantId);
-        fetchTopProducts(tenantId);
-        fetchLowStock(tenantId);
-        fetchPendingTasks(tenantId);
-      }
-    };
-    const subs = [
-      EventBus.on(SystemEvents.SALE_COMPLETED, handler),
-      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, handler),
-      EventBus.on(SystemEvents.INVENTORY_UPDATED, handler),
-      EventBus.on(SystemEvents.PURCHASE_RECEIVED, handler),
-      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, handler),
-      EventBus.on(SystemEvents.SALE_VOIDED, handler),
-    ];
-    return () => { subs.forEach((s) => EventBus.off(s)); };
-  }, [tenantId, fetchDashboard, fetchTopProducts, fetchLowStock, fetchPendingTasks]);
+  const refreshDashboard = useDebouncedCallback(() => {
+    if (!tenantId || !mountedRef.current) return;
+    fetchDashboard(tenantId);
+    fetchTopProducts(tenantId);
+    fetchLowStock(tenantId);
+    fetchPendingTasks(tenantId);
+  }, 300, 1000);
+
+  const refreshTasks = useDebouncedCallback(() => {
+    if (!tenantId || !mountedRef.current) return;
+    fetchDashboard(tenantId);
+    fetchPendingTasks(tenantId);
+  }, 300, 1000);
 
   useEffect(() => {
     if (!tenantId) return;
-    const handler = () => {
-      if (mountedRef.current) {
-        fetchDashboard(tenantId);
-        fetchPendingTasks(tenantId);
-      }
-    };
     const subs = [
-      EventBus.on(SystemEvents.EXPENSES_CREATED, handler),
-      EventBus.on(SystemEvents.EXPENSES_UPDATED, handler),
-      EventBus.on(SystemEvents.EXPENSES_DELETED, handler),
+      EventBus.on(SystemEvents.SALE_COMPLETED, refreshDashboard),
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, refreshDashboard),
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, refreshDashboard),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, refreshDashboard),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, refreshDashboard),
+      EventBus.on(SystemEvents.SALE_VOIDED, refreshDashboard),
+      EventBus.on(SystemEvents.EXPENSES_CREATED, refreshTasks),
+      EventBus.on(SystemEvents.EXPENSES_UPDATED, refreshTasks),
+      EventBus.on(SystemEvents.EXPENSES_DELETED, refreshTasks),
+      EventBus.on(SystemEvents.CUSTOMER_UPDATED, refreshTasks),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
-  }, [tenantId, fetchDashboard, fetchPendingTasks]);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    const handler = () => {
-      if (mountedRef.current) {
-        fetchPendingTasks(tenantId);
-      }
-    };
-    const subs = [
-      EventBus.on(SystemEvents.CUSTOMER_UPDATED, handler),
-    ];
-    return () => { subs.forEach((s) => EventBus.off(s)); };
-  }, [tenantId, fetchPendingTasks]);
+  }, [tenantId, refreshDashboard, refreshTasks]);
 
   return {
     tenantInfo,

@@ -3,6 +3,7 @@ import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useProductionStore } from '../stores/productionStore';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
+import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 
 export function useProduction(tenantId: string | null) {
   const recipes = useProductionStore((s) => s.recipes);
@@ -33,56 +34,35 @@ export function useProduction(tenantId: string | null) {
     doFetch();
   }, [tenantId, doFetch]);
 
+  const refreshOnEvent = useDebouncedCallback(() => {
+    if (!tenantId) return;
+    doFetch(true);
+  }, 300, 1000);
+
   useEffect(() => {
     if (!tenantId) return;
 
-    const sub1 = EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
-      const { table } = payload as { table?: string };
-      if (!table || table === '*' || ['recipes', 'recipe_lines', 'production_orders', 'products'].includes(table)) {
-        doFetch(true);
-      }
-    });
+    const subs = [
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if (!table || table === '*' || ['recipes', 'recipe_lines', 'production_orders', 'products'].includes(table)) {
+          refreshOnEvent();
+        }
+      }),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, refreshOnEvent),
+      EventBus.on(SystemEvents.PRODUCTION_ORDER_CANCELLED, refreshOnEvent),
+      EventBus.on(SystemEvents.PRODUCTION_RECIPE_CREATED, refreshOnEvent),
+      EventBus.on(SystemEvents.PRODUCTION_UPDATED, refreshOnEvent),
+      EventBus.on(SystemEvents.PRODUCTION_DELETED, refreshOnEvent),
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, refreshOnEvent),
+      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, refreshOnEvent),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, refreshOnEvent),
+      EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, refreshOnEvent),
+      EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, refreshOnEvent),
+    ];
 
-    const sub2 = EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => {
-      doFetch(true);
-    });
-
-    const sub3 = EventBus.on(SystemEvents.PRODUCTION_ORDER_CANCELLED, () => {
-      doFetch(true);
-    });
-
-    const sub4b = EventBus.on(SystemEvents.PRODUCTION_RECIPE_CREATED, () => {
-      doFetch(true);
-    });
-
-    const sub5 = EventBus.on(SystemEvents.PRODUCTION_UPDATED, () => {
-      doFetch(true);
-    });
-
-    const sub6 = EventBus.on(SystemEvents.PRODUCTION_DELETED, () => {
-      doFetch(true);
-    });
-
-    const sub7 = EventBus.on(SystemEvents.INVENTORY_UPDATED, () => { doFetch(true); });
-    const sub8 = EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, () => { doFetch(true); });
-    const sub9 = EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => { doFetch(true); });
-    const sub10 = EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => { doFetch(true); });
-    const sub11 = EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, () => { doFetch(true); });
-
-    return () => {
-      EventBus.off(sub1);
-      EventBus.off(sub2);
-      EventBus.off(sub3);
-      EventBus.off(sub4b);
-      EventBus.off(sub5);
-      EventBus.off(sub6);
-      EventBus.off(sub7);
-      EventBus.off(sub8);
-      EventBus.off(sub9);
-      EventBus.off(sub10);
-      EventBus.off(sub11);
-    };
-  }, [tenantId, doFetch]);
+    return () => { subs.forEach((s) => EventBus.off(s)); };
+  }, [tenantId, refreshOnEvent]);
 
   const refresh = useCallback(() => {
     initialFetchDone.current = false;

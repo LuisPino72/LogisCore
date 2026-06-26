@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useCustomerStore } from '../stores/customerStore';
+import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 import type {
   CreateCustomerInput,
   UpdateCustomerInput,
@@ -42,42 +43,30 @@ export function useCustomers(tenantId: string | null) {
     doFetch();
   }, [tenantId, doFetch]);
 
+  const refresh = useDebouncedCallback(() => {
+    if (!tenantId) return;
+    fetchCustomers(tenantId, true);
+  }, 300, 1000);
+
   useEffect(() => {
     if (!tenantId) return;
 
-    const sub = EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
-      const { table } = payload as { table?: string };
-      if (!table || table === 'customers' || table === 'sales') {
-        fetchCustomers(tenantId, true);
-      }
-    });
+    const subs = [
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if (!table || table === 'customers' || table === 'sales') {
+          refresh();
+        }
+      }),
+      EventBus.on(SystemEvents.CUSTOMER_CREATED, refresh),
+      EventBus.on(SystemEvents.CUSTOMER_UPDATED, refresh),
+      EventBus.on(SystemEvents.CUSTOMER_DELETED, refresh),
+      EventBus.on(SystemEvents.SALE_COMPLETED, refresh),
+      EventBus.on(SystemEvents.DEBT_COLLECTED, refresh),
+    ];
 
-    const subCreated = EventBus.on(SystemEvents.CUSTOMER_CREATED, () => {
-      fetchCustomers(tenantId, true);
-    });
-    const subUpdated = EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => {
-      fetchCustomers(tenantId, true);
-    });
-    const subDeleted = EventBus.on(SystemEvents.CUSTOMER_DELETED, () => {
-      fetchCustomers(tenantId, true);
-    });
-
-    const subSale = EventBus.on(SystemEvents.SALE_COMPLETED, () => {
-      fetchCustomers(tenantId, true);
-    });
-    const subDebt = EventBus.on(SystemEvents.DEBT_COLLECTED, () => {
-      fetchCustomers(tenantId, true);
-    });
-
-    return () => {
-      EventBus.off(sub);
-      EventBus.off(subCreated);
-      EventBus.off(subUpdated);
-      EventBus.off(subDeleted);
-      EventBus.off(subSale);
-      EventBus.off(subDebt);
-    };
-  }, [tenantId, fetchCustomers]);
+    return () => { subs.forEach((s) => EventBus.off(s)); };
+  }, [tenantId, refresh]);
 
   return {
     customers,

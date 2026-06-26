@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { usePurchaseStore } from '../stores/purchaseStore';
+import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 import type { PurchaseOrderStatus } from '../../../specs/purchases';
 
 export function usePurchases(tenantId: string | null) {
@@ -44,44 +45,57 @@ export function usePurchases(tenantId: string | null) {
     doFetch();
   }, [tenantId, doFetch]);
 
+  const refreshAll = useDebouncedCallback(() => {
+    if (!tenantId) return;
+    fetchSuppliers(tenantId, true);
+    fetchOrders(tenantId, undefined, true);
+  }, 300, 1000);
+
+  const refreshSuppliers = useDebouncedCallback(() => {
+    if (!tenantId) return;
+    fetchSuppliers(tenantId, true);
+  }, 300, 1000);
+
+  const refreshPayables = useDebouncedCallback(() => {
+    if (!tenantId) return;
+    fetchPendingPayables(tenantId);
+  }, 300, 1000);
+
   useEffect(() => {
     if (!tenantId) return;
-
-    const fetchAll = () => doFetch(undefined, true);
-    const fetchSuppliersFn = () => fetchSuppliers(tenantId, true);
-    const fetchPayables = () => fetchPendingPayables(tenantId);
 
     const subscriptions = [
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (!table || ['purchase_orders', 'purchase_order_items', 'suppliers', 'products', 'inventory_lots'].includes(table)) {
-          fetchAll();
+          refreshAll();
         }
       }),
-      EventBus.on(SystemEvents.INVENTORY_UPDATED, fetchAll),
-      EventBus.on(SystemEvents.INVENTORY_CREATED, fetchAll),
-      EventBus.on(SystemEvents.INVENTORY_DELETED, fetchAll),
-      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, fetchAll),
-      EventBus.on(SystemEvents.INVENTORY_PRODUCT_CREATED, fetchAll),
-      EventBus.on(SystemEvents.PURCHASE_CREATED, fetchAll),
-      EventBus.on(SystemEvents.PURCHASE_UPDATED, fetchAll),
-      EventBus.on(SystemEvents.PURCHASE_DELETED, fetchAll),
-      EventBus.on(SystemEvents.PURCHASE_CONFIRMED, fetchAll),
-      EventBus.on(SystemEvents.PURCHASE_RECEIVED, fetchAll),
-      EventBus.on(SystemEvents.PURCHASE_CANCELLED, fetchAll),
-      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, fetchAll),
-      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_CREATED, fetchSuppliersFn),
-      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_UPDATED, fetchSuppliersFn),
-      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_DELETED, fetchSuppliersFn),
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, refreshAll),
+      EventBus.on(SystemEvents.INVENTORY_CREATED, refreshAll),
+      EventBus.on(SystemEvents.INVENTORY_DELETED, refreshAll),
+      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, refreshAll),
+      EventBus.on(SystemEvents.INVENTORY_PRODUCT_CREATED, refreshAll),
+      EventBus.on(SystemEvents.PURCHASE_CREATED, refreshAll),
+      EventBus.on(SystemEvents.PURCHASE_UPDATED, refreshAll),
+      EventBus.on(SystemEvents.PURCHASE_DELETED, refreshAll),
+      EventBus.on(SystemEvents.PURCHASE_CONFIRMED, refreshAll),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, refreshAll),
+      EventBus.on(SystemEvents.PURCHASE_CANCELLED, refreshAll),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, refreshAll),
+      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_CREATED, refreshSuppliers),
+      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_UPDATED, refreshSuppliers),
+      EventBus.on(SystemEvents.PURCHASE_SUPPLIER_DELETED, refreshSuppliers),
       EventBus.on(SystemEvents.SUPPLIER_PAYMENT_CREATED, () => {
-        Promise.all([fetchSuppliersFn(), fetchPayables()]);
+        refreshSuppliers();
+        refreshPayables();
       }),
     ];
 
     return () => {
       subscriptions.forEach((sub) => EventBus.off(sub));
     };
-  }, [tenantId, doFetch, fetchSuppliers, fetchPendingPayables]);
+  }, [tenantId, refreshAll, refreshSuppliers, refreshPayables]);
 
   const refresh = useCallback(() => {
     initialFetchDone.current = false;
