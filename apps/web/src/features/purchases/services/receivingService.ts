@@ -217,7 +217,7 @@ export async function receiveOrder(
           };
           await db.expenses.add(expense);
           await syncQueue.enqueue('expenses', 'CREATE', expenseId, toSnake(expense as unknown as Record<string, unknown>), tenantId);
-          await outboxService.enqueue('EXPENSE.CREATED', PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
+          await outboxService.enqueue('EXPENSES.CREATED', PURCHASES_MODULE, { expenseId, amountUsd: totalReceivedUsd, category: 'COMPRA_INVENTARIO' });
         }
       }
 

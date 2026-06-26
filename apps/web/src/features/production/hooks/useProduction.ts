@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useProductionStore } from '../stores/productionStore';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
@@ -64,6 +64,11 @@ export function useProduction(tenantId: string | null) {
       doFetch(true);
     });
 
+    const sub7 = EventBus.on('INVENTORY.UPDATED', () => { doFetch(true); });
+    const sub8 = EventBus.on('INVENTORY.ADJUSTMENT', () => { doFetch(true); });
+    const sub9 = EventBus.on('PURCHASE.RECEIVED', () => { doFetch(true); });
+    const sub10 = EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => { doFetch(true); });
+
     return () => {
       EventBus.off(sub1);
       EventBus.off(sub2);
@@ -71,6 +76,10 @@ export function useProduction(tenantId: string | null) {
       EventBus.off(sub4b);
       EventBus.off(sub5);
       EventBus.off(sub6);
+      EventBus.off(sub7);
+      EventBus.off(sub8);
+      EventBus.off(sub9);
+      EventBus.off(sub10);
     };
   }, [tenantId, doFetch]);
 

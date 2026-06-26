@@ -40,13 +40,34 @@ export function useGastos(tenantId: string | null) {
 
   useEffect(() => {
     if (!tenantId) return;
-    const sub = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
-      const { table } = payload as { table?: string };
-      if (table === 'expenses' || table === '*') {
+
+    const subscriptions = [
+      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if (table === 'expenses' || table === '*') {
+          fetchGastos();
+        }
+      }),
+      EventBus.on('PURCHASE.RECEIVED', () => {
         fetchGastos();
-      }
-    });
-    return () => { EventBus.off(sub); };
+      }),
+      EventBus.on('EXPENSES.CREATED', () => {
+        fetchGastos();
+      }),
+      EventBus.on('EXPENSES.UPDATED', () => {
+        fetchGastos();
+      }),
+      EventBus.on('EXPENSES.DELETED', () => {
+        fetchGastos();
+      }),
+      EventBus.on('EXPENSES.CANCELLED', () => {
+        fetchGastos();
+      }),
+    ];
+
+    return () => {
+      subscriptions.forEach((sub) => EventBus.off(sub));
+    };
   }, [tenantId, fetchGastos]);
 
   const createGasto = useCallback(async (input: CreateGastoInput): Promise<Result<Gasto, AppError>> => {

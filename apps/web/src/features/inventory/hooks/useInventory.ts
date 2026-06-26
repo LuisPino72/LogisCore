@@ -58,38 +58,21 @@ export function useInventory(tenantId: string | null) {
 
   useEffect(() => {
     if (!tenantId) return;
-
+    const handler = () => doFetch(undefined, true);
     const sub1 = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
-      if (!tenantId) return;
       const { table } = payload as { table?: string };
-      if (!table || table === '*' || ['products', 'categories', 'inventory_movements', 'inventory_lots'].includes(table)) {
-        doFetch(undefined, true);
+      if (!table || table === '*' || ['products','categories','inventory_movements','inventory_lots'].includes(table)) {
+        handler();
       }
     });
-
-    const sub2 = EventBus.on('SALE.COMPLETED', () => {
-      if (!tenantId) return;
-      doFetch(undefined, true);
-    });
-
-    const sub3 = EventBus.on('PURCHASE.RECEIVED', () => {
-      if (!tenantId) return;
-      doFetch(undefined, true);
-    });
-
-    return () => {
-      EventBus.off(sub1);
-      EventBus.off(sub2);
-      EventBus.off(sub3);
-    };
-  }, [tenantId, doFetch]);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    const sub = EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => {
-      doFetch(undefined, true);
-    });
-    return () => { EventBus.off(sub); };
+    const subs = [
+      sub1,
+      EventBus.on('SALE.COMPLETED', handler),
+      EventBus.on('SALE.VOIDED', handler),
+      EventBus.on('PURCHASE.RECEIVED', handler),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, handler),
+    ];
+    return () => { subs.forEach(s => EventBus.off(s)); };
   }, [tenantId, doFetch]);
 
   const search = useCallback((query: string, categoryId?: string) => {

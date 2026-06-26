@@ -43,13 +43,22 @@ export function useRecurringGastos(tenantId: string | null) {
 
   useEffect(() => {
     if (!tenantId) return;
-    const sub = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
-      const { table } = payload as { table?: string };
-      if (table === 'expenses' || table === '*') {
+
+    const subscriptions = [
+      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if (table === 'expenses' || table === '*') {
+          fetchTemplates();
+        }
+      }),
+      EventBus.on('EXPENSES.RECURRING_GENERATED', () => {
         fetchTemplates();
-      }
-    });
-    return () => { EventBus.off(sub); };
+      }),
+    ];
+
+    return () => {
+      subscriptions.forEach((sub) => EventBus.off(sub));
+    };
   }, [tenantId, fetchTemplates]);
 
   return {

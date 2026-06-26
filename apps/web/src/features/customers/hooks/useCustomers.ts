@@ -62,11 +62,20 @@ export function useCustomers(tenantId: string | null) {
       fetchCustomers(tenantId, true);
     });
 
+    const subSale = EventBus.on('SALE.COMPLETED', () => {
+      fetchCustomers(tenantId, true);
+    });
+    const subDebt = EventBus.on('DEBT.COLLECTED', () => {
+      fetchCustomers(tenantId, true);
+    });
+
     return () => {
       EventBus.off(sub);
       EventBus.off(subCreated);
       EventBus.off(subUpdated);
       EventBus.off(subDeleted);
+      EventBus.off(subSale);
+      EventBus.off(subDebt);
     };
   }, [tenantId, fetchCustomers]);
 

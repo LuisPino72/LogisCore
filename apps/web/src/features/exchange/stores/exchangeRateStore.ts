@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ExchangeRateState } from '../types';
 import { exchangeRateService } from '../services/exchangeRateService';
 import { emitWithAudit } from '../../../services/audit/emitWithAudit';
-import { SystemEvents } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 
 export interface ExchangeRateStore extends ExchangeRateState {
   fetchLatest: (tenantId: string) => Promise<void>;
@@ -35,6 +35,10 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set, get) => ({
         fetchedAt: result.data?.fetched_at ?? null,
         loading: false,
       });
+      const newRate = result.data?.rate ?? null;
+      if (newRate !== null) {
+        EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { tenantId, rate: newRate, source: result.data?.source ?? 'bcv' });
+      }
     } else {
       set({ loading: false, error: result.error.message });
     }
@@ -60,6 +64,7 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set, get) => ({
           payload: { rate: result.data.rate, source: result.data.source },
           context: {},
         });
+        EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { tenantId, rate: result.data.rate, source: 'bcv' });
       }
     } else {
       set({ isUpdating: false, error: result.error.message });
@@ -86,6 +91,7 @@ export const useExchangeRateStore = create<ExchangeRateStore>((set, get) => ({
           payload: { rate: result.data.rate, source: result.data.source },
           context: {},
         });
+        EventBus.emit(SystemEvents.EXCHANGE_RATE_UPDATED, { tenantId, rate: result.data.rate, source: 'manual' });
       }
     } else {
       set({ isUpdating: false, error: result.error.message });

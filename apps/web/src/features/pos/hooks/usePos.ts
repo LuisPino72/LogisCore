@@ -132,8 +132,17 @@ export function usePos(tenantId: string | null) {
     }));
 
     subs.push(EventBus.on('CUSTOMER.UPDATED', () => {
-      // The SearchableSelect is handled by useCustomers hook used in CustomerPickerModal
-      // We don't need to do anything here unless we want to refresh selectedCustomer
+      if (!tenantId) return;
+      // Refrescar productos (por si el cliente afecta precios o descuentos)
+      fetchProducts(tenantId);
+    }));
+
+    // PRODUCTION.COMPLETED — productos terminados afectan stock disponible en POS
+    subs.push(EventBus.on('PRODUCTION.COMPLETED', debouncedRefreshProducts));
+
+    // EXCHANGE.RATE_UPDATED — tasa cambia, precios en Bs se actualizan
+    subs.push(EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => {
+      if (tenantId) fetchLatestRate(tenantId);
     }));
 
     return () => {

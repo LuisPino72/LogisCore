@@ -32,6 +32,9 @@ export function useRecentActivity(tenantId: string | null) {
       EventBus.on('PURCHASE.SUPPLIER_PAID', handler),
       EventBus.on('SUPPLIER.PAYMENT_CREATED', handler),
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, handler),
+      EventBus.on('SALE.VOIDED', handler),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, handler),
+      EventBus.on(SystemEvents.CUSTOMER_CREATED, handler),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [tenantId, refresh]);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { usePurchaseStore } from '../stores/purchaseStore';
 import type { PurchaseOrderStatus } from '../../../specs/purchases';
@@ -47,17 +47,36 @@ export function usePurchases(tenantId: string | null) {
   useEffect(() => {
     if (!tenantId) return;
 
-    const sub = EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
-      const { table } = payload as { table?: string };
-      if (!table || ['purchase_orders', 'purchase_order_items', 'suppliers', 'products', 'inventory_lots'].includes(table)) {
-        doFetch(undefined, true);
-      }
-    });
+    const fetchAll = () => doFetch(undefined, true);
+    const fetchSuppliersFn = () => fetchSuppliers(tenantId, true);
+    const fetchPayables = () => fetchPendingPayables(tenantId);
+
+    const subscriptions = [
+      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if (!table || ['purchase_orders', 'purchase_order_items', 'suppliers', 'products', 'inventory_lots'].includes(table)) {
+          fetchAll();
+        }
+      }),
+      EventBus.on('INVENTORY.UPDATED', fetchAll),
+      EventBus.on('INVENTORY.CREATED', fetchAll),
+      EventBus.on('INVENTORY.DELETED', fetchAll),
+      EventBus.on('INVENTORY.ADJUSTMENT', fetchAll),
+      EventBus.on('INVENTORY.PRODUCT_CREATED', fetchAll),
+      EventBus.on('PURCHASE.RECEIVED', fetchAll),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, fetchAll),
+      EventBus.on('PURCHASE.SUPPLIER_CREATED', fetchSuppliersFn),
+      EventBus.on('PURCHASE.SUPPLIER_UPDATED', fetchSuppliersFn),
+      EventBus.on('PURCHASE.SUPPLIER_DELETED', fetchSuppliersFn),
+      EventBus.on('SUPPLIER.PAYMENT_CREATED', () => {
+        Promise.all([fetchSuppliersFn(), fetchPayables()]);
+      }),
+    ];
 
     return () => {
-      EventBus.off(sub);
+      subscriptions.forEach((sub) => EventBus.off(sub));
     };
-  }, [tenantId, doFetch]);
+  }, [tenantId, doFetch, fetchSuppliers, fetchPendingPayables]);
 
   const refresh = useCallback(() => {
     initialFetchDone.current = false;

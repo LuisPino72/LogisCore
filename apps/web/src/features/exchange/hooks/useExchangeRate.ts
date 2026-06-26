@@ -58,6 +58,18 @@ export function useExchangeRate(tenantId: string | null) {
     EventBus.emit(SystemEvents.EXCHANGE_RATE_FAILED, { tenantId, error });
   }, [error, rate, tenantId]);
 
+  // Refrescar tasa cuando se sincroniza la tabla exchange_rates
+  useEffect(() => {
+    if (!tenantId) return;
+    const sub = EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
+      const { table } = payload as { table?: string };
+      if (!table || table === '*' || table === 'exchange_rates') {
+        fetchLatest(tenantId);
+      }
+    });
+    return () => { EventBus.off(sub); };
+  }, [tenantId, fetchLatest]);
+
   return { rate, source, fetchedAt, loading, isUpdating, error, fetchLatest, updateFromBcv, setManual };
 }
 

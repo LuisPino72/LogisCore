@@ -49,6 +49,7 @@ export function useDashboard(tenantId: string | null) {
       EventBus.on(SystemEvents.INVENTORY_UPDATED, handler),
       EventBus.on('PURCHASE.RECEIVED', handler),
       EventBus.on(SystemEvents.PRODUCTION_COMPLETED, handler),
+      EventBus.on('SALE.VOIDED', handler),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [tenantId, fetchDashboard, fetchTopProducts, fetchLowStock, fetchPendingTasks]);
