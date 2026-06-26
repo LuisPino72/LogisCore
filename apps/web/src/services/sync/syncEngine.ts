@@ -38,6 +38,7 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'production_orders', timeCol: 'updated_at' },
   { name: 'tenant_settings', timeCol: 'updated_at' },
   { name: 'registers_config', timeCol: 'updated_at' },
+  { name: 'exchange_rates', timeCol: 'updated_at' },
 ];
 
 export class SyncEngine {
@@ -309,8 +310,6 @@ export class SyncEngine {
         if (isDbClosing()) break;
 
         await db.syncMeta.put({ table: tableName, lastPullAt: Date.now() });
-        const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
-        emitEngineEvent(eventName, { table: tableName });
       } catch (err) {
         if (err instanceof AppError) {
           result.errors.push(err);
@@ -393,8 +392,6 @@ export class SyncEngine {
       if (isDbClosing() || !isDbReady()) return;
       try {
         await this.upsertLocalRecord(tableName, record);
-        const eventName = `SYNC.REFRESH_${tableName.toUpperCase().replace(/-/g, '_')}`;
-        emitEngineEvent(eventName, { table: tableName });
         emitEngineEvent('SYNC.REFRESH_TABLE', { table: tableName });
       } catch (err) {
         logger.warn('[SyncEngine]', `Realtime upsert failed for ${tableName}, continuing with normal sync`, String(err));

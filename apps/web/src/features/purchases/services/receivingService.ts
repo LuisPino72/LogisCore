@@ -237,6 +237,9 @@ export async function receiveOrder(
       });
     });
 
+    // @ts-expect-error - syncEngine está disponible globalmente
+    syncEngine.pushNow().catch((err: unknown) => logger.warn('Receiving', 'pushNow failed:', err));
+
     await logAuditEventOnly({
       eventName: SystemEvents.PURCHASE_RECEIVED,
       module: PURCHASES_MODULE,

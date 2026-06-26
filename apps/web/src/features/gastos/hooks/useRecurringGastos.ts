@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { EventBus } from '@logiscore/core';
+import { EventBus, SystemEvents } from '@logiscore/core';
 import { useGastosStore } from '../stores/gastosStore';
 import { gastosService } from '../services/gastosService';
 import { useNotificationStore } from '../../../stores/notificationStore';
@@ -45,7 +45,7 @@ export function useRecurringGastos(tenantId: string | null) {
     if (!tenantId) return;
 
     const subscriptions = [
-      EventBus.on('SYNC.REFRESH_TABLE', (payload: unknown) => {
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (table === 'expenses' || table === '*') {
           fetchTemplates();

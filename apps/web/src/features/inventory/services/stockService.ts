@@ -172,6 +172,9 @@ export async function adjustStock(input: AdjustStockInput & { userId: string; te
       });
     });
 
+    // @ts-expect-error - syncEngine está disponible globalmente
+    syncEngine.pushNow().catch((err: unknown) => logger.warn('Inventory', 'pushNow failed:', err));
+
     await logAuditEventOnly({
       eventName: SystemEvents.INVENTORY_ADJUSTMENT,
       module: INVENTORY_MODULE,

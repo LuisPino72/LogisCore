@@ -904,6 +904,9 @@ export const productionService = {
         await ev.enqueueInTransaction(tx);
       });
 
+      // @ts-expect-error - syncEngine está disponible globalmente
+      syncEngine.pushNow().catch((err: unknown) => logger.warn('Production', 'pushNow failed:', err));
+
       // 7. Audit event
       await ev.auditAfterTransaction();
 
