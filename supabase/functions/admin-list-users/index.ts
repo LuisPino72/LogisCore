@@ -29,11 +29,17 @@ serve(async (req) => {
     nameMap.set(u.id, (u.user_metadata as Record<string, unknown>)?.name as string ?? '');
   }
 
-  const { data: userRoles, error: rolesError } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('user_roles')
     .select('id, user_id, role, tenant_id, created_at, tenants!inner(name, slug)')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .is('deleted_at', null);
+
+  // Owner solo ve usuarios de su tenant
+  if (adminCheck.role === 'owner' && adminCheck.tenantId) {
+    query = query.eq('tenant_id', adminCheck.tenantId);
+  }
+
+  const { data: userRoles, error: rolesError } = await query.order('created_at', { ascending: false });
 
   if (rolesError) {
     console.error('[admin-list-users] rolesError:', rolesError.message);

@@ -25,8 +25,8 @@ function decodeJWTPayload(token: string): Record<string, unknown> {
 }
 
 export async function verifyAdmin(request: Request): Promise<
-  { ok: true; userId: string; email: string; response: null }
-  | { ok: false; userId: null; email: null; response: Response }
+  { ok: true; userId: string; email: string; role: string; tenantId: string | null; response: null }
+  | { ok: false; userId: null; email: null; role: null; tenantId: null; response: Response }
 > {
   const origin = request.headers.get('origin') ?? '';
   const headers = corsHeaders(origin);
@@ -34,7 +34,7 @@ export async function verifyAdmin(request: Request): Promise<
   const authHeader = request.headers.get('Authorization')?.replace('Bearer ', '');
   if (!authHeader) {
     return {
-      ok: false, userId: null, email: null,
+      ok: false, userId: null, email: null, role: null, tenantId: null,
       response: new Response(
         JSON.stringify({ code: 'UNAUTHORIZED', message: 'Token requerido' }),
         { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } },
@@ -51,7 +51,7 @@ export async function verifyAdmin(request: Request): Promise<
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(authHeader);
   if (authError || !user) {
     return {
-      ok: false, userId: null, email: null,
+      ok: false, userId: null, email: null, role: null, tenantId: null,
       response: new Response(
         JSON.stringify({ code: 'UNAUTHORIZED', message: 'Token inválido o expirado' }),
         { status: 401, headers: { ...headers, 'Content-Type': 'application/json' } },
@@ -62,25 +62,28 @@ export async function verifyAdmin(request: Request): Promise<
   // El role se inyecta en el JWT via custom_access_token_hook, no en raw_app_meta_data
   // Decodificamos el JWT localmente para obtener app_metadata.role
   let role: string | undefined;
+  let tenantId: string | undefined;
   try {
     const payload = decodeJWTPayload(authHeader);
     const jwtAppMeta = payload.app_metadata as Record<string, unknown> | undefined;
     role = jwtAppMeta?.role as string | undefined;
+    tenantId = jwtAppMeta?.tenant_id as string | undefined;
   } catch {
     role = user.app_metadata?.role as string | undefined;
+    tenantId = user.app_metadata?.tenant_id as string | undefined;
   }
 
-  if (role !== 'admin') {
+  if (role !== 'admin' && role !== 'owner') {
     return {
-      ok: false, userId: null, email: null,
+      ok: false, userId: null, email: null, role: null, tenantId: null,
       response: new Response(
-        JSON.stringify({ code: 'ADMIN_ONLY', message: 'Solo el administrador puede ejecutar esta operación' }),
+        JSON.stringify({ code: 'ADMIN_ONLY', message: 'Solo el administrador o propietario puede ejecutar esta operación' }),
         { status: 403, headers: { ...headers, 'Content-Type': 'application/json' } },
       ),
     };
   }
 
-  return { ok: true, userId: user.id, email: user.email ?? '', response: null };
+  return { ok: true, userId: user.id, email: user.email ?? '', role: role ?? '', tenantId: tenantId ?? null, response: null };
 }
 
 export const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;

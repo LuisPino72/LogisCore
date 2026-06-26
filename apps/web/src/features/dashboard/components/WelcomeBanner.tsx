@@ -107,7 +107,7 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, sub
                 onClick={onEarningsClick}
                 className="group"
               >
-                <p className="text-[14px] font-medium uppercase tracking-wider">Ganancia hoy</p>
+                <p className="text-[14px] font-medium uppercase tracking-wider">Ganancia de hoy</p>
                 <p className="text-md font-title font-bold text-success group-hover:text-success/80 transition-colors">
                   {formatUsd(todayEarnings)}
                 </p>
@@ -119,7 +119,7 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, sub
                 onClick={onEarningsClick}
                 className="group"
               >
-                <p className="text-[14px] font-medium uppercase tracking-wider">Ganancia hoy</p>
+                <p className="text-[14px] font-medium uppercase tracking-wider">Ganancia de hoy</p>
                 <p className="text-md font-title font-bold text-gray-400 group-hover:text-gray-500 transition-colors">
                   Sin ventas
                 </p>
@@ -139,7 +139,7 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, sub
               onClick={onEarningsClick}
               className="flex flex-col items-center w-full group"
             >
-              <span className="text-[12px]  uppercase tracking-wider">Ganancia hoy</span>
+              <span className="text-[12px]  uppercase tracking-wider">Ganancia de hoy</span>
               <span className="text-base font-title font-bold text-success group-hover:text-success/80 transition-colors">
                 {formatUsd(todayEarnings)}
               </span>
@@ -151,11 +151,11 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, sub
               onClick={onEarningsClick}
               className="flex flex-col items-center w-full group"
             >
-              <span className="text-[10px] font-medium text-accent-dark/60 uppercase tracking-wider">Ganancia hoy</span>
+              <span className="text-[12px] suppercase tracking-wider">Ganancia de hoy</span>
               <span className="text-base font-title font-bold text-gray-400 group-hover:text-gray-500 transition-colors">
                 Sin ventas
               </span>
-              <span className="text-[10px] text-accent-dark/50 group-hover:text-accent-dark/70 transition-colors">Ver reportes →</span>
+              <span className="text-[12px] transition-colors">Ver reportes →</span>
             </button>
           )}
         </div>
