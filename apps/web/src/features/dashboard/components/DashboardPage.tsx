@@ -8,9 +8,8 @@ import { PendingTasksWidget } from './PendingTasksWidget';
 import { RecentActivityWidget } from './RecentActivityWidget';
 import { useRecentActivity } from '../hooks/useRecentActivity';
 import { EmptyState, Card, Badge, Tooltip } from '../../../common/components';
-import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, DollarSign, ShoppingCart } from 'lucide-react';
+import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
 import { displayStock } from '../../inventory/types';
-import { formatUsd } from '../../../lib/formatBs';
 import { getDb } from '../../../services/dexie/db';
 
 interface DashboardPageProps {
@@ -108,81 +107,47 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
         tenantName={tenantInfo?.name ?? null}
         logoUrl={tenantInfo?.logoUrl ?? null}
         subscription={subscription}
+        todayEarnings={todayEarnings}
+        todayEarningsLoading={todayEarningsLoading}
+        onEarningsClick={() => navigate('/reports')}
       />
 
       <PwaInstallBanner />
 
-      <div className="dashboard-grid mt-4 sm:mt-6">
-        {/* Ganancias de hoy */}
-        <div className="dashboard-card-entrance" style={{ animationDelay: '0.1s' }}>
-          <Card>
-            <div className="p-4 sm:p-5 dashboard-kpi-card" style={{ '--kpi-accent': 'var(--color-success)' } as React.CSSProperties}>
-              <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
-                <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                  <DollarSign size={16} className="text-success" />
-                </div>
-                <h3 className="text-sm font-title font-bold text-gray-900">Ganancia Neta del día</h3>
-              </div>
-              {todayEarningsLoading ? (
-                <div className="space-y-3">
-                  <div className="skeleton h-8 w-32 rounded" />
-                </div>
-              ) : todayEarnings != null && todayEarnings > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => navigate('/reports')}
-                  className="text-left w-full group min-h-[44px]"
-                >
-                  <p className="dashboard-kpi-amount font-title font-bold text-success group-hover:text-success/80 transition-colors">
-                    {formatUsd(todayEarnings)}
-                  </p>
-                  <p className="text-xs text-text-secondary mt-1">Ver reportes →</p>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => navigate('/reports')}
-                  className="text-left w-full group min-h-[44px]"
-                >
-                  <p className="text-lg font-title font-bold text-gray-400 group-hover:text-gray-500 transition-colors">
-                    Sin ventas hoy
-                  </p>
-                  <p className="text-xs text-text-secondary mt-1">Ver reportes →</p>
-                </button>
-              )}
-            </div>
-          </Card>
-        </div>
-
+      <div className="dashboard-grid-small mt-4 sm:mt-6">
+        {/* Tareas pendientes */}
         {!pendingTasksLoading && (
           <div className="dashboard-card-entrance" style={{ animationDelay: '0.12s' }}>
-            <Card>
-              <div className="p-4 sm:p-5">
+            <Card className="h-full" bodyClassName="h-full flex flex-col">
+              <div className="p-3 flex-1 overflow-y-auto">
                 <PendingTasksWidget tasks={pendingTasks} loading={pendingTasksLoading} />
               </div>
             </Card>
           </div>
         )}
 
+        {/* Actividad reciente */}
         <div className="dashboard-card-entrance" style={{ animationDelay: '0.2s' }}>
-          <Card>
-            <div className="p-4 sm:p-5">
+          <Card className="h-full" bodyClassName="h-full flex flex-col">
+            <div className="p-3 flex-1 overflow-y-auto">
               <RecentActivityWidget activity={recentActivity} loading={activityLoading} />
             </div>
           </Card>
         </div>
+      </div>
 
-        {dashboardError && (
-          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-warning/8 border border-warning/20 text-sm text-warning animate-slide-down dashboard-card--full">
-            <AlertTriangle size={16} className="shrink-0" />
-            <span>{dashboardError}</span>
-          </div>
-        )}
+      {dashboardError && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-warning/8 border border-warning/20 text-sm text-warning animate-slide-down mt-4">
+          <AlertTriangle size={16} className="shrink-0" />
+          <span>{dashboardError}</span>
+        </div>
+      )}
 
+      <div className="dashboard-grid-large mt-4 sm:mt-6">
         {/* Productos más vendidos */}
         <div className="dashboard-card-entrance" style={{ animationDelay: '0.05s' }}>
-          <Card interactive>
-            <div className="p-4 sm:p-5">
+          <Card interactive className="h-full" bodyClassName="h-full flex flex-col">
+            <div className="p-4 flex-1 overflow-y-auto">
               <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <TrendingUp size={16} className="text-primary" />
@@ -257,8 +222,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
         {/* Stock bajo */}
         <div className="dashboard-card-entrance" style={{ animationDelay: '0.15s' }}>
-          <Card interactive>
-            <div className="p-4 sm:p-5">
+          <Card interactive className="h-full" bodyClassName="h-full flex flex-col">
+            <div className="p-4 flex-1 overflow-y-auto">
               <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
                 <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
                   <AlertTriangle size={16} className="text-warning" />

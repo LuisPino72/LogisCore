@@ -1,6 +1,7 @@
 import { type FC, useMemo } from 'react';
 import { Sun, Sunset, Moon, Calendar, AlertTriangle, CheckCircle, Store } from 'lucide-react';
 import { startOfDayVzla } from '@/lib/date';
+import { formatUsd } from '../../../lib/formatBs';
 import type { SubscriptionResponse } from '../types';
 
 interface WelcomeBannerProps {
@@ -8,6 +9,9 @@ interface WelcomeBannerProps {
   tenantName: string | null;
   logoUrl?: string | null;
   subscription?: SubscriptionResponse | null;
+  todayEarnings?: number | null;
+  todayEarningsLoading?: boolean;
+  onEarningsClick?: () => void;
 }
 
 function getGreeting(): { text: string; icon: FC<{ size?: number; className?: string }> } {
@@ -17,7 +21,7 @@ function getGreeting(): { text: string; icon: FC<{ size?: number; className?: st
   return { text: 'Buenas noches', icon: Moon };
 }
 
-export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, subscription }) => {
+export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, subscription, todayEarnings, todayEarningsLoading, onEarningsClick }) => {
   const dateKey = new Date().toDateString();
 
   const today = useMemo(
@@ -92,6 +96,68 @@ export const WelcomeBanner: FC<WelcomeBannerProps> = ({ tenantName, logoUrl, sub
             <p className="text-xs text-accent-dark mt-0.5">{greeting.text}</p>
             <p className="text-sm sm:text-base text-gray-800 mt-0.5 capitalize font-medium">{today}</p>
           </div>
+
+          {/* Ganancia del día */}
+          <div className="shrink-0 text-right hidden sm:block">
+            {todayEarningsLoading ? (
+              <div className="skeleton h-5 w-20 rounded ml-auto" />
+            ) : todayEarnings != null && todayEarnings > 0 ? (
+              <button
+                type="button"
+                onClick={onEarningsClick}
+                className="group"
+              >
+                <p className="text-[14px] font-medium uppercase tracking-wider">Ganancia hoy</p>
+                <p className="text-md font-title font-bold text-success group-hover:text-success/80 transition-colors">
+                  {formatUsd(todayEarnings)}
+                </p>
+                <p className="text-[14px] font-medium uppercase tracking-wider ">Ver reportes →</p>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onEarningsClick}
+                className="group"
+              >
+                <p className="text-[14px] font-medium uppercase tracking-wider">Ganancia hoy</p>
+                <p className="text-md font-title font-bold text-gray-400 group-hover:text-gray-500 transition-colors">
+                  Sin ventas
+                </p>
+                <p className="text-[14px] font-medium uppercase tracking-wider ">Ver reportes →</p>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Ganancia del día — mobile */}
+        <div className="sm:hidden mt-3 pt-3 border-t border-amber-200/40">
+          {todayEarningsLoading ? (
+            <div className="skeleton h-5 w-20 rounded mx-auto" />
+          ) : todayEarnings != null && todayEarnings > 0 ? (
+            <button
+              type="button"
+              onClick={onEarningsClick}
+              className="flex flex-col items-center w-full group"
+            >
+              <span className="text-[12px]  uppercase tracking-wider">Ganancia hoy</span>
+              <span className="text-base font-title font-bold text-success group-hover:text-success/80 transition-colors">
+                {formatUsd(todayEarnings)}
+              </span>
+              <span className="text-[12px] transition-colors">Ver reportes →</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onEarningsClick}
+              className="flex flex-col items-center w-full group"
+            >
+              <span className="text-[10px] font-medium text-accent-dark/60 uppercase tracking-wider">Ganancia hoy</span>
+              <span className="text-base font-title font-bold text-gray-400 group-hover:text-gray-500 transition-colors">
+                Sin ventas
+              </span>
+              <span className="text-[10px] text-accent-dark/50 group-hover:text-accent-dark/70 transition-colors">Ver reportes →</span>
+            </button>
+          )}
         </div>
       </div>
 

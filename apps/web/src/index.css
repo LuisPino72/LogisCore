@@ -463,23 +463,29 @@ html[data-sidebar-expanded="true"] .bottom-nav-mobile { display: none !important
   container-name: dashboard;
 }
 
-.dashboard-grid {
+/* Grid para paneles pequeños — fila con altura fija, scroll interno */
+.dashboard-grid-small {
   display: grid;
   grid-template-columns: 1fr;
-  gap: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+  grid-auto-rows: 320px;
+  gap: clamp(0.75rem, 0.6rem + 0.75vw, 1.25rem);
 }
 
 @container dashboard (min-width: 640px) {
-  .dashboard-grid {
+  .dashboard-grid-small {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .dashboard-grid > .dashboard-card--full {
-    grid-column: 1 / -1;
   }
 }
 
-@container dashboard (min-width: 1024px) {
-  .dashboard-grid {
+/* Grid para paneles grandes — 2 columnas en desktop */
+.dashboard-grid-large {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.75rem, 0.6rem + 0.75vw, 1.25rem);
+}
+
+@container dashboard (min-width: 640px) {
+  .dashboard-grid-large {
     grid-template-columns: repeat(2, 1fr);
   }
 }
