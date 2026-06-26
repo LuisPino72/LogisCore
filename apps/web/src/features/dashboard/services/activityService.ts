@@ -62,21 +62,19 @@ export const activityService = {
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
 
       const { data, error } = await supabase
-        .from('audit_trail')
-        .select('id, event_name, payload, created_at')
-        .eq('tenant_id', tenantUuid)
-        .order('created_at', { ascending: false })
-        .limit(15);
+        .rpc('get_recent_activity', { p_tenant_id: tenantUuid });
 
       if (error) {
         logger.error('ActivityService', 'Error fetching recent activity:', error);
         return failure(new AppError(DashboardErrors.DASHBOARD_ACTIVITY_FAILED, 'Error al cargar actividad reciente'));
       }
 
-      if (!data || data.length === 0) return success([]);
+      const finalData = data as AuditTrailRow[] | null;
+
+      if (!finalData || finalData.length === 0) return success([]);
 
       const activity: ActivityEntry[] = [];
-      for (const row of data) {
+      for (const row of finalData) {
         const mapped = mapAuditEvent(row);
         if (mapped) activity.push(mapped);
       }

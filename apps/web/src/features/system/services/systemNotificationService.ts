@@ -57,8 +57,39 @@ export const systemNotificationService = {
     const rows = await db.products
       .where('tenantId')
       .equals(tenantId)
-      .filter((p) => !p.deletedAt && !assemblyIds.has(p.id) && !!p.stockMin && p.stockMin > 0 && p.stock <= p.stockMin)
+      .filter((p) => !p.deletedAt && !assemblyIds.has(p.id) && !!p.stockMin && p.stockMin > 0 && p.stock > 0 && p.stock <= p.stockMin)
       .toArray();
+
+    if (rows.length === 0 && navigator.onLine) {
+      try {
+        const uuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .eq('tenant_id', uuid)
+          .is('deleted_at', null);
+        if (data) {
+          for (const p of data) {
+            const pid = p.id as string;
+            const stock = p.stock as number;
+            const stockMin = p.stock_min as number;
+            if (!assemblyIds.has(pid) && !!stockMin && stockMin > 0 && stock > 0 && stock <= stockMin) {
+              rows.push({
+                id: pid,
+                tenantId,
+                name: p.name as string,
+                stock,
+                stockMin,
+                deletedAt: p.deleted_at ?? undefined,
+              } as typeof rows[number]);
+            }
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
     return rows;
   },
 
@@ -70,6 +101,35 @@ export const systemNotificationService = {
       .equals(tenantId)
       .filter((p) => !p.deletedAt && !assemblyIds.has(p.id) && p.stock === 0)
       .toArray();
+
+    if (rows.length === 0 && navigator.onLine) {
+      try {
+        const uuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .eq('tenant_id', uuid)
+          .is('deleted_at', null);
+        if (data) {
+          for (const p of data) {
+            const pid = p.id as string;
+            const stock = p.stock as number;
+            if (!assemblyIds.has(pid) && stock === 0) {
+              rows.push({
+                id: pid,
+                tenantId,
+                name: p.name as string,
+                stock,
+                deletedAt: p.deleted_at ?? undefined,
+              } as typeof rows[number]);
+            }
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
     return rows;
   },
 

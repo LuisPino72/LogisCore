@@ -61,6 +61,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     pendingTasks,
     pendingTasksLoading,
     fetchTopProducts,
+    fetchLowStock,
   } = useDashboard(tenantId);
 
   const { activity: recentActivity, loading: activityLoading } = useRecentActivity(tenantId);
@@ -70,7 +71,8 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   useEffect(() => {
     if (!tenantId) return;
     fetchTopProducts(tenantId);
-  }, [tenantId, fetchTopProducts]);
+    fetchLowStock(tenantId);
+  }, [tenantId, fetchTopProducts, fetchLowStock]);
 
   const top5LowStock = useMemo(() => lowStockProducts.slice(0, 5), [lowStockProducts]);
 
