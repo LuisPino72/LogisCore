@@ -508,15 +508,17 @@ export function PosPage({ tenantId }: PosPageProps) {
     (parked: ParkedCart) => {
       loadParkedCart(parked);
       setPaymentMethod(null);
-      toggleMobileCart();
+      setParkTableNumber(null);
     },
-    [loadParkedCart, toggleMobileCart],
+    [loadParkedCart, setParkTableNumber],
   );
 
   const handleParkTable = useCallback((tableNumber: number) => {
+    if (parkTableNumber === tableNumber) return;
     setParkTableNumber(tableNumber);
+    usePosStore.setState({ cart: [], activeParkedCartId: null });
     addToast({ type: 'success', message: `Mesa ${tableNumber} seleccionada. Agrega productos y presiona "Poner en cola" para asignarla.`, duration: 3000 });
-  }, [addToast]);
+  }, [addToast, parkTableNumber]);
 
   const handleConfirmVoid = useCallback(async () => {
     if (!voidConfirmId || !tenantId || !userId) return;
