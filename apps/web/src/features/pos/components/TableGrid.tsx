@@ -6,6 +6,7 @@ import { ParkedCartsList } from './ParkedCartsList';
 import type { ParkedCart } from '../types';
 import { formatTime } from '@/lib/formatBs';
 import { TABLE_COUNT } from '../constants';
+import { MAX_PARKED_CARTS } from '../../../specs/pos';
 
 interface TableGridProps {
   carts: ParkedCart[];
@@ -53,7 +54,7 @@ export function TableGrid({ carts, onLoad, onDelete, onParkTable, selectedTableN
           <h4 className="text-sm font-semibold text-gray-700">
             {viewMode === 'list' ? 'Ventas en cola' : 'Mesas'}
           </h4>
-          <Badge variant="info">{carts.length}/{TABLE_COUNT}</Badge>
+          <Badge variant="info">{viewMode === 'tables' ? tableMap.size : carts.length}/{viewMode === 'tables' ? TABLE_COUNT : MAX_PARKED_CARTS}</Badge>
         </div>
         <div className="flex bg-gray-100 p-0.5 rounded-xl">
           <button
