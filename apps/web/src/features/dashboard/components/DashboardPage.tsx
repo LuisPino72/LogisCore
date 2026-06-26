@@ -116,15 +116,13 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
 
       <div className="dashboard-grid-small mt-4 sm:mt-6">
         {/* Tareas pendientes */}
-        {!pendingTasksLoading && (
-          <div className="dashboard-card-entrance" style={{ animationDelay: '0.12s' }}>
-            <Card className="h-full" bodyClassName="h-full flex flex-col">
-              <div className="p-3 flex-1 overflow-y-auto">
-                <PendingTasksWidget tasks={pendingTasks} loading={pendingTasksLoading} />
-              </div>
-            </Card>
-          </div>
-        )}
+        <div className="dashboard-card-entrance" style={{ animationDelay: '0.12s' }}>
+          <Card className="h-full" bodyClassName="h-full flex flex-col">
+            <div className="p-3 flex-1 overflow-y-auto">
+              <PendingTasksWidget tasks={pendingTasks} loading={pendingTasksLoading} />
+            </div>
+          </Card>
+        </div>
 
         {/* Actividad reciente */}
         <div className="dashboard-card-entrance" style={{ animationDelay: '0.2s' }}>

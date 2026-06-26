@@ -36,16 +36,16 @@ export function useDashboard(tenantId: string | null) {
 
   const refreshDashboard = useDebouncedCallback(() => {
     if (!tenantId || !mountedRef.current) return;
-    fetchDashboard(tenantId);
-    fetchTopProducts(tenantId);
-    fetchLowStock(tenantId);
-    fetchPendingTasks(tenantId);
+    fetchDashboard(tenantId, true);
+    fetchTopProducts(tenantId, true);
+    fetchLowStock(tenantId, true);
+    fetchPendingTasks(tenantId, true);
   }, 300, 1000);
 
   const refreshTasks = useDebouncedCallback(() => {
     if (!tenantId || !mountedRef.current) return;
-    fetchDashboard(tenantId);
-    fetchPendingTasks(tenantId);
+    fetchDashboard(tenantId, true);
+    fetchPendingTasks(tenantId, true);
   }, 300, 1000);
 
   useEffect(() => {

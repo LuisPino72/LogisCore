@@ -13,10 +13,10 @@ export interface DashboardStore extends DashboardState {
   todayEarningsLoading: boolean;
   pendingTasks: PendingTask[];
   pendingTasksLoading: boolean;
-  fetchDashboard: (tenantId: string) => Promise<void>;
-  fetchTopProducts: (tenantId: string) => Promise<void>;
-  fetchLowStock: (tenantId: string) => Promise<void>;
-  fetchPendingTasks: (tenantId: string) => Promise<void>;
+  fetchDashboard: (tenantId: string, silent?: boolean) => Promise<void>;
+  fetchTopProducts: (tenantId: string, silent?: boolean) => Promise<void>;
+  fetchLowStock: (tenantId: string, silent?: boolean) => Promise<void>;
+  fetchPendingTasks: (tenantId: string, silent?: boolean) => Promise<void>;
   reset: () => void;
 }
 
@@ -40,7 +40,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   pendingTasks: [],
   pendingTasksLoading: false,
 
-  fetchDashboard: async (tenantId: string) => {
+  fetchDashboard: async (tenantId: string, silent?: boolean) => {
     const now = Date.now();
     if (lastFetchTenant === tenantId && now - lastFetchAt < FETCH_COOLDOWN_MS) {
       return;
@@ -49,7 +49,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     lastFetchAt = now;
     lastFetchTenant = tenantId;
 
-    set({ error: null, todayEarningsLoading: true });
+    if (!silent) set({ error: null, todayEarningsLoading: true });
 
     const [tenantResult, subResult, empResult, earningsResult] = await Promise.all([
       dashboardService.getTenantInfo(tenantId),
@@ -62,7 +62,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
       tenantInfo: tenantResult.ok ? tenantResult.data : null,
       subscription: subResult.ok ? subResult.data : null,
       todayEarnings: earningsResult.ok ? earningsResult.data : null,
-      todayEarningsLoading: false,
+      ...(silent ? {} : { todayEarningsLoading: false }),
       error: !navigator.onLine ? null
         : [!tenantResult.ok && 'Información del negocio',
            !subResult.ok && 'Suscripción',
@@ -72,32 +72,31 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     });
   },
 
-  fetchTopProducts: async (tenantId: string) => {
-    set({ topProductsLoading: true });
+  fetchTopProducts: async (tenantId: string, silent?: boolean) => {
+    if (!silent) set({ topProductsLoading: true });
     const result = await dashboardService.getTopProducts(tenantId);
     set({
       topProducts: result.ok ? result.data : [],
-      topProductsLoading: false,
+      ...(silent ? {} : { topProductsLoading: false }),
     });
   },
 
-  fetchLowStock: async (tenantId: string) => {
-    set({ lowStockLoading: true });
+  fetchLowStock: async (tenantId: string, silent?: boolean) => {
+    if (!silent) set({ lowStockLoading: true });
     const result = await dashboardService.getLowStockProducts(tenantId);
     set({
       lowStockProducts: result.ok ? result.data : [],
-      lowStockLoading: false,
+      ...(silent ? {} : { lowStockLoading: false }),
     });
   },
 
-  fetchPendingTasks: async (tenantId: string) => {
-    set({ pendingTasksLoading: true });
+  fetchPendingTasks: async (tenantId: string, silent?: boolean) => {
+    if (!silent) set({ pendingTasksLoading: true });
     const result = await dashboardService.getPendingTasks(tenantId);
-    if (result.ok) {
-      set({ pendingTasks: result.data, pendingTasksLoading: false });
-    } else {
-      set({ pendingTasks: [], pendingTasksLoading: false });
-    }
+    set({
+      pendingTasks: result.ok ? result.data : [],
+      ...(silent ? {} : { pendingTasksLoading: false }),
+    });
   },
 
   reset: () => {
