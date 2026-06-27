@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue, useMemo, useCallback } from 'react';
+import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo } from 'react';
 import { Badge, Button, Input, Spinner, EmptyState } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
@@ -30,7 +30,7 @@ interface OrdersTabProps {
   onConfirmDelivery?: (saleId: string) => void;
 }
 
-export function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery }: OrdersTabProps) {
+export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery }: OrdersTabProps) {
   const [orders, setOrders] = useState<DexieSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -207,4 +207,4 @@ export function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDeli
       )}
     </div>
   );
-}
+});

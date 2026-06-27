@@ -17,15 +17,12 @@ export async function getDeliverySettlement(
   const db = getDb();
 
   const sales = await db.sales
-    .where('tenantId')
-    .equals(tenantId)
-    .filter((s) =>
-      s.status === 'entregada' &&
-      s.createdAt >= startDate &&
-      s.createdAt <= endDate &&
-      !s.deletedAt &&
-      !!s.deliveryPersonName
+    .where('[tenantId+status+createdAt]')
+    .between(
+      [tenantId, 'entregada', startDate],
+      [tenantId, 'entregada', endDate]
     )
+    .filter((s) => !s.deletedAt && !!s.deliveryPersonName)
     .toArray();
 
   if (sales.length === 0) {
@@ -95,15 +92,12 @@ export async function markDeliverySettlementPaid(
   const db = getDb();
 
   const sales = await db.sales
-    .where('tenantId')
-    .equals(tenantId)
-    .filter(s =>
-      s.status === 'entregada' &&
-      s.createdAt >= startDate &&
-      s.createdAt <= endDate &&
-      !s.deletedAt &&
-      s.deliveryPersonName === personName
+    .where('[tenantId+status+createdAt]')
+    .between(
+      [tenantId, 'entregada', startDate],
+      [tenantId, 'entregada', endDate]
     )
+    .filter(s => !s.deletedAt && s.deliveryPersonName === personName)
     .toArray();
 
   const saleIds = new Set(sales.map(s => s.id));

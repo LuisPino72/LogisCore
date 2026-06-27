@@ -63,7 +63,7 @@ export class LogisCoreDB extends Dexie {
       categories: 'id, tenantId, [tenantId+deletedAt]',
       inventoryMovements: 'id, tenantId, productId, type, createdAt, [productId+createdAt]',
       inventoryLots: 'id, tenantId, productId, remainingQuantity, createdAt, [productId+remainingQuantity]',
-      sales: 'id, tenantId, [tenantId+deletedAt], [tenantId+createdAt], customerId',
+      sales: 'id, tenantId, [tenantId+deletedAt], [tenantId+createdAt], [tenantId+status+createdAt], customerId',
       saleItems: 'id, tenantId, saleId, productId, [tenantId+deletedAt], [saleId]',
       cashRegisters: 'id, tenantId, [tenantId+deletedAt]',
       parkedCarts: 'id, tenantId, [tenantId+createdAt]',

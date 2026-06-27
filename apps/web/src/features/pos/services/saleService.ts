@@ -9,6 +9,7 @@ import { outboxService } from '../../../services/outbox/outboxService';
 import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { supabase } from '../../../services/supabase/client';
+import { type Transaction } from 'dexie';
 import { logger } from '../../../lib/logger';
 import { isSameDayVzla, startOfDayFromDateStringVzla, endOfDayFromDateStringVzla } from '../../../lib/date';
 import { PosErrors } from '../../../specs/pos/errors';
@@ -44,8 +45,7 @@ async function filterOrphanLots(
 type ConsumedItem = { productId: string; name: string; requested: number; available: number };
 
 async function consumeSaleItems(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tx: any,
+  tx: Transaction,
   normalItems: CartItem[],
   assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string; unitMultiplier?: number }>,
   saleId: string,
