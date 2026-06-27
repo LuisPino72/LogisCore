@@ -4,6 +4,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useProductionStore } from '../stores/productionStore';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
+import { logger } from '../../../lib/logger';
 
 export function useProduction(tenantId: string | null) {
   const recipes = useProductionStore((s) => s.recipes);
@@ -21,11 +22,16 @@ export function useProduction(tenantId: string | null) {
 
   const doFetch = useCallback(async (silent = false) => {
     if (!tenantId) return;
-    await Promise.all([
+    const results = await Promise.allSettled([
       fetchRecipes(tenantId, undefined, silent),
       fetchOrders(tenantId, undefined, silent),
       fetchProducts(tenantId, undefined, silent),
     ]);
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        logger.warn('useProduction', `doFetch[${i}] falló:`, r.reason);
+      }
+    });
   }, [tenantId]);
 
   useEffect(() => {

@@ -247,6 +247,8 @@ export class SyncEngine {
         if (isDbClosing()) break;
 
         if (error) {
+          // TECH DEBT: string-matching frágil contra error.message. Si Supabase cambia
+          // el mensaje, este fallback se rompe. Ideal: error.code === 'PGRST116' (no rows).
           if (error.message?.includes('deleted_at')) {
             const simpleQuery = supabase
               .from(tableName)
@@ -405,8 +407,8 @@ export class SyncEngine {
     this.unsubscribeNetwork = networkAware.onChange((state) => {
       if (!wasOnline && state.online) {
         logger.debug('[SyncEngine]', 'Reconectado — ejecutando push + pull inmediatos');
-        this.push().catch(() => {});
-        this.pull().catch(() => {});
+        this.push().catch((err) => logger.error('Sync', 'Push falló:', err));
+    this.pull().catch((err) => logger.error('Sync', 'Pull falló:', err));
       }
       wasOnline = state.online;
     });

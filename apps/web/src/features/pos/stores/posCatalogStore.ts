@@ -37,7 +37,7 @@ type CatalogGetter = PosCatalogSlice & {
   error: string | null;
 };
 
-export const createCatalogSlice = (set: any, get: () => CatalogGetter): PosCatalogSlice => ({
+export const createCatalogSlice = (set: (setter: Partial<CatalogGetter> | ((state: CatalogGetter) => Partial<CatalogGetter>)) => void, get: () => CatalogGetter): PosCatalogSlice => ({
   ...initialCatalogState,
 
   fetchProducts: async (tenantId, silent = false) => {
@@ -70,8 +70,8 @@ export const createCatalogSlice = (set: any, get: () => CatalogGetter): PosCatal
             lines: lines.map(l => ({ productId: l.productId, quantity: l.quantity })),
           };
         }
-      } catch {
-        // Offline o DB cerrada — sin pre-validación
+      } catch (err) {
+        logger.warn('posCatalogStore', 'assemblyRecipesMap falló:', err);
       }
 
       const sorted = [...result.data].sort((a, b) => {
@@ -111,6 +111,7 @@ export const createCatalogSlice = (set: any, get: () => CatalogGetter): PosCatal
 
   restoreFavorites: async (tenantId) => {
     try {
+      // TODO-L-08: localStorage directo — migrar a Dexie cuando se unifique almacenamiento offline.
       const raw = localStorage.getItem(`sasa-favorites-${tenantId}`);
       if (!raw) return;
       const productIds = JSON.parse(raw) as string[];

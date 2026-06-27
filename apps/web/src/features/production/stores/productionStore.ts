@@ -75,12 +75,17 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   // ===== RECIPES =====
 
   fetchRecipes: async (tenantId, filters, silent = false) => {
-    if (!silent) set({ loading: true, error: null });
-    const result = await productionService.getRecipes(tenantId, filters);
-    if (result.ok) {
-      set({ recipes: result.data, loading: false });
-    } else {
-      set({ loading: false, error: result.error });
+    try {
+      if (!silent) set({ loading: true, error: null });
+      const result = await productionService.getRecipes(tenantId, filters);
+      if (result.ok) {
+        set({ recipes: result.data, loading: false });
+      } else {
+        set({ loading: false, error: result.error });
+      }
+    } catch (err) {
+      logger.error('[ProductionStore]', 'fetchRecipes threw:', err);
+      if (!silent) set({ loading: false, error: createAppError({ code: 'RECIPES_FETCH_FAILED', message: 'Error al cargar recetas.' }) });
     }
   },
 
@@ -136,19 +141,24 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   // ===== PRODUCTION ORDERS =====
 
   fetchOrders: async (tenantId, filters, silent = false) => {
-    if (!silent) set({ loading: true, error: null });
-    const result = await productionService.getOrders(tenantId, filters);
-    if (result.ok) {
-      // Deduplicate by id (race condition: createOrder optimistic prepend + EventBus fetch)
-      const seen = new Set<string>();
-      const unique = result.data.filter((o) => {
-        if (seen.has(o.id)) return false;
-        seen.add(o.id);
-        return true;
-      });
-      set({ productionOrders: unique, loading: false });
-    } else {
-      set({ loading: false, error: result.error });
+    try {
+      if (!silent) set({ loading: true, error: null });
+      const result = await productionService.getOrders(tenantId, filters);
+      if (result.ok) {
+        // Deduplicate by id (race condition: createOrder optimistic prepend + EventBus fetch)
+        const seen = new Set<string>();
+        const unique = result.data.filter((o) => {
+          if (seen.has(o.id)) return false;
+          seen.add(o.id);
+          return true;
+        });
+        set({ productionOrders: unique, loading: false });
+      } else {
+        set({ loading: false, error: result.error });
+      }
+    } catch (err) {
+      logger.error('[ProductionStore]', 'fetchOrders threw:', err);
+      if (!silent) set({ loading: false, error: createAppError({ code: 'ORDERS_FETCH_FAILED', message: 'Error al cargar órdenes.' }) });
     }
   },
 
@@ -197,6 +207,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   hasOrderSales: async (tenantId, orderId) => {
     const result = await productionService.hasOrderSales(tenantId, orderId);
     if (result.ok) return result.data;
+    logger.error('[ProductionStore]', 'hasOrderSales failed:', result.error?.message);
     return false;
   },
 

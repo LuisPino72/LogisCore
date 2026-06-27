@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo, useRef } from 'react';
 import { Badge, Button, Input, Spinner, EmptyState } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
@@ -35,16 +35,18 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
+  const cancelledRef = useRef(false);
 
   const reload = useCallback(async () => {
     const result = await getActiveOrders(tenantId);
-    if (result.ok) {
+    if (!cancelledRef.current && result.ok) {
       const sorted = [...result.data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setOrders(sorted);
     }
   }, [tenantId]);
 
   useEffect(() => {
+    cancelledRef.current = false;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -55,7 +57,10 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      cancelledRef.current = true;
+    };
   }, [reload]);
 
   useEffect(() => {

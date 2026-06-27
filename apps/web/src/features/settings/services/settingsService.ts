@@ -14,6 +14,7 @@ import { isSameDayVzla, startOfDayVzla } from '../../../lib/date';
 import { SettingsErrors } from '../types/errors';
 import type { FiscalSettings, OperationSettings, BusinessInfo, ChangePasswordInput } from '../types';
 import { FiscalSettingsSchema, OperationSettingsSchema, UpdateBusinessInfoSchema, ChangePasswordSchema } from '../types';
+// TODO: TECH DEBT — servicio no debe importar stores. Refactorizar vía adapter inyectado por el hook.
 import { useSettingsStore } from '../stores/settingsStore';
 import { createPersistentCache } from '../../../lib/cache';
 
@@ -50,7 +51,11 @@ async function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, opera
     try {
       const db = getDb();
       existing = await db.tenantSettings.get(tenantId);
-    } catch { logger.warn('SETTINGS', 'fall through en buildSettingsRow:', 'error al leer Dexie') }
+    } catch {
+      // TECH DEBT: buildSettingsRow no retorna Result, no puede propagar el error.
+      // El fallthrough a store state es intencional, pero el warn debería ser error.
+      logger.error('SETTINGS', 'fall through en buildSettingsRow:', 'error al leer Dexie');
+    }
   }
   const store = useSettingsStore.getState();
   return {
@@ -94,7 +99,9 @@ export const settingsService = {
         const db = getDb();
         const cached = await db.tenantSettings.get(tenantId);
         if (cached) return success(toFiscalSettings(cached));
-      } catch { logger.warn('SETTINGS', 'fall through en getFiscalSettings:', 'error al leer Dexie') }
+      } catch {
+        logger.error('SETTINGS', 'fall through en getFiscalSettings:', 'error al leer Dexie');
+      }
     }
 
     if (navigator.onLine) {
@@ -119,7 +126,9 @@ export const settingsService = {
               try {
                 const d = getDb();
                 existingOps = await d.tenantSettings.get(tenantId);
-              } catch { logger.warn('SETTINGS', 'fall through en getFiscalSettings:', 'error al leer Dexie - existingOps') }
+              } catch {
+                logger.error('SETTINGS', 'fall through en getFiscalSettings:', 'error al leer Dexie - existingOps');
+              }
             }
             const opsPartial: OperationSettings = {
               maxDiscountPct: existingOps?.maxDiscountPct ?? 100,
@@ -141,7 +150,9 @@ export const settingsService = {
             });
             return success(settings);
           }
-        } catch { logger.warn('SETTINGS', 'fall through en getFiscalSettings:', 'error al consultar Supabase') }
+        } catch {
+          logger.error('SETTINGS', 'fall through en getFiscalSettings:', 'error al consultar Supabase');
+        }
       }
     }
 
@@ -192,7 +203,9 @@ export const settingsService = {
             return failure(new AppError('SETTINGS_FISCAL_BLOCKED', SettingsErrors.SETTINGS_FISCAL_BLOCKED));
           }
         }
-      } catch { logger.warn('SETTINGS', 'fall through en updateFiscalSettings:', 'error al consultar Supabase sessions') }
+      } catch {
+        logger.error('SETTINGS', 'fall through en updateFiscalSettings:', 'error al consultar Supabase sessions');
+      }
     }
 
     try {
@@ -224,7 +237,9 @@ export const settingsService = {
         const db = getDb();
         const cached = await db.tenantSettings.get(tenantId);
         if (cached) return success(toOperationSettings(cached));
-      } catch { logger.warn('SETTINGS', 'fall through en getOperationSettings:', 'error al leer Dexie') }
+      } catch {
+        logger.error('SETTINGS', 'fall through en getOperationSettings:', 'error al leer Dexie');
+      }
     }
 
     if (navigator.onLine) {
@@ -259,7 +274,9 @@ export const settingsService = {
               try {
                 const d = getDb();
                 existingFiscal = await d.tenantSettings.get(tenantId);
-              } catch { logger.warn('SETTINGS', 'fall through en getOperationSettings:', 'error al leer Dexie - existingFiscal') }
+              } catch {
+                logger.error('SETTINGS', 'fall through en getOperationSettings:', 'error al leer Dexie - existingFiscal');
+              }
             }
             const fiscalPartial: FiscalSettings = {
               ivaRate: existingFiscal?.ivaRate ?? IVA_RATE,
@@ -280,7 +297,9 @@ export const settingsService = {
             });
             return success(settings);
           }
-        } catch { logger.warn('SETTINGS', 'fall through en getOperationSettings:', 'error al consultar Supabase') }
+        } catch {
+          logger.error('SETTINGS', 'fall through en getOperationSettings:', 'error al consultar Supabase');
+        }
       }
     }
 
@@ -417,7 +436,9 @@ export const settingsService = {
             logoUrl: ref.logoUrl ?? null,
           });
         }
-      } catch { logger.warn('SETTINGS', 'fall through en getBusinessInfo:', 'error al leer Dexie') }
+      } catch {
+        logger.error('SETTINGS', 'fall through en getBusinessInfo:', 'error al leer Dexie');
+      }
     }
 
     if (navigator.onLine) {
@@ -441,7 +462,9 @@ export const settingsService = {
             };
             return success(info);
           }
-        } catch { logger.warn('SETTINGS', 'fall through en getBusinessInfo:', 'error al consultar Supabase') }
+        } catch {
+          logger.error('SETTINGS', 'fall through en getBusinessInfo:', 'error al consultar Supabase');
+        }
       }
     }
 

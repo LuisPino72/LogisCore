@@ -38,6 +38,11 @@ export interface CompletedSaleData {
   customerPhone?: string;
 }
 
+export interface VerifyCounts {
+  sold: number;
+  lowStock: number;
+}
+
 export interface TenantInfo {
   name: string;
   rif: string;

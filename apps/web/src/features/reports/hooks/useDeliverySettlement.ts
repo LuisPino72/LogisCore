@@ -31,7 +31,8 @@ export function useDeliverySettlement(tenantId: string | null) {
   }, [tenantId, date]);
 
   const paySettlement = useCallback(async (name: string, start: string, end: string) => {
-    const result = await markDeliverySettlementPaid(tenantId!, name, start, end);
+    const tid = tenantId ?? '';
+    const result = await markDeliverySettlementPaid(tid, name, start, end);
     if (result.ok) {
       await fetchData();
     } else {

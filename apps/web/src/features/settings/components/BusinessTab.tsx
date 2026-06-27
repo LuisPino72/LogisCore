@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type FC } from 'react';
+import { useState, useEffect, useRef, useCallback, memo, type FC } from 'react';
 import { Building2, Upload, X, CreditCard, Bike } from 'lucide-react';
 import { Card, Input, Button, Textarea, Alert, Skeleton, Checkbox, Modal } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -9,6 +9,7 @@ import { sanitizeValue } from '../../../lib/validation';
 import { formatPhone, unformatPhone } from '../../../lib/utils';
 import { getDeliveryPersons, addDeliveryPerson, removeDeliveryPerson } from '../services/deliveryPersonService';
 import type { DexieDeliveryPerson } from '../../../services/dexie/db';
+import { logger } from '../../../lib/logger';
 
 interface BusinessTabProps {
   tenantId?: string | null;
@@ -17,7 +18,7 @@ interface BusinessTabProps {
 const LOGO_MAX_SIZE = 2 * 1024 * 1024;
 const LOGO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
+const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
   const { addToast } = useToastStore();
   const userId = useAuthStore((s) => s.session?.userId);
   const store = useSettingsStore();
@@ -117,6 +118,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
       const result = await settingsService.deleteBusinessLogo(tenantId, logoUrl);
       if (!result.ok) {
         // Best effort — logo will be overwritten on next upload
+        logger.warn('BusinessTab', 'deleteBusinessLogo failed (best-effort):', result.error?.message);
       }
     }
   }, [logoUrl, tenantId]);
@@ -528,3 +530,5 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     </>
   );
 };
+
+export const BusinessTab = memo(BusinessTabInner);

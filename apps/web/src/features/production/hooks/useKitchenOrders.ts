@@ -35,19 +35,19 @@ function playBeep(): void {
     if (!AudioCtx) return;
     const audioCtx = new AudioCtx() as AudioContext;
     if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
+      audioCtx.resume().catch((err) => logger.warn('useKitchenOrders', 'audioCtx.resume falló:', err));
     }
     const osc = audioCtx.createOscillator();
     osc.frequency.value = 800;
     osc.connect(audioCtx.destination);
     osc.start();
     osc.stop(audioCtx.currentTime + 0.15);
-  } catch {
-    /* AudioContext no soportado */
+  } catch (err) {
+    logger.warn('useKitchenOrders', 'AudioContext no soportado:', err);
   }
 }
 
-export function useKitchenOrders(): {
+export function useKitchenOrders(enabled = true): {
   orders: KitchenOrderView[];
   pendingCount: number;
   preparingCount: number;
@@ -76,9 +76,6 @@ export function useKitchenOrders(): {
     const result = await getKitchenOrders(tenantId);
     if (result.ok) {
       const newOrders = result.data;
-      if (prevOrderCount.current > 0 && newOrders.length > prevOrderCount.current) {
-        playBeep();
-      }
       prevOrderCount.current = newOrders.length;
       setRawOrders(newOrders);
 
@@ -105,8 +102,9 @@ export function useKitchenOrders(): {
   }, [tenantId]);
 
   useEffect(() => {
+    if (!enabled) return;
     loadOrders();
-  }, [loadOrders]);
+  }, [enabled, loadOrders]);
 
   const refreshRaw = useDebouncedCallback(() => {
     loadOrders(true);
@@ -138,7 +136,6 @@ export function useKitchenOrders(): {
   }, []);
 
   const orders = useMemo<KitchenOrderView[]>(() => {
-    void elapsedTick;
     return rawOrders.map((sale) => {
       const saleItems = itemsMap.get(sale.id) ?? [];
       const items = saleItems.length > 0
@@ -164,6 +161,15 @@ export function useKitchenOrders(): {
   const pendingCount = useMemo(() => orders.filter((o) => o.status === 'pedida').length, [orders]);
   const preparingCount = useMemo(() => orders.filter((o) => o.status === 'preparacion').length, [orders]);
   const readyCount = useMemo(() => orders.filter((o) => o.status === 'lista').length, [orders]);
+
+  // Beep cuando llegan nuevos pedidos (separado de loadOrders para evitar side-effects en carga)
+  const prevBeepCount = useRef(0);
+  useEffect(() => {
+    if (prevBeepCount.current > 0 && orders.length > prevBeepCount.current) {
+      playBeep();
+    }
+    prevBeepCount.current = orders.length;
+  }, [orders.length]);
 
   const markAsPreparing = useCallback(async (id: string) => {
     const result = await updateOrderStatus(id, 'preparacion');
@@ -202,11 +208,13 @@ export function useKitchenOrders(): {
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       if (ctx.state === 'suspended') {
-        ctx.resume().then(() => setAudioSuspended(false)).catch(() => {});
+        ctx.resume().then(() => setAudioSuspended(false)).catch((err) => logger.warn('useKitchenOrders', 'ctx.resume falló:', err));
       } else {
         setAudioSuspended(false);
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      logger.warn('useKitchenOrders', 'resumeAudio falló:', err);
+    }
   }, []);
 
   useEffect(() => {
@@ -218,7 +226,9 @@ export function useKitchenOrders(): {
       const handler = () => setAudioSuspended(ctx.state === 'suspended');
       ctx.addEventListener('statechange', handler);
       return () => ctx.removeEventListener('statechange', handler);
-    } catch { /* ignore */ }
+    } catch (err) {
+      logger.warn('useKitchenOrders', 'AudioContext state check falló:', err);
+    }
   }, []);
 
   return {

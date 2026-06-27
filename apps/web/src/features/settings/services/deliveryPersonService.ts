@@ -177,17 +177,20 @@ export async function updateDeliveryPerson(
     if (data.name !== undefined) updated.name = data.name.trim();
     if (data.phone !== undefined) updated.phone = data.phone.trim();
 
-    await db.transaction('rw', [db.deliveryPersons, db.syncQueue], async () => {
+    await db.transaction('rw', [db.deliveryPersons, db.syncQueue, db.outbox], async (tx) => {
       await db.deliveryPersons.update(id, updated);
       await syncQueue.enqueue('delivery_persons', 'UPDATE', id, toSnake({ id, ...updated } as unknown as Record<string, unknown>), tenantId);
+      await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
+        action: 'delivery_person_updated', personId: id, ...updated,
+      }, tx);
     });
 
-    await logAuditEventOnly({
+    logAuditEventOnly({
       eventName: SystemEvents.SETTINGS_BUSINESS_UPDATED,
       module: MODULE_NAME,
       payload: { action: 'delivery_person_updated', personId: id, ...updated },
       context: { userId, tenantId },
-    });
+    }).catch((err) => logger.warn(MODULE_NAME, 'Audit falló (best-effort):', err));
 
     const result = await db.deliveryPersons.get(id);
     if (!result) {

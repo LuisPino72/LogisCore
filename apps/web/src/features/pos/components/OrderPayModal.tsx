@@ -5,7 +5,7 @@ import { METADATA_PAGOS } from '../../../specs/pos';
 import type { PaymentMethod } from '../types';
 import type { DexieSale } from '../../../services/dexie/types';
 
-interface OrderPayModalProps {
+export interface OrderPayModalProps {
   isOpen: boolean;
   sale: { sale: DexieSale; method: PaymentMethod | null } | null;
   processing: boolean;

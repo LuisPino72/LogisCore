@@ -2,6 +2,8 @@ import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
 import { MAX_PARKED_CARTS } from '../../../specs/pos';
 import { logger } from '../../../lib/logger';
+import { type Result, type AppError, failure, AppError as AppErrorClass } from '@logiscore/core';
+import { useToastStore } from '../../../stores/toastStore';
 import type { ParkedCart, SaleItem, Sale } from '../types';
 import type { Product } from '../../../specs/inventory';
 
@@ -17,7 +19,7 @@ export interface PosHistorySlice {
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
   fetchSaleItems: (tenantId: string, saleId: string) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
-  parkCart: (tenantId: string, name: string, deliveryInfo?: { orderType?: 'dine-in' | 'delivery'; needsKitchen?: boolean }) => Promise<boolean>;
+  parkCart: (tenantId: string, name: string, deliveryInfo?: { orderType?: 'dine-in' | 'delivery'; needsKitchen?: boolean }) => Promise<Result<string, AppError>>;
   loadParkedCart: (cart: ParkedCart) => void;
   deleteParkedCart: (tenantId: string, id: string) => Promise<void>;
   loadLowStockAlert: (tenantId: string) => Promise<void>;
@@ -40,7 +42,7 @@ type HistoryGetter = PosHistorySlice & {
   error: string | null;
 };
 
-export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHistorySlice => ({
+export const createHistorySlice = (set: (setter: Partial<HistoryGetter> | ((state: HistoryGetter) => Partial<HistoryGetter>)) => void, get: () => HistoryGetter): PosHistorySlice => ({
   ...initialHistoryState,
 
   fetchSalesHistory: async (tenantId, offset = 0, limit = 50, startDate?, endDate?) => {
@@ -75,22 +77,24 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
   parkCart: async (tenantId, name, deliveryInfo?) => {
     const { cart, parkedCarts } = get();
     if (cart.length === 0) {
-      set({ error: 'No hay productos en el carrito.' });
-      return false;
+      const err = new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.');
+      set({ error: err.message });
+      return failure(err);
     }
     if (parkedCarts.length >= MAX_PARKED_CARTS) {
-      set({ error: `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.` });
-      return false;
+      const err = new AppErrorClass('PARKED_CART_MAX_REACHED', `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.`);
+      set({ error: err.message });
+      return failure(err);
     }
     const result = await posService.parkCart(tenantId, name, cart, undefined, deliveryInfo);
     if (result.ok) {
       set({ cart: [], activeParkedCartId: null, error: null });
       get().fetchParkedCarts(tenantId);
-      return true;
+      return result;
     }
     logger.error('POS', '[parkCart] Error:', result.error);
     set({ loading: false, error: result.error.message });
-    return false;
+    return failure(result.error);
   },
 
   loadParkedCart: (parked) => {
@@ -98,7 +102,12 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
   },
 
   deleteParkedCart: async (tenantId, id) => {
-    await posService.deleteParkedCart(tenantId, id);
+    const result = await posService.deleteParkedCart(tenantId, id);
+    if (!result.ok) {
+      logger.error('POS', '[deleteParkedCart] Error:', result.error);
+      useToastStore.getState().addToast({ type: 'error', message: result.error?.message ?? 'Error al eliminar venta en cola' });
+      return;
+    }
     set((state: HistoryGetter) => ({
       parkedCarts: state.parkedCarts.filter((p: ParkedCart) => p.id !== id),
       ...(state.activeParkedCartId === id ? { cart: [], activeParkedCartId: null } : {}),

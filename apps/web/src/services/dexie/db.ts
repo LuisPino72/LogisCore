@@ -2,6 +2,9 @@ import Dexie from 'dexie';
 
 Dexie.debug = false;
 
+// TECH DEBT: barrel exports — cada re-export fuerza TypeScript a cargar todos los
+// tipos del módulo fuente aunque solo se necesite uno. A medida que crezca el schema,
+// conviene migrar a imports directos desde './types' y './sync/types' en cada consumer.
 export type {
   DexieTenantRef,
   DexieProductPresentation,

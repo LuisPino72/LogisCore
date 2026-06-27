@@ -48,7 +48,7 @@ export async function parkCart(
     const db = getDb();
     const existingCount = await db.parkedCarts.where({ tenantId }).count();
     if (existingCount >= MAX_PARKED_CARTS) {
-      return failure(new AppError('CART_ITEM_WEIGHT_REQUIRED', `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.`));
+      return failure(new AppError('PARKED_CART_MAX_REACHED', `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.`));
     }
     const id = generateId();
     await db.parkedCarts.add({

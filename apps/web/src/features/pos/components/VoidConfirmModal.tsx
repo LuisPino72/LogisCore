@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { Modal, Button } from '../../../common/components';
 
-interface VoidConfirmModalProps {
+export interface VoidConfirmModalProps {
   isOpen: boolean;
   onConfirm: () => void;
   onCancel: () => void;

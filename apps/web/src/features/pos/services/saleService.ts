@@ -24,6 +24,8 @@ import { useSettingsStore } from '../../settings/stores/settingsStore';
 
 const MODULE_NAME = 'POS';
 
+type TxTables = string[];
+
 async function filterOrphanLots(
   lots: Array<{ lotId: string; quantity: number }>,
 ): Promise<Array<{ lotId: string; quantity: number }>> {
@@ -188,6 +190,7 @@ async function consumeSaleItems(
       };
       await db.inventoryMovements.add(movement);
 
+      const filteredLots = await filterOrphanLots(consumedLots);
       await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
         id: saleItemId,
         tenant_id: tenantUuid,
@@ -204,7 +207,7 @@ async function consumeSaleItems(
         presentation_id: cartItem.presentationId ?? null,
         presentation_name: cartItem.presentationName ?? null,
         unit_multiplier: cartItem.unitMultiplier ?? 1,
-        consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null,
+        consumed_lots: filteredLots.length > 0 ? filteredLots : null,
         created_at: now,
       } as unknown as Record<string, unknown>), tenantId);
 
@@ -265,6 +268,7 @@ async function consumeSaleItems(
         consumedLots,
       });
 
+      const filteredLots = await filterOrphanLots(consumedLots);
       await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
         id: saleItemId,
         tenant_id: tenantUuid,
@@ -280,7 +284,7 @@ async function consumeSaleItems(
         unit: product.unit,
         presentation_id: assemblyItem.presentationId ?? null,
         presentation_name: assemblyItem.presentationName ?? null,
-        consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null,
+        consumed_lots: filteredLots.length > 0 ? filteredLots : null,
         created_at: now,
       } as unknown as Record<string, unknown>), tenantId);
 
@@ -423,6 +427,8 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
     discountValue = input.discountValue;
   }
 
+  // L-04: Este cálculo es CONSISTENTE con calculateSaleTotals.
+  // NO cambiar — cualquier modificación rompería el comportamiento actual de createSale.
   const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
 
   const saleId = generateId();
@@ -453,20 +459,19 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const txTables: any[] = [
-      db.sales,
-      db.saleItems,
-      db.inventoryMovements,
-      db.inventoryLots,
-      db.products,
-      db.cashRegisters,
-      db.recipes,
-      db.recipeLines,
-      db.syncQueue,
-      db.outbox,
+    const txTables: TxTables = [
+      'sales',
+      'saleItems',
+      'inventoryMovements',
+      'inventoryLots',
+      'products',
+      'cashRegisters',
+      'recipes',
+      'recipeLines',
+      'syncQueue',
+      'outbox',
     ];
-    if (isCreditSale) txTables.push(db.customers);
+    if (isCreditSale) txTables.push('customers');
 
     await db.transaction('rw', txTables, async (tx) => {
       if (isCreditSale && input.customerId) {
@@ -635,6 +640,10 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
   }
 }
 
+/**
+ * Obtiene historial de ventas. Como efecto secundario, cachea localmente
+ * los datos de Supabase en Dexie para operación offline.
+ */
 export async function getSalesHistory(
   tenantId: string,
   offset = 0,
@@ -759,7 +768,7 @@ export async function getSaleItems(tenantId: string, saleId: string): Promise<Re
 
       if (data) {
         for (const raw of data) {
-          const result = saleItemFromSupabase(raw);
+          const result = saleItemFromSupabase(raw, tenantId);
           if (!result.ok) continue;
           await db.saleItems.put(result.data);
         }
@@ -837,9 +846,8 @@ export async function voidSale(saleId: string, tenantId: string, userId: string)
       }) ?? allRegisters.find((r) => r.isOpen);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const txTables: any[] = [db.sales, db.saleItems, db.products, db.inventoryMovements, db.inventoryLots, db.cashRegisters, db.recipes, db.recipeLines, db.syncQueue, db.outbox];
-    if (sale.isCreditSale && sale.customerId) txTables.push(db.customers);
+    const txTables: TxTables = ['sales', 'saleItems', 'products', 'inventoryMovements', 'inventoryLots', 'cashRegisters', 'recipes', 'recipeLines', 'syncQueue', 'outbox'];
+    if (sale.isCreditSale && sale.customerId) txTables.push('customers');
 
     await db.transaction('rw', txTables, async (tx) => {
       await db.sales.update(saleId, { status: 'voided', voidedAt: now });
@@ -1253,8 +1261,22 @@ export async function createOrder(input: {
   };
 
   try {
-    await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
+    await db.transaction('rw', [db.sales, db.saleItems, db.syncQueue, db.outbox], async (tx) => {
       await tx.sales.add(sale);
+
+      for (const item of items) {
+        await tx.saleItems.add({
+          id: generateId(), tenantId, saleId,
+          productId: item.productId, productName: item.name,
+          productSku: item.sku || '', quantity: item.quantity,
+          unitPriceUsd: item.unitPriceUsd, totalPriceUsd: item.totalPriceUsd,
+          isWeighted: item.isWeighted, unit: item.unit,
+          presentationId: item.presentationId,
+          presentationName: item.presentationName,
+          unitMultiplier: item.unitMultiplier ?? 1,
+          createdAt: now,
+        });
+      }
 
       await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake({
         ...sale,
@@ -1640,7 +1662,7 @@ export async function reassignDelivery(saleId: string): Promise<Result<void, App
         }
       }
 
-      await tx.sales.update(saleId, { status: revertStatus, deliveryPersonName: undefined });
+      await tx.sales.update(saleId, { status: revertStatus, deliveryPersonName: '' });
 
       await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
         id: saleId, tenant_id: tenantUuid, status: revertStatus, delivery_person_name: null,
@@ -1765,10 +1787,9 @@ export async function confirmOrderPayment(
   const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const txTables: any[] = [
-      db.sales, db.saleItems, db.inventoryLots, db.inventoryMovements,
-      db.products, db.cashRegisters, db.syncQueue, db.outbox,
+    const txTables: TxTables = [
+      'sales', 'saleItems', 'inventoryLots', 'inventoryMovements',
+      'products', 'cashRegisters', 'syncQueue', 'outbox',
     ];
 
     await db.transaction('rw', txTables, async (tx) => {
@@ -1870,12 +1891,19 @@ export async function dispatchDelivery(
     return failure(new AppError('DELIVERY_FEE_REQUIRED', 'La tarifa de delivery debe ser mayor a 0.'));
   }
 
+  const deliveryPerson = await db.deliveryPersons
+    .where({ tenantId: sale.tenantId, name: data.deliveryPersonName.trim() })
+    .filter((p) => !p.deletedAt && p.isActive)
+    .first();
+  if (!deliveryPerson) {
+    return failure(new AppError('DELIVERY_PERSON_NOT_FOUND', `El motorizado "${data.deliveryPersonName}" no existe o está inactivo.`));
+  }
+
   const now = new Date().toISOString();
   const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const txTables: any[] = [db.sales, db.expenses, db.syncQueue, db.outbox];
+    const txTables: TxTables = ['sales', 'expenses', 'syncQueue', 'outbox'];
 
     await db.transaction('rw', txTables, async (tx) => {
       await tx.sales.update(saleId, {

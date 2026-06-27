@@ -33,6 +33,10 @@ export function DeliveryDispatchPanel({
   const defaultDeliveryFee = useSettingsStore((s) => s.defaultDeliveryFee);
   const { addToast } = useToastStore();
 
+  // TECH DEBT: llamado directo a getDeliveryPersons desde el componente.
+  // Lo correcto sería inyectar el servicio vía props o hook para testabilidad.
+  // Contexto: DeliveryDispatchPanel se abrió paso como componente standalone sin
+  // abstracción de datos. Refactor futuro: mover a un hook useDeliveryService().
   useEffect(() => {
     if (!isOpen || !sale.tenantId) return;
     setLoadingPersons(true);
@@ -162,6 +166,7 @@ export function DeliveryDispatchPanel({
               fullWidth
               onClick={handleNotifyCustomer}
               className="min-h-11"
+              // TECH DEBT: inline style WhatsApp verde. Refactor: className con variable CSS o token de diseño.
               style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
             >
               <MessageCircle size={16} />

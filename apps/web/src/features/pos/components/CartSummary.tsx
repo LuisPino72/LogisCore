@@ -1,5 +1,5 @@
 import { memo, useState, useMemo } from 'react';
-import { Button, Input } from '../../../common/components';
+import { Button, Input } from '@/common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info, Lock } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
 import type { Customer } from '../../../specs/customers';
@@ -308,6 +308,7 @@ export const CartSummary = memo(function CartSummary({
           onClick={handleCreditToggle}
           disabled={creditExceeds}
           className="w-full min-h-11"
+          // TECH DEBT: inline style ámbar para botón crédito. Refactor: className con variable de diseño.
           style={isCreditSale ? { backgroundColor: '#f59e0b', borderColor: '#f59e0b' } : undefined}
         >
           <CreditCard size={14} />

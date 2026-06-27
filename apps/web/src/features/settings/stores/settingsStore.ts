@@ -54,6 +54,9 @@ const initialState = {
 export const useSettingsStore = create<SettingsStore>((set) => ({
   ...initialState,
 
+  // L-18: El spread manual (vs Object.assign o spread de data) es INTENCIONAL.
+  // Garantiza que solo se actualicen campos explícitos, evitando contaminación
+  // desde objetos parciales que pudieran incluir props no deseadas.
   setFiscalSettings: (data: FiscalSettings) => {
     set({
       ivaRate: data.ivaRate,

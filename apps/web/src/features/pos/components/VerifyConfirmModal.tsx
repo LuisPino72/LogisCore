@@ -1,12 +1,8 @@
 import { Package } from 'lucide-react';
 import { Modal, Button, Spinner } from '../../../common/components';
+import type { VerifyCounts } from '../types';
 
-interface VerifyCounts {
-  sold: number;
-  lowStock: number;
-}
-
-interface VerifyConfirmModalProps {
+export interface VerifyConfirmModalProps {
   isOpen: boolean;
   loading: boolean;
   verifyCounts: VerifyCounts;

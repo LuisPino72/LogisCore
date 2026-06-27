@@ -4,7 +4,7 @@ import { formatBs, formatUsd } from '@/lib/formatBs';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import type { CompletedSaleData } from '../types';
 
-interface CompletedSaleModalProps {
+export interface CompletedSaleModalProps {
   completedSale: CompletedSaleData | null;
   sharing: boolean;
   onShare: (mode: 'ticket' | 'text') => void;

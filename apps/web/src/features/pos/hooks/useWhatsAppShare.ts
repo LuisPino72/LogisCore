@@ -45,9 +45,11 @@ export function useWhatsAppShare() {
           enrichedTenantInfo,
         );
         if (link) {
-          window.open(link, '_blank');
-        } else {
-          // error handled via callback
+          const win = window.open(link, '_blank');
+          if (!win || win.closed) {
+            logger.warn('useWhatsAppShare', 'Popup bloqueado por el navegador');
+            // Toast warning handled by caller
+          }
         }
       } else {
         const result = await receiptService.sharePdfViaWhatsApp(

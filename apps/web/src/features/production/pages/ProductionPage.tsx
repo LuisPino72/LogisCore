@@ -4,6 +4,7 @@ import { Button, Badge, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding, 
 import { useToastStore } from '../../../stores/toastStore';
 import { useProduction } from '../hooks/useProduction';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { logger } from '../../../lib/logger';
 import { RecipeList } from '../components/RecipeList';
 import { RecipeForm } from '../components/RecipeForm';
 import { ProduceModal } from '../components/ProduceModal';
@@ -24,7 +25,8 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
     userId,
     cancelOrder,
   } = useProduction(tenantId);
-  const { pendingCount: pendingKitchenCount } = useKitchenOrders();
+  const kitchenEnabled = activeTab === 'kitchen';
+  const { pendingCount: pendingKitchenCount } = useKitchenOrders(kitchenEnabled);
   const { addToast } = useToastStore();
 
   const [showRecipeForm, setShowRecipeForm] = useState(false);
@@ -79,7 +81,7 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
     try {
       const success = await cancelOrder(orderId, tenantId);
       if (!success) {
-        // El store ya setea el error; el componente UI lo muestra via fetchOrders/error
+        logger.warn('Production', 'cancelOrder falló sin error en store');
       }
     } finally {
       setCancellingOrderId(null);

@@ -11,6 +11,7 @@ import type { PosCustomerSlice } from './posCustomerStore';
 import { createHistorySlice, initialHistoryState } from './posHistoryStore';
 import type { PosHistorySlice } from './posHistoryStore';
 import { posService } from '../services/posService';
+import { logger } from '../../../lib/logger';
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { type Result, type AppError, success, failure, AppError as AppErrorClass } from '@logiscore/core';
 import type { PaymentMethod } from '../types';
@@ -23,8 +24,8 @@ interface PosStore extends PosCartSlice, PosRegisterSlice, PosCatalogSlice, PosC
   reset: () => void;
   showDeliveryPrompt: boolean;
   setShowDeliveryPrompt: (v: boolean) => void;
-  parkAsDelivery: (tenantId: string, name: string, needsKitchen: boolean) => Promise<boolean>;
-  parkNormal: (tenantId: string, name: string) => Promise<boolean>;
+  parkAsDelivery: (tenantId: string, name: string, needsKitchen: boolean) => Promise<Result<string, AppError>>;
+  parkNormal: (tenantId: string, name: string) => Promise<Result<string, AppError>>;
 }
 
 export const usePosStore = create<PosStore>()(
@@ -42,21 +43,23 @@ export const usePosStore = create<PosStore>()(
       parkAsDelivery: async (tenantId, name, needsKitchen) => {
         const { cart, parkedCarts } = get();
         if (cart.length === 0) {
-          set({ error: 'No hay productos en el carrito.' });
-          return false;
+          const err = new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.');
+          set({ error: err.message });
+          return failure(err);
         }
         if (parkedCarts.length >= MAX_PARKED_CARTS) {
-          set({ error: `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.` });
-          return false;
+          const err = new AppErrorClass('PARKED_CART_MAX_REACHED', `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.`);
+          set({ error: err.message });
+          return failure(err);
         }
         const result = await posService.parkCart(tenantId, name, cart, get().selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen });
         if (result.ok) {
           set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false });
-          get().fetchParkedCarts(tenantId);
-          return true;
+          get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));
+          return result;
         }
         set({ loading: false, error: result.error.message });
-        return false;
+        return failure(result.error);
       },
 
       parkNormal: async (tenantId, name) => {

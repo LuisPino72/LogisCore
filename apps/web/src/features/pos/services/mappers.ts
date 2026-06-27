@@ -82,11 +82,11 @@ export function saleFromSupabase(raw: SupabaseSale, tenantId: string): Result<Sa
   }
 }
 
-export function saleItemFromSupabase(raw: SupabaseSaleItem): Result<SaleItem, AppError> {
+export function saleItemFromSupabase(raw: SupabaseSaleItem, tenantId: string): Result<SaleItem, AppError> {
   try {
     return success(SaleItemSchema.parse({
       id: raw.id,
-      tenantId: raw.tenant_id,
+      tenantId,
       saleId: raw.sale_id,
       productId: raw.product_id,
       productName: raw.product_name,

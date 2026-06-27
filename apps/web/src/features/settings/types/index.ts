@@ -46,6 +46,7 @@ export const UpdateBusinessInfoSchema = BusinessInfoSchema.partial();
 
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(1),
+  // max(14) viene del límite de Supabase Auth (máx 72 chars, pero 14 es política del negocio)
   newPassword: z.string().min(8).max(14).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/),
 });
 

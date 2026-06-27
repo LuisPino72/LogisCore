@@ -37,7 +37,7 @@ import { buildReorderUrl } from '../../../lib/reorderHelper';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import { CustomerPickerModal } from '../../customers/components/CustomerPickerModal';
 import type { Product } from '../../../specs/inventory';
-import type { PaymentMethod, ParkedCart, TenantInfo } from '../types';
+import type { PaymentMethod, ParkedCart, TenantInfo, PresentationSelection } from '../types';
 import type { DexieSale } from '../../../services/dexie/types';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
@@ -160,7 +160,12 @@ export function PosPage({ tenantId }: PosPageProps) {
     try {
       const result = await confirmOrderPayment(saleId, method, exchangeRateBs, activeSessionId ?? undefined);
       if (result.ok) {
-        const sale = result.data as unknown as DexieSale;
+        const saleData = result.data;
+        if (!saleData) {
+          logger.error('POS', 'confirmOrderPayment returned null data');
+          return;
+        }
+        const sale = saleData as unknown as DexieSale;
         if (sale.orderType === 'delivery') {
           const { name, phone } = await fetchDispatchCustomer(sale.customerId, tenantId);
           setDispatchSale(sale);
@@ -388,7 +393,8 @@ export function PosPage({ tenantId }: PosPageProps) {
         return;
       }
       openVerifyConfirm({ sold: soldCount, lowStock: lowStockCount });
-    } catch {
+    } catch (err) {
+      logger.error('POS', 'Error en verificación cierre caja:', err);
       closeVerifyConfirm();
       openCashModal('close');
     } finally {
@@ -521,6 +527,17 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [voidConfirmId, tenantId, userId, addToast, fetchSalesHistory]);
 
+  const handlePresentationSelect = useCallback(async (product: Product, selection: PresentationSelection) => {
+    const added = await addToCart(product, 1, selection);
+    if (added) {
+      addToast({ type: 'success', message: `${product.name} agregado`, duration: 1500 });
+    } else {
+      const error = usePosStore.getState().error;
+      if (error) {
+        addToast({ type: 'warning', message: error, duration: 3000 });
+      }
+    }
+  }, [addToCart, addToast]);
 
   if (!tenantId) {
     return (
@@ -882,17 +899,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         onClose={closePresModal}
         product={selectedProductForPres}
         presentations={selectedProductForPres ? getPresentations(selectedProductForPres.id) : []}
-        onSelect={async (_product, selection) => {
-          const added = await addToCart(_product, 1, selection);
-          if (added) {
-            addToast({ type: 'success', message: `${_product.name} agregado`, duration: 1500 });
-          } else {
-            const error = usePosStore.getState().error;
-            if (error) {
-              addToast({ type: 'warning', message: error, duration: 3000 });
-            }
-          }
-        }}
+        onSelect={handlePresentationSelect}
       />
 
       <ModuleOnboarding

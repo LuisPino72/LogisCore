@@ -249,66 +249,71 @@ export function normalizeWaPhone(phone: string): string | null {
       : `58${digits}`;
 }
 
-export async function generateMenuText(tenantId: string): Promise<string> {
-  const { getDb, isDbReady } = await import('../../../services/dexie/db');
-  if (!isDbReady()) return '';
+export async function generateMenuText(tenantId: string): Promise<Result<string, AppError>> {
+  try {
+    const { getDb, isDbReady } = await import('../../../services/dexie/db');
+    if (!isDbReady()) return success('');
 
-  const db = getDb();
-  const settings = await db.tenantSettings.get(tenantId);
-  const tenantRef = await db.tenantRefs.get(tenantId);
-  const businessName = tenantRef?.name ?? 'Mi Negocio';
-  const businessPhone = tenantRef?.telefono ?? '';
+    const db = getDb();
+    const settings = await db.tenantSettings.get(tenantId);
+    const tenantRef = await db.tenantRefs.get(tenantId);
+    const businessName = tenantRef?.name ?? 'Mi Negocio';
+    const businessPhone = tenantRef?.telefono ?? '';
 
-  const products = await db.products
-    .where({ tenantId })
-    .filter((p) => !p.deletedAt && p.isSellable !== false && !p.isIngredient && p.priceUsd > 0)
-    .toArray();
+    const products = await db.products
+      .where({ tenantId })
+      .filter((p) => !p.deletedAt && p.isSellable !== false && !p.isIngredient && p.priceUsd > 0)
+      .toArray();
 
-  const categories = await db.categories
-    .where({ tenantId })
-    .toArray();
+    const categories = await db.categories
+      .where({ tenantId })
+      .toArray();
 
-  const categoryMap = new Map<string, string>();
-  for (const cat of categories) {
-    if (!cat.deletedAt) categoryMap.set(cat.id, cat.name);
-  }
-
-  const grouped = new Map<string, Array<{ name: string; price: number }>>();
-  for (const p of products) {
-    const catName = (p.categoryId && categoryMap.get(p.categoryId)) ?? 'Otros';
-    if (!grouped.has(catName)) grouped.set(catName, []);
-    grouped.get(catName)!.push({ name: p.name, price: p.priceUsd });
-  }
-
-  const lines: string[] = [];
-  lines.push(`*${businessName}*`);
-  lines.push('');
-  lines.push('📋 *Menú Disponible*');
-
-  for (const [catName, items] of grouped) {
-    lines.push('');
-    lines.push(catName);
-    for (const item of items) {
-      const dots = '.'.repeat(Math.max(1, 30 - item.name.length - item.price.toFixed(2).length));
-      lines.push(`${item.name} ${dots} $${item.price.toFixed(2)}`);
+    const categoryMap = new Map<string, string>();
+    for (const cat of categories) {
+      if (!cat.deletedAt) categoryMap.set(cat.id, cat.name);
     }
-  }
 
-  if (businessPhone) {
+    const grouped = new Map<string, Array<{ name: string; price: number }>>();
+    for (const p of products) {
+      const catName = (p.categoryId && categoryMap.get(p.categoryId)) ?? 'Otros';
+      if (!grouped.has(catName)) grouped.set(catName, []);
+      grouped.get(catName)!.push({ name: p.name, price: p.priceUsd });
+    }
+
+    const lines: string[] = [];
+    lines.push(`*${businessName}*`);
     lines.push('');
-    lines.push(`📞 Haz tu pedido al ${businessPhone}`);
-  }
+    lines.push('📋 *Menú Disponible*');
 
-  if (settings?.pagoMovilEnabled && settings.pagoMovilBank) {
-    lines.push('');
-    lines.push('💳 *Paga a:*');
-    lines.push(`Banco: ${settings.pagoMovilBank}`);
-    if (settings.pagoMovilHolder) lines.push(`Titular: ${settings.pagoMovilHolder}`);
-    if (settings.pagoMovilId) lines.push(`C.I.: ${settings.pagoMovilId}`);
-    if (settings.pagoMovilPhone) lines.push(`Tlf.: ${settings.pagoMovilPhone}`);
-  }
+    for (const [catName, items] of grouped) {
+      lines.push('');
+      lines.push(catName);
+      for (const item of items) {
+        const dots = '.'.repeat(Math.max(1, 30 - item.name.length - item.price.toFixed(2).length));
+        lines.push(`${item.name} ${dots} $${item.price.toFixed(2)}`);
+      }
+    }
 
-  return lines.join('\n');
+    if (businessPhone) {
+      lines.push('');
+      lines.push(`📞 Haz tu pedido al ${businessPhone}`);
+    }
+
+    if (settings?.pagoMovilEnabled && settings.pagoMovilBank) {
+      lines.push('');
+      lines.push('💳 *Paga a:*');
+      lines.push(`Banco: ${settings.pagoMovilBank}`);
+      if (settings.pagoMovilHolder) lines.push(`Titular: ${settings.pagoMovilHolder}`);
+      if (settings.pagoMovilId) lines.push(`C.I.: ${settings.pagoMovilId}`);
+      if (settings.pagoMovilPhone) lines.push(`Tlf.: ${settings.pagoMovilPhone}`);
+    }
+
+    return success(lines.join('\n'));
+  } catch (err) {
+    logger.error('receiptService', 'generateMenuText error:', err);
+    return failure(new AppError('MENU_GENERATION_FAILED', 'Error al generar el menú.'));
+  }
 }
 
 async function renderToBlob(
@@ -438,7 +443,10 @@ export const receiptService = {
       const text = encodeURIComponent(
         `📄 *${fileName}* descargado. Adjúntalo en este chat para enviárselo al cliente.\n\n${buildWhatsAppText(sale, items, tenantInfo)}`,
       );
-      window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank');
+      const popup = window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank');
+      if (!popup) {
+        logger.warn('receiptService', 'Popup bloqueado al abrir WhatsApp');
+      }
       return success(undefined);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {

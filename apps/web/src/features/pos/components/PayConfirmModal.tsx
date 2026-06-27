@@ -7,7 +7,7 @@ import type { CartItem } from '../types';
 import type { PaymentMethod } from '../types';
 import type { Customer } from '../../../specs/customers';
 
-interface PayConfirmModalProps {
+export interface PayConfirmModalProps {
   isOpen: boolean;
   cart: CartItem[];
   exchangeRateBs: number;

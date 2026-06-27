@@ -1,10 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Flame, Clock, Volume2 } from 'lucide-react';
-import { Badge } from '@/common/components/Badge';
-import { Button } from '@/common/components/Button';
-import { Card } from '@/common/components/Card';
-import { EmptyState } from '@/common/components/EmptyState';
-import { Spinner } from '@/common/components/Loading';
+import { Badge, Button, Card, EmptyState, Spinner } from '@/common/components';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import type { KitchenOrderView } from '../hooks/useKitchenOrders';
 
@@ -23,6 +19,9 @@ const OrderCard = React.memo(function OrderCard({
   onReady: () => void;
   onRevert: () => void;
 }) {
+  const handleStart = useCallback(onStart, [onStart]);
+  const handleReady = useCallback(onReady, [onReady]);
+  const handleRevert = useCallback(onRevert, [onRevert]);
   const [expanded, setExpanded] = useState(false);
 
   const borderColor =
@@ -43,7 +42,7 @@ const OrderCard = React.memo(function OrderCard({
   return (
     <Card
       className={`p-4 border-l-4 ${borderColor} ${order.isUrgent ? 'ring-2 ring-red-400' : ''}`}
-      style={{ contentVisibility: 'auto' }}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px' }}
     >
       <div className="space-y-3">
         {/* Header: Order number + timer */}
@@ -71,12 +70,12 @@ const OrderCard = React.memo(function OrderCard({
               </div>
             ))}
             {!expanded && order.items.length > 2 && (
-              <Button variant="ghost" size="sm" onClick={() => setExpanded(true)} className="min-h-[80px]">
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(true)} className="min-h-[48px]">
                 +{order.items.length - 2} más...
               </Button>
             )}
             {expanded && order.items.length > 2 && (
-              <Button variant="ghost" size="sm" onClick={() => setExpanded(false)} className="min-h-[80px]">
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(false)} className="min-h-[48px]">
                 Ver menos
               </Button>
             )}
@@ -113,7 +112,7 @@ const OrderCard = React.memo(function OrderCard({
             <Button
               variant="primary"
               className="flex-1 min-h-[80px] text-base font-semibold"
-              onClick={onStart}
+              onClick={handleStart}
             >
               Empezar
             </Button>
@@ -123,14 +122,14 @@ const OrderCard = React.memo(function OrderCard({
               <Button
                 variant="primary"
                 className="flex-1 min-h-[80px] text-base font-semibold"
-                onClick={onReady}
+                onClick={handleReady}
               >
                 Listo
               </Button>
               <Button
                 variant="ghost"
                 className="min-h-[80px] px-4"
-                onClick={onRevert}
+                onClick={handleRevert}
               >
                 Revertir
               </Button>
@@ -140,7 +139,7 @@ const OrderCard = React.memo(function OrderCard({
             <Button
               variant="ghost"
               className="min-h-[80px] px-4"
-              onClick={onRevert}
+              onClick={handleRevert}
             >
               Revertir
             </Button>
@@ -185,7 +184,7 @@ export default function KitchenDisplay() {
   const preparingOrders = useMemo(() => orders.filter((o) => o.status === 'preparacion'), [orders]);
   const readyOrders = useMemo(() => orders.filter((o) => o.status === 'lista'), [orders]);
 
-  const totalCount = pendingCount + preparingCount + readyCount;
+  const totalCount = orders.length;
 
   if (loading && orders.length === 0) {
     return (
@@ -231,11 +230,11 @@ export default function KitchenDisplay() {
           description="Las órdenes que requieran cocina aparecerán aquí automáticamente."
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Pendientes */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🟡</span>
+              <span className="w-3 h-3 rounded-full inline-block bg-amber-400" />
               <h3 className="font-semibold text-sm">Pendientes</h3>
               <Badge variant="warning">{pendingCount}</Badge>
             </div>
@@ -258,7 +257,7 @@ export default function KitchenDisplay() {
           {/* Preparación */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🔵</span>
+              <span className="w-3 h-3 rounded-full inline-block bg-blue-500" />
               <h3 className="font-semibold text-sm">Preparación</h3>
               <Badge variant="info">{preparingCount}</Badge>
             </div>
@@ -280,7 +279,7 @@ export default function KitchenDisplay() {
           {/* Listos */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🟢</span>
+              <span className="w-3 h-3 rounded-full inline-block bg-green-500" />
               <h3 className="font-semibold text-sm">Listos</h3>
               <Badge variant="success">{readyCount}</Badge>
             </div>

@@ -17,7 +17,7 @@ class EventBusImpl {
       try {
         listener(payload);
       } catch (err) {
-        console.error(`[EventBus] Error en listener de ${event}:`, err);
+        console.warn(`[EventBus] Error en listener de ${event}:`, err);
       }
     }
   }

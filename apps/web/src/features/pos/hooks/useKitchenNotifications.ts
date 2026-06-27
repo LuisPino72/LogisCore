@@ -18,6 +18,17 @@ export function useKitchenNotifications({ tenantId }: UseKitchenNotificationsOpt
   const [kitchenReadyNotifs, setKitchenReadyNotifs] = useState<KitchenNotification[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
 
+  useEffect(() => {
+    const AudioCtx = window.AudioContext || (window as unknown as Record<string, unknown>)['webkitAudioContext'];
+    if (AudioCtx) {
+      audioContextRef.current = new AudioCtx() as AudioContext;
+    }
+    return () => {
+      audioContextRef.current?.close();
+      audioContextRef.current = null;
+    };
+  }, []);
+
   const fetchOrderData = useCallback(async (saleId: string) => {
     const saleResult = await getSaleById(saleId);
     if (!saleResult.ok || !saleResult.data) return null;
@@ -42,16 +53,18 @@ export function useKitchenNotifications({ tenantId }: UseKitchenNotificationsOpt
           });
 
           try {
-            if (!audioContextRef.current) audioContextRef.current = new AudioContext();
-            const osc = audioContextRef.current.createOscillator();
-            const gain = audioContextRef.current.createGain();
+            const ctx = audioContextRef.current;
+            if (!ctx) return;
+            if (ctx.state === 'suspended') { ctx.resume().catch((e) => logger.warn('useKitchenNotifications', 'resume falló:', e)); }
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
             osc.connect(gain);
-            gain.connect(audioContextRef.current.destination);
+            gain.connect(ctx.destination);
             osc.frequency.value = 880;
             osc.type = 'sine';
             gain.gain.value = 0.3;
             osc.start();
-            osc.stop(audioContextRef.current.currentTime + 0.2);
+            osc.stop(ctx.currentTime + 0.2);
           } catch (err) {
             logger.warn('POS', 'Error reproduciendo beep de notificación', err);
           }

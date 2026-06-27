@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Card, Button, Spinner, EmptyState, Modal, DatePicker } from '@/common/components';
+import { useState, useCallback, memo } from 'react';
+import { Card, Button, Spinner, EmptyState, Modal, DatePicker, Skeleton } from '@/common/components';
 import { Truck, Check, Wallet, AlertCircle } from 'lucide-react';
 import { useDeliverySettlement } from '../hooks/useDeliverySettlement';
 import { formatUsd } from '@/lib/formatBs';
@@ -8,7 +8,7 @@ interface DeliverySettlementReportProps {
   tenantId: string;
 }
 
-export function DeliverySettlementReport({ tenantId }: DeliverySettlementReportProps) {
+export const DeliverySettlementReport = memo(function DeliverySettlementReport({ tenantId }: DeliverySettlementReportProps) {
   const { data, loading, date, setDate, paySettlement } = useDeliverySettlement(tenantId);
   const [paying, setPaying] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ name: string; amount: number } | null>(null);
@@ -39,16 +39,16 @@ export function DeliverySettlementReport({ tenantId }: DeliverySettlementReportP
             <div className="space-y-3">
               <div className="flex justify-between">
                 <div className="space-y-2">
-                  <div className="skeleton h-5 w-32 rounded" />
-                  <div className="skeleton h-3 w-20 rounded" />
+                  <Skeleton className="h-5 w-32 rounded" />
+                  <Skeleton className="h-3 w-20 rounded" />
                 </div>
-                <div className="skeleton h-5 w-24 rounded" />
+                <Skeleton className="h-5 w-24 rounded" />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {Array.from({ length: 3 }).map((_, j) => (
                   <div key={j} className="space-y-1">
-                    <div className="skeleton h-3 w-12 rounded" />
-                    <div className="skeleton h-4 w-16 rounded" />
+                    <Skeleton className="h-3 w-12 rounded" />
+                    <Skeleton className="h-4 w-16 rounded" />
                   </div>
                 ))}
               </div>
@@ -222,4 +222,4 @@ export function DeliverySettlementReport({ tenantId }: DeliverySettlementReportP
       </Modal>
     </div>
   );
-}
+});

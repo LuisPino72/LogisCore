@@ -85,6 +85,12 @@ class RealtimeService {
   }
 
   private createChannel(): void {
+    // TECH DEBT: suscripción wildcard `{ event: '*', schema: 'public', table: '*' }`
+    // recibe cambios de TODAS las tablas públicas. Consume más ancho de banda y puede
+    // saturar el cliente. Lo óptimo sería un canal por tabla con filtro de tenant_id,
+    // pero eso multiplica conexiones WebSocket. Supabase Realtime limita a ~10 canales,
+    // y tenemos ~20 tablas. Solución futura: usar un solo canal con `filter` por tenant
+    // y filtrar en el servidor con RLS + `broadcast.self`.
     this.channel = supabase
       .channel('logiscore-realtime')
       .on(

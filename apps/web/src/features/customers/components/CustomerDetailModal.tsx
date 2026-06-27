@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { Modal, Button, Badge, EmptyState, Spinner, Pagination, SaleDetailModal, Tooltip } from '../../../common/components';
 import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, CreditCard, Calendar, Send } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
@@ -7,6 +7,8 @@ import { useCustomerStore } from '../stores/customerStore';
 import { formatTimeAgo, formatPhone } from '../../../lib/utils';
 import { PaymentModal } from './PaymentModal';
 import { generateMenuText, normalizeWaPhone } from '../../pos/services/receiptService';
+import { logger } from '../../../lib/logger';
+import { useToastStore } from '../../../stores/toastStore';
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -20,7 +22,7 @@ interface CustomerDetailModalProps {
   canEdit?: boolean;
 }
 
-export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, onRefresh, canEdit = false }: CustomerDetailModalProps) {
+export const CustomerDetailModal = memo(function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, onRefresh, canEdit = false }: CustomerDetailModalProps) {
   const [page, setPage] = useState(1);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -46,15 +48,53 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
 
   if (!customer) return null;
 
+  const renderWhatsAppButton = (): React.ReactNode => {
+    if (typeof customer.phone !== 'string' || !customer.phone) return null;
+    const digits = customer.phone.replace(/[^0-9]/g, '');
+    const waPhone = digits.startsWith('58') ? digits
+      : digits.startsWith('0') ? `58${digits.slice(1)}`
+      : `58${digits}`;
+    return (
+      <Tooltip content="Abrir chat en WhatsApp" variant="help">
+      <a
+        href={`https://wa.me/${waPhone}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-1"
+        aria-label="Abrir chat en WhatsApp con este cliente"
+      >
+      <Button variant="primary" className="w-full min-h-11 bg-[#25D366]! border-[#25D366]! hover:bg-[#1ebe57]!">
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 mr-1.5 inline">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+        WhatsApp
+      </Button>
+    </a>
+    </Tooltip>
+    );
+  };
+
+  const { addToast } = useToastStore();
   const handleSendMenu = async () => {
     setSendingMenu(true);
     try {
-      const menuText = await generateMenuText(tenantId);
+      const result = await generateMenuText(tenantId);
+      if (!result.ok) {
+        addToast({ type: 'error', message: result.error?.message ?? 'Error al generar el menú' });
+        return;
+      }
+      const menuText = result.data;
       const phone = normalizeWaPhone(customer.phone ?? '');
       if (phone && menuText) {
         const encoded = encodeURIComponent(menuText);
-        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+        const popup = window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+        if (!popup) {
+          addToast({ type: 'warning', message: 'El navegador bloqueó la ventana emergente. Permite popups para este sitio.' });
+        }
       }
+    } catch (err) {
+      logger.error('CustomerDetailModal', 'handleSendMenu error:', err);
+      addToast({ type: 'error', message: 'Error al enviar el menú. Intenta nuevamente.' });
     } finally {
       setSendingMenu(false);
     }
@@ -82,30 +122,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
               Editar
             </Button>
           )}
-          {typeof customer.phone === 'string' && customer.phone && (() => {
-            const digits = customer.phone.replace(/[^0-9]/g, '');
-            const waPhone = digits.startsWith('58') ? digits
-              : digits.startsWith('0') ? `58${digits.slice(1)}`
-              : `58${digits}`;
-            return (
-              <Tooltip content="Abrir chat en WhatsApp" variant="help">
-              <a
-                href={`https://wa.me/${waPhone}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1"
-                aria-label="Abrir chat en WhatsApp con este cliente"
-              >
-              <Button variant="primary" className="w-full min-h-11 bg-[#25D366]! border-[#25D366]! hover:bg-[#1ebe57]!">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 mr-1.5 inline">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                WhatsApp
-              </Button>
-            </a>
-            </Tooltip>
-            );
-          })()}
+          {renderWhatsAppButton()}
           <Tooltip content="Enviar menú por WhatsApp" variant="help">
             <Button
               variant="outline"
@@ -318,4 +335,4 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
       />
     </Modal>
   );
-}
+});

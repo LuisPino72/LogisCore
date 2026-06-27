@@ -33,6 +33,8 @@ export type CartItem = z.infer<typeof CartItemSchema>;
 
 export const SaleSchema = z.object({
   id: z.string().uuid(),
+  // TODO-L-02: tenantId debería validarse como slug (formato: [a-z0-9-]{3,}) o UUID.
+  // Validar en runtime requeriría conocer si la fuente es slug (URL) o UUID (DB).
   tenantId: z.string(),
   userId: z.string().uuid(),
   paymentMethod: PaymentMethodSchema,
@@ -85,6 +87,7 @@ export type Sale = z.infer<typeof SaleSchema>;
 
 export const SaleItemSchema = z.object({
   id: z.string().uuid(),
+  // TODO-L-02: tenantId debería validarse como slug o UUID
   tenantId: z.string(),
   saleId: z.string().uuid(),
   productId: z.string().uuid(),
