@@ -1,8 +1,8 @@
-import { useState, useEffect, useDeferredValue, useMemo } from 'react';
-import { Badge, Spinner, EmptyState } from '@/common/components';
+import { useState, useEffect, useDeferredValue, useMemo, useCallback } from 'react';
+import { Badge, Button, Spinner, EmptyState } from '@/common/components';
 import { getDb } from '../../../services/dexie/db';
 import type { DexieSale } from '../../../services/dexie/types';
-import { Clock, Truck, ChefHat, Search, Package } from 'lucide-react';
+import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2 } from 'lucide-react';
 
 const ACTIVE_STATUSES = ['pedida', 'preparacion', 'lista', 'pagada', 'despachada'] as const;
 
@@ -26,35 +26,45 @@ function timeAgo(dateStr: string): string {
 
 interface OrdersTabProps {
   tenantId: string;
+  onPayOrder?: (sale: DexieSale) => void;
+  onDispatchOrder?: (sale: DexieSale) => void;
+  onConfirmDelivery?: (saleId: string) => void;
 }
 
-export function OrdersTab({ tenantId }: OrdersTabProps) {
+export function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery }: OrdersTabProps) {
   const [orders, setOrders] = useState<DexieSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
+
+  const reload = useCallback(async () => {
+    const db = getDb();
+    const all = await db.sales
+      .where({ tenantId })
+      .filter((s) => !s.deletedAt && ACTIVE_STATUSES.includes(s.status as typeof ACTIVE_STATUSES[number]))
+      .toArray();
+    all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setOrders(all);
+  }, [tenantId]);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
       try {
-        const db = getDb();
-        const all = await db.sales
-          .where({ tenantId })
-          .filter((s) => !s.deletedAt && ACTIVE_STATUSES.includes(s.status as typeof ACTIVE_STATUSES[number]))
-          .toArray();
-        if (!cancelled) {
-          all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setOrders(all);
-        }
+        await reload();
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [tenantId]);
+  }, [reload]);
+
+  useEffect(() => {
+    const interval = setInterval(reload, 10000);
+    return () => clearInterval(interval);
+  }, [reload]);
 
   const filtered = useMemo(() => {
     if (!deferredSearch.trim()) return orders;
@@ -142,6 +152,48 @@ export function OrdersTab({ tenantId }: OrdersTabProps) {
                     </div>
                   </div>
                 </div>
+
+                {order.status === 'lista' && onPayOrder && (
+                  <div className="mt-2 pt-2 border-t border-black/5">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onPayOrder(order)}
+                      className="min-h-9 text-xs w-full"
+                    >
+                      <DollarSign size={14} />
+                      Cobrar
+                    </Button>
+                  </div>
+                )}
+
+                {order.status === 'pagada' && onDispatchOrder && (
+                  <div className="mt-2 pt-2 border-t border-black/5">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onDispatchOrder(order)}
+                      className="min-h-9 text-xs w-full"
+                    >
+                      <Truck size={14} />
+                      Despachar
+                    </Button>
+                  </div>
+                )}
+
+                {order.status === 'despachada' && onConfirmDelivery && (
+                  <div className="mt-2 pt-2 border-t border-black/5">
+                    <Button
+                      variant="ghost-success"
+                      size="sm"
+                      onClick={() => onConfirmDelivery(order.id)}
+                      className="min-h-9 text-xs w-full"
+                    >
+                      <CheckCircle2 size={14} />
+                      Confirmar Entrega
+                    </Button>
+                  </div>
+                )}
               </div>
             );
           })}

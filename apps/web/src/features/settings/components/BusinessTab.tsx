@@ -144,6 +144,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
           lowStockThreshold: store.lowStockThreshold,
           ticketFooterMessage,
           needsKitchenDefault: store.needsKitchenDefault,
+          defaultDeliveryFee: store.defaultDeliveryFee,
         });
       }
       addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });

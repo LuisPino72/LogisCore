@@ -22,12 +22,15 @@ import { SalesHistory } from './SalesHistory';
 import { TableGrid } from './TableGrid';
 import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
+import { KitchenReadyNotification } from './KitchenReadyNotification';
+import { DeliveryDispatchPanel } from './DeliveryDispatchPanel';
 import { buildReorderUrl } from '../../../lib/reorderHelper';
 
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import { CustomerPickerModal } from '../../customers/components/CustomerPickerModal';
 import type { Product } from '../../../specs/inventory';
 import type { PaymentMethod, ParkedCart } from '../types';
+import type { DexieSale } from '../../../services/dexie/types';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
@@ -38,7 +41,10 @@ import { dashboardService } from '../../dashboard/services/dashboardService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
-import { failure, AppError } from '@logiscore/core';
+import { failure, AppError, SystemEvents, EventBus } from '@logiscore/core';
+import { confirmOrderPayment } from '../services/saleService';
+import { confirmDelivery } from '../services/saleService';
+import { getDb } from '../../../services/dexie/db';
 
 interface PosPageProps {
   tenantId: string | null;
@@ -103,6 +109,11 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
   const [showRegisterSelection, setShowRegisterSelection] = useState(false);
+  const [kitchenReadyNotifs, setKitchenReadyNotifs] = useState<Array<{ saleId: string; customerName: string; orderNumber: string }>>([]);
+  const [showDispatchPanel, setShowDispatchPanel] = useState(false);
+  const [dispatchSale, setDispatchSale] = useState<DexieSale | null>(null);
+  const [dispatchCustomerName, setDispatchCustomerName] = useState('');
+  const [orderPayModal, setOrderPayModal] = useState<{ sale: DexieSale; method: PaymentMethod | null } | null>(null);
 
   // Global Barcode Listener State
   const SCAN_TIMEOUT_MS = 120;
@@ -120,6 +131,100 @@ export function PosPage({ tenantId }: PosPageProps) {
 
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
+
+  const handleOrderPayment = useCallback(async (saleId: string, method: PaymentMethod) => {
+    if (!exchangeRateBs || exchangeRateBs <= 0) {
+      addToast({ type: 'error', message: 'No hay tasa de cambio configurada.', duration: 4000 });
+      return;
+    }
+    setProcessing(true);
+    try {
+      const result = await confirmOrderPayment(saleId, method, exchangeRateBs, activeSessionId ?? undefined);
+      if (result.ok) {
+        const sale = result.data as unknown as DexieSale;
+        if (sale.orderType === 'delivery') {
+          const db = getDb();
+          const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
+          setDispatchSale(sale);
+          setDispatchCustomerName(customer?.name || 'Cliente');
+          setShowDispatchPanel(true);
+        } else {
+          addToast({ type: 'success', message: 'Pedido pagado', duration: 3000 });
+        }
+      } else {
+        addToast({ type: 'error', message: result.error?.message || 'Error al cobrar', duration: 5000 });
+      }
+    } catch (err) {
+      logger.error('POS', 'Error en handleOrderPayment', err);
+      addToast({ type: 'error', message: 'Error al procesar el pago.', duration: 5000 });
+    } finally {
+      setProcessing(false);
+      setOrderPayModal(null);
+    }
+  }, [exchangeRateBs, activeSessionId, addToast]);
+
+  const handlePayOrder = useCallback((sale: DexieSale) => {
+    setOrderPayModal({ sale, method: null });
+  }, []);
+
+  const handleConfirmPayOrder = useCallback(() => {
+    if (!orderPayModal?.method || !orderPayModal?.sale) return;
+    handleOrderPayment(orderPayModal.sale.id, orderPayModal.method);
+  }, [orderPayModal, handleOrderPayment]);
+
+  const handleDispatchOrder = useCallback((sale: DexieSale) => {
+    setDispatchSale(sale);
+    setDispatchCustomerName('Cliente');
+    setShowDispatchPanel(true);
+  }, []);
+
+  const handleConfirmDeliveryOrder = useCallback(async (saleId: string) => {
+    const result = await confirmDelivery(saleId);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Entrega confirmada', duration: 3000 });
+    } else {
+      addToast({ type: 'error', message: result.error?.message || 'Error al confirmar entrega', duration: 4000 });
+    }
+  }, [addToast]);
+
+  useEffect(() => {
+    const sub = EventBus.on(
+      SystemEvents.ORDER_STATUS_CHANGED,
+      (payload: unknown) => {
+        const data = payload as { saleId?: string; newStatus?: string };
+        if (data?.newStatus === 'lista' && data?.saleId) {
+          const db = getDb();
+          db.sales.get(data.saleId).then((sale) => {
+            if (!sale) return;
+            db.customers.get(sale.customerId ?? '').then((customer) => {
+              setKitchenReadyNotifs((prev) => {
+                const next = [...prev, {
+                  saleId: data.saleId!,
+                  customerName: customer?.name || 'Cliente',
+                  orderNumber: sale.orderNumber ?? data.saleId!.slice(0, 8),
+                }];
+                return next.slice(-3);
+              });
+              if (activeTab !== 'orders') {
+                try {
+                  const ctx = new AudioContext();
+                  const osc = ctx.createOscillator();
+                  const gain = ctx.createGain();
+                  osc.connect(gain);
+                  gain.connect(ctx.destination);
+                  osc.frequency.value = 400;
+                  gain.gain.value = 0.1;
+                  osc.start();
+                  osc.stop(ctx.currentTime + 0.4);
+                } catch { /* ignore */ }
+              }
+            });
+          });
+        }
+      },
+    );
+    return () => { EventBus.off(sub); };
+  }, [activeTab]);
 
   // Confirmar si el usuario intenta recargar con productos en el carrito
   useEffect(() => {
@@ -734,7 +839,32 @@ export function PosPage({ tenantId }: PosPageProps) {
           </div>
         ) : activeTab === 'orders' ? (
           <div className="flex-1 overflow-hidden animate-tab-fade">
-            {tenantId && <OrdersTab tenantId={tenantId} />}
+            {tenantId && (
+              <div className="flex flex-col h-full">
+                {kitchenReadyNotifs.length > 0 && (
+                  <div className="flex flex-col gap-2 p-3 pb-0">
+                    {kitchenReadyNotifs.map((n) => (
+                      <KitchenReadyNotification
+                        key={n.saleId}
+                        saleId={n.saleId}
+                        customerName={n.customerName}
+                        orderNumber={n.orderNumber}
+                        onDismiss={() => setKitchenReadyNotifs((prev) => prev.filter((x) => x.saleId !== n.saleId))}
+                        onViewOrder={() => setKitchenReadyNotifs((prev) => prev.filter((x) => x.saleId !== n.saleId))}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="flex-1 overflow-auto">
+                  <OrdersTab
+                    tenantId={tenantId}
+                    onPayOrder={handlePayOrder}
+                    onDispatchOrder={handleDispatchOrder}
+                    onConfirmDelivery={handleConfirmDeliveryOrder}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex-1 overflow-hidden animate-tab-fade">
@@ -1052,6 +1182,66 @@ export function PosPage({ tenantId }: PosPageProps) {
         ]}
         onComplete={() => {}}
       />
+
+      <Modal
+        isOpen={!!orderPayModal}
+        onClose={() => setOrderPayModal(null)}
+        title="Cobrar Pedido"
+        size="sm"
+        footer={
+          <div className="flex gap-2 w-full">
+            <Button variant="ghost" className="flex-1" onClick={() => setOrderPayModal(null)}>Cancelar</Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              onClick={handleConfirmPayOrder}
+              disabled={!orderPayModal?.method}
+              loading={processing}
+            >
+              Confirmar cobro
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3 pt-2 animate-slide-down">
+          {orderPayModal?.sale && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <ShoppingCart size={20} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-gray-900">{formatUsd(orderPayModal.sale.totalUsd)}</p>
+                <p className="text-xs text-text-secondary">{orderPayModal.sale.orderNumber}</p>
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            {(['efectivo_bs', 'efectivo_usd', 'pago_movil', 'transferencia', 'zelle', 'credito'] as PaymentMethod[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setOrderPayModal((prev) => prev ? { ...prev, method: m } : null)}
+                className={`p-2.5 rounded-xl border text-xs font-medium transition-all min-h-11 ${
+                  orderPayModal?.method === m
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-white text-gray-700 hover:border-primary/30'
+                }`}
+              >
+                {METADATA_PAGOS[m]?.label ?? m}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      {dispatchSale && (
+        <DeliveryDispatchPanel
+          isOpen={showDispatchPanel}
+          onClose={() => { setShowDispatchPanel(false); setDispatchSale(null); }}
+          sale={dispatchSale}
+          customerName={dispatchCustomerName}
+        />
+      )}
 
       {sharing && (
         <div className="fixed inset-0 z-99999 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">

@@ -1631,3 +1631,275 @@ export async function reassignDelivery(saleId: string): Promise<Result<void, App
     return failure(new AppError('ORDER_REASSIGN_FAILED', 'Error al re-asignar el delivery.'));
   }
 }
+
+export async function confirmOrderPayment(
+  saleId: string,
+  paymentMethod: PaymentMethod,
+  exchangeRate: number,
+  cashRegisterId?: string,
+): Promise<Result<Sale, AppError>> {
+  const db = getDb();
+
+  const sale = await db.sales.get(saleId);
+  if (!sale || sale.deletedAt) {
+    return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  }
+  if (sale.status !== 'lista' && sale.status !== 'pedida') {
+    return failure(new AppError(PosErrors.ORDER_INVALID_STATUS_TRANSITION,
+      `La orden debe estar "lista" o "pedida" para cobrar (actual: ${sale.status}).`));
+  }
+
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'pos', 'create')) {
+    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+  }
+
+  if (!exchangeRate || exchangeRate <= 0) {
+    return failure(new AppError(PosErrors.SALE_EXCHANGE_RATE_NOT_FOUND, 'No hay tasa de cambio configurada.'));
+  }
+
+  const cashReg = cashRegisterId
+    ? await db.cashRegisters.get(cashRegisterId)
+    : await db.cashRegisters
+      .where({ tenantId: sale.tenantId })
+      .filter((r) => !r.deletedAt && r.isOpen)
+      .first();
+
+  if (!cashReg) {
+    return failure(new AppError('NO_ACTIVE_SESSION', 'Debe abrir una caja antes de cobrar.'));
+  }
+
+  const { ivaRate, igtfRate, igtfEnabled } = useSettingsStore.getState();
+
+  const saleItems = await db.saleItems.where({ saleId }).filter((i) => !i.deletedAt).toArray();
+  if (saleItems.length === 0) {
+    return failure(new AppError(PosErrors.SALE_NO_ITEMS, 'La orden no tiene items.'));
+  }
+
+  const normalItems: CartItem[] = saleItems
+    .filter((si) => {
+      const recipe = db.recipes
+        .where({ productId: si.productId, mode: 'assembly' as const })
+        .filter(r => !r.deletedAt && r.isActive);
+      return !recipe;
+    })
+    .map((si) => ({
+      productId: si.productId,
+      name: si.productName,
+      sku: si.productSku || '',
+      quantity: si.quantity,
+      unitPriceUsd: si.unitPriceUsd,
+      totalPriceUsd: si.totalPriceUsd,
+      isWeighted: si.isWeighted,
+      isTaxable: true,
+      unit: si.unit,
+      stock: 0,
+      presentationId: si.presentationId,
+      presentationName: si.presentationName,
+      unitMultiplier: si.unitMultiplier,
+    }));
+
+  const assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string; unitMultiplier?: number }> = [];
+
+  for (const si of saleItems) {
+    const recipe = await db.recipes
+      .where({ productId: si.productId, mode: 'assembly' as const })
+      .filter(r => !r.deletedAt && r.isActive)
+      .first();
+    if (recipe) {
+      assemblyItems.push({
+        productId: si.productId,
+        quantity: si.quantity,
+        productName: si.productName,
+        presentationId: si.presentationId,
+        presentationName: si.presentationName,
+        unitMultiplier: si.unitMultiplier,
+      });
+    }
+  }
+
+  const totals = calculateSaleTotals(
+    saleItems.map(i => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: true })),
+    exchangeRate,
+    paymentMethod,
+    sale.discountType && sale.discountValue != null ? { type: sale.discountType, value: sale.discountValue } : null,
+    { ivaRate, igtfRate: igtfEnabled ? igtfRate : 0 },
+  );
+  const { subtotalBs, igtfBs, ivaBs, discountBs, subtotalUsd, ivaUsd, totalUsd, discountUsd } = totals;
+  const igtfUsd = exchangeRate > 0 ? preciseRound(igtfBs / exchangeRate, 4) : 0;
+  const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
+
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const txTables: any[] = [
+      db.sales, db.saleItems, db.inventoryLots, db.inventoryMovements,
+      db.products, db.cashRegisters, db.syncQueue, db.outbox,
+    ];
+
+    await db.transaction('rw', txTables, async (tx) => {
+      const consumeResult = await consumeSaleItems(
+        tx, normalItems, assemblyItems, saleId, sale.tenantId, sale.userId, false, saleItems as unknown as CartItem[],
+      );
+      if (!consumeResult.ok) throw consumeResult.error;
+
+      await tx.sales.update(saleId, {
+        status: 'pagada',
+        paidAt: now,
+        paymentMethod,
+        exchangeRate,
+        subtotalBs,
+        igtfBs,
+        ivaBs,
+        totalBs,
+        subtotalUsd,
+        ivaUsd,
+        igtfUsd,
+        totalUsd,
+        discountBs: discountBs > 0 ? discountBs : undefined,
+        discountUsd: discountUsd > 0 ? discountUsd : undefined,
+      });
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, status: 'pagada', paid_at: now,
+        payment_method: paymentMethod, exchange_rate: exchangeRate,
+        subtotal_bs: subtotalBs, igtf_bs: igtfBs, iva_bs: ivaBs, total_bs: totalBs,
+        subtotal_usd: subtotalUsd, iva_usd: ivaUsd, igtf_usd: igtfUsd, total_usd: totalUsd,
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      const txCashReg = await db.cashRegisters.get(cashReg.id);
+      if (txCashReg && txCashReg.isOpen) {
+        const newCount = (txCashReg.totalSalesCount ?? 0) + 1;
+        const newSalesBs = preciseRound((txCashReg.totalSalesBs ?? 0) + totalBs, 2);
+        const newIgtfBs = preciseRound((txCashReg.totalIgtfBs ?? 0) + igtfBs, 2);
+
+        await db.cashRegisters.update(cashReg.id, {
+          totalSalesCount: newCount,
+          totalSalesBs: newSalesBs,
+          totalIgtfBs: newIgtfBs,
+          updatedAt: now,
+        });
+
+        await syncQueue.enqueue('cash_registers', 'UPDATE', cashReg.id, toSnake({
+          id: cashReg.id, tenant_id: tenantUuid,
+          total_sales_count: newCount, total_sales_bs: newSalesBs, total_igtf_bs: newIgtfBs,
+          is_open: true, updated_at: now,
+        } as unknown as Record<string, unknown>), sale.tenantId);
+      }
+
+      await outboxService.enqueue(SystemEvents.SALE_COMPLETED, MODULE_NAME, {
+        saleId, tenantSlug: sale.tenantId, totalBs, totalUsd, paymentMethod,
+        itemsCount: saleItems.length,
+      }, tx);
+
+      await outboxService.enqueue(SystemEvents.ORDER_STATUS_CHANGED, MODULE_NAME, {
+        saleId, oldStatus: sale.status, newStatus: 'pagada',
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.SALE_COMPLETED,
+      module: MODULE_NAME,
+      payload: { saleId, tenantSlug: sale.tenantId, totalBs, totalUsd, paymentMethod },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (confirmOrderPayment):', err));
+
+    const updatedSale = await db.sales.get(saleId);
+    return success(updatedSale as unknown as Sale);
+  } catch (err) {
+    if (err instanceof AppError) return failure(err);
+    logger.error(MODULE_NAME, 'Error en confirmOrderPayment:', err);
+    return failure(new AppError('ORDER_PAYMENT_FAILED', 'Error al procesar el pago de la orden.'));
+  }
+}
+
+export async function dispatchDelivery(
+  saleId: string,
+  data: { deliveryPersonName: string; deliveryFee: number },
+): Promise<Result<void, AppError>> {
+  const db = getDb();
+
+  const sale = await db.sales.get(saleId);
+  if (!sale || sale.deletedAt) {
+    return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  }
+  if (sale.status !== 'pagada') {
+    return failure(new AppError(PosErrors.ORDER_INVALID_STATUS_TRANSITION,
+      `La orden debe estar "pagada" para despachar (actual: ${sale.status}).`));
+  }
+  if (!data.deliveryPersonName || !data.deliveryPersonName.trim()) {
+    return failure(new AppError('DELIVERY_PERSON_REQUIRED', 'Debes seleccionar un motorizado.'));
+  }
+  if (!data.deliveryFee || data.deliveryFee <= 0) {
+    return failure(new AppError('DELIVERY_FEE_REQUIRED', 'La tarifa de delivery debe ser mayor a 0.'));
+  }
+
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const txTables: any[] = [db.sales, db.expenses, db.syncQueue, db.outbox];
+
+    await db.transaction('rw', txTables, async (tx) => {
+      await tx.sales.update(saleId, {
+        status: 'despachada',
+        dispatchedAt: now,
+        deliveryPersonName: data.deliveryPersonName.trim(),
+        deliveryFee: data.deliveryFee,
+      });
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, status: 'despachada', dispatched_at: now,
+        delivery_person_name: data.deliveryPersonName.trim(), delivery_fee: data.deliveryFee,
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      const expenseId = generateId();
+      await tx.expenses.add({
+        id: expenseId,
+        tenantId: sale.tenantId,
+        createdByUserId: sale.userId,
+        category: 'DELIVERY',
+        amountUsd: data.deliveryFee,
+        exchangeRate: 0,
+        amountBs: 0,
+        description: `Delivery - ${data.deliveryPersonName.trim()}`,
+        date: now,
+        status: 'pending',
+        saleId,
+        isRecurring: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await syncQueue.enqueue('expenses', 'CREATE', expenseId, toSnake({
+        id: expenseId, tenant_id: tenantUuid, created_by_user_id: sale.userId,
+        category: 'DELIVERY', amount_usd: data.deliveryFee, exchange_rate: 0,
+        amount_bs: 0, description: `Delivery - ${data.deliveryPersonName.trim()}`,
+        date: now, status: 'pending', sale_id: saleId,
+        is_recurring: false, created_at: now, updated_at: now,
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      await outboxService.enqueue(SystemEvents.ORDER_STATUS_CHANGED, MODULE_NAME, {
+        saleId, oldStatus: 'pagada', newStatus: 'despachada',
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_STATUS_CHANGED,
+      module: MODULE_NAME,
+      payload: { saleId, oldStatus: 'pagada', newStatus: 'despachada', deliveryPersonName: data.deliveryPersonName },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (dispatchDelivery):', err));
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en dispatchDelivery:', err);
+    return failure(new AppError('DELIVERY_DISPATCH_FAILED', 'Error al despachar el delivery.'));
+  }
+}

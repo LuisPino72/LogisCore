@@ -26,6 +26,7 @@ export const OperationSettingsSchema = z.object({
   ticketFooterMessage: z.string()
     .max(100, 'Mensaje demasiado largo (máx 100 caracteres)'),
   needsKitchenDefault: z.boolean().optional().default(false),
+  defaultDeliveryFee: z.number().min(0).optional().default(0),
 });
 
 export const BusinessInfoSchema = z.object({

@@ -34,6 +34,7 @@ function toOperationSettings(row: DexieTenantSettings): OperationSettings {
     lowStockThreshold: row.lowStockThreshold,
     ticketFooterMessage: row.ticketFooterMessage,
     needsKitchenDefault: row.needsKitchenDefault ?? false,
+    defaultDeliveryFee: row.defaultDeliveryFee ?? 0,
   };
 }
 
@@ -59,6 +60,7 @@ async function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, opera
     lowStockThreshold: operations?.lowStockThreshold ?? existing?.lowStockThreshold ?? store.lowStockThreshold,
     ticketFooterMessage: operations?.ticketFooterMessage ?? existing?.ticketFooterMessage ?? store.ticketFooterMessage,
     needsKitchenDefault: operations?.needsKitchenDefault ?? existing?.needsKitchenDefault ?? store.needsKitchenDefault,
+    defaultDeliveryFee: operations?.defaultDeliveryFee ?? existing?.defaultDeliveryFee ?? store.defaultDeliveryFee,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -115,6 +117,7 @@ export const settingsService = {
             lowStockThreshold: existingOps?.lowStockThreshold ?? 5,
             ticketFooterMessage: existingOps?.ticketFooterMessage ?? '¡Gracias por su compra!',
             needsKitchenDefault: existingOps?.needsKitchenDefault ?? false,
+            defaultDeliveryFee: existingOps?.defaultDeliveryFee ?? 0,
           };
           await cacheSettings({
             tenantId,
@@ -215,7 +218,7 @@ export const settingsService = {
       try {
         const { data, error } = await supabase
           .from('tenant_settings')
-          .select('max_discount_pct, default_min_stock, default_credit_limit, mandatory_customer_id, low_stock_threshold, ticket_footer_message, needs_kitchen_default')
+          .select('max_discount_pct, default_min_stock, default_credit_limit, mandatory_customer_id, low_stock_threshold, ticket_footer_message, needs_kitchen_default, default_delivery_fee')
           .eq('tenant_id', tenantId)
           .single();
 
@@ -228,6 +231,7 @@ export const settingsService = {
             lowStockThreshold: data.low_stock_threshold as number,
             ticketFooterMessage: data.ticket_footer_message as string,
             needsKitchenDefault: (data.needs_kitchen_default as boolean) ?? false,
+            defaultDeliveryFee: (data.default_delivery_fee as number) ?? 0,
           };
           // Preserve existing fiscal settings in Dexie, only overwrite operation fields
           let existingFiscal: DexieTenantSettings | undefined;
@@ -267,6 +271,7 @@ export const settingsService = {
       lowStockThreshold: 5,
       ticketFooterMessage: '¡Gracias por su compra!',
       needsKitchenDefault: false,
+      defaultDeliveryFee: 0,
     });
   },
 
