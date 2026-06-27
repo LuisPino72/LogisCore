@@ -25,6 +25,7 @@ export const OperationSettingsSchema = z.object({
     .min(0, 'Umbral de stock bajo no puede ser negativo'),
   ticketFooterMessage: z.string()
     .max(100, 'Mensaje demasiado largo (máx 100 caracteres)'),
+  needsKitchenDefault: z.boolean().optional().default(false),
 });
 
 export const BusinessInfoSchema = z.object({

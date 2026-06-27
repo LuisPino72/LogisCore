@@ -21,7 +21,10 @@ export async function getParkedCarts(tenantId: string): Promise<Result<ParkedCar
           tenantId: r.tenantId,
           name: r.name,
           cart: JSON.parse(r.cartJson) as CartItem[],
+          customerId: r.customerId,
           createdAt: r.createdAt,
+          orderType: r.orderType,
+          needsKitchen: r.needsKitchen,
         });
       } catch (err) {
         logger.warn(MODULE_NAME, `parkedCart ${r.id} tiene cartJson corrupto, se omite:`, err);
@@ -34,7 +37,13 @@ export async function getParkedCarts(tenantId: string): Promise<Result<ParkedCar
   }
 }
 
-export async function parkCart(tenantId: string, name: string, cart: CartItem[], customerId?: string): Promise<Result<string, AppError>> {
+export async function parkCart(
+  tenantId: string,
+  name: string,
+  cart: CartItem[],
+  customerId?: string,
+  deliveryInfo?: { orderType?: 'dine-in' | 'delivery'; needsKitchen?: boolean },
+): Promise<Result<string, AppError>> {
   try {
     const db = getDb();
     const existingCount = await db.parkedCarts.where({ tenantId }).count();
@@ -48,6 +57,8 @@ export async function parkCart(tenantId: string, name: string, cart: CartItem[],
       cartJson: JSON.stringify(cart),
       customerId,
       createdAt: new Date().toISOString(),
+      orderType: deliveryInfo?.orderType,
+      needsKitchen: deliveryInfo?.needsKitchen,
     });
     return success(id);
   } catch (err) {

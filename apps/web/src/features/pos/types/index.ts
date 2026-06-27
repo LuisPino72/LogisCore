@@ -21,6 +21,8 @@ export interface ParkedCart {
   cart: CartItem[];
   customerId?: string;
   createdAt: string;
+  orderType?: 'dine-in' | 'delivery';
+  needsKitchen?: boolean;
 }
 
 export interface PosState {

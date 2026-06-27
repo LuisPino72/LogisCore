@@ -11,6 +11,7 @@ export interface SettingsStore {
   mandatoryCustomerId: boolean;
   lowStockThreshold: number;
   ticketFooterMessage: string;
+  needsKitchenDefault: boolean;
   loading: boolean;
   loaded: boolean;
   setFiscalSettings: (data: FiscalSettings) => void;
@@ -32,6 +33,7 @@ const initialState = {
   mandatoryCustomerId: false,
   lowStockThreshold: 5,
   ticketFooterMessage: '¡Gracias por su compra!',
+  needsKitchenDefault: false,
   loading: false,
   loaded: false,
   lastUpdatedAt: 0,
@@ -56,6 +58,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       mandatoryCustomerId: data.mandatoryCustomerId,
       lowStockThreshold: data.lowStockThreshold,
       ticketFooterMessage: data.ticketFooterMessage,
+      needsKitchenDefault: data.needsKitchenDefault ?? false,
     });
   },
 

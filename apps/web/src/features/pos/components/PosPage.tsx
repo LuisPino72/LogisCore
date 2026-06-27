@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
-import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, User } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, User, Truck } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosNavigation } from '../hooks/usePosNavigation';
 import { usePosModals } from '../hooks/usePosModals';
@@ -16,6 +16,8 @@ import { CashRegisterModal } from './CashRegisterModal';
 import { RegisterSelectionModal } from './RegisterSelectionModal';
 import { CashStatusBadge } from './CashStatusBadge';
 import { ParkCartModal } from './ParkCartModal';
+import { DeliveryPromptModal } from './DeliveryPromptModal';
+import { OrdersTab } from './OrdersTab';
 import { SalesHistory } from './SalesHistory';
 import { TableGrid } from './TableGrid';
 import { StockVerificationModal } from './StockVerificationModal';
@@ -65,10 +67,15 @@ export function PosPage({ tenantId }: PosPageProps) {
   const setSelectedCategory = usePosStore((s) => s.setSelectedCategory);
   const loadCategories = usePosStore((s) => s.loadCategories);
   const loadLowStockAlert = usePosStore((s) => s.loadLowStockAlert);
+  const showDeliveryPrompt = usePosStore((s) => s.showDeliveryPrompt);
+  const setShowDeliveryPrompt = usePosStore((s) => s.setShowDeliveryPrompt);
+  const parkAsDelivery = usePosStore((s) => s.parkAsDelivery);
+
+  const needsKitchenDefault = useSettingsStore((s) => s.needsKitchenDefault);
 
   const { addToast } = useToastStore();
 
-  const { activeTab, mobileCartOpen, switchToSell, switchToHistory, toggleMobileCart, closeMobileCart } = usePosNavigation();
+  const { activeTab, mobileCartOpen, switchToSell, switchToHistory, switchToOrders, toggleMobileCart, closeMobileCart } = usePosNavigation();
   const {
     showWeightModal, weightingProduct, weightingQty, setWeightingQty,
     showCashModal, cashMode,
@@ -481,8 +488,12 @@ export function PosPage({ tenantId }: PosPageProps) {
   );
 
   const handlePark = useCallback(() => {
-    openParkModal();
-  }, [openParkModal]);
+    if (selectedCustomer) {
+      setShowDeliveryPrompt(true);
+    } else {
+      openParkModal();
+    }
+  }, [selectedCustomer, openParkModal, setShowDeliveryPrompt]);
 
   const handleParkConfirm = useCallback(
     async (name: string) => {
@@ -512,6 +523,31 @@ export function PosPage({ tenantId }: PosPageProps) {
     },
     [loadParkedCart, setParkTableNumber],
   );
+
+  const handleDeliveryConfirm = useCallback(
+    async (needsKitchen: boolean) => {
+      if (!tenantId) return;
+      if (cart.length === 0) {
+        addToast({ type: 'warning', message: 'Agrega productos al carrito antes de poner en cola.', duration: 4000 });
+        return;
+      }
+      const deliveryName = `Delivery #${parkedCarts.length + 1}`;
+      setProcessing(true);
+      const ok = await parkAsDelivery(tenantId, deliveryName, needsKitchen);
+      setProcessing(false);
+      if (ok) {
+        setPaymentMethod(null);
+        closeMobileCart();
+        setParkTableNumber(null);
+      }
+    },
+    [tenantId, cart.length, parkAsDelivery, parkedCarts.length, closeMobileCart, addToast],
+  );
+
+  const handleJustPark = useCallback(() => {
+    setShowDeliveryPrompt(false);
+    openParkModal();
+  }, [setShowDeliveryPrompt, openParkModal]);
 
   const handleParkTable = useCallback((tableNumber: number) => {
     if (parkTableNumber === tableNumber) return;
@@ -600,6 +636,20 @@ export function PosPage({ tenantId }: PosPageProps) {
                 Historial
               </button>
             </Tooltip>
+            <Tooltip content="Órdenes activas y delivery" position="bottom">
+              <button
+                type="button"
+                onClick={() => switchToOrders()}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all active:scale-[0.98] ${
+                  activeTab === 'orders'
+                    ? 'bg-white text-primary shadow-sm'
+                    : 'text-text-secondary hover:text-gray-700'
+                }`}
+              >
+                <Truck size={16} />
+                Pedidos
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -682,6 +732,10 @@ export function PosPage({ tenantId }: PosPageProps) {
               />
             </div>
           </div>
+        ) : activeTab === 'orders' ? (
+          <div className="flex-1 overflow-hidden animate-tab-fade">
+            {tenantId && <OrdersTab tenantId={tenantId} />}
+          </div>
         ) : (
           <div className="flex-1 overflow-hidden animate-tab-fade">
             <SalesHistory
@@ -726,6 +780,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         activeId={activeTab}
         items={[
           { id: 'sell', label: 'Vender', icon: <Package size={20} />, onClick: () => switchToSell() },
+          { id: 'orders', label: 'Pedidos', icon: <Truck size={20} />, onClick: () => switchToOrders() },
           { id: 'history', label: 'Historial', icon: <HistoryIcon size={20} />, onClick: () => { switchToHistory(); if (tenantId) fetchSalesHistory(tenantId); } },
         ]}
       />
@@ -815,6 +870,15 @@ export function PosPage({ tenantId }: PosPageProps) {
         loading={processing}
         defaultTableNumber={parkTableNumber ?? undefined}
         existingNames={parkedCarts.map((c) => c.name)}
+      />
+
+      <DeliveryPromptModal
+        isOpen={showDeliveryPrompt}
+        onDelivery={handleDeliveryConfirm}
+        onJustPark={handleJustPark}
+        onClose={() => setShowDeliveryPrompt(false)}
+        loading={processing}
+        needsKitchenDefault={needsKitchenDefault}
       />
 
       <Modal

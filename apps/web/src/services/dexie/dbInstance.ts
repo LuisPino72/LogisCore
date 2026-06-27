@@ -141,6 +141,9 @@ export class LogisCoreDB extends Dexie {
     this.version(32).stores({
       deliveryPersons: 'id, tenantId, phone, [tenantId+deletedAt]',
     });
+    this.version(33).stores({
+      parkedCarts: 'id, tenantId, [tenantId+createdAt], orderType',
+    });
 
   }
 }

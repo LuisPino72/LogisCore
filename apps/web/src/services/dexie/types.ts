@@ -225,6 +225,8 @@ export interface DexieParkedCart {
   cartJson: string;
   customerId?: string;
   createdAt: string;
+  orderType?: 'dine-in' | 'delivery';
+  needsKitchen?: boolean;
 }
 
 export interface DexieProductFavorite {

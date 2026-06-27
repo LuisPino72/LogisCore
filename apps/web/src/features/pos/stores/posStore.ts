@@ -20,6 +20,10 @@ interface PosStore extends PosCartSlice, PosRegisterSlice, PosCatalogSlice, PosC
   voidSale: (saleId: string, tenantId: string, userId: string) => Promise<Result<void, AppError>>;
   getTodaySoldProducts: (tenantId: string, maxProducts?: number, referenceDate?: Date) => Promise<Result<Array<{ productId: string; productName: string; productSku: string; quantity: number }>, AppError>>;
   reset: () => void;
+  showDeliveryPrompt: boolean;
+  setShowDeliveryPrompt: (v: boolean) => void;
+  parkAsDelivery: (tenantId: string, name: string, needsKitchen: boolean) => Promise<boolean>;
+  parkNormal: (tenantId: string, name: string) => Promise<boolean>;
 }
 
 export const usePosStore = create<PosStore>()(
@@ -30,6 +34,33 @@ export const usePosStore = create<PosStore>()(
       ...createCatalogSlice(set, get),
       ...createCustomerSlice(set, get),
       ...createHistorySlice(set, get),
+
+      showDeliveryPrompt: false,
+      setShowDeliveryPrompt: (v) => set({ showDeliveryPrompt: v }),
+
+      parkAsDelivery: async (tenantId, name, needsKitchen) => {
+        const { cart, parkedCarts } = get();
+        if (cart.length === 0) {
+          set({ error: 'No hay productos en el carrito.' });
+          return false;
+        }
+        if (parkedCarts.length >= 20) {
+          set({ error: 'Máximo 20 ventas en cola. Completa o elimina una.' });
+          return false;
+        }
+        const result = await posService.parkCart(tenantId, name, cart, get().selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen });
+        if (result.ok) {
+          set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false });
+          get().fetchParkedCarts(tenantId);
+          return true;
+        }
+        set({ loading: false, error: result.error.message });
+        return false;
+      },
+
+      parkNormal: async (tenantId, name) => {
+        return get().parkCart(tenantId, name);
+      },
 
       completeSale: async (tenantId, paymentMethod, userId) => {
         const { cart, selectedCustomerId, isCreditSale } = get();

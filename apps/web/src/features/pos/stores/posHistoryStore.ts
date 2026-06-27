@@ -16,7 +16,7 @@ export interface PosHistorySlice {
   fetchSalesHistory: (tenantId: string, offset?: number, limit?: number, startDate?: string, endDate?: string) => Promise<void>;
   fetchSaleItems: (tenantId: string, saleId: string) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
-  parkCart: (tenantId: string, name: string) => Promise<boolean>;
+  parkCart: (tenantId: string, name: string, deliveryInfo?: { orderType?: 'dine-in' | 'delivery'; needsKitchen?: boolean }) => Promise<boolean>;
   loadParkedCart: (cart: ParkedCart) => void;
   deleteParkedCart: (tenantId: string, id: string) => Promise<void>;
   loadLowStockAlert: (tenantId: string) => Promise<void>;
@@ -69,7 +69,7 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
     }
   },
 
-  parkCart: async (tenantId, name) => {
+  parkCart: async (tenantId, name, deliveryInfo?) => {
     const { cart, parkedCarts } = get();
     if (cart.length === 0) {
       set({ error: 'No hay productos en el carrito.' });
@@ -79,7 +79,7 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
       set({ error: `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.` });
       return false;
     }
-    const result = await posService.parkCart(tenantId, name, cart);
+    const result = await posService.parkCart(tenantId, name, cart, undefined, deliveryInfo);
     if (result.ok) {
       set({ cart: [], activeParkedCartId: null, error: null });
       get().fetchParkedCarts(tenantId);
