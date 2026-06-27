@@ -99,7 +99,7 @@ export function LoginPage() {
                 <span className="text-2xl sm:text-3xl font-bold text-primary select-none">S</span>
               ) : (
                 <img
-                  src="/Sasa con fondo.png"
+                  src="/Sasa.png"
                   alt="Sasa"
                   className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
                   onError={() => setLogoError(true)}
