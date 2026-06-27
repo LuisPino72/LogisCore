@@ -2,28 +2,7 @@ import { useState, useCallback } from 'react';
 import { receiptService } from '../services/receiptService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { logger } from '../../../lib/logger';
-import type { PaymentMethod } from '../types';
-
-interface CompletedSaleData {
-  saleId: string;
-  subtotalBs: number;
-  totalUsd: number;
-  totalBs: number;
-  paymentMethod: PaymentMethod;
-  items: Array<{ name: string; quantity: number; unitPriceUsd: number; totalPriceUsd: number; presentationName?: string; unit?: string }>;
-  exchangeRate: number;
-  customerId?: string;
-  customerName?: string;
-  customerPhone?: string;
-}
-
-interface TenantInfo {
-  name: string;
-  rif: string;
-  direccion?: string;
-  telefono?: string;
-  logoUrl?: string;
-}
+import type { CompletedSaleData, TenantInfo } from '../types';
 
 export function useWhatsAppShare() {
   const [sharing, setSharing] = useState(false);

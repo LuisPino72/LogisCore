@@ -2,20 +2,7 @@ import { CheckCircle2, FileText, MessageCircle } from 'lucide-react';
 import { Modal, Button, Badge } from '../../../common/components';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { METADATA_PAGOS } from '../../../specs/pos';
-import type { PaymentMethod } from '../types';
-
-interface CompletedSaleData {
-  saleId: string;
-  subtotalBs: number;
-  totalUsd: number;
-  totalBs: number;
-  paymentMethod: PaymentMethod;
-  items: Array<{ name: string; quantity: number; unitPriceUsd: number; totalPriceUsd: number; presentationName?: string; unit?: string }>;
-  exchangeRate: number;
-  customerId?: string;
-  customerName?: string;
-  customerPhone?: string;
-}
+import type { CompletedSaleData } from '../types';
 
 interface CompletedSaleModalProps {
   completedSale: CompletedSaleData | null;

@@ -1,12 +1,13 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { logger } from '../../../lib/logger';
+import type { Product } from '../../../specs/inventory';
 
 interface UseBarcodeScanOptions {
   tenantId: string | null;
-  onProductFound: (product: any) => Promise<void>;
-  onWeightedProduct: (product: any) => void;
-  onPresentationNeeded: (product: any) => void;
+  onProductFound: (product: Product) => Promise<void>;
+  onWeightedProduct: (product: Product) => void;
+  onPresentationNeeded: (product: Product) => void;
   onError: (message: string) => void;
 }
 
@@ -40,8 +41,7 @@ export function useBarcodeScan({ tenantId, onProductFound, onWeightedProduct, on
 
       const barcodeResult = await inventoryService.getPresentationByBarcode(tenantId, cleanCode);
       if (barcodeResult?.id) {
-        navigator.vibrate?.(50);
-        await onProductFound(barcodeResult);
+        onError(`Presentación "${barcodeResult.name}" no tiene un producto asociado por SKU`);
         return;
       }
 

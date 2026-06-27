@@ -1,5 +1,4 @@
-import type { Product } from '../../../specs/inventory';
-import type { Presentation } from '../../../specs/inventory';
+import type { Product, Presentation } from '../../../specs/inventory';
 import type { Customer } from '../../../specs/customers';
 import type { CartItem as SpecCartItem, Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../../../specs/pos';
 
@@ -24,6 +23,27 @@ export interface ParkedCart {
   createdAt: string;
   orderType?: 'dine-in' | 'delivery';
   needsKitchen?: boolean;
+}
+
+export interface CompletedSaleData {
+  saleId: string;
+  subtotalBs: number;
+  totalUsd: number;
+  totalBs: number;
+  paymentMethod: PaymentMethod;
+  items: Array<{ name: string; quantity: number; unitPriceUsd: number; totalPriceUsd: number; presentationName?: string; unit?: string }>;
+  exchangeRate: number;
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
+}
+
+export interface TenantInfo {
+  name: string;
+  rif: string;
+  direccion?: string;
+  telefono?: string;
+  logoUrl?: string;
 }
 
 export interface PosState {

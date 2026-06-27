@@ -37,7 +37,7 @@ import { buildReorderUrl } from '../../../lib/reorderHelper';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import { CustomerPickerModal } from '../../customers/components/CustomerPickerModal';
 import type { Product } from '../../../specs/inventory';
-import type { PaymentMethod, ParkedCart } from '../types';
+import type { PaymentMethod, ParkedCart, TenantInfo } from '../types';
 import type { DexieSale } from '../../../services/dexie/types';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
@@ -112,7 +112,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [parkTableNumber, setParkTableNumber] = useState<number | null>(null);
   const { sharing, handleWhatsAppShare } = useWhatsAppShare();
   const [showFullAlert, setShowFullAlert] = useState(false);
-  const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [showRegisterSelection, setShowRegisterSelection] = useState(false);
   const { kitchenReadyNotifs, dismissNotification } = useKitchenNotifications({ tenantId });
   const [showDispatchPanel, setShowDispatchPanel] = useState(false);
