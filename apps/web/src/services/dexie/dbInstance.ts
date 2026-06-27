@@ -10,7 +10,7 @@ import type {
   DexieSupplier, DexieCustomer, DexiePurchaseOrder, DexiePurchaseOrderItem,
   DexieNotification, DexieExpense, DexieRecipe, DexieRecipeLine,
   DexieProductionOrder, DexieRolePermission, DexieSupplierPayment, DexieCreditPayment,
-  DexieImageLibrary,
+  DexieImageLibrary, DexieDeliveryPerson,
 } from './types';
 
 export class LogisCoreDB extends Dexie {
@@ -46,6 +46,7 @@ export class LogisCoreDB extends Dexie {
   registerConfigs!: Table<DexieRegisterConfig, string>;
   tenantSettings!: Table<DexieTenantSettings, string>;
   imageLibrary!: Table<DexieImageLibrary, string>;
+  deliveryPersons!: Table<DexieDeliveryPerson, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -136,6 +137,9 @@ export class LogisCoreDB extends Dexie {
     });
     this.version(31).stores({
       tenantSettings: 'tenantId',
+    });
+    this.version(32).stores({
+      deliveryPersons: 'id, tenantId, phone, [tenantId+deletedAt]',
     });
 
   }

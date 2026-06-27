@@ -4,7 +4,7 @@ import { isoDateTime } from '../helpers';
 export const EXPENSE_CATEGORIES = [
   'LUZ', 'AGUA', 'GAS', 'INTERNET',
   'ALQUILER', 'NOMINA',
-  'IMPUESTOS', 'COMPRA_INVENTARIO', 'OTROS',
+  'IMPUESTOS', 'COMPRA_INVENTARIO', 'DELIVERY', 'OTROS',
 ] as const;
 
 export const ExpenseCategorySchema = z.enum(EXPENSE_CATEGORIES);
@@ -34,6 +34,7 @@ export const GastoSchema = z.object({
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
   deletedAt: isoDateTime.optional(),
+  saleId: z.string().uuid().optional(),
 });
 
 export type Gasto = z.infer<typeof GastoSchema>;

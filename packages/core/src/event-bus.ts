@@ -54,6 +54,10 @@ export const SystemEvents = {
   BOX_OPENED: 'POS.BOX_OPENED',
   BOX_CLOSED: 'POS.BOX_CLOSED',
   CART_ADD_ANIMATION: 'CART.ADD_ANIMATION',
+  ORDER_CREATED: 'ORDER.CREATED',
+  ORDER_STATUS_CHANGED: 'ORDER.STATUS_CHANGED',
+  ORDER_DELIVERED: 'ORDER.DELIVERED',
+  ORDER_CANCELLED: 'ORDER.CANCELLED',
 
   // Inventario
   INVENTORY_CREATED: 'INVENTORY.CREATED',
@@ -134,6 +138,10 @@ export interface EventPayloadMap {
   [SystemEvents.BOX_OPENED]: { registerId: string; [key: string]: unknown };
   [SystemEvents.BOX_CLOSED]: { registerId: string; [key: string]: unknown };
   [SystemEvents.CART_ADD_ANIMATION]: Record<string, unknown>;
+  [SystemEvents.ORDER_CREATED]: { saleId: string; customerId?: string; customerName?: string; items: Array<{ name: string; qty: number }>; needsKitchen: boolean; orderType: string; [key: string]: unknown };
+  [SystemEvents.ORDER_STATUS_CHANGED]: { saleId: string; oldStatus: string; newStatus: string; modified?: boolean; reverted?: boolean; [key: string]: unknown };
+  [SystemEvents.ORDER_DELIVERED]: { saleId: string; deliveryPersonName: string; [key: string]: unknown };
+  [SystemEvents.ORDER_CANCELLED]: { saleId: string; [key: string]: unknown };
   [SystemEvents.INVENTORY_CREATED]: Record<string, unknown>;
   [SystemEvents.INVENTORY_UPDATED]: Record<string, unknown>;
   [SystemEvents.INVENTORY_DELETED]: Record<string, unknown>;

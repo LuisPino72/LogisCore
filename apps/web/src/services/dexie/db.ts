@@ -32,6 +32,8 @@ export type {
   DexieSupplierPayment,
   DexieCreditPayment,
   DexieImageLibrary,
+  DexieDeliveryPerson,
+  OrderStatus,
 } from './types';
 
 export type { SyncQueueItem, SyncMeta } from '../sync/types';

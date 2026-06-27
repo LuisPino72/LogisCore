@@ -90,6 +90,11 @@ export interface DexieInventoryLot {
   deletedAt?: string;
 }
 
+export type OrderStatus =
+  | 'completed' | 'voided'
+  | 'pedida' | 'preparacion' | 'lista'
+  | 'pagada' | 'despachada' | 'entregada' | 'cancelada';
+
 export interface DexieSale {
   id: string;
   tenantId: string;
@@ -100,7 +105,7 @@ export interface DexieSale {
   ivaBs: number;
   totalBs: number;
   exchangeRate: number;
-  status: 'completed' | 'voided';
+  status: OrderStatus;
   voidedAt?: string;
   createdAt: string;
   deletedAt?: string;
@@ -117,6 +122,23 @@ export interface DexieSale {
   isCreditSale?: boolean;
   creditCollected?: boolean;
   collectedAt?: string;
+  orderType?: 'delivery';
+  needsKitchen?: boolean;
+  isUrgent?: boolean;
+  kitchenNotes?: string;
+  orderNumber?: string;
+  deliveryPersonName?: string;
+  deliveryFee?: number;
+  deliveryAddress?: string;
+  deliveryLat?: number;
+  deliveryLng?: number;
+  deliveryNotes?: string;
+  paidAt?: string;
+  preparedAt?: string;
+  dispatchedAt?: string;
+  deliveredAt?: string;
+  modifiedAt?: string;
+  modificationCount?: number;
 }
 
 export interface DexieSaleItem {
@@ -187,6 +209,13 @@ export interface DexieTenantSettings {
   lowStockThreshold: number;
   ticketFooterMessage: string;
   updatedAt: string;
+  pagoMovilEnabled?: boolean;
+  pagoMovilBank?: string;
+  pagoMovilHolder?: string;
+  pagoMovilId?: string;
+  pagoMovilPhone?: string;
+  needsKitchenDefault?: boolean;
+  defaultDeliveryFee?: number;
 }
 
 export interface DexieParkedCart {
@@ -333,6 +362,7 @@ export interface DexieExpense {
   updatedAt: string;
   deletedAt?: string;
   purchaseOrderId?: string;
+  saleId?: string;
 }
 
 export interface DexieRecipe {
@@ -431,4 +461,14 @@ export interface DexieImageLibrary {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+}
+
+export interface DexieDeliveryPerson {
+  id: string;
+  tenantId: string;
+  name: string;
+  phone: string;
+  isActive: boolean;
+  createdAt: string;
+  deletedAt?: string;
 }

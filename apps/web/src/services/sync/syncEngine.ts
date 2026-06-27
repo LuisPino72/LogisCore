@@ -39,6 +39,7 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'tenant_settings', timeCol: 'updated_at' },
   { name: 'registers_config', timeCol: 'updated_at' },
   { name: 'exchange_rates', timeCol: 'updated_at' },
+  { name: 'delivery_persons', timeCol: 'updated_at' },
 ];
 
 export class SyncEngine {
@@ -328,6 +329,7 @@ export class SyncEngine {
   /** Maps remote (Supabase) table names to local (Dexie) table names when they differ */
   private readonly TABLE_ALIASES: Record<string, string> = {
     'registers_config': 'registerConfigs',
+    'delivery_persons': 'deliveryPersons',
   };
 
   /** Tables where we should merge (not overwrite) on sync to avoid data loss */

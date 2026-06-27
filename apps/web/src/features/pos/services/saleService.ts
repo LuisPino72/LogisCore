@@ -15,7 +15,7 @@ import { PosErrors } from '../../../specs/pos/errors';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import { CreateSaleInputSchema, calculateSaleTotals } from '../../../specs/pos';
 import { saleFromSupabase, saleItemFromSupabase } from './mappers';
-import type { Sale, SaleItem, CreateSaleInput, PaymentMethod } from '../types';
+import type { Sale, SaleItem, CreateSaleInput, PaymentMethod, CartItem } from '../types';
 import { convertToStorage, unitToStorageType } from '../../../features/inventory/types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -39,6 +39,264 @@ async function filterOrphanLots(
     logger.warn(MODULE_NAME, `filterOrphanLots: removed ${lots.length - filtered.length} orphan lotId(s)`);
   }
   return filtered;
+}
+
+type ConsumedItem = { productId: string; name: string; requested: number; available: number };
+
+async function consumeSaleItems(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tx: any,
+  normalItems: CartItem[],
+  assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string; unitMultiplier?: number }>,
+  saleId: string,
+  tenantId: string,
+  userId: string,
+  allowOverride?: boolean,
+  originalItems?: CartItem[],
+): Promise<Result<{ consumedItems: ConsumedItem[]; consumedLots: Array<{ lotId: string; quantity: number }> }, AppError>> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+  const consumedItems: ConsumedItem[] = [];
+  const allConsumedLots: Array<{ lotId: string; quantity: number }> = [];
+
+  try {
+    for (const cartItem of normalItems) {
+      const product = await db.products.where({ id: cartItem.productId, tenantId }).first();
+      if (!product || product.deletedAt) {
+        throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
+      }
+
+      const baseQuantity = product.isWeighted
+        ? convertToStorage(cartItem.quantity, unitToStorageType(product.isWeighted, product.unit))
+        : Math.round(cartItem.quantity);
+      const storageQuantity = baseQuantity * (cartItem.unitMultiplier || 1);
+
+      if (product.stock < storageQuantity) {
+        throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}". Disponible: ${product.stock}.`);
+      }
+
+      let toConsume = storageQuantity;
+      let totalCostUsd = 0;
+      const consumedLots: Array<{ lotId: string; quantity: number }> = [];
+      let lots = await db.inventoryLots
+        .where({ productId: cartItem.productId })
+        .filter((l) => l.remainingQuantity > 0)
+        .sortBy('createdAt');
+
+      if (lots.length === 0 && !product.costPrice) {
+        throw new AppError('SALE_NO_COST_DATA', `"${product.name}" no tiene costo registrado. Registre un costo o reciba una compra primero.`);
+      }
+
+      if (lots.length === 0 && product.stock >= storageQuantity) {
+        const implicitLot = {
+          id: generateId(),
+          tenantId,
+          productId: cartItem.productId,
+          quantityAdded: product.stock,
+          remainingQuantity: product.stock,
+          costUsdPerUnit: product.isWeighted
+            ? (product.costPrice ?? 0) / 1000
+            : (product.costPrice ?? 0),
+          createdAt: now,
+          updatedAt: now,
+          version: 1,
+        };
+        await db.inventoryLots.add(implicitLot);
+        await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
+        lots = [implicitLot];
+      }
+
+      for (const lot of lots) {
+        if (toConsume <= 0) break;
+        const currentLot = await db.inventoryLots.get(lot.id);
+        if (!currentLot || currentLot.remainingQuantity <= 0) continue;
+        if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
+          throw new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto de inventario concurrente. Reintente la operación.');
+        }
+        const lotCost = currentLot.costUsdPerUnit ?? 0;
+        const newVersion = (currentLot.version ?? 0) + 1;
+        if (currentLot.remainingQuantity >= toConsume) {
+          totalCostUsd = preciseRound(totalCostUsd + toConsume * lotCost, 2);
+          consumedLots.push({ lotId: lot.id, quantity: toConsume });
+          await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion });
+          await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion } as unknown as Record<string, unknown>), tenantId);
+          toConsume = 0;
+        } else {
+          totalCostUsd = preciseRound(totalCostUsd + currentLot.remainingQuantity * lotCost, 2);
+          consumedLots.push({ lotId: lot.id, quantity: currentLot.remainingQuantity });
+          toConsume -= currentLot.remainingQuantity;
+          await db.inventoryLots.update(lot.id, { remainingQuantity: 0, version: newVersion });
+          await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: 0, version: newVersion } as unknown as Record<string, unknown>), tenantId);
+        }
+      }
+
+      if (toConsume > 0) {
+        throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}" (lotes agotados).`);
+      }
+
+      const freshProduct = await db.products.where({ id: cartItem.productId, tenantId }).first();
+      if (!freshProduct) {
+        throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
+      }
+      const previousStock = freshProduct.stock;
+      const newStock = previousStock - storageQuantity;
+      if (newStock < 0) {
+        throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}". Disponible: ${previousStock}.`);
+      }
+      await db.products.update(cartItem.productId, { stock: newStock });
+
+      const costUsdPerUnitStorage = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 6) : 0;
+      const costUsdPerUnit = product.isWeighted
+        ? preciseRound(costUsdPerUnitStorage * 1000, 4)
+        : costUsdPerUnitStorage;
+
+      const saleItemId = generateId();
+      await db.saleItems.add({
+        id: saleItemId,
+        tenantId,
+        saleId,
+        productId: cartItem.productId,
+        productName: product.name,
+        productSku: product.sku ?? '',
+        quantity: cartItem.quantity,
+        unitPriceUsd: cartItem.unitPriceUsd,
+        totalPriceUsd: cartItem.totalPriceUsd,
+        costUsdPerUnit,
+        isWeighted: product.isWeighted,
+        unit: product.unit,
+        presentationId: cartItem.presentationId,
+        presentationName: cartItem.presentationName,
+        unitMultiplier: cartItem.unitMultiplier ?? 1,
+        createdAt: now,
+        consumedLots,
+      });
+
+      const movementId = generateId();
+      const movement = {
+        id: movementId,
+        tenantId,
+        productId: cartItem.productId,
+        userId,
+        type: 'sale' as const,
+        quantity: storageQuantity,
+        previousStock,
+        newStock,
+        reason: `Venta #${saleId.slice(0, 8)}`,
+        createdAt: now,
+      };
+      await db.inventoryMovements.add(movement);
+
+      await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
+        id: saleItemId,
+        tenant_id: tenantUuid,
+        sale_id: saleId,
+        product_id: cartItem.productId,
+        product_name: product.name,
+        product_sku: product.sku,
+        quantity: cartItem.quantity,
+        unit_price_usd: cartItem.unitPriceUsd,
+        total_price_usd: cartItem.totalPriceUsd,
+        cost_usd_per_unit: costUsdPerUnit,
+        is_weighted: product.isWeighted,
+        unit: product.unit,
+        presentation_id: cartItem.presentationId ?? null,
+        presentation_name: cartItem.presentationName ?? null,
+        unit_multiplier: cartItem.unitMultiplier ?? 1,
+        consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null,
+        created_at: now,
+      } as unknown as Record<string, unknown>), tenantId);
+
+      await syncQueue.enqueue('products', 'UPDATE', cartItem.productId, toSnake({ id: cartItem.productId, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+      await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
+
+      consumedItems.push({
+        productId: cartItem.productId,
+        name: product.name,
+        requested: cartItem.quantity,
+        available: cartItem.quantity - toConsume,
+      });
+      allConsumedLots.push(...consumedLots);
+    }
+
+    for (const assemblyItem of assemblyItems) {
+      const scaledQuantity = assemblyItem.quantity * (assemblyItem.unitMultiplier ?? 1);
+      const result = await productionService.consumeForAssembly(
+        assemblyItem.productId,
+        scaledQuantity,
+        tenantId,
+        userId,
+        { allowOverride },
+        tx,
+      );
+
+      if (!result.ok) {
+        throw result.error;
+      }
+
+      const { consumedLots, totalIngredientCost } = result.data;
+      const product = await db.products.where({ id: assemblyItem.productId, tenantId }).first();
+      if (!product) {
+        throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no encontrado.`);
+      }
+
+      const cartItemData = originalItems?.find(i => i.productId === assemblyItem.productId);
+      const costUsdPerUnit = assemblyItem.quantity > 0 ? preciseRound(totalIngredientCost / assemblyItem.quantity, 4) : 0;
+
+      const saleItemId = generateId();
+      await db.saleItems.add({
+        id: saleItemId,
+        tenantId,
+        saleId,
+        productId: assemblyItem.productId,
+        productName: product.name,
+        productSku: product.sku ?? '',
+        quantity: assemblyItem.quantity,
+        unitPriceUsd: cartItemData?.unitPriceUsd ?? 0,
+        totalPriceUsd: cartItemData?.totalPriceUsd ?? 0,
+        costUsdPerUnit,
+        isWeighted: false,
+        unit: product.unit,
+        presentationId: assemblyItem.presentationId,
+        presentationName: assemblyItem.presentationName,
+        unitMultiplier: assemblyItem.unitMultiplier ?? 1,
+        createdAt: now,
+        consumedLots,
+      });
+
+      await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
+        id: saleItemId,
+        tenant_id: tenantUuid,
+        sale_id: saleId,
+        product_id: assemblyItem.productId,
+        product_name: product.name,
+        product_sku: product.sku,
+        quantity: assemblyItem.quantity,
+        unit_price_usd: cartItemData?.unitPriceUsd ?? 0,
+        total_price_usd: cartItemData?.totalPriceUsd ?? 0,
+        cost_usd_per_unit: costUsdPerUnit,
+        is_weighted: false,
+        unit: product.unit,
+        presentation_id: assemblyItem.presentationId ?? null,
+        presentation_name: assemblyItem.presentationName ?? null,
+        consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null,
+        created_at: now,
+      } as unknown as Record<string, unknown>), tenantId);
+
+      consumedItems.push({
+        productId: assemblyItem.productId,
+        name: product.name,
+        requested: assemblyItem.quantity,
+        available: assemblyItem.quantity,
+      });
+      allConsumedLots.push(...consumedLots);
+    }
+
+    return success({ consumedItems, consumedLots: allConsumedLots });
+  } catch (err) {
+    if (err instanceof AppError) return failure(err);
+    throw err;
+  }
 }
 
 export async function createSale(input: CreateSaleInput): Promise<Result<Sale, AppError>> {
@@ -277,220 +535,10 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
       }
       await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake(saleSnakePayload), tenantId);
 
-      for (const cartItem of normalItems) {
-        const product = await db.products.where({ id: cartItem.productId, tenantId }).first();
-        if (!product || product.deletedAt) {
-          throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
-        }
-
-        const baseQuantity = product.isWeighted
-          ? convertToStorage(cartItem.quantity, unitToStorageType(product.isWeighted, product.unit))
-          : Math.round(cartItem.quantity);
-        const storageQuantity = baseQuantity * (cartItem.unitMultiplier || 1);
-
-        if (product.stock < storageQuantity) {
-          throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}". Disponible: ${product.stock}.`);
-        }
-
-        let toConsume = storageQuantity;
-        let totalCostUsd = 0;
-        const consumedLots: Array<{ lotId: string; quantity: number }> = [];
-        let lots = await db.inventoryLots
-          .where({ productId: cartItem.productId })
-          .filter((l) => l.remainingQuantity > 0)
-          .sortBy('createdAt');
-
-        if (lots.length === 0 && !product.costPrice) {
-          throw new AppError('SALE_NO_COST_DATA', `"${product.name}" no tiene costo registrado. Registre un costo o reciba una compra primero.`);
-        }
-
-        if (lots.length === 0 && product.stock >= storageQuantity) {
-          const implicitLot = {
-            id: generateId(),
-            tenantId,
-            productId: cartItem.productId,
-            quantityAdded: product.stock,
-            remainingQuantity: product.stock,
-            costUsdPerUnit: product.isWeighted
-              ? (product.costPrice ?? 0) / 1000
-              : (product.costPrice ?? 0),
-            createdAt: now,
-            updatedAt: now,
-            version: 1,
-          };
-          await db.inventoryLots.add(implicitLot);
-          await syncQueue.enqueue('inventory_lots', 'CREATE', implicitLot.id, toSnake(implicitLot as unknown as Record<string, unknown>), tenantId);
-          lots = [implicitLot];
-        }
-
-        for (const lot of lots) {
-          if (toConsume <= 0) break;
-          const currentLot = await db.inventoryLots.get(lot.id);
-          if (!currentLot || currentLot.remainingQuantity <= 0) continue;
-          if (currentLot.version !== undefined && lot.version !== undefined && currentLot.version !== lot.version) {
-            throw new AppError(InventoryErrors.INVENTORY_LOT_FIFO_CONFLICT, 'Conflicto de inventario concurrente. Reintente la operación.');
-          }
-          const lotCost = currentLot.costUsdPerUnit ?? 0;
-          const newVersion = (currentLot.version ?? 0) + 1;
-          if (currentLot.remainingQuantity >= toConsume) {
-            totalCostUsd = preciseRound(totalCostUsd + toConsume * lotCost, 2);
-            consumedLots.push({ lotId: lot.id, quantity: toConsume });
-            await db.inventoryLots.update(lot.id, { remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion });
-            await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: currentLot.remainingQuantity - toConsume, version: newVersion } as unknown as Record<string, unknown>), tenantId);
-            toConsume = 0;
-          } else {
-            totalCostUsd = preciseRound(totalCostUsd + currentLot.remainingQuantity * lotCost, 2);
-            consumedLots.push({ lotId: lot.id, quantity: currentLot.remainingQuantity });
-            toConsume -= currentLot.remainingQuantity;
-            await db.inventoryLots.update(lot.id, { remainingQuantity: 0, version: newVersion });
-            await syncQueue.enqueue('inventory_lots', 'UPDATE', lot.id, toSnake({ ...lot, remainingQuantity: 0, version: newVersion } as unknown as Record<string, unknown>), tenantId);
-          }
-        }
-
-        if (toConsume > 0) {
-          throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}" (lotes agotados).`);
-        }
-
-        const freshProduct = await db.products.where({ id: cartItem.productId, tenantId }).first();
-        if (!freshProduct) {
-          throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${cartItem.name}" no encontrado.`);
-        }
-        const previousStock = freshProduct.stock;
-        const newStock = previousStock - storageQuantity;
-        if (newStock < 0) {
-          throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Stock insuficiente para "${product.name}". Disponible: ${previousStock}.`);
-        }
-        await db.products.update(cartItem.productId, { stock: newStock });
-
-        const costUsdPerUnitStorage = storageQuantity > 0 ? preciseRound(totalCostUsd / storageQuantity, 6) : 0;
-        const costUsdPerUnit = product.isWeighted
-          ? preciseRound(costUsdPerUnitStorage * 1000, 4)
-          : costUsdPerUnitStorage;
-
-        const saleItemId = generateId();
-        await db.saleItems.add({
-          id: saleItemId,
-          tenantId,
-          saleId,
-          productId: cartItem.productId,
-          productName: product.name,
-          productSku: product.sku ?? '',
-          quantity: cartItem.quantity,
-          unitPriceUsd: cartItem.unitPriceUsd,
-          totalPriceUsd: cartItem.totalPriceUsd,
-          costUsdPerUnit,
-          isWeighted: product.isWeighted,
-          unit: product.unit,
-          presentationId: cartItem.presentationId,
-          presentationName: cartItem.presentationName,
-          unitMultiplier: cartItem.unitMultiplier ?? 1,
-          createdAt: now,
-          consumedLots,
-        });
-
-        const movementId = generateId();
-        const movement = {
-          id: movementId,
-          tenantId,
-          productId: cartItem.productId,
-          userId,
-          type: 'sale' as const,
-          quantity: storageQuantity,
-          previousStock,
-          newStock,
-          reason: `Venta #${saleId.slice(0, 8)}`,
-          createdAt: now,
-        };
-        await db.inventoryMovements.add(movement);
-
-        await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
-          id: saleItemId,
-          tenant_id: tenantUuid,
-          sale_id: saleId,
-          product_id: cartItem.productId,
-          product_name: product.name,
-          product_sku: product.sku,
-          quantity: cartItem.quantity,
-          unit_price_usd: cartItem.unitPriceUsd,
-          total_price_usd: cartItem.totalPriceUsd,
-          cost_usd_per_unit: costUsdPerUnit,
-          is_weighted: product.isWeighted,
-          unit: product.unit,
-          presentation_id: cartItem.presentationId ?? null,
-          presentation_name: cartItem.presentationName ?? null,
-          unit_multiplier: cartItem.unitMultiplier ?? 1,
-          consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null,
-          created_at: now,
-        } as unknown as Record<string, unknown>), tenantId);
-
-        await syncQueue.enqueue('products', 'UPDATE', cartItem.productId, toSnake({ id: cartItem.productId, stock: newStock } as unknown as Record<string, unknown>), tenantId);
-        await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
-      }
-
-      for (const assemblyItem of assemblyItems) {
-        const scaledQuantity = assemblyItem.quantity * (assemblyItem.unitMultiplier ?? 1);
-        const result = await productionService.consumeForAssembly(
-          assemblyItem.productId,
-          scaledQuantity,
-          tenantId,
-          userId,
-          { allowOverride: input.allowOverride },
-          tx,
-        );
-
-        if (!result.ok) {
-          throw result.error;
-        }
-
-        const { consumedLots, totalIngredientCost } = result.data;
-        const product = await db.products.where({ id: assemblyItem.productId, tenantId }).first();
-        if (!product) {
-          throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no encontrado.`);
-        }
-
-        const cartItemData = items.find(i => i.productId === assemblyItem.productId);
-        const costUsdPerUnit = assemblyItem.quantity > 0 ? preciseRound(totalIngredientCost / assemblyItem.quantity, 4) : 0;
-
-        const saleItemId = generateId();
-        await db.saleItems.add({
-          id: saleItemId,
-          tenantId,
-          saleId,
-          productId: assemblyItem.productId,
-          productName: product.name,
-          productSku: product.sku ?? '',
-          quantity: assemblyItem.quantity,
-          unitPriceUsd: cartItemData?.unitPriceUsd ?? 0,
-          totalPriceUsd: cartItemData?.totalPriceUsd ?? 0,
-          costUsdPerUnit,
-          isWeighted: false,
-          unit: product.unit,
-          presentationId: assemblyItem.presentationId,
-          presentationName: assemblyItem.presentationName,
-          unitMultiplier: assemblyItem.unitMultiplier ?? 1,
-          createdAt: now,
-          consumedLots,
-        });
-
-        await syncQueue.enqueue('sale_items', 'CREATE', saleItemId, toSnake({
-          id: saleItemId,
-          tenant_id: tenantUuid,
-          sale_id: saleId,
-          product_id: assemblyItem.productId,
-          product_name: product.name,
-          product_sku: product.sku,
-          quantity: assemblyItem.quantity,
-          unit_price_usd: cartItemData?.unitPriceUsd ?? 0,
-          total_price_usd: cartItemData?.totalPriceUsd ?? 0,
-          cost_usd_per_unit: costUsdPerUnit,
-          is_weighted: false,
-          unit: product.unit,
-          presentation_id: assemblyItem.presentationId ?? null,
-          presentation_name: assemblyItem.presentationName ?? null,
-          consumed_lots: (await filterOrphanLots(consumedLots)).length > 0 ? await filterOrphanLots(consumedLots) : null,
-          created_at: now,
-        } as unknown as Record<string, unknown>), tenantId);
-      }
+      const consumeResult = await consumeSaleItems(
+        tx, normalItems, assemblyItems, saleId, tenantId, userId, input.allowOverride, items
+      );
+      if (!consumeResult.ok) throw consumeResult.error;
 
       if (!isCreditSale) {
         const txCashReg = await db.cashRegisters.get(cashReg.id);
@@ -1095,5 +1143,472 @@ export async function voidSale(saleId: string, tenantId: string, userId: string)
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en voidSale:', err);
     return failure(new AppError('SALE_VOID_FAILED', 'Error al anular la venta.'));
+  }
+}
+
+function generateOrderNumber(): string {
+  const ts = Date.now().toString(36).slice(-4);
+  const rand = Math.random().toString(36).slice(2, 4);
+  return `ORD-${ts}-${rand}`.toUpperCase();
+}
+
+export function generateMapsLink(lat?: number, lng?: number, address?: string): string {
+  if (lat && lng) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  }
+  if (address) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  }
+  return 'https://www.google.com/maps';
+}
+
+export async function createOrder(input: {
+  tenantId: string;
+  userId: string;
+  customerId: string;
+  items: CartItem[];
+  needsKitchen: boolean;
+  isUrgent?: boolean;
+  kitchenNotes?: string;
+  deliveryAddress?: string;
+  deliveryLat?: number;
+  deliveryLng?: number;
+  deliveryNotes?: string;
+}): Promise<Result<Sale, AppError>> {
+  const db = getDb();
+  const { tenantId, userId, customerId, items, needsKitchen, isUrgent, kitchenNotes,
+    deliveryAddress, deliveryLat, deliveryLng, deliveryNotes } = input;
+
+  if (!items.length) {
+    return failure(new AppError(PosErrors.SALE_NO_ITEMS, 'La orden no tiene productos.'));
+  }
+
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'pos', 'create')) {
+    return failure(new AppError('PERMISSION_DENIED', 'No tienes permiso para crear órdenes.'));
+  }
+
+  const customer = await db.customers.get(customerId);
+  if (!customer || customer.deletedAt) {
+    return failure(new AppError('ORDER_NO_CUSTOMER', 'El cliente no existe.'));
+  }
+
+  const totals = calculateSaleTotals(
+    items.map(i => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: i.isTaxable })),
+    0,
+    'efectivo_bs',
+    null,
+  );
+
+  const saleId = generateId();
+  const orderNumber = generateOrderNumber();
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+
+  const sale: Sale = {
+    id: saleId,
+    tenantId,
+    userId,
+    paymentMethod: 'efectivo_bs' as PaymentMethod,
+    subtotalBs: totals.subtotalBs,
+    igtfBs: totals.igtfBs,
+    ivaBs: totals.ivaBs,
+    totalBs: totals.totalBs,
+    exchangeRate: 0,
+    status: 'pedida',
+    voidedAt: undefined,
+    createdAt: now,
+    deletedAt: undefined,
+    discountType: undefined,
+    discountValue: undefined,
+    discountBs: 0,
+    customerId,
+    subtotalUsd: totals.subtotalUsd,
+    ivaUsd: totals.ivaUsd,
+    igtfUsd: 0,
+    totalUsd: totals.subtotalUsd,
+    discountUsd: 0,
+    cashRegisterId: undefined,
+    isCreditSale: false,
+    creditCollected: false,
+    collectedAt: undefined,
+    orderType: 'delivery',
+    needsKitchen,
+    isUrgent: isUrgent ?? false,
+    kitchenNotes,
+    orderNumber,
+    deliveryPersonName: undefined,
+    deliveryFee: undefined,
+    deliveryAddress,
+    deliveryLat,
+    deliveryLng,
+    deliveryNotes,
+    paidAt: undefined,
+    preparedAt: undefined,
+    dispatchedAt: undefined,
+    deliveredAt: undefined,
+    modifiedAt: undefined,
+    modificationCount: 0,
+  };
+
+  try {
+    await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
+      await tx.sales.add(sale);
+
+      await syncQueue.enqueue('sales', 'CREATE', saleId, toSnake({
+        ...sale,
+        tenant_id: tenantUuid,
+      } as unknown as Record<string, unknown>), tenantId);
+
+      await outboxService.enqueue(SystemEvents.ORDER_CREATED, MODULE_NAME, {
+        saleId,
+        customerId,
+        customerName: customer.name,
+        items: items.map(i => ({ name: i.name, qty: i.quantity })),
+        needsKitchen,
+        orderType: 'delivery',
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_CREATED,
+      module: MODULE_NAME,
+      payload: { saleId, orderNumber, customerId, customerName: customer.name, needsKitchen },
+      context: { userId, tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch(() => {});
+    return success(sale);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en createOrder:', err);
+    return failure(new AppError('ORDER_CREATE_FAILED', 'Error al crear la orden.'));
+  }
+}
+
+export async function updateOrderStatus(
+  saleId: string,
+  newStatus: 'preparacion' | 'lista' | 'pagada' | 'cancelada' | 'despachada' | 'entregada'
+): Promise<Result<void, AppError>> {
+  const db = getDb();
+
+  const sale = await db.sales.get(saleId);
+  if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+
+  const validTransitions: Record<string, string[]> = {
+    pedida: sale.needsKitchen ? ['preparacion', 'cancelada'] : ['pagada', 'cancelada'],
+    preparacion: ['lista', 'cancelada'],
+    lista: ['pagada', 'cancelada'],
+    pagada: ['despachada'],
+    despachada: ['entregada'],
+  };
+
+  const allowed = validTransitions[sale.status];
+  if (!allowed || !allowed.includes(newStatus)) {
+    return failure(new AppError(PosErrors.ORDER_INVALID_STATUS_TRANSITION,
+      `Transición de estado no válida: ${sale.status} → ${newStatus}`));
+  }
+
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+  const oldStatus = sale.status;
+
+  try {
+    await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
+      const updates: Record<string, unknown> = { status: newStatus };
+      if (newStatus === 'lista') updates.preparedAt = now;
+      if (newStatus === 'pagada') updates.paidAt = now;
+      if (newStatus === 'despachada') updates.dispatchedAt = now;
+      if (newStatus === 'entregada') updates.deliveredAt = now;
+
+      await tx.sales.update(saleId, updates);
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, ...updates,
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      const eventName = newStatus === 'cancelada' ? SystemEvents.ORDER_CANCELLED : SystemEvents.ORDER_STATUS_CHANGED;
+      await outboxService.enqueue(eventName, MODULE_NAME, {
+        saleId,
+        oldStatus,
+        newStatus,
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_STATUS_CHANGED,
+      module: MODULE_NAME,
+      payload: { saleId, oldStatus, newStatus },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch(() => {});
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en updateOrderStatus:', err);
+    return failure(new AppError('ORDER_STATUS_FAILED', 'Error al actualizar el estado.'));
+  }
+}
+
+export async function revertOrderStatus(saleId: string): Promise<Result<void, AppError>> {
+  const db = getDb();
+  const sale = await db.sales.get(saleId);
+  if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.status !== 'lista') {
+    return failure(new AppError(PosErrors.ORDER_CANNOT_REVERT, 'Solo se puede revertir desde status "lista".'));
+  }
+
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+
+  try {
+    await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
+      await tx.sales.update(saleId, { status: 'preparacion' });
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, status: 'preparacion',
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      await outboxService.enqueue(SystemEvents.ORDER_STATUS_CHANGED, MODULE_NAME, {
+        saleId, oldStatus: 'lista', newStatus: 'preparacion', reverted: true,
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_STATUS_CHANGED,
+      module: MODULE_NAME,
+      payload: { saleId, oldStatus: 'lista', newStatus: 'preparacion', reverted: true },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch(() => {});
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en revertOrderStatus:', err);
+    return failure(new AppError('ORDER_REVERT_FAILED', 'Error al revertir el estado.'));
+  }
+}
+
+export async function updateOrderItems(
+  saleId: string,
+  newItems: CartItem[]
+): Promise<Result<void, AppError>> {
+  const db = getDb();
+  const sale = await db.sales.get(saleId);
+  if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.status !== 'pedida' && sale.status !== 'preparacion') {
+    return failure(new AppError(PosErrors.ORDER_CANNOT_MODIFY,
+      `Ya no se puede modificar la orden (status: ${sale.status})`));
+  }
+
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+  const newCount = (sale.modificationCount ?? 0) + 1;
+
+  const totals = calculateSaleTotals(
+    newItems.map(i => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: i.isTaxable })),
+    sale.exchangeRate || 0,
+    'efectivo_bs',
+    sale.discountType && sale.discountValue != null ? { type: sale.discountType, value: sale.discountValue } : null,
+  );
+
+  try {
+    await db.transaction('rw', [db.sales, db.saleItems, db.syncQueue, db.outbox], async (tx) => {
+      const oldItems = await tx.saleItems.where('saleId').equals(saleId).toArray();
+      for (const item of oldItems) {
+        await tx.saleItems.delete(item.id);
+      }
+
+      for (const cartItem of newItems) {
+        const saleItemId = generateId();
+        await tx.saleItems.add({
+          id: saleItemId,
+          tenantId: sale.tenantId,
+          saleId,
+          productId: cartItem.productId,
+          productName: cartItem.name,
+          productSku: '',
+          quantity: cartItem.quantity,
+          unitPriceUsd: cartItem.unitPriceUsd,
+          totalPriceUsd: cartItem.unitPriceUsd * cartItem.quantity,
+          costUsdPerUnit: undefined,
+          isWeighted: cartItem.isWeighted,
+          unit: cartItem.unit,
+          createdAt: now,
+          presentationId: cartItem.presentationId,
+          presentationName: cartItem.presentationName,
+          unitMultiplier: cartItem.unitMultiplier,
+        });
+      }
+
+      await tx.sales.update(saleId, {
+        subtotalBs: totals.subtotalBs,
+        ivaBs: totals.ivaBs,
+        igtfBs: totals.igtfBs,
+        totalBs: totals.totalBs,
+        subtotalUsd: totals.subtotalUsd,
+        ivaUsd: totals.ivaUsd,
+        totalUsd: totals.subtotalUsd,
+        modificationCount: newCount,
+        modifiedAt: now,
+      });
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, modification_count: newCount, modified_at: now,
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      await outboxService.enqueue(SystemEvents.ORDER_STATUS_CHANGED, MODULE_NAME, {
+        saleId, oldStatus: sale.status, newStatus: sale.status, modified: true,
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_STATUS_CHANGED,
+      module: MODULE_NAME,
+      payload: { saleId, modified: true, modificationCount: newCount },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch(() => {});
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en updateOrderItems:', err);
+    return failure(new AppError('ORDER_UPDATE_ITEMS_FAILED', 'Error al actualizar los items.'));
+  }
+}
+
+export async function cancelOrder(saleId: string): Promise<Result<void, AppError>> {
+  const db = getDb();
+  const sale = await db.sales.get(saleId);
+  if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+
+  const cancellable = ['pedida', 'preparacion', 'lista'];
+  if (!cancellable.includes(sale.status)) {
+    return failure(new AppError(PosErrors.ORDER_INVALID_STATUS_TRANSITION,
+      `No se puede cancelar una orden con status "${sale.status}".`));
+  }
+
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+
+  try {
+    await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
+      await tx.sales.update(saleId, { status: 'cancelada' });
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, status: 'cancelada',
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      await outboxService.enqueue(SystemEvents.ORDER_CANCELLED, MODULE_NAME, {
+        saleId,
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_CANCELLED,
+      module: MODULE_NAME,
+      payload: { saleId },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch(() => {});
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en cancelOrder:', err);
+    return failure(new AppError('ORDER_CANCEL_FAILED', 'Error al cancelar la orden.'));
+  }
+}
+
+export async function confirmDelivery(saleId: string): Promise<Result<void, AppError>> {
+  const db = getDb();
+  const sale = await db.sales.get(saleId);
+  if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.status !== 'despachada') {
+    return failure(new AppError(PosErrors.ORDER_INVALID_STATUS_TRANSITION,
+      `La orden debe estar en status "despachada" para confirmar entrega (actual: ${sale.status}).`));
+  }
+
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+
+  try {
+    await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
+      await tx.sales.update(saleId, { status: 'entregada', deliveredAt: now });
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, status: 'entregada', delivered_at: now,
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      await outboxService.enqueue(SystemEvents.ORDER_DELIVERED, MODULE_NAME, {
+        saleId, deliveryPersonName: sale.deliveryPersonName ?? '',
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_DELIVERED,
+      module: MODULE_NAME,
+      payload: { saleId, deliveryPersonName: sale.deliveryPersonName },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch(() => {});
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en confirmDelivery:', err);
+    return failure(new AppError('ORDER_DELIVER_FAILED', 'Error al confirmar la entrega.'));
+  }
+}
+
+export async function reassignDelivery(saleId: string): Promise<Result<void, AppError>> {
+  const db = getDb();
+  const sale = await db.sales.get(saleId);
+  if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+  if (sale.status !== 'despachada') {
+    return failure(new AppError(PosErrors.ORDER_INVALID_STATUS_TRANSITION,
+      'La orden debe estar "despachada" para re-asignar.'));
+  }
+
+  const now = new Date().toISOString();
+  const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+  const revertStatus = sale.needsKitchen ? 'lista' : 'pagada';
+
+  try {
+    await db.transaction('rw', [db.sales, db.expenses, db.syncQueue, db.outbox], async (tx) => {
+      const expenses = await tx.expenses.where('saleId').equals(saleId).toArray();
+      for (const expense of expenses) {
+        if (expense.category === 'DELIVERY' && expense.status === 'pending') {
+          await tx.expenses.update(expense.id, { status: 'cancelled', deletedAt: now });
+          await syncQueue.enqueue('expenses', 'UPDATE', expense.id, toSnake({
+            id: expense.id, status: 'cancelled', deleted_at: now,
+          } as unknown as Record<string, unknown>), sale.tenantId);
+        }
+      }
+
+      await tx.sales.update(saleId, { status: revertStatus, deliveryPersonName: undefined });
+
+      await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+        id: saleId, tenant_id: tenantUuid, status: revertStatus, delivery_person_name: null,
+      } as unknown as Record<string, unknown>), sale.tenantId);
+
+      await outboxService.enqueue(SystemEvents.ORDER_STATUS_CHANGED, MODULE_NAME, {
+        saleId, oldStatus: 'despachada', newStatus: revertStatus,
+      }, tx);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.ORDER_STATUS_CHANGED,
+      module: MODULE_NAME,
+      payload: { saleId, oldStatus: 'despachada', newStatus: revertStatus },
+      context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
+    });
+
+    syncEngine.pushNow().catch(() => {});
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en reassignDelivery:', err);
+    return failure(new AppError('ORDER_REASSIGN_FAILED', 'Error al re-asignar el delivery.'));
   }
 }
