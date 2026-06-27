@@ -58,6 +58,24 @@ export function saleFromSupabase(raw: SupabaseSale, tenantId: string): Result<Sa
       isCreditSale: raw.is_credit_sale ?? false,
       creditCollected: raw.credit_collected ?? false,
       collectedAt: raw.collected_at ?? undefined,
+      // Delivery/Order fields
+      orderType: raw.order_type ?? undefined,
+      needsKitchen: raw.needs_kitchen ?? undefined,
+      isUrgent: raw.is_urgent ?? undefined,
+      kitchenNotes: raw.kitchen_notes ?? undefined,
+      orderNumber: raw.order_number ?? undefined,
+      deliveryPersonName: raw.delivery_person_name ?? undefined,
+      deliveryFee: raw.delivery_fee ?? undefined,
+      deliveryAddress: raw.delivery_address ?? undefined,
+      deliveryLat: raw.delivery_lat ?? undefined,
+      deliveryLng: raw.delivery_lng ?? undefined,
+      deliveryNotes: raw.delivery_notes ?? undefined,
+      paidAt: raw.paid_at ?? undefined,
+      preparedAt: raw.prepared_at ?? undefined,
+      dispatchedAt: raw.dispatched_at ?? undefined,
+      deliveredAt: raw.delivered_at ?? undefined,
+      modifiedAt: raw.modified_at ?? undefined,
+      modificationCount: raw.modification_count ?? undefined,
     }));
   } catch (err) {
     return failure(toFailureFromZod(err, 'Sale'));

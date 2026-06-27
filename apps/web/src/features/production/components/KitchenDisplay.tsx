@@ -71,20 +71,14 @@ const OrderCard = React.memo(function OrderCard({
               </div>
             ))}
             {!expanded && order.items.length > 2 && (
-              <button
-                onClick={() => setExpanded(true)}
-                className="text-xs text-primary font-medium hover:underline"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(true)}>
                 +{order.items.length - 2} más...
-              </button>
+              </Button>
             )}
             {expanded && order.items.length > 2 && (
-              <button
-                onClick={() => setExpanded(false)}
-                className="text-xs text-primary font-medium hover:underline"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(false)}>
                 Ver menos
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -218,13 +212,9 @@ export default function KitchenDisplay() {
         </div>
         <div className="flex items-center gap-3">
           {audioSuspended && (
-            <button
-              onClick={resumeAudio}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium hover:bg-amber-100 transition-colors"
-            >
-              <Volume2 size={14} />
-              Activar sonido
-            </button>
+            <Button variant="ghost" size="sm" onClick={resumeAudio} className="flex items-center gap-1.5">
+              <Volume2 size={14} /> Activar sonido
+            </Button>
           )}
           <div className="flex items-center gap-1.5 text-sm text-gray-500">
             <Clock size={14} />

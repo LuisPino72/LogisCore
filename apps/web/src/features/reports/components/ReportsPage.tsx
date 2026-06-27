@@ -1,5 +1,6 @@
 import { useState, Suspense, lazy, useRef, useCallback, type ReactNode } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip, DrillDownModal } from '@/common/components';
+import { logger } from '../../../lib/logger';
 import type { Column } from '@/common/components';
 import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer, Users, Truck } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -338,7 +339,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       await html2pdf().set(opt).from(element).save();
       addToast({ type: 'success', message: 'PDF generado exitosamente', duration: 3000 });
     } catch (error) {
-      console.error('Error generando PDF:', error);
+      logger.error('ReportsPage', 'Error generando PDF:', error);
       addToast({ type: 'error', message: 'Error al generar el PDF. Intenta nuevamente.', duration: 5000 });
     } finally {
       container.style.display = originalStyles.display;

@@ -66,12 +66,12 @@ export async function addDeliveryPerson(data: {
       createdAt: now,
     };
 
-    await db.transaction('rw', [db.deliveryPersons, db.syncQueue, db.outbox], async () => {
+    await db.transaction('rw', [db.deliveryPersons, db.syncQueue, db.outbox], async (tx) => {
       await db.deliveryPersons.add(person);
       await syncQueue.enqueue('delivery_persons', 'CREATE', person.id, toSnake(person as unknown as Record<string, unknown>), data.tenantId);
       await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
         action: 'delivery_person_added', personId: person.id,
-      });
+      }, tx);
     });
 
     await logAuditEventOnly({
@@ -122,12 +122,12 @@ export async function removeDeliveryPerson(
 
     const now = new Date().toISOString();
 
-    await db.transaction('rw', [db.deliveryPersons, db.syncQueue, db.outbox], async () => {
+    await db.transaction('rw', [db.deliveryPersons, db.syncQueue, db.outbox], async (tx) => {
       await db.deliveryPersons.update(id, { deletedAt: now, isActive: false });
       await syncQueue.enqueue('delivery_persons', 'UPDATE', id, toSnake({ id, deletedAt: now, isActive: false } as unknown as Record<string, unknown>), tenantId);
       await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
         action: 'delivery_person_removed', personId: id,
-      });
+      }, tx);
     });
 
     await logAuditEventOnly({

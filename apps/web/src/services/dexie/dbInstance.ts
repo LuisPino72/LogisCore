@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { SyncQueueItem, SyncMeta } from '../sync/types';
 import type { OutboxEntry } from '@logiscore/core';
+import { logger } from '../../lib/logger';
 import type {
   DexieTenantRef, DexieProductPresentation, DexieProduct,
   DexieCategory, DexieInventoryMovement, DexieInventoryLot,
@@ -198,12 +199,12 @@ export async function destroyDb(): Promise<void> {
     try {
       await Dexie.delete(dbName);
     } catch {
-      console.debug('[DbInstance] destroyDb: first delete attempt failed, retrying...');
+      logger.debug('[DbInstance]', 'destroyDb: first delete attempt failed, retrying...');
       await new Promise((resolve) => setTimeout(resolve, 1000));
       try {
         await Dexie.delete(dbName);
       } catch {
-        console.debug('[DbInstance] destroyDb: second delete attempt failed, giving up');
+        logger.debug('[DbInstance]', 'destroyDb: second delete attempt failed, giving up');
       }
     }
   }

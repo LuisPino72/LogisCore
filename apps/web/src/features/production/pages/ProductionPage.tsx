@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ChefHat, Plus, History, Utensils, Package, AlertTriangle, Flame } from 'lucide-react';
-import { Button, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding, Modal } from '../../../common/components';
+import { Button, Badge, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding, Modal } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { useProduction } from '../hooks/useProduction';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
@@ -94,8 +94,6 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
   };
 
   const activeRecipes = recipes.filter((r) => r.isActive).length;
-  const batchRecipes = recipes.filter((r) => r.isActive && r.mode === 'batch').length;
-  const completedOrders = productionOrders.filter((o) => o.status === 'done').length;
 
   return (
     <div className="p-3 sm:p-6 pb-24 sm:pb-0 max-w-6xl mx-auto space-y-3 sm:space-y-6">
@@ -126,46 +124,19 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
       {/* Desktop tabs */}
       <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
         {bottomNavItems.map((tab) => (
-          <button
+          <Button
             key={tab.id}
+            variant={activeTab === tab.id ? 'primary' : 'ghost'}
+            size="sm"
             onClick={tab.onClick}
-            className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-title font-medium rounded-lg transition-all duration-200 ${
-              activeTab === tab.id
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-text-secondary hover:text-gray-700 hover:bg-gray-50'
-            }`}
+            className="min-h-[44px]"
           >
             {tab.icon}
-            {tab.label}
-            {tab.id === 'recipes' && activeRecipes > 0 && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
-                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
-              }`}>
-                {activeRecipes}
-              </span>
+            <span className="hidden sm:inline">{tab.label}</span>
+            {typeof tab.badge === 'number' && tab.badge > 0 && (
+              <Badge variant="danger">{tab.badge}</Badge>
             )}
-            {tab.id === 'produce' && batchRecipes > 0 && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
-                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'
-              }`}>
-                {batchRecipes}
-              </span>
-            )}
-            {tab.id === 'kitchen' && pendingKitchenCount > 0 && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
-                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'
-              }`}>
-                {pendingKitchenCount}
-              </span>
-            )}
-            {tab.id === 'history' && completedOrders > 0 && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
-                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'
-              }`}>
-                {completedOrders}
-              </span>
-            )}
-          </button>
+          </Button>
         ))}
       </div>
 

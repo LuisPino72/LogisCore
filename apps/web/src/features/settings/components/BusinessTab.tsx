@@ -340,14 +340,10 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
               </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto min-h-11 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all duration-200"
-            >
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="min-h-11">
               <Upload size={16} />
               <span>Subir logo del negocio</span>
-            </button>
+            </Button>
           )}
           {logoError && <p className="text-danger text-xs mt-1">{logoError}</p>}
         </div>

@@ -60,6 +60,7 @@ async function consumeSaleItems(
   const consumedItems: ConsumedItem[] = [];
   const allConsumedLots: Array<{ lotId: string; quantity: number }> = [];
 
+  // NOTA: throws dentro de consumeSaleItems son intencionales — causan rollback en la transacción Dexie
   try {
     for (const cartItem of normalItems) {
       const product = await db.products.where({ id: cartItem.productId, tenantId }).first();
@@ -1277,7 +1278,7 @@ export async function createOrder(input: {
       context: { userId, tenantId, tenantUuid },
     });
 
-    syncEngine.pushNow().catch(() => {});
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (createOrder):', err));
     return success(sale);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en createOrder:', err);
@@ -1342,7 +1343,7 @@ export async function updateOrderStatus(
       context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
     });
 
-    syncEngine.pushNow().catch(() => {});
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (updateOrderStatus):', err));
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en updateOrderStatus:', err);
@@ -1381,7 +1382,7 @@ export async function revertOrderStatus(saleId: string): Promise<Result<void, Ap
       context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
     });
 
-    syncEngine.pushNow().catch(() => {});
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (revertOrderStatus):', err));
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en revertOrderStatus:', err);
@@ -1470,7 +1471,7 @@ export async function updateOrderItems(
       context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
     });
 
-    syncEngine.pushNow().catch(() => {});
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (updateOrderItems):', err));
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en updateOrderItems:', err);
@@ -1516,7 +1517,7 @@ export async function cancelOrder(saleId: string): Promise<Result<void, AppError
       context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
     });
 
-    syncEngine.pushNow().catch(() => {});
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (cancelOrder):', err));
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en cancelOrder:', err);
@@ -1557,11 +1558,22 @@ export async function confirmDelivery(saleId: string): Promise<Result<void, AppE
       context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
     });
 
-    syncEngine.pushNow().catch(() => {});
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (confirmDelivery):', err));
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en confirmDelivery:', err);
     return failure(new AppError('ORDER_DELIVER_FAILED', 'Error al confirmar la entrega.'));
+  }
+}
+
+export async function getSaleById(saleId: string): Promise<Result<DexieSale | null, AppError>> {
+  try {
+    const db = getDb();
+    const sale = await db.sales.get(saleId);
+    return success(sale ?? null);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en getSaleById:', err);
+    return failure(new AppError('SALE_FETCH_FAILED', 'Error al cargar venta.'));
   }
 }
 
@@ -1646,7 +1658,7 @@ export async function reassignDelivery(saleId: string): Promise<Result<void, App
       context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
     });
 
-    syncEngine.pushNow().catch(() => {});
+    syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (reassignDelivery):', err));
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en reassignDelivery:', err);

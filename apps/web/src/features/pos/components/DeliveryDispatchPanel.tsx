@@ -6,7 +6,6 @@ import { dispatchDelivery, generateMapsLink } from '../services/saleService';
 import { normalizeWaPhone } from '../services/receiptService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { useToastStore } from '../../../stores/toastStore';
-import { getDb } from '../../../services/dexie/db';
 import type { DexieSale } from '../../../services/dexie/types';
 import type { DexieDeliveryPerson } from '../../../services/dexie/db';
 
@@ -15,6 +14,7 @@ interface DeliveryDispatchPanelProps {
   onClose: () => void;
   sale: DexieSale;
   customerName: string;
+  customerPhone?: string;
 }
 
 export function DeliveryDispatchPanel({
@@ -22,6 +22,7 @@ export function DeliveryDispatchPanel({
   onClose,
   sale,
   customerName,
+  customerPhone,
 }: DeliveryDispatchPanelProps) {
   const [deliveryPersons, setDeliveryPersons] = useState<DexieDeliveryPerson[]>([]);
   const [selectedPerson, setSelectedPerson] = useState('');
@@ -85,17 +86,14 @@ export function DeliveryDispatchPanel({
 
   const handleNotifyCustomer = useCallback(async () => {
     if (!sale) return;
-    const db = getDb();
-    const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
-    const phone = customer?.phone;
-    if (!phone) {
+    if (!customerPhone) {
       addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado' });
       return;
     }
-    const normalizedPhone = normalizeWaPhone(phone);
-    const text = encodeURIComponent(`¡Hola ${customer?.name || ''}! Tu pedido va en camino con ${selectedPerson} 🚴`);
+    const normalizedPhone = normalizeWaPhone(customerPhone);
+    const text = encodeURIComponent(`¡Hola ${customerName}! Tu pedido va en camino con ${selectedPerson} 🚴`);
     window.open(`https://wa.me/${normalizedPhone}?text=${text}`, '_blank');
-  }, [sale, selectedPerson, addToast]);
+  }, [sale, customerPhone, customerName, selectedPerson, addToast]);
 
   const canDispatch = selectedPerson && deliveryFee && parseFloat(deliveryFee) > 0;
 

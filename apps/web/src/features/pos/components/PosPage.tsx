@@ -42,9 +42,9 @@ import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { METADATA_PAGOS } from '../../../specs/pos';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { failure, AppError, SystemEvents, EventBus } from '@logiscore/core';
-import { confirmOrderPayment } from '../services/saleService';
+import { confirmOrderPayment, getSaleById } from '../services/saleService';
 import { confirmDelivery } from '../services/saleService';
-import { getDb } from '../../../services/dexie/db';
+import { customerService } from '../../customers/services/customerService';
 
 interface PosPageProps {
   tenantId: string | null;
@@ -113,6 +113,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [showDispatchPanel, setShowDispatchPanel] = useState(false);
   const [dispatchSale, setDispatchSale] = useState<DexieSale | null>(null);
   const [dispatchCustomerName, setDispatchCustomerName] = useState('');
+  const [dispatchCustomerPhone, setDispatchCustomerPhone] = useState('');
   const [orderPayModal, setOrderPayModal] = useState<{ sale: DexieSale; method: PaymentMethod | null } | null>(null);
 
   // Global Barcode Listener State
@@ -132,6 +133,15 @@ export function PosPage({ tenantId }: PosPageProps) {
   const exchangeRateBs = exchangeRate ?? 0;
   const isOnline = useOnlineStatus();
 
+  const fetchDispatchCustomer = useCallback(async (customerId: string | undefined, tenantId: string | null) => {
+    if (!customerId || !tenantId) return { name: 'Cliente', phone: '' };
+    const result = await customerService.getCustomerById(customerId, tenantId);
+    if (result.ok && result.data) {
+      return { name: result.data.name, phone: result.data.phone ?? '' };
+    }
+    return { name: 'Cliente', phone: '' };
+  }, []);
+
   const handleOrderPayment = useCallback(async (saleId: string, method: PaymentMethod) => {
     if (!exchangeRateBs || exchangeRateBs <= 0) {
       addToast({ type: 'error', message: 'No hay tasa de cambio configurada.', duration: 4000 });
@@ -143,10 +153,10 @@ export function PosPage({ tenantId }: PosPageProps) {
       if (result.ok) {
         const sale = result.data as unknown as DexieSale;
         if (sale.orderType === 'delivery') {
-          const db = getDb();
-          const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
+          const { name, phone } = await fetchDispatchCustomer(sale.customerId, tenantId);
           setDispatchSale(sale);
-          setDispatchCustomerName(customer?.name || 'Cliente');
+          setDispatchCustomerName(name);
+          setDispatchCustomerPhone(phone);
           setShowDispatchPanel(true);
         } else {
           addToast({ type: 'success', message: 'Pedido pagado', duration: 3000 });
@@ -161,7 +171,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       setProcessing(false);
       setOrderPayModal(null);
     }
-  }, [exchangeRateBs, activeSessionId, addToast]);
+  }, [exchangeRateBs, activeSessionId, tenantId, addToast, fetchDispatchCustomer]);
 
   const handlePayOrder = useCallback((sale: DexieSale) => {
     setOrderPayModal({ sale, method: null });
@@ -187,44 +197,53 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [addToast]);
 
+  const fetchOrderData = useCallback(async (saleId: string) => {
+    const saleResult = await getSaleById(saleId);
+    if (!saleResult.ok || !saleResult.data) return null;
+    const sale = saleResult.data;
+    let customerName = 'Cliente';
+    if (sale.customerId && tenantId) {
+      const custResult = await customerService.getCustomerById(sale.customerId, tenantId);
+      if (custResult.ok && custResult.data) customerName = custResult.data.name;
+    }
+    return { customerName, orderNumber: sale.orderNumber ?? saleId.slice(0, 8) };
+  }, [tenantId]);
+
   useEffect(() => {
     const sub = EventBus.on(
       SystemEvents.ORDER_STATUS_CHANGED,
       (payload: unknown) => {
         const data = payload as { saleId?: string; newStatus?: string };
         if (data?.newStatus === 'lista' && data?.saleId) {
-          const db = getDb();
-          db.sales.get(data.saleId).then((sale) => {
-            if (!sale) return;
-            db.customers.get(sale.customerId ?? '').then((customer) => {
-              setKitchenReadyNotifs((prev) => {
-                const next = [...prev, {
-                  saleId: data.saleId!,
-                  customerName: customer?.name || 'Cliente',
-                  orderNumber: sale.orderNumber ?? data.saleId!.slice(0, 8),
-                }];
-                return next.slice(-3);
-              });
-              if (activeTab !== 'orders') {
-                try {
-                  const ctx = new AudioContext();
-                  const osc = ctx.createOscillator();
-                  const gain = ctx.createGain();
-                  osc.connect(gain);
-                  gain.connect(ctx.destination);
-                  osc.frequency.value = 400;
-                  gain.gain.value = 0.1;
-                  osc.start();
-                  osc.stop(ctx.currentTime + 0.4);
-                } catch { /* ignore */ }
-              }
+          fetchOrderData(data.saleId).then((info) => {
+            if (!info) return;
+            setKitchenReadyNotifs((prev) => {
+              const next = [...prev, {
+                saleId: data.saleId!,
+                customerName: info.customerName,
+                orderNumber: info.orderNumber,
+              }];
+              return next.slice(-3);
             });
+            if (activeTab !== 'orders') {
+              try {
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 400;
+                gain.gain.value = 0.1;
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+              } catch { /* ignore */ }
+            }
           });
         }
       },
     );
     return () => { EventBus.off(sub); };
-  }, [activeTab]);
+  }, [activeTab, fetchOrderData]);
 
   // Confirmar si el usuario intenta recargar con productos en el carrito
   useEffect(() => {
@@ -1240,6 +1259,7 @@ export function PosPage({ tenantId }: PosPageProps) {
           onClose={() => { setShowDispatchPanel(false); setDispatchSale(null); }}
           sale={dispatchSale}
           customerName={dispatchCustomerName}
+          customerPhone={dispatchCustomerPhone}
         />
       )}
 

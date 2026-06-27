@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info, Lock } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
+import type { Customer } from '../../../specs/customers';
 import { METADATA_PAGOS, PAYMENT_METHODS, calculateSaleTotals } from '../../../specs/pos';
 import { preciseRound } from '@logiscore/shared';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
@@ -21,7 +22,7 @@ interface CartSummaryProps {
   discount: { type: 'percentage' | 'fixed'; value: number } | null;
   onSetDiscount: (type: 'percentage' | 'fixed', value: number) => void;
   onClearDiscount: () => void;
-  selectedCustomer: { id: string; name: string; cedula?: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
+  selectedCustomer: Customer | null;
   onSelectCustomer: () => void;
   onClearCustomer: () => void;
   isCreditSale: boolean;
@@ -137,14 +138,15 @@ export function CartSummary({
         <div className="flex justify-between text-sm text-danger">
           <span className="flex items-center gap-1">
             Descuento ({discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`})
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClearDiscount}
-              className="ml-1 p-2 min-w-11 min-h-11 rounded hover:bg-danger/10 transition-colors flex items-center justify-center text-danger"
+              className="ml-1 p-2 min-w-11 min-h-11 rounded text-danger"
               aria-label="Quitar descuento"
             >
               <X size={12} />
-            </button>
+            </Button>
           </span>
           <span>-{formatUsd(discountUsd)} / -{formatBs(discountBs)}</span>
         </div>
@@ -239,30 +241,24 @@ export function CartSummary({
       {showDiscountInput && (
         <div className="space-y-2 p-2 rounded-xl bg-surface-alt border border-border shadow-sm animate-slide-down-panel">
           <div className="flex gap-1">
-            <button
-              type="button"
+            <Button
+              variant={discountType === 'percentage' ? 'primary' : 'outline'}
+              size="sm"
               onClick={() => setDiscountType('percentage')}
-              className={`flex-1 py-1.5 min-h-11 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
-                discountType === 'percentage'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-gray-600 border border-border hover:border-primary/30'
-              }`}
+              className="flex-1 min-h-11 text-xs"
             >
-              <Percent size={12} className="inline mr-1" />
+              <Percent size={12} className="mr-1" />
               Porcentaje
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant={discountType === 'fixed' ? 'primary' : 'outline'}
+              size="sm"
               onClick={() => setDiscountType('fixed')}
-              className={`flex-1 py-1.5 min-h-11 rounded-lg text-xs font-medium transition-all active:scale-[0.98] ${
-                discountType === 'fixed'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-white text-gray-600 border border-border hover:border-primary/30'
-              }`}
+              className="flex-1 min-h-11 text-xs"
             >
-              <DollarSign size={12} className="inline mr-1" />
-             Dólares
-            </button>
+              <DollarSign size={12} className="mr-1" />
+              Dólares
+            </Button>
           </div>
           <div className="flex gap-2">
             <Input
@@ -293,34 +289,26 @@ export function CartSummary({
           const meta = METADATA_PAGOS[m];
           const selected = paymentMethod === m && !isCreditSale;
           return (
-            <button
+            <Button
               key={m}
-              type="button"
+              variant={selected ? 'primary' : 'outline'}
+              size="sm"
               onClick={() => { onPaymentMethodChange(m); onSetIsCreditSale(false); }}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
-                selected
-                  ? 'bg-primary text-white border-primary shadow-sm ring-1 ring-primary/30'
-                  : 'bg-white text-text-secondary border-border hover:border-primary/30 hover:text-primary'
-              }`}
+              className="min-h-11"
             >
               {meta.label}
-            </button>
+            </Button>
           );
         })}
       </div>
 
       {hasCustomerWithCredit && (
-        <button
-          type="button"
+        <Button
+          variant={isCreditSale ? 'primary' : 'outline'}
           onClick={handleCreditToggle}
           disabled={creditExceeds}
-          className={`w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all min-h-11 active:scale-[0.98] ${
-            isCreditSale
-              ? 'bg-amber-500 text-white border-amber-500 shadow-sm ring-1 ring-amber-500/30'
-              : creditExceeds
-                ? 'bg-gray-100 text-gray-400 border-border cursor-not-allowed'
-                : 'bg-white text-amber-700 border-amber-300 hover:border-amber-500 hover:bg-amber-50'
-          }`}
+          className="w-full min-h-11"
+          style={isCreditSale ? { backgroundColor: '#f59e0b', borderColor: '#f59e0b' } : undefined}
         >
           <CreditCard size={14} />
           A crédito
@@ -329,7 +317,7 @@ export function CartSummary({
               ({formatUsd(totalUsd)})
             </span>
           )}
-        </button>
+        </Button>
       )}
 
       {creditExceeds && (

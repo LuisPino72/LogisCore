@@ -1,5 +1,6 @@
 import type { Product } from '../../../specs/inventory';
 import type { Presentation } from '../../../specs/inventory';
+import type { Customer } from '../../../specs/customers';
 import type { CartItem as SpecCartItem, Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod } from '../../../specs/pos';
 
 export type { Sale, SaleItem, CashRegister, CreateSaleInput, OpenCashRegisterInput, CloseCashRegisterInput, PaymentMethod };
@@ -47,6 +48,6 @@ export interface PosState {
   saleItemsLoading: boolean;
   assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }>;
   selectedCustomerId: string | null;
-  selectedCustomer: { id: string; name: string; phone?: string; address?: string; creditLimit: number; balance: number; notes?: string; createdAt: string; updatedAt: string; deletedAt?: string } | null;
+  selectedCustomer: Customer | null;
   isCreditSale: boolean;
 }

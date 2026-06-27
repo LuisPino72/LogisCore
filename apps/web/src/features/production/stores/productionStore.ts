@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createAppError } from '@logiscore/core';
+import { logger } from '../../../lib/logger';
 import type { Recipe, RecipeLine, ProductionOrder, ProductionState, RecipeFilters, ProductionOrderFilters, IngredientAvailability, RecipeWithLines, CreateRecipeInput, UpdateRecipeInput, CreateProductionOrderInput } from '../types';
 import { productionService } from '../services/productionService';
 
@@ -94,7 +95,7 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       set({ loading: false, error: result.error });
       return null;
     } catch (err) {
-      console.error('[ProductionStore] createRecipe threw:', err);
+      logger.error('[ProductionStore]', 'createRecipe threw:', err);
       const message = err instanceof Error ? err.message : 'Error inesperado al crear la receta.';
       set({ loading: false, error: createAppError({ code: 'RECIPE_CREATE_FAILED', message }) });
       return null;

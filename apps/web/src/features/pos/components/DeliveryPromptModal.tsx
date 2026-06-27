@@ -50,11 +50,11 @@ export function DeliveryPromptModal({
               Selecciona el tipo de pedido para esta venta.
             </p>
             <div className="flex flex-col gap-2">
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 onClick={handleDelivery}
                 disabled={loading}
-                className="flex items-center gap-3 p-4 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-[0.98] min-h-[56px]"
+                className="flex items-center gap-3 p-4 min-h-[56px] w-full justify-start"
               >
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                   <Truck size={20} className="text-primary" />
@@ -63,12 +63,12 @@ export function DeliveryPromptModal({
                   <p className="text-sm font-semibold text-gray-900">Delivery</p>
                   <p className="text-xs text-text-secondary">Enviar a domicilio</p>
                 </div>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="outline"
                 onClick={onJustPark}
                 disabled={loading}
-                className="flex items-center gap-3 p-4 rounded-xl border border-border hover:border-gray-300 hover:bg-gray-50 transition-all active:scale-[0.98] min-h-[56px]"
+                className="flex items-center gap-3 p-4 min-h-[56px] w-full justify-start"
               >
                 <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                   <Store size={20} className="text-gray-600" />
@@ -77,7 +77,7 @@ export function DeliveryPromptModal({
                   <p className="text-sm font-semibold text-gray-900">Solo pausar</p>
                   <p className="text-xs text-text-secondary">Guardar para retomar después</p>
                 </div>
-              </button>
+              </Button>
             </div>
           </>
         ) : (
@@ -86,11 +86,11 @@ export function DeliveryPromptModal({
               ¿Esta orden requiere preparación en cocina?
             </p>
             <div className="flex flex-col gap-2">
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 onClick={() => { setWantsKitchen(true); handleKitchenChoice(true); }}
                 disabled={loading}
-                className={`flex items-center gap-3 p-4 rounded-xl border transition-all active:scale-[0.98] min-h-[56px] ${wantsKitchen ? 'border-warning bg-warning/5' : 'border-border hover:border-warning/40 hover:bg-warning/5'}`}
+                className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${wantsKitchen ? 'border-warning bg-warning/5' : ''}`}
               >
                 <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
                   <ChefHat size={20} className="text-warning" />
@@ -99,12 +99,12 @@ export function DeliveryPromptModal({
                   <p className="text-sm font-semibold text-gray-900">Sí, necesita cocina</p>
                   <p className="text-xs text-text-secondary">Pasará por preparación antes de enviar</p>
                 </div>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => { setWantsKitchen(false); handleKitchenChoice(false); }}
                 disabled={loading}
-                className={`flex items-center gap-3 p-4 rounded-xl border transition-all active:scale-[0.98] min-h-[56px] ${!wantsKitchen ? 'border-success bg-success/5' : 'border-border hover:border-success/40 hover:bg-success/5'}`}
+                className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${!wantsKitchen ? 'border-success bg-success/5' : ''}`}
               >
                 <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
                   <Truck size={20} className="text-success" />
@@ -113,7 +113,7 @@ export function DeliveryPromptModal({
                   <p className="text-sm font-semibold text-gray-900">No, directo a envío</p>
                   <p className="text-xs text-text-secondary">Sin preparación adicional</p>
                 </div>
-              </button>
+              </Button>
             </div>
             <Button
               variant="ghost"

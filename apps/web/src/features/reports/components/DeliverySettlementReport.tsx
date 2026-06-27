@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { Card, Button, Spinner, EmptyState, Modal, DatePicker } from '@/common/components';
 import { Truck, Check, Wallet, AlertCircle } from 'lucide-react';
 import { useDeliverySettlement } from '../hooks/useDeliverySettlement';
-import { markDeliverySettlementPaid } from '../services/deliverySettlementService';
 import { formatUsd } from '@/lib/formatBs';
 
 interface DeliverySettlementReportProps {
@@ -10,7 +9,7 @@ interface DeliverySettlementReportProps {
 }
 
 export function DeliverySettlementReport({ tenantId }: DeliverySettlementReportProps) {
-  const { data, loading, date, setDate, refresh } = useDeliverySettlement(tenantId);
+  const { data, loading, date, setDate, paySettlement } = useDeliverySettlement(tenantId);
   const [paying, setPaying] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ name: string; amount: number } | null>(null);
 
@@ -25,15 +24,12 @@ export function DeliverySettlementReport({ tenantId }: DeliverySettlementReportP
   const handlePay = useCallback(async () => {
     if (!confirmModal) return;
     setPaying(confirmModal.name);
-    const result = await markDeliverySettlementPaid(
-      tenantId, confirmModal.name, date.start, date.end
-    );
+    const result = await paySettlement(confirmModal.name, date.start, date.end);
     if (result.ok) {
       setConfirmModal(null);
-      refresh();
     }
     setPaying(null);
-  }, [confirmModal, tenantId, date, refresh]);
+  }, [confirmModal, paySettlement, date]);
 
   if (loading) {
     return (

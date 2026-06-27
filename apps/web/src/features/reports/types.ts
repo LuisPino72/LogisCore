@@ -223,14 +223,6 @@ export interface ProductionSummaryData {
 
 // ===== MULTI-CASH REGISTER ANALYSIS =====
 
-export interface DeliverySettlementRow {
-  name: string;
-  deliveryCount: number;
-  totalFees: number;
-  paidAmount: number;
-  pendingAmount: number;
-}
-
 export interface RegisterCashAnalysis {
   registerId: string;
   registerName: string;
