@@ -19,9 +19,9 @@ export function useDeliverySettlement(tenantId: string | null) {
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     if (!tenantId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     const result = await getDeliverySettlement(tenantId, date.start, date.end);
     if (!mountedRef.current) return;
@@ -38,7 +38,7 @@ export function useDeliverySettlement(tenantId: string | null) {
     const result = await markDeliverySettlementPaid(tid, name, start, end);
     if (!mountedRef.current) return result;
     if (result.ok) {
-      await fetchData();
+      await fetchData(true);
     } else {
       setError(result.error.message);
     }
@@ -57,9 +57,9 @@ export function useDeliverySettlement(tenantId: string | null) {
     const subs = [
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
-        if (table === '*' || table === 'sales') fetchData();
+        if (table === '*' || table === 'sales') fetchData(true);
       }),
-      EventBus.on(SystemEvents.ORDER_DELIVERED, fetchData),
+      EventBus.on(SystemEvents.ORDER_DELIVERED, () => fetchData(true)),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [tenantId, fetchData]);

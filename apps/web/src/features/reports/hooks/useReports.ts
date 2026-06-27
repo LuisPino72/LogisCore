@@ -114,7 +114,7 @@ export function useReports(tenantId: string | null) {
     }
   }, [tenantId, filters]);
 
-  const loadTab = useCallback(async (tab: ReportTab) => {
+  const loadTab = useCallback(async (tab: ReportTab, silent = false) => {
     if (!tenantId) return;
     const cacheKey = `${tenantId}-${tab}-${filters.timeRange}-${filters.startDate ?? ''}-${filters.endDate ?? ''}`;
     if (prevKey.current === cacheKey) return;
@@ -126,7 +126,7 @@ export function useReports(tenantId: string | null) {
       return;
     }
 
-    setState((s) => ({ ...s, loading: true, error: null }));
+    if (!silent) setState((s) => ({ ...s, loading: true, error: null }));
 
     const apply = (updates: Partial<ReportsState>, error: string | null) => {
       dataCache.current.set(cacheKey, updates);
@@ -226,11 +226,10 @@ export function useReports(tenantId: string | null) {
 
   const REPORTS_TABLES = ['sales', 'sale_items', 'cash_registers', 'expenses', 'products', 'categories', 'inventory_movements', 'exchange_rates', 'customers', 'recipes', 'recipe_lines', 'production_orders'];
 
-  const refetch = useCallback((table?: string) => {
+  const refetch = useCallback((table?: string, silent = false) => {
     if (debounceRefetchTimer.current) clearTimeout(debounceRefetchTimer.current);
     debounceRefetchTimer.current = setTimeout(() => {
       if (!mountedRef.current) return;
-      // Granular invalidation: only clear cache keys affected by the synced table
       if (table && table !== '*') {
         const affectedTabs: ReportTab[] = [];
         if (['sales', 'sale_items', 'exchange_rates'].includes(table)) affectedTabs.push('summary', 'profits', 'cash');
@@ -248,12 +247,11 @@ export function useReports(tenantId: string | null) {
           }
         }
       } else {
-        // Full clear for transaction events or wildcard sync
         prevKey.current = '';
         dataCache.current.clear();
         cacheOrder.current = [];
       }
-      loadTab(activeTab);
+      loadTab(activeTab, silent);
     }, REFETCH_DEBOUNCE_MS);
   }, [loadTab, activeTab, tenantId, filters]);
 
@@ -267,32 +265,32 @@ export function useReports(tenantId: string | null) {
   useEffect(() => {
     if (!tenantId) return;
     const subs = [
-      EventBus.on(SystemEvents.SALE_COMPLETED, () => refetch()),
-      EventBus.on(SystemEvents.SALE_VOIDED, () => refetch()),
-      EventBus.on(SystemEvents.BOX_CLOSED, () => refetch()),
-      EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => refetch()),
-      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, () => refetch()),
-      EventBus.on(SystemEvents.INVENTORY_UPDATED, () => refetch('products')),
-      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => refetch()),
-      EventBus.on(SystemEvents.EXPENSES_CREATED, () => refetch()),
-      EventBus.on(SystemEvents.EXPENSES_UPDATED, () => refetch()),
-      EventBus.on(SystemEvents.EXPENSES_DELETED, () => refetch()),
-      EventBus.on(SystemEvents.EXPENSES_CANCELLED, () => refetch()),
-      EventBus.on(SystemEvents.BOX_OPENED, () => refetch('cash_registers')),
-      EventBus.on(SystemEvents.CUSTOMER_CREATED, () => refetch('customers')),
-      EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => refetch('customers')),
-      EventBus.on(SystemEvents.CUSTOMER_DELETED, () => refetch('customers')),
-      EventBus.on(SystemEvents.DEBT_COLLECTED, () => refetch()),
+      EventBus.on(SystemEvents.SALE_COMPLETED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.SALE_VOIDED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.BOX_CLOSED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.INVENTORY_ADJUSTMENT, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, () => refetch('products', true)),
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.EXPENSES_CREATED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.EXPENSES_UPDATED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.EXPENSES_DELETED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.EXPENSES_CANCELLED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.BOX_OPENED, () => refetch('cash_registers', true)),
+      EventBus.on(SystemEvents.CUSTOMER_CREATED, () => refetch('customers', true)),
+      EventBus.on(SystemEvents.CUSTOMER_UPDATED, () => refetch('customers', true)),
+      EventBus.on(SystemEvents.CUSTOMER_DELETED, () => refetch('customers', true)),
+      EventBus.on(SystemEvents.DEBT_COLLECTED, () => refetch(undefined, true)),
       EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
         const { table } = payload as { table?: string };
         if (!table || table === '*' || REPORTS_TABLES.includes(table)) {
-          refetch(table);
+          refetch(table, true);
         }
       }),
-      EventBus.on(SystemEvents.ORDER_CREATED, () => refetch()),
-      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, () => refetch()),
-      EventBus.on(SystemEvents.ORDER_DELIVERED, () => refetch()),
-      EventBus.on(SystemEvents.ORDER_CANCELLED, () => refetch()),
+      EventBus.on(SystemEvents.ORDER_CREATED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.ORDER_DELIVERED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.ORDER_CANCELLED, () => refetch(undefined, true)),
     ];
     return () => {
       subs.forEach((sub) => EventBus.off(sub));
