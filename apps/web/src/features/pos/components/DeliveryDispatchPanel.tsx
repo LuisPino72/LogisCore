@@ -3,8 +3,10 @@ import { Button, Modal, Select, Input } from '@/common/components';
 import { MapPin, MessageCircle } from 'lucide-react';
 import { getDeliveryPersons } from '../../settings/services/deliveryPersonService';
 import { dispatchDelivery, generateMapsLink } from '../services/saleService';
+import { normalizeWaPhone } from '../services/receiptService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { getDb } from '../../../services/dexie/db';
 import type { DexieSale } from '../../../services/dexie/types';
 import type { DexieDeliveryPerson } from '../../../services/dexie/db';
 
@@ -81,10 +83,19 @@ export function DeliveryDispatchPanel({
     }
   }, [selectedPerson, deliveryFee, sale, customerName, deliveryPersons, addToast, onClose]);
 
-  const handleNotifyCustomer = useCallback(() => {
-    const text = `¡Hola ${customerName}! Tu pedido va en camino con ${selectedPerson} 🚴`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  }, [customerName, selectedPerson]);
+  const handleNotifyCustomer = useCallback(async () => {
+    if (!sale) return;
+    const db = getDb();
+    const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
+    const phone = customer?.phone;
+    if (!phone) {
+      addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado' });
+      return;
+    }
+    const normalizedPhone = normalizeWaPhone(phone);
+    const text = encodeURIComponent(`¡Hola ${customer?.name || ''}! Tu pedido va en camino con ${selectedPerson} 🚴`);
+    window.open(`https://wa.me/${normalizedPhone}?text=${text}`, '_blank');
+  }, [sale, selectedPerson, addToast]);
 
   const canDispatch = selectedPerson && deliveryFee && parseFloat(deliveryFee) > 0;
 

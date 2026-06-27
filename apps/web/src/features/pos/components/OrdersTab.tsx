@@ -1,10 +1,8 @@
 import { useState, useEffect, useDeferredValue, useMemo, useCallback } from 'react';
 import { Badge, Button, Spinner, EmptyState } from '@/common/components';
-import { getDb } from '../../../services/dexie/db';
+import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
 import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2 } from 'lucide-react';
-
-const ACTIVE_STATUSES = ['pedida', 'preparacion', 'lista', 'pagada', 'despachada'] as const;
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pedida: { label: 'Pedida', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
@@ -38,13 +36,11 @@ export function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDeli
   const deferredSearch = useDeferredValue(search);
 
   const reload = useCallback(async () => {
-    const db = getDb();
-    const all = await db.sales
-      .where({ tenantId })
-      .filter((s) => !s.deletedAt && ACTIVE_STATUSES.includes(s.status as typeof ACTIVE_STATUSES[number]))
-      .toArray();
-    all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    setOrders(all);
+    const result = await getActiveOrders(tenantId);
+    if (result.ok) {
+      const sorted = [...result.data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setOrders(sorted);
+    }
   }, [tenantId]);
 
   useEffect(() => {

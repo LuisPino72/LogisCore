@@ -209,7 +209,8 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     }
   }, [tenantId, userId, newMotorizadoName, newMotorizadoPhone, addToast]);
 
-  const handleRemoveMotorizado = useCallback(async (id: string) => {
+  const handleRemoveMotorizado = useCallback(async (id: string, name: string) => {
+    if (!window.confirm(`¿Eliminar motorizado "${name}"?`)) return;
     if (!tenantId || !userId) return;
     const result = await removeDeliveryPerson(id, tenantId, userId);
     if (result.ok) {
@@ -441,7 +442,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleRemoveMotorizado(person.id)}
+                  onClick={() => handleRemoveMotorizado(person.id, person.name)}
                   className="text-gray-400 hover:text-danger min-w-[44px] min-h-[44px]"
                   aria-label={`Eliminar motorizado ${person.name}`}
                 >

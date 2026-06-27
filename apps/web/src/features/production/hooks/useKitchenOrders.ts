@@ -3,6 +3,7 @@ import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 import { getKitchenOrders, updateOrderStatus, revertOrderStatus } from '../../pos/services/saleService';
+import { logger } from '../../../lib/logger';
 import { getDb } from '../../../services/dexie/db';
 import type { DexieSale, DexieSaleItem } from '../../../services/dexie/db';
 
@@ -165,18 +166,30 @@ export function useKitchenOrders(): {
   const readyCount = useMemo(() => orders.filter((o) => o.status === 'lista').length, [orders]);
 
   const markAsPreparing = useCallback(async (id: string) => {
-    await updateOrderStatus(id, 'preparacion');
-    loadOrders(true);
+    const result = await updateOrderStatus(id, 'preparacion');
+    if (!result.ok) {
+      logger.error('useKitchenOrders', 'Failed to mark as preparing', result.error);
+      return;
+    }
+    await loadOrders(true);
   }, [loadOrders]);
 
   const markAsReady = useCallback(async (id: string) => {
-    await updateOrderStatus(id, 'lista');
-    loadOrders(true);
+    const result = await updateOrderStatus(id, 'lista');
+    if (!result.ok) {
+      logger.error('useKitchenOrders', 'Failed to mark as ready', result.error);
+      return;
+    }
+    await loadOrders(true);
   }, [loadOrders]);
 
   const revertToPreparing = useCallback(async (id: string) => {
-    await revertOrderStatus(id);
-    loadOrders(true);
+    const result = await revertOrderStatus(id);
+    if (!result.ok) {
+      logger.error('useKitchenOrders', 'Failed to revert to preparing', result.error);
+      return;
+    }
+    await loadOrders(true);
   }, [loadOrders]);
 
   const refresh = useCallback(() => {

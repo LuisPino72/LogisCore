@@ -1189,7 +1189,7 @@ export async function createOrder(input: {
   }
 
   const customer = await db.customers.get(customerId);
-  if (!customer || customer.deletedAt) {
+  if (!customer || customer.deletedAt || customer.tenantId !== tenantId) {
     return failure(new AppError('ORDER_NO_CUSTOMER', 'El cliente no existe.'));
   }
 
@@ -1484,6 +1484,10 @@ export async function cancelOrder(saleId: string): Promise<Result<void, AppError
   if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
   if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
 
+  if (['pagada', 'despachada', 'entregada'].includes(sale.status)) {
+    return failure(new AppError('ORDER_ALREADY_PAID', 'No se puede cancelar una orden ya pagada. Usa la función de anulación.'));
+  }
+
   const cancellable = ['pedida', 'preparacion', 'lista'];
   if (!cancellable.includes(sale.status)) {
     return failure(new AppError(PosErrors.ORDER_INVALID_STATUS_TRANSITION,
@@ -1558,6 +1562,24 @@ export async function confirmDelivery(saleId: string): Promise<Result<void, AppE
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en confirmDelivery:', err);
     return failure(new AppError('ORDER_DELIVER_FAILED', 'Error al confirmar la entrega.'));
+  }
+}
+
+export async function getActiveOrders(tenantId: string): Promise<Result<DexieSale[], AppError>> {
+  try {
+    const db = getDb();
+    const orders = await db.sales
+      .where('tenantId')
+      .equals(tenantId)
+      .filter(s =>
+        ['pedida', 'preparacion', 'lista', 'pagada', 'despachada'].includes(s.status) &&
+        !s.deletedAt
+      )
+      .sortBy('createdAt');
+    return success(orders);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en getActiveOrders:', err);
+    return failure(new AppError('ACTIVE_ORDERS_FETCH_FAILED', 'Error al cargar órdenes activas.'));
   }
 }
 

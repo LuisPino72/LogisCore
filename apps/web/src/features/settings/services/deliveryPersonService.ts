@@ -124,7 +124,7 @@ export async function removeDeliveryPerson(
 
     await db.transaction('rw', [db.deliveryPersons, db.syncQueue, db.outbox], async () => {
       await db.deliveryPersons.update(id, { deletedAt: now, isActive: false });
-      await syncQueue.enqueue('delivery_persons', 'UPDATE', id, { id, deleted_at: now, is_active: false }, tenantId);
+      await syncQueue.enqueue('delivery_persons', 'UPDATE', id, toSnake({ id, deletedAt: now, isActive: false } as unknown as Record<string, unknown>), tenantId);
       await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
         action: 'delivery_person_removed', personId: id,
       });
@@ -190,7 +190,10 @@ export async function updateDeliveryPerson(
     });
 
     const result = await db.deliveryPersons.get(id);
-    return success(result!);
+    if (!result) {
+      return failure(new AppError('DELIVERY_PERSON_NOT_FOUND', 'Motorizado no encontrado'));
+    }
+    return success(result);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en updateDeliveryPerson:', err);
     return failure(new AppError('DELIVERY_PERSON_UPDATE_FAILED', 'Error al actualizar motorizado.'));
