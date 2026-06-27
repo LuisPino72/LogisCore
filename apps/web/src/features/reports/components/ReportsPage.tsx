@@ -1,7 +1,7 @@
 import { useState, Suspense, lazy, useRef, useCallback, type ReactNode } from 'react';
 import { Card, Button, Select, Spinner, BottomNav, DatePicker, ModuleOnboarding, type BottomNavItem, EmptyState, Tooltip, DrillDownModal } from '@/common/components';
 import type { Column } from '@/common/components';
-import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer, Users } from 'lucide-react';
+import { BarChart3, PieChart, ShoppingBag, Wallet, FileText, TrendingUp, ShieldBan, Printer, Users, Truck } from 'lucide-react';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useReports } from '../hooks/useReports';
 import { useDrillDown } from '../hooks/useDrillDown';
@@ -21,6 +21,7 @@ const CashAnalysis = lazy(() => import('./CashAnalysis').then((m) => ({ default:
 const ExpenseBreakdownChart = lazy(() => import('./ExpenseBreakdownChart').then((m) => ({ default: m.ExpenseBreakdownChart })));
 const CustomersReport = lazy(() => import('./CustomersReport').then((m) => ({ default: m.CustomersReport })));
 const ProductionReport = lazy(() => import('./ProductionReport').then((m) => ({ default: m.ProductionReport })));
+const DeliverySettlementReport = lazy(() => import('./DeliverySettlementReport').then((m) => ({ default: m.DeliverySettlementReport })));
 
 const TIME_RANGE_OPTIONS: { value: ReportTimeRange; label: string }[] = [
   { value: 'today', label: 'Hoy' },
@@ -37,6 +38,7 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'products', label: 'Productos', icon: <ShoppingBag size={20} /> },
   { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
   { id: 'more', label: 'Más', icon: <Users size={20} /> },
+  { id: 'delivery', label: 'Liquidación', icon: <Truck size={20} /> },
 ];
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -598,6 +600,13 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             </div>
             <div className="animate-report-fade-in">
               <ProductionReport data={productionSummary} loading={loading} onKpiClick={openDrillDown} />
+            </div>
+          </Suspense>
+        </div>
+        <div className={`print-section ${activeTab !== 'delivery' ? 'hidden' : ''}`}>
+          <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
+            <div className="animate-report-fade-in">
+              <DeliverySettlementReport tenantId={tenantId ?? ''} />
             </div>
           </Suspense>
         </div>

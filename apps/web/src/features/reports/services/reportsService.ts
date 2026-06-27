@@ -6,6 +6,7 @@ import { getNonSellableExpenses, getAdjustmentLossExpenses, getExpenseBreakdown 
 import { getCustomersSummary, getCustomersRanking } from './customersReportService';
 import { getProductionSummary, getRecipeProfitability } from './productionReportService';
 import { getPendingPayables } from './payablesService';
+import { getDeliverySettlement } from './deliverySettlementService';
 
 export const reportsService = {
   getExecutiveSummary,
@@ -27,4 +28,5 @@ export const reportsService = {
   getProductionSummary,
   getPendingPayables,
   getRecipeProfitability,
+  getDeliverySettlement,
 };

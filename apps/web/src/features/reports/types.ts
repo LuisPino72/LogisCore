@@ -122,7 +122,7 @@ export interface CashRegisterSummaryData {
 
 
 
-export type ReportTab = 'summary' | 'profits' | 'products' | 'cash' | 'more';
+export type ReportTab = 'summary' | 'profits' | 'products' | 'cash' | 'more' | 'delivery';
 
 export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos' | 'topClientes' | 'clientesRanking' | 'produccionRecetas' | 'produccionOrdenes';
 
@@ -222,6 +222,14 @@ export interface ProductionSummaryData {
 }
 
 // ===== MULTI-CASH REGISTER ANALYSIS =====
+
+export interface DeliverySettlementRow {
+  name: string;
+  deliveryCount: number;
+  totalFees: number;
+  paidAmount: number;
+  pendingAmount: number;
+}
 
 export interface RegisterCashAnalysis {
   registerId: string;
