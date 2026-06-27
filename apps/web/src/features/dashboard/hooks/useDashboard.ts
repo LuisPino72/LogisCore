@@ -61,6 +61,10 @@ export function useDashboard(tenantId: string | null) {
       EventBus.on(SystemEvents.EXPENSES_UPDATED, refreshTasks),
       EventBus.on(SystemEvents.EXPENSES_DELETED, refreshTasks),
       EventBus.on(SystemEvents.CUSTOMER_UPDATED, refreshTasks),
+      EventBus.on(SystemEvents.ORDER_CREATED, refreshDashboard),
+      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, refreshDashboard),
+      EventBus.on(SystemEvents.ORDER_DELIVERED, refreshDashboard),
+      EventBus.on(SystemEvents.ORDER_CANCELLED, refreshDashboard),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [tenantId, refreshDashboard, refreshTasks]);

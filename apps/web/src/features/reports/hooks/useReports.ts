@@ -289,6 +289,10 @@ export function useReports(tenantId: string | null) {
           refetch(table);
         }
       }),
+      EventBus.on(SystemEvents.ORDER_CREATED, () => refetch()),
+      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, () => refetch()),
+      EventBus.on(SystemEvents.ORDER_DELIVERED, () => refetch()),
+      EventBus.on(SystemEvents.ORDER_CANCELLED, () => refetch()),
     ];
     return () => {
       subs.forEach((sub) => EventBus.off(sub));

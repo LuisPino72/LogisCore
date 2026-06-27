@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Button, Modal, Select, Input } from '@/common/components';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Button, Modal, Select, Input, Skeleton, Alert } from '@/common/components';
 import { MapPin, MessageCircle } from 'lucide-react';
 import { getDeliveryPersons } from '../../settings/services/deliveryPersonService';
 import { dispatchDelivery, generateMapsLink } from '../services/saleService';
@@ -29,6 +29,8 @@ export function DeliveryDispatchPanel({
   const [deliveryFee, setDeliveryFee] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingPersons, setLoadingPersons] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
 
   const defaultDeliveryFee = useSettingsStore((s) => s.defaultDeliveryFee);
   const { addToast } = useToastStore();
@@ -39,11 +41,19 @@ export function DeliveryDispatchPanel({
   // abstracción de datos. Refactor futuro: mover a un hook useDeliveryService().
   useEffect(() => {
     if (!isOpen || !sale.tenantId) return;
+    mountedRef.current = true;
     setLoadingPersons(true);
+    setError(null);
     getDeliveryPersons(sale.tenantId).then((res) => {
-      if (res.ok) setDeliveryPersons(res.data);
+      if (!mountedRef.current) return;
+      if (res.ok) {
+        setDeliveryPersons(res.data);
+      } else {
+        setError(res.error?.message || 'Error al cargar motorizados');
+      }
       setLoadingPersons(false);
     });
+    return () => { mountedRef.current = false; };
   }, [isOpen, sale.tenantId]);
 
   useEffect(() => {
@@ -104,8 +114,14 @@ export function DeliveryDispatchPanel({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Despachar Delivery" size="sm">
       <div className="flex flex-col gap-4 animate-slide-down">
+        {error && (
+          <Alert variant="error" title="Error">{error}</Alert>
+        )}
         {loadingPersons ? (
-          <div className="text-center py-4 text-sm text-text-secondary">Cargando motorizados...</div>
+          <div className="space-y-3 py-4">
+            <Skeleton className="h-12 w-full rounded-lg" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </div>
         ) : deliveryPersons.length === 0 ? (
           <div className="text-center py-4">
             <p className="text-sm text-text-secondary">
@@ -157,6 +173,7 @@ export function DeliveryDispatchPanel({
             disabled={!canDispatch || loading || loadingPersons}
             loading={loading}
             className="min-h-11"
+            aria-label="Enviar ubicación al motorizado por WhatsApp"
           >
             📨 Enviar al Motorizado
           </Button>
@@ -166,6 +183,7 @@ export function DeliveryDispatchPanel({
               fullWidth
               onClick={handleNotifyCustomer}
               className="min-h-11"
+              aria-label="Notificar al cliente por WhatsApp"
               // TECH DEBT: inline style WhatsApp verde. Refactor: className con variable CSS o token de diseño.
               style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
             >

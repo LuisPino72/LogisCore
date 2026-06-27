@@ -1,5 +1,5 @@
 import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo, useRef } from 'react';
-import { Badge, Button, Input, Spinner, EmptyState } from '@/common/components';
+import { Badge, Button, Input, Skeleton, EmptyState } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
 import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2 } from 'lucide-react';
@@ -47,33 +47,35 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
 
   useEffect(() => {
     cancelledRef.current = false;
-    let cancelled = false;
     async function load() {
       setLoading(true);
       try {
         await reload();
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelledRef.current) setLoading(false);
       }
     }
     load();
     return () => {
-      cancelled = true;
       cancelledRef.current = true;
     };
   }, [reload]);
 
   useEffect(() => {
-    const interval = setInterval(reload, 10000);
+    const interval = setInterval(reload, 30000);
     return () => clearInterval(interval);
   }, [reload]);
 
   useEffect(() => {
     const subs = [
-      EventBus.on(SystemEvents.ORDER_CREATED, () => { reload(); }),
-      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, () => { reload(); }),
-      EventBus.on(SystemEvents.ORDER_CANCELLED, () => { reload(); }),
-      EventBus.on(SystemEvents.ORDER_DELIVERED, () => { reload(); }),
+      EventBus.on(SystemEvents.ORDER_CREATED, reload),
+      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, reload),
+      EventBus.on(SystemEvents.ORDER_CANCELLED, reload),
+      EventBus.on(SystemEvents.ORDER_DELIVERED, reload),
+      EventBus.on(SystemEvents.SYNC_REFRESH_TABLE, (payload: unknown) => {
+        const { table } = payload as { table?: string };
+        if (table === '*' || table === 'sales') reload();
+      }),
     ];
     return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [reload]);
@@ -88,10 +90,23 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
     );
   }, [orders, deferredSearch]);
 
-  if (loading) {
+  if (loading && !orders.length) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner />
+      <div className="space-y-3 p-4">
+        {[1,2,3,4,5].map(i => (
+          <div key={i} className="bg-white rounded-lg p-4 space-y-2">
+            <div className="flex justify-between">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-5 w-16" />
+            </div>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <div className="flex gap-2 mt-2">
+              <Skeleton className="h-8 w-20 rounded-md" />
+              <Skeleton className="h-8 w-20 rounded-md" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -132,6 +147,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
               <div
                 key={order.id}
                 className={`p-3 rounded-xl border ${cfg.bg} transition-all`}
+                style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px' }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -171,6 +187,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       size="sm"
                       onClick={() => onPayOrder(order)}
                       className="min-h-9 text-xs w-full"
+                      aria-label={`Cobrar orden ${order.orderNumber || ''}`}
                     >
                       <DollarSign size={14} />
                       Cobrar
@@ -185,6 +202,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       size="sm"
                       onClick={() => onDispatchOrder(order)}
                       className="min-h-9 text-xs w-full"
+                      aria-label={`Despachar orden ${order.orderNumber || ''}`}
                     >
                       <Truck size={14} />
                       Despachar
@@ -199,6 +217,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       size="sm"
                       onClick={() => onConfirmDelivery(order.id)}
                       className="min-h-9 text-xs w-full"
+                      aria-label={`Confirmar entrega orden ${order.orderNumber || ''}`}
                     >
                       <CheckCircle2 size={14} />
                       Confirmar Entrega

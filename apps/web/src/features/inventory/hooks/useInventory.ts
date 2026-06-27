@@ -75,6 +75,7 @@ export function useInventory(tenantId: string | null) {
       EventBus.on(SystemEvents.PURCHASE_RECEIVED, refreshOnEvent),
       EventBus.on(SystemEvents.PRODUCTION_COMPLETED, refreshOnEvent),
       EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, refreshOnEvent),
+      EventBus.on(SystemEvents.ORDER_CANCELLED, refreshOnEvent),
     ];
     return () => { subs.forEach(s => EventBus.off(s)); };
   }, [tenantId, refreshOnEvent]);

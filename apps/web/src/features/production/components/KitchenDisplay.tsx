@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Flame, Clock, Volume2 } from 'lucide-react';
-import { Badge, Button, Card, EmptyState, Spinner } from '@/common/components';
+import { Badge, Button, Card, EmptyState, Skeleton } from '@/common/components';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import type { KitchenOrderView } from '../hooks/useKitchenOrders';
+
+const NOOP = () => {};
 
 function formatTime(): string {
   return new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
@@ -15,13 +17,13 @@ const OrderCard = React.memo(function OrderCard({
   onRevert,
 }: {
   order: KitchenOrderView;
-  onStart: () => void;
-  onReady: () => void;
-  onRevert: () => void;
+  onStart: (id: string) => void;
+  onReady: (id: string) => void;
+  onRevert: (id: string) => void;
 }) {
-  const handleStart = useCallback(onStart, [onStart]);
-  const handleReady = useCallback(onReady, [onReady]);
-  const handleRevert = useCallback(onRevert, [onRevert]);
+  const handleStart = useCallback(() => onStart(order.id), [onStart, order.id]);
+  const handleReady = useCallback(() => onReady(order.id), [onReady, order.id]);
+  const handleRevert = useCallback(() => onRevert(order.id), [onRevert, order.id]);
   const [expanded, setExpanded] = useState(false);
 
   const borderColor =
@@ -41,7 +43,7 @@ const OrderCard = React.memo(function OrderCard({
 
   return (
     <Card
-      className={`p-4 border-l-4 ${borderColor} ${order.isUrgent ? 'ring-2 ring-red-400' : ''}`}
+      className={`p-4 border-l-4 ${borderColor} ${order.isUrgent ? 'ring-2 ring-red-400' : ''} animate-fade-in`}
       style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px' }}
     >
       <div className="space-y-3">
@@ -113,6 +115,7 @@ const OrderCard = React.memo(function OrderCard({
               variant="primary"
               className="flex-1 min-h-[80px] text-base font-semibold"
               onClick={handleStart}
+              aria-label="Iniciar preparación"
             >
               Empezar
             </Button>
@@ -123,6 +126,7 @@ const OrderCard = React.memo(function OrderCard({
                 variant="primary"
                 className="flex-1 min-h-[80px] text-base font-semibold"
                 onClick={handleReady}
+                aria-label="Marcar como listo"
               >
                 Listo
               </Button>
@@ -130,6 +134,7 @@ const OrderCard = React.memo(function OrderCard({
                 variant="ghost"
                 className="min-h-[80px] px-4"
                 onClick={handleRevert}
+                aria-label="Revertir a estado anterior"
               >
                 Revertir
               </Button>
@@ -140,6 +145,7 @@ const OrderCard = React.memo(function OrderCard({
               variant="ghost"
               className="min-h-[80px] px-4"
               onClick={handleRevert}
+              aria-label="Revertir a estado anterior"
             >
               Revertir
             </Button>
@@ -188,8 +194,20 @@ export default function KitchenDisplay() {
 
   if (loading && orders.length === 0) {
     return (
-      <div className="flex justify-center py-12">
-        <Spinner size="lg" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+        {[1,2,3].map(col => (
+          <div key={col} className="space-y-4">
+            <Skeleton className="h-8 w-24" />
+            {[1,2,3].map(row => (
+              <div key={row} className="bg-white rounded-lg p-4 space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     );
   }
@@ -245,9 +263,9 @@ export default function KitchenDisplay() {
                 <div key={order.id} ref={i === 0 ? oldestPendingRef : undefined}>
                   <OrderCard
                     order={order}
-                    onStart={() => markAsPreparing(order.id)}
-                    onReady={() => {}}
-                    onRevert={() => {}}
+                    onStart={markAsPreparing}
+                    onReady={NOOP}
+                    onRevert={NOOP}
                   />
                 </div>
               ))
@@ -268,9 +286,9 @@ export default function KitchenDisplay() {
                 <OrderCard
                   key={order.id}
                   order={order}
-                  onStart={() => {}}
-                  onReady={() => markAsReady(order.id)}
-                  onRevert={() => revertToPreparing(order.id)}
+                  onStart={NOOP}
+                  onReady={markAsReady}
+                  onRevert={revertToPreparing}
                 />
               ))
             )}
@@ -290,9 +308,9 @@ export default function KitchenDisplay() {
                 <OrderCard
                   key={order.id}
                   order={order}
-                  onStart={() => {}}
-                  onReady={() => {}}
-                  onRevert={() => revertToPreparing(order.id)}
+                  onStart={NOOP}
+                  onReady={NOOP}
+                  onRevert={revertToPreparing}
                 />
               ))
             )}
