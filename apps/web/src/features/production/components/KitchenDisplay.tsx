@@ -63,7 +63,7 @@ const OrderCard = React.memo(function OrderCard({
 
         {/* Items (collapsed) */}
         {order.items.length > 0 && (
-          <div className="space-y-1">
+          <div className="space-y-1 wrap-break-word">
             {(!expanded ? order.items.slice(0, 2) : order.items).map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-sm">
                 <span className="font-bold text-base text-gray-900">{item.quantity}</span>
@@ -257,7 +257,10 @@ export default function KitchenDisplay() {
               <Badge variant="warning">{pendingCount}</Badge>
             </div>
             {pendingOrders.length === 0 ? (
-              <div className="text-center py-8 text-xs text-gray-400">Sin pedidos</div>
+              <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
+                <Clock size={16} className="text-gray-300" />
+                Sin pedidos
+              </div>
             ) : (
               pendingOrders.map((order, i) => (
                 <div key={order.id} ref={i === 0 ? oldestPendingRef : undefined}>
@@ -280,7 +283,10 @@ export default function KitchenDisplay() {
               <Badge variant="info">{preparingCount}</Badge>
             </div>
             {preparingOrders.length === 0 ? (
-              <div className="text-center py-8 text-xs text-gray-400">Sin pedidos</div>
+              <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
+                <Flame size={16} className="text-gray-300" />
+                Sin pedidos
+              </div>
             ) : (
               preparingOrders.map((order) => (
                 <OrderCard
@@ -302,7 +308,10 @@ export default function KitchenDisplay() {
               <Badge variant="success">{readyCount}</Badge>
             </div>
             {readyOrders.length === 0 ? (
-              <div className="text-center py-8 text-xs text-gray-400">Sin pedidos</div>
+              <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
+                <Clock size={16} className="text-gray-300" />
+                Sin pedidos
+              </div>
             ) : (
               readyOrders.map((order) => (
                 <OrderCard

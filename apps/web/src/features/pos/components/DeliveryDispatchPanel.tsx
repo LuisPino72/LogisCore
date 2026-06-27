@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button, Modal, Select, Input, Skeleton, Alert } from '@/common/components';
-import { MapPin, MessageCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Button, Modal, Select, Input, Skeleton, Alert, Card } from '@/common/components';
+import { MapPin, Send, Smartphone } from 'lucide-react';
 import { getDeliveryPersons } from '../../settings/services/deliveryPersonService';
 import { dispatchDelivery, generateMapsLink } from '../services/saleService';
 import { normalizeWaPhone } from '../services/receiptService';
@@ -17,6 +17,28 @@ interface DeliveryDispatchPanelProps {
   customerPhone?: string;
 }
 
+function buildWaText({
+  customerName,
+  deliveryAddress,
+  mapsLink,
+  deliveryNotes,
+  deliveryFee,
+}: {
+  customerName: string;
+  deliveryAddress?: string;
+  mapsLink: string;
+  deliveryNotes?: string;
+  deliveryFee: string;
+}) {
+  return [
+    `🚴 Delivery para ${customerName}`,
+    `📍 ${deliveryAddress || 'Sin dirección'}`,
+    `🗺️ ${mapsLink}`,
+    deliveryNotes ? `📝 ${deliveryNotes}` : '',
+    `💰 Tarifa: $${deliveryFee}`,
+  ].filter(Boolean).join('\n');
+}
+
 export function DeliveryDispatchPanel({
   isOpen,
   onClose,
@@ -30,15 +52,12 @@ export function DeliveryDispatchPanel({
   const [loading, setLoading] = useState(false);
   const [loadingPersons, setLoadingPersons] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const mountedRef = useRef(true);
 
   const defaultDeliveryFee = useSettingsStore((s) => s.defaultDeliveryFee);
   const { addToast } = useToastStore();
 
-  // TECH DEBT: llamado directo a getDeliveryPersons desde el componente.
-  // Lo correcto sería inyectar el servicio vía props o hook para testabilidad.
-  // Contexto: DeliveryDispatchPanel se abrió paso como componente standalone sin
-  // abstracción de datos. Refactor futuro: mover a un hook useDeliveryService().
   useEffect(() => {
     if (!isOpen || !sale.tenantId) return;
     mountedRef.current = true;
@@ -60,11 +79,26 @@ export function DeliveryDispatchPanel({
     if (isOpen) {
       setDeliveryFee(String(defaultDeliveryFee || 2));
       setSelectedPerson('');
+      setShowPreview(false);
     }
   }, [isOpen, defaultDeliveryFee]);
 
+  const mapsLink = useMemo(
+    () => generateMapsLink(sale.deliveryLat, sale.deliveryLng, sale.deliveryAddress),
+    [sale.deliveryLat, sale.deliveryLng, sale.deliveryAddress]
+  );
+
+  const waMessageText = useMemo(
+    () => buildWaText({ customerName, deliveryAddress: sale.deliveryAddress, mapsLink, deliveryNotes: sale.deliveryNotes, deliveryFee }),
+    [customerName, sale.deliveryAddress, mapsLink, sale.deliveryNotes, deliveryFee]
+  );
+
   const handleDispatch = useCallback(async () => {
     if (!selectedPerson || !deliveryFee) return;
+    setShowPreview(true);
+  }, [selectedPerson, deliveryFee]);
+
+  const handleConfirmSend = useCallback(async () => {
     setLoading(true);
     try {
       const result = await dispatchDelivery(sale.id, {
@@ -73,19 +107,10 @@ export function DeliveryDispatchPanel({
       });
       if (result.ok) {
         const person = deliveryPersons.find((p) => p.name === selectedPerson);
-        const mapsLink = generateMapsLink(sale.deliveryLat, sale.deliveryLng, sale.deliveryAddress);
-        const text = [
-          `🚴 Delivery para ${customerName}`,
-          `📍 ${sale.deliveryAddress || 'Sin dirección'}`,
-          `🗺️ ${mapsLink}`,
-          sale.deliveryNotes ? `📝 ${sale.deliveryNotes}` : '',
-          `💰 Tarifa: $${deliveryFee}`,
-        ].filter(Boolean).join('\n');
-
         const phone = person?.phone ? `58${person.phone.replace(/\D/g, '')}` : '';
         const waUrl = phone
-          ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
-          : `https://wa.me/?text=${encodeURIComponent(text)}`;
+          ? `https://wa.me/${phone}?text=${encodeURIComponent(waMessageText)}`
+          : `https://wa.me/?text=${encodeURIComponent(waMessageText)}`;
         window.open(waUrl, '_blank');
 
         addToast({ type: 'success', message: 'Delivery despachado correctamente', duration: 3000 });
@@ -96,7 +121,7 @@ export function DeliveryDispatchPanel({
     } finally {
       setLoading(false);
     }
-  }, [selectedPerson, deliveryFee, sale, customerName, deliveryPersons, addToast, onClose]);
+  }, [selectedPerson, deliveryFee, sale, deliveryPersons, waMessageText, addToast, onClose]);
 
   const handleNotifyCustomer = useCallback(async () => {
     if (!sale) return;
@@ -117,84 +142,120 @@ export function DeliveryDispatchPanel({
         {error && (
           <Alert variant="error" title="Error">{error}</Alert>
         )}
-        {loadingPersons ? (
-          <div className="space-y-3 py-4">
-            <Skeleton className="h-12 w-full rounded-lg" />
-            <Skeleton className="h-12 w-full rounded-lg" />
-          </div>
-        ) : deliveryPersons.length === 0 ? (
-          <div className="text-center py-4">
-            <p className="text-sm text-text-secondary">
-              Registra motorizados en <strong>Settings → Delivery</strong>
-            </p>
-          </div>
+
+        {showPreview ? (
+          <>
+            <Alert variant="info" title="Vista previa del mensaje">
+              Se abrirá WhatsApp con este mensaje:
+            </Alert>
+            <Card className="p-3 bg-surface-alt text-xs whitespace-pre-line text-gray-800 max-h-40 overflow-y-auto wrap-break-word">
+              {waMessageText}
+            </Card>
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={handleConfirmSend}
+                disabled={loading}
+                loading={loading}
+                className="min-h-11"
+                aria-label="Confirmar envío por WhatsApp"
+              >
+                <Send size={16} />
+                Confirmar y Enviar
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowPreview(false)}
+                disabled={loading}
+                className="min-h-11"
+                aria-label="Cancelar envío"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </>
         ) : (
           <>
-            <Select
-              label="Motorizado"
-              value={selectedPerson}
-              onChange={(e) => setSelectedPerson(e.target.value)}
-            >
-              <option value="">Seleccionar motorizado...</option>
-              {deliveryPersons.map((p) => (
-                <option key={p.id} value={p.name}>{p.name} ({p.phone})</option>
-              ))}
-            </Select>
-
-            <Input
-              label="Tarifa $"
-              type="number"
-              min="0"
-              step="0.50"
-              value={deliveryFee}
-              onChange={(e) => setDeliveryFee(e.target.value)}
-            />
-
-            {sale.deliveryAddress && (
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-surface-alt text-sm">
-                <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
-                <span className="text-gray-700">{sale.deliveryAddress}</span>
+            {loadingPersons ? (
+              <div className="space-y-3 py-4">
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
               </div>
+            ) : deliveryPersons.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-text-secondary">
+                  Registra motorizados en <strong>Settings → Delivery</strong>
+                </p>
+              </div>
+            ) : (
+              <>
+                <Select
+                  label="Motorizado"
+                  value={selectedPerson}
+                  onChange={(e) => setSelectedPerson(e.target.value)}
+                >
+                  <option value="">Seleccionar motorizado...</option>
+                  {deliveryPersons.map((p) => (
+                    <option key={p.id} value={p.name}>{p.name} ({p.phone})</option>
+                  ))}
+                </Select>
+
+                <Input
+                  label="Tarifa $"
+                  type="number"
+                  min="0"
+                  step="0.50"
+                  value={deliveryFee}
+                  onChange={(e) => setDeliveryFee(e.target.value)}
+                />
+
+                {sale.deliveryAddress && (
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-surface-alt text-sm">
+                    <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
+                    <span className="text-gray-700">{sale.deliveryAddress}</span>
+                  </div>
+                )}
+
+                {sale.deliveryNotes && (
+                  <div className="p-2.5 rounded-lg bg-surface-alt text-sm text-gray-600">
+                    📝 {sale.deliveryNotes}
+                  </div>
+                )}
+              </>
             )}
 
-            {sale.deliveryNotes && (
-              <div className="p-2.5 rounded-lg bg-surface-alt text-sm text-gray-600">
-                📝 {sale.deliveryNotes}
-              </div>
-            )}
+            <div className="flex flex-col gap-2 pt-1">
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={handleDispatch}
+                disabled={!canDispatch || loading || loadingPersons}
+                loading={loading}
+                className="min-h-11"
+                aria-label="Vista previa del mensaje para el motorizado"
+              >
+                <Send size={16} />
+                Enviar al Motorizado
+              </Button>
+              {selectedPerson && (
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={handleNotifyCustomer}
+                  className="min-h-11 bg-[#25D366] border-[#25D366] text-white hover:bg-[#1fb855] hover:border-[#1fb855] focus-visible:ring-[#25D366]"
+                  aria-label="Notificar al cliente por WhatsApp"
+                >
+                  <Smartphone size={16} />
+                  Notificar Cliente
+                </Button>
+              )}
+              <Button variant="ghost" fullWidth onClick={onClose} className="min-h-11">
+                Despachar después
+              </Button>
+            </div>
           </>
         )}
-
-        <div className="flex flex-col gap-2 pt-1">
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={handleDispatch}
-            disabled={!canDispatch || loading || loadingPersons}
-            loading={loading}
-            className="min-h-11"
-            aria-label="Enviar ubicación al motorizado por WhatsApp"
-          >
-            📨 Enviar al Motorizado
-          </Button>
-          {selectedPerson && (
-            <Button
-              variant="secondary"
-              fullWidth
-              onClick={handleNotifyCustomer}
-              className="min-h-11"
-              aria-label="Notificar al cliente por WhatsApp"
-              // TECH DEBT: inline style WhatsApp verde. Refactor: className con variable CSS o token de diseño.
-              style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
-            >
-              <MessageCircle size={16} />
-              Notificar Cliente
-            </Button>
-          )}
-          <Button variant="ghost" fullWidth onClick={onClose} className="min-h-11">
-            Saltar, lo haré después
-          </Button>
-        </div>
       </div>
     </Modal>
   );

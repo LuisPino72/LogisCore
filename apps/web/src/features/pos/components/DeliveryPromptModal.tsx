@@ -55,6 +55,7 @@ export function DeliveryPromptModal({
                 onClick={handleDelivery}
                 disabled={loading}
                 className="flex items-center gap-3 p-4 min-h-[56px] w-full justify-start"
+                aria-label="Seleccionar delivery a domicilio"
               >
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                   <Truck size={20} className="text-primary" />
@@ -69,6 +70,7 @@ export function DeliveryPromptModal({
                 onClick={onJustPark}
                 disabled={loading}
                 className="flex items-center gap-3 p-4 min-h-[56px] w-full justify-start"
+                aria-label="Guardar venta para retomar después"
               >
                 <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                   <Store size={20} className="text-gray-600" />
@@ -91,6 +93,7 @@ export function DeliveryPromptModal({
                 onClick={() => { setWantsKitchen(true); handleKitchenChoice(true); }}
                 disabled={loading}
                 className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${wantsKitchen ? 'border-warning bg-warning/5' : ''}`}
+                aria-label="Sí, requiere preparación en cocina"
               >
                 <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
                   <ChefHat size={20} className="text-warning" />
@@ -105,6 +108,7 @@ export function DeliveryPromptModal({
                 onClick={() => { setWantsKitchen(false); handleKitchenChoice(false); }}
                 disabled={loading}
                 className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${!wantsKitchen ? 'border-success bg-success/5' : ''}`}
+                aria-label="No, enviar directo a delivery"
               >
                 <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
                   <Truck size={20} className="text-success" />

@@ -6,12 +6,18 @@ import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2 } from
 import { EventBus, SystemEvents } from '@logiscore/core';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pedida: { label: 'Pedida', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+  pedida: { label: 'Pedida', color: 'text-info', bg: 'bg-info/5 border-info/20' },
   preparacion: { label: 'Preparación', color: 'text-warning', bg: 'bg-warning/5 border-warning/20' },
   lista: { label: 'Lista', color: 'text-success', bg: 'bg-success/5 border-success/20' },
   pagada: { label: 'Pagada', color: 'text-primary', bg: 'bg-primary/5 border-primary/20' },
-  despachada: { label: 'Despachada', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+  despachada: { label: 'Despachada', color: 'text-text-muted', bg: 'bg-surface-alt border-border' },
 };
+
+const VARIANT_MAP: Record<string, 'info' | 'warning' | 'success' | 'danger' | 'neutral'> = {
+  pedida: 'info', preparacion: 'warning', lista: 'success', pagada: 'info', despachada: 'neutral', cancelada: 'danger', entregada: 'success',
+};
+
+const STATUS_BADGE_VARIANT = (status: string) => VARIANT_MAP[status] ?? 'info';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -155,7 +161,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       <span className="text-xs font-bold text-gray-900">
                         {order.orderNumber ?? order.id.slice(0, 8)}
                       </span>
-                      <Badge variant={order.status === 'cancelada' ? 'danger' : order.status === 'entregada' ? 'success' : 'info'} className="text-[10px]">
+                      <Badge variant={STATUS_BADGE_VARIANT(order.status)} className="text-[10px]">
                         {cfg.label}
                       </Badge>
                       {order.needsKitchen && (
@@ -186,7 +192,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       variant="primary"
                       size="sm"
                       onClick={() => onPayOrder(order)}
-                      className="min-h-9 text-xs w-full"
+                      className="min-h-11 text-xs w-full"
                       aria-label={`Cobrar orden ${order.orderNumber || ''}`}
                     >
                       <DollarSign size={14} />
@@ -201,7 +207,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       variant="primary"
                       size="sm"
                       onClick={() => onDispatchOrder(order)}
-                      className="min-h-9 text-xs w-full"
+                      className="min-h-11 text-xs w-full"
                       aria-label={`Despachar orden ${order.orderNumber || ''}`}
                     >
                       <Truck size={14} />
@@ -216,7 +222,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       variant="ghost-success"
                       size="sm"
                       onClick={() => onConfirmDelivery(order.id)}
-                      className="min-h-9 text-xs w-full"
+                      className="min-h-11 text-xs w-full"
                       aria-label={`Confirmar entrega orden ${order.orderNumber || ''}`}
                     >
                       <CheckCircle2 size={14} />
