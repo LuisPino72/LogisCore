@@ -27,6 +27,11 @@ export const OperationSettingsSchema = z.object({
     .max(100, 'Mensaje demasiado largo (máx 100 caracteres)'),
   needsKitchenDefault: z.boolean().optional().default(false),
   defaultDeliveryFee: z.number().min(0).optional().default(0),
+  pagoMovilEnabled: z.boolean().optional(),
+  pagoMovilBank: z.string().optional(),
+  pagoMovilHolder: z.string().optional(),
+  pagoMovilId: z.string().optional(),
+  pagoMovilPhone: z.string().optional(),
 });
 
 export const BusinessInfoSchema = z.object({

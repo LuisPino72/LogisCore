@@ -35,6 +35,11 @@ function toOperationSettings(row: DexieTenantSettings): OperationSettings {
     ticketFooterMessage: row.ticketFooterMessage,
     needsKitchenDefault: row.needsKitchenDefault ?? false,
     defaultDeliveryFee: row.defaultDeliveryFee ?? 0,
+    pagoMovilEnabled: row.pagoMovilEnabled ?? false,
+    pagoMovilBank: row.pagoMovilBank ?? '',
+    pagoMovilHolder: row.pagoMovilHolder ?? '',
+    pagoMovilId: row.pagoMovilId ?? '',
+    pagoMovilPhone: row.pagoMovilPhone ?? '',
   };
 }
 
@@ -61,6 +66,11 @@ async function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, opera
     ticketFooterMessage: operations?.ticketFooterMessage ?? existing?.ticketFooterMessage ?? store.ticketFooterMessage,
     needsKitchenDefault: operations?.needsKitchenDefault ?? existing?.needsKitchenDefault ?? store.needsKitchenDefault,
     defaultDeliveryFee: operations?.defaultDeliveryFee ?? existing?.defaultDeliveryFee ?? store.defaultDeliveryFee,
+    pagoMovilEnabled: operations?.pagoMovilEnabled ?? existing?.pagoMovilEnabled ?? store.pagoMovilEnabled,
+    pagoMovilBank: operations?.pagoMovilBank ?? existing?.pagoMovilBank ?? store.pagoMovilBank,
+    pagoMovilHolder: operations?.pagoMovilHolder ?? existing?.pagoMovilHolder ?? store.pagoMovilHolder,
+    pagoMovilId: operations?.pagoMovilId ?? existing?.pagoMovilId ?? store.pagoMovilId,
+    pagoMovilPhone: operations?.pagoMovilPhone ?? existing?.pagoMovilPhone ?? store.pagoMovilPhone,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -218,7 +228,7 @@ export const settingsService = {
       try {
         const { data, error } = await supabase
           .from('tenant_settings')
-          .select('max_discount_pct, default_min_stock, default_credit_limit, mandatory_customer_id, low_stock_threshold, ticket_footer_message, needs_kitchen_default, default_delivery_fee')
+          .select('max_discount_pct, default_min_stock, default_credit_limit, mandatory_customer_id, low_stock_threshold, ticket_footer_message, needs_kitchen_default, default_delivery_fee, pago_movil_enabled, pago_movil_bank, pago_movil_holder, pago_movil_id, pago_movil_phone')
           .eq('tenant_id', tenantId)
           .single();
 
@@ -232,6 +242,11 @@ export const settingsService = {
             ticketFooterMessage: data.ticket_footer_message as string,
             needsKitchenDefault: (data.needs_kitchen_default as boolean) ?? false,
             defaultDeliveryFee: (data.default_delivery_fee as number) ?? 0,
+            pagoMovilEnabled: (data.pago_movil_enabled as boolean) ?? false,
+            pagoMovilBank: (data.pago_movil_bank as string) ?? '',
+            pagoMovilHolder: (data.pago_movil_holder as string) ?? '',
+            pagoMovilId: (data.pago_movil_id as string) ?? '',
+            pagoMovilPhone: (data.pago_movil_phone as string) ?? '',
           };
           // Preserve existing fiscal settings in Dexie, only overwrite operation fields
           let existingFiscal: DexieTenantSettings | undefined;
@@ -272,6 +287,11 @@ export const settingsService = {
       ticketFooterMessage: '¡Gracias por su compra!',
       needsKitchenDefault: false,
       defaultDeliveryFee: 0,
+      pagoMovilEnabled: false,
+      pagoMovilBank: '',
+      pagoMovilHolder: '',
+      pagoMovilId: '',
+      pagoMovilPhone: '',
     });
   },
 

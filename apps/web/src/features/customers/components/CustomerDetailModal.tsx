@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Modal, Button, Badge, EmptyState, Spinner, Pagination, SaleDetailModal, Tooltip } from '../../../common/components';
-import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, CreditCard, Calendar } from 'lucide-react';
+import { Users, Phone, MapPin, DollarSign, ShoppingBag, TrendingUp, IdCard, CreditCard, Calendar, Send } from 'lucide-react';
 import type { Customer } from '../../../specs/customers';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useCustomerStore } from '../stores/customerStore';
 import { formatTimeAgo, formatPhone } from '../../../lib/utils';
 import { PaymentModal } from './PaymentModal';
+import { generateMenuText, normalizeWaPhone } from '../../pos/services/receiptService';
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -30,6 +31,7 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
   const fetchHistory = useCustomerStore((s) => s.fetchCustomerHistory);
   const fetchStats = useCustomerStore((s) => s.fetchCustomerStats);
   const resetModal = useCustomerStore((s) => s.resetModal);
+  const [sendingMenu, setSendingMenu] = useState(false);
 
   useEffect(() => {
     if (isOpen && customer) {
@@ -43,6 +45,20 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
   }, [isOpen, customer, tenantId, fetchHistory, fetchStats, resetModal]);
 
   if (!customer) return null;
+
+  const handleSendMenu = async () => {
+    setSendingMenu(true);
+    try {
+      const menuText = await generateMenuText(tenantId);
+      const phone = normalizeWaPhone(customer.phone ?? '');
+      if (phone && menuText) {
+        const encoded = encodeURIComponent(menuText);
+        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+      }
+    } finally {
+      setSendingMenu(false);
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(historyTotal / HISTORY_PAGE_SIZE));
   const handlePageChange = (newPage: number) => {
@@ -90,6 +106,19 @@ export function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdi
             </Tooltip>
             );
           })()}
+          <Tooltip content="Enviar menú por WhatsApp" variant="help">
+            <Button
+              variant="outline"
+              className="flex-1 min-h-11"
+              onClick={handleSendMenu}
+              loading={sendingMenu}
+              aria-label="Enviar menú por WhatsApp"
+            >
+              <Send size={16} className="mr-1.5 inline" />
+              <span className="hidden sm:inline">Enviar Menú</span>
+              <span className="sm:hidden">Menú</span>
+            </Button>
+          </Tooltip>
           <Button variant="ghost" className="flex-1" onClick={onClose}>
             Cerrar
           </Button>

@@ -13,6 +13,11 @@ export interface SettingsStore {
   ticketFooterMessage: string;
   needsKitchenDefault: boolean;
   defaultDeliveryFee: number;
+  pagoMovilEnabled: boolean;
+  pagoMovilBank: string;
+  pagoMovilHolder: string;
+  pagoMovilId: string;
+  pagoMovilPhone: string;
   loading: boolean;
   loaded: boolean;
   setFiscalSettings: (data: FiscalSettings) => void;
@@ -36,6 +41,11 @@ const initialState = {
   ticketFooterMessage: '¡Gracias por su compra!',
   needsKitchenDefault: false,
   defaultDeliveryFee: 0,
+  pagoMovilEnabled: false,
+  pagoMovilBank: '',
+  pagoMovilHolder: '',
+  pagoMovilId: '',
+  pagoMovilPhone: '',
   loading: false,
   loaded: false,
   lastUpdatedAt: 0,
@@ -62,6 +72,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       ticketFooterMessage: data.ticketFooterMessage,
       needsKitchenDefault: data.needsKitchenDefault ?? false,
       defaultDeliveryFee: data.defaultDeliveryFee ?? 0,
+      pagoMovilEnabled: data.pagoMovilEnabled ?? false,
+      pagoMovilBank: data.pagoMovilBank ?? '',
+      pagoMovilHolder: data.pagoMovilHolder ?? '',
+      pagoMovilId: data.pagoMovilId ?? '',
+      pagoMovilPhone: data.pagoMovilPhone ?? '',
     });
   },
 

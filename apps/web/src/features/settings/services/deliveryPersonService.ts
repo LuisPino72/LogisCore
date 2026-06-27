@@ -144,6 +144,59 @@ export async function removeDeliveryPerson(
   }
 }
 
+export async function updateDeliveryPerson(
+  id: string,
+  data: { name?: string; phone?: string },
+  tenantId: string,
+  userId: string,
+): Promise<Result<DexieDeliveryPerson, AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'settings', 'update')) {
+    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+  }
+
+  try {
+    const db = getDb();
+    const existing = await db.deliveryPersons.get(id);
+    if (!existing || existing.deletedAt || existing.tenantId !== tenantId) {
+      return failure(new AppError('DELIVERY_PERSON_NOT_FOUND', 'Motorizado no encontrado.'));
+    }
+
+    if (data.phone && data.phone.trim() !== existing.phone) {
+      const duplicate = await db.deliveryPersons
+        .where('tenantId')
+        .equals(tenantId)
+        .filter((p) => p.phone === data.phone!.trim() && p.id !== id && !p.deletedAt)
+        .first();
+      if (duplicate) {
+        return failure(new AppError('DELIVERY_PERSON_PHONE_DUPLICATE', 'Ya existe un motorizado con ese teléfono.'));
+      }
+    }
+
+    const updated: Partial<DexieDeliveryPerson> = {};
+    if (data.name !== undefined) updated.name = data.name.trim();
+    if (data.phone !== undefined) updated.phone = data.phone.trim();
+
+    await db.transaction('rw', [db.deliveryPersons, db.syncQueue], async () => {
+      await db.deliveryPersons.update(id, updated);
+      await syncQueue.enqueue('delivery_persons', 'UPDATE', id, toSnake({ id, ...updated } as unknown as Record<string, unknown>), tenantId);
+    });
+
+    await logAuditEventOnly({
+      eventName: SystemEvents.SETTINGS_BUSINESS_UPDATED,
+      module: MODULE_NAME,
+      payload: { action: 'delivery_person_updated', personId: id, ...updated },
+      context: { userId, tenantId },
+    });
+
+    const result = await db.deliveryPersons.get(id);
+    return success(result!);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en updateDeliveryPerson:', err);
+    return failure(new AppError('DELIVERY_PERSON_UPDATE_FAILED', 'Error al actualizar motorizado.'));
+  }
+}
+
 export async function getDeliveryPersonByPhone(
   tenantId: string,
   phone: string,

@@ -240,13 +240,75 @@ function buildWhatsAppText(
   return lines.join('\n');
 }
 
-function normalizeWaPhone(phone: string): string | null {
+export function normalizeWaPhone(phone: string): string | null {
   if (!phone || typeof phone !== 'string') return null;
   const digits = phone.replace(/[^0-9]/g, '');
   if (!digits) return null;
   return digits.startsWith('58') ? digits
     : digits.startsWith('0') ? `58${digits.slice(1)}`
       : `58${digits}`;
+}
+
+export async function generateMenuText(tenantId: string): Promise<string> {
+  const { getDb, isDbReady } = await import('../../../services/dexie/db');
+  if (!isDbReady()) return '';
+
+  const db = getDb();
+  const settings = await db.tenantSettings.get(tenantId);
+  const tenantRef = await db.tenantRefs.get(tenantId);
+  const businessName = tenantRef?.name ?? 'Mi Negocio';
+  const businessPhone = tenantRef?.telefono ?? '';
+
+  const products = await db.products
+    .where({ tenantId })
+    .filter((p) => !p.deletedAt && p.isSellable !== false && !p.isIngredient && p.priceUsd > 0)
+    .toArray();
+
+  const categories = await db.categories
+    .where({ tenantId })
+    .toArray();
+
+  const categoryMap = new Map<string, string>();
+  for (const cat of categories) {
+    if (!cat.deletedAt) categoryMap.set(cat.id, cat.name);
+  }
+
+  const grouped = new Map<string, Array<{ name: string; price: number }>>();
+  for (const p of products) {
+    const catName = (p.categoryId && categoryMap.get(p.categoryId)) ?? 'Otros';
+    if (!grouped.has(catName)) grouped.set(catName, []);
+    grouped.get(catName)!.push({ name: p.name, price: p.priceUsd });
+  }
+
+  const lines: string[] = [];
+  lines.push(`*${businessName}*`);
+  lines.push('');
+  lines.push('📋 *Menú Disponible*');
+
+  for (const [catName, items] of grouped) {
+    lines.push('');
+    lines.push(catName);
+    for (const item of items) {
+      const dots = '.'.repeat(Math.max(1, 30 - item.name.length - item.price.toFixed(2).length));
+      lines.push(`${item.name} ${dots} $${item.price.toFixed(2)}`);
+    }
+  }
+
+  if (businessPhone) {
+    lines.push('');
+    lines.push(`📞 Haz tu pedido al ${businessPhone}`);
+  }
+
+  if (settings?.pagoMovilEnabled && settings.pagoMovilBank) {
+    lines.push('');
+    lines.push('💳 *Paga a:*');
+    lines.push(`Banco: ${settings.pagoMovilBank}`);
+    if (settings.pagoMovilHolder) lines.push(`Titular: ${settings.pagoMovilHolder}`);
+    if (settings.pagoMovilId) lines.push(`C.I.: ${settings.pagoMovilId}`);
+    if (settings.pagoMovilPhone) lines.push(`Tlf.: ${settings.pagoMovilPhone}`);
+  }
+
+  return lines.join('\n');
 }
 
 async function renderToBlob(
