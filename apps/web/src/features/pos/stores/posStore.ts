@@ -15,6 +15,7 @@ import { useExchangeRateStore } from '../../../features/exchange/stores/exchange
 import { type Result, type AppError, success, failure, AppError as AppErrorClass } from '@logiscore/core';
 import type { PaymentMethod } from '../types';
 import type { CreateSaleInput } from '../../../specs/pos';
+import { MAX_PARKED_CARTS } from '../../../specs/pos';
 interface PosStore extends PosCartSlice, PosRegisterSlice, PosCatalogSlice, PosCustomerSlice, PosHistorySlice {
   completeSale: (tenantId: string, paymentMethod: PaymentMethod, userId: string) => Promise<Result<string, AppError>>;
   voidSale: (saleId: string, tenantId: string, userId: string) => Promise<Result<void, AppError>>;
@@ -44,8 +45,8 @@ export const usePosStore = create<PosStore>()(
           set({ error: 'No hay productos en el carrito.' });
           return false;
         }
-        if (parkedCarts.length >= 20) {
-          set({ error: 'Máximo 20 ventas en cola. Completa o elimina una.' });
+        if (parkedCarts.length >= MAX_PARKED_CARTS) {
+          set({ error: `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.` });
           return false;
         }
         const result = await posService.parkCart(tenantId, name, cart, get().selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen });

@@ -165,23 +165,21 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
       setLogoUrl(finalLogoUrl);
       setLogoFile(null);
       setLogoPreview(null);
-      if (ticketFooterMessage !== store.ticketFooterMessage) {
-        await settingsService.updateOperationSettings(tenantId, userId, {
-          maxDiscountPct: store.maxDiscountPct,
-          defaultMinStock: store.defaultMinStock,
-          defaultCreditLimit: store.defaultCreditLimit,
-          mandatoryCustomerId: store.mandatoryCustomerId,
-          lowStockThreshold: store.lowStockThreshold,
-          ticketFooterMessage,
-          needsKitchenDefault: store.needsKitchenDefault,
-          defaultDeliveryFee: store.defaultDeliveryFee,
-          pagoMovilEnabled,
-          pagoMovilBank,
-          pagoMovilHolder,
-          pagoMovilId,
-          pagoMovilPhone,
-        });
-      }
+      await settingsService.updateOperationSettings(tenantId, userId, {
+        maxDiscountPct: store.maxDiscountPct,
+        defaultMinStock: store.defaultMinStock,
+        defaultCreditLimit: store.defaultCreditLimit,
+        mandatoryCustomerId: store.mandatoryCustomerId,
+        lowStockThreshold: store.lowStockThreshold,
+        ticketFooterMessage,
+        needsKitchenDefault: store.needsKitchenDefault,
+        defaultDeliveryFee: store.defaultDeliveryFee,
+        pagoMovilEnabled,
+        pagoMovilBank,
+        pagoMovilHolder,
+        pagoMovilId,
+        pagoMovilPhone,
+      });
       addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });
     } else {
       setLocalError(result.error.message);

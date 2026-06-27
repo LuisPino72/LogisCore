@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Card, Button, Spinner, EmptyState, Modal, DatePicker } from '@/common/components';
 import { Truck, Check, Wallet, AlertCircle } from 'lucide-react';
 import { useDeliverySettlement } from '../hooks/useDeliverySettlement';
-import { getDb } from '../../../services/dexie/db';
+import { markDeliverySettlementPaid } from '../services/deliverySettlementService';
 import { formatUsd } from '@/lib/formatBs';
 
 interface DeliverySettlementReportProps {
@@ -25,40 +25,14 @@ export function DeliverySettlementReport({ tenantId }: DeliverySettlementReportP
   const handlePay = useCallback(async () => {
     if (!confirmModal) return;
     setPaying(confirmModal.name);
-    try {
-      const db = getDb();
-      const sales = await db.sales
-        .where('tenantId')
-        .equals(tenantId)
-        .filter((s) =>
-          s.status === 'entregada' &&
-          s.createdAt >= date.start &&
-          s.createdAt <= date.end &&
-          !s.deletedAt &&
-          s.deliveryPersonName === confirmModal.name
-        )
-        .toArray();
-      const saleIds = new Set(sales.map((s) => s.id));
-      const expenses = await db.expenses
-        .where('tenantId')
-        .equals(tenantId)
-        .filter((e) =>
-          e.category === 'DELIVERY' &&
-          !e.deletedAt &&
-          !!e.saleId && saleIds.has(e.saleId) &&
-          e.status === 'pending'
-        )
-        .toArray();
-      await Promise.all(
-        expenses.map((e) => db.expenses.update(e.id, { status: 'paid' as const, updatedAt: new Date().toISOString() }))
-      );
+    const result = await markDeliverySettlementPaid(
+      tenantId, confirmModal.name, date.start, date.end
+    );
+    if (result.ok) {
       setConfirmModal(null);
       refresh();
-    } catch (err) {
-      console.error('Error pagando:', err);
-    } finally {
-      setPaying(null);
     }
+    setPaying(null);
   }, [confirmModal, tenantId, date, refresh]);
 
   if (loading) {

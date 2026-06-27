@@ -65,7 +65,7 @@ export function DeliveryDispatchPanel({
           `💰 Tarifa: $${deliveryFee}`,
         ].filter(Boolean).join('\n');
 
-        const phone = person?.phone ? `57${person.phone.replace(/\D/g, '')}` : '';
+        const phone = person?.phone ? `58${person.phone.replace(/\D/g, '')}` : '';
         const waUrl = phone
           ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
           : `https://wa.me/?text=${encodeURIComponent(text)}`;

@@ -85,3 +85,44 @@ export async function getDeliverySettlement(
   rows.sort((a, b) => a.name.localeCompare(b.name));
   return success(rows);
 }
+
+export async function markDeliverySettlementPaid(
+  tenantId: string,
+  personName: string,
+  startDate: string,
+  endDate: string,
+): Promise<Result<number, AppError>> {
+  const db = getDb();
+
+  const sales = await db.sales
+    .where('tenantId')
+    .equals(tenantId)
+    .filter(s =>
+      s.status === 'entregada' &&
+      s.createdAt >= startDate &&
+      s.createdAt <= endDate &&
+      !s.deletedAt &&
+      s.deliveryPersonName === personName
+    )
+    .toArray();
+
+  const saleIds = new Set(sales.map(s => s.id));
+  const expenses = await db.expenses
+    .where('tenantId')
+    .equals(tenantId)
+    .filter(e =>
+      e.category === 'DELIVERY' &&
+      !e.deletedAt &&
+      !!e.saleId && saleIds.has(e.saleId) &&
+      e.status === 'pending'
+    )
+    .toArray();
+
+  const now = new Date().toISOString();
+  await db.expenses.bulkUpdate(expenses.map(e => ({
+    key: e.id,
+    changes: { status: 'paid' as const, updatedAt: now },
+  })));
+
+  return success(expenses.length);
+}

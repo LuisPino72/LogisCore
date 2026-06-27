@@ -1216,7 +1216,7 @@ export function PosPage({ tenantId }: PosPageProps) {
             </div>
           )}
           <div className="grid grid-cols-2 gap-2">
-            {(['efectivo_bs', 'efectivo_usd', 'pago_movil', 'transferencia', 'zelle', 'credito'] as PaymentMethod[]).map((m) => (
+            {(['efectivo_bs', 'efectivo_usd', 'pago_movil', 'credito'] as PaymentMethod[]).map((m) => (
               <button
                 key={m}
                 type="button"

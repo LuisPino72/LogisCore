@@ -1676,13 +1676,19 @@ export async function confirmOrderPayment(
     return failure(new AppError(PosErrors.SALE_NO_ITEMS, 'La orden no tiene items.'));
   }
 
+  const assemblyProductIds = new Set<string>();
+  for (const si of saleItems) {
+    const recipe = await db.recipes
+      .where({ productId: si.productId, mode: 'assembly' as const })
+      .filter(r => !r.deletedAt && r.isActive)
+      .first();
+    if (recipe) {
+      assemblyProductIds.add(si.productId);
+    }
+  }
+
   const normalItems: CartItem[] = saleItems
-    .filter((si) => {
-      const recipe = db.recipes
-        .where({ productId: si.productId, mode: 'assembly' as const })
-        .filter(r => !r.deletedAt && r.isActive);
-      return !recipe;
-    })
+    .filter((si) => !assemblyProductIds.has(si.productId))
     .map((si) => ({
       productId: si.productId,
       name: si.productName,
@@ -1699,24 +1705,16 @@ export async function confirmOrderPayment(
       unitMultiplier: si.unitMultiplier,
     }));
 
-  const assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string; unitMultiplier?: number }> = [];
-
-  for (const si of saleItems) {
-    const recipe = await db.recipes
-      .where({ productId: si.productId, mode: 'assembly' as const })
-      .filter(r => !r.deletedAt && r.isActive)
-      .first();
-    if (recipe) {
-      assemblyItems.push({
-        productId: si.productId,
-        quantity: si.quantity,
-        productName: si.productName,
-        presentationId: si.presentationId,
-        presentationName: si.presentationName,
-        unitMultiplier: si.unitMultiplier,
-      });
-    }
-  }
+  const assemblyItems: Array<{ productId: string; quantity: number; productName?: string; presentationId?: string; presentationName?: string; unitMultiplier?: number }> = saleItems
+    .filter((si) => assemblyProductIds.has(si.productId))
+    .map((si) => ({
+      productId: si.productId,
+      quantity: si.quantity,
+      productName: si.productName,
+      presentationId: si.presentationId,
+      presentationName: si.presentationName,
+      unitMultiplier: si.unitMultiplier,
+    }));
 
   const totals = calculateSaleTotals(
     saleItems.map(i => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: true })),
