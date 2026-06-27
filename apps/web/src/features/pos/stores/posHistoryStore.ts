@@ -67,6 +67,8 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
     const result = await posService.getParkedCarts(tenantId);
     if (result.ok) {
       set({ parkedCarts: result.data });
+    } else {
+      logger.warn('POS', '[fetchParkedCarts] Error:', result.error);
     }
   },
 
@@ -105,6 +107,10 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
 
   loadLowStockAlert: async (tenantId) => {
     const result = await inventoryService.getLowStockProducts(tenantId);
-    if (result.ok) set({ lowStockAlert: result.data });
+    if (result.ok) {
+      set({ lowStockAlert: result.data });
+    } else {
+      logger.warn('POS', '[loadLowStockAlert] Error:', result.error);
+    }
   },
 });

@@ -236,7 +236,7 @@ export function PosPage({ tenantId }: PosPageProps) {
                 gain.gain.value = 0.1;
                 osc.start();
                 osc.stop(ctx.currentTime + 0.4);
-              } catch { /* ignore */ }
+              } catch { logger.warn('POS', 'AudioContext beep failed'); }
             }
           });
         }

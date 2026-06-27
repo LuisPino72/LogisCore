@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { memo, useState, useMemo } from 'react';
 import { Button, Input } from '../../../common/components';
 import { ShoppingCart, Pause, Percent, DollarSign, X, User, UserPlus, CreditCard, Info, Lock } from 'lucide-react';
 import type { CartItem, PaymentMethod } from '../types';
@@ -29,7 +29,7 @@ interface CartSummaryProps {
   onSetIsCreditSale: (isCredit: boolean) => void;
 }
 
-export function CartSummary({
+export const CartSummary = memo(function CartSummary({
   items,
   exchangeRateBs,
   paymentMethod,
@@ -349,4 +349,4 @@ export function CartSummary({
       </div>
     </div>
   );
-}
+});

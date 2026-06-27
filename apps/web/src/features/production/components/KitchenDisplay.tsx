@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Flame, Clock, Volume2 } from 'lucide-react';
 import { Badge } from '@/common/components/Badge';
 import { Button } from '@/common/components/Button';
@@ -71,12 +71,12 @@ const OrderCard = React.memo(function OrderCard({
               </div>
             ))}
             {!expanded && order.items.length > 2 && (
-              <Button variant="ghost" size="sm" onClick={() => setExpanded(true)}>
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(true)} className="min-h-[80px]">
                 +{order.items.length - 2} más...
               </Button>
             )}
             {expanded && order.items.length > 2 && (
-              <Button variant="ghost" size="sm" onClick={() => setExpanded(false)}>
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(false)} className="min-h-[80px]">
                 Ver menos
               </Button>
             )}
@@ -181,9 +181,9 @@ export default function KitchenDisplay() {
     }
   }, [orders.length]);
 
-  const pendingOrders = orders.filter((o) => o.status === 'pedida');
-  const preparingOrders = orders.filter((o) => o.status === 'preparacion');
-  const readyOrders = orders.filter((o) => o.status === 'lista');
+  const pendingOrders = useMemo(() => orders.filter((o) => o.status === 'pedida'), [orders]);
+  const preparingOrders = useMemo(() => orders.filter((o) => o.status === 'preparacion'), [orders]);
+  const readyOrders = useMemo(() => orders.filter((o) => o.status === 'lista'), [orders]);
 
   const totalCount = pendingCount + preparingCount + readyCount;
 

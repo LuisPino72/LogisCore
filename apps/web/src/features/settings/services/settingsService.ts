@@ -50,7 +50,7 @@ async function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, opera
     try {
       const db = getDb();
       existing = await db.tenantSettings.get(tenantId);
-    } catch { /* fall through */ }
+    } catch { logger.warn('SETTINGS', 'fall through en buildSettingsRow:', 'error al leer Dexie') }
   }
   const store = useSettingsStore.getState();
   return {
@@ -94,52 +94,55 @@ export const settingsService = {
         const db = getDb();
         const cached = await db.tenantSettings.get(tenantId);
         if (cached) return success(toFiscalSettings(cached));
-      } catch { /* fall through */ }
+      } catch { logger.warn('SETTINGS', 'fall through en getFiscalSettings:', 'error al leer Dexie') }
     }
 
     if (navigator.onLine) {
-      try {
-        const { data, error } = await supabase
-          .from('tenant_settings')
-          .select('iva_rate, igtf_rate, igtf_enabled')
-          .eq('tenant_id', tenantId)
-          .single();
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+      if (tenantUuid) {
+        try {
+          const { data, error } = await supabase
+            .from('tenant_settings')
+            .select('iva_rate, igtf_rate, igtf_enabled')
+            .eq('tenant_id', tenantUuid)
+            .single();
 
-        if (!error && data) {
-          const settings: FiscalSettings = {
-            ivaRate: data.iva_rate as number,
-            igtfRate: data.igtf_rate as number,
-            igtfEnabled: data.igtf_enabled as boolean,
-          };
-          // Preserve existing operation settings in Dexie, only overwrite fiscal fields
-          let existingOps: DexieTenantSettings | undefined;
-          if (isDbReady()) {
-            try {
-              const d = getDb();
-              existingOps = await d.tenantSettings.get(tenantId);
-            } catch { /* fall through */ }
+          if (!error && data) {
+            const settings: FiscalSettings = {
+              ivaRate: data.iva_rate as number,
+              igtfRate: data.igtf_rate as number,
+              igtfEnabled: data.igtf_enabled as boolean,
+            };
+            // Preserve existing operation settings in Dexie, only overwrite fiscal fields
+            let existingOps: DexieTenantSettings | undefined;
+            if (isDbReady()) {
+              try {
+                const d = getDb();
+                existingOps = await d.tenantSettings.get(tenantId);
+              } catch { logger.warn('SETTINGS', 'fall through en getFiscalSettings:', 'error al leer Dexie - existingOps') }
+            }
+            const opsPartial: OperationSettings = {
+              maxDiscountPct: existingOps?.maxDiscountPct ?? 100,
+              defaultMinStock: existingOps?.defaultMinStock ?? 5,
+              defaultCreditLimit: existingOps?.defaultCreditLimit ?? 100,
+              mandatoryCustomerId: existingOps?.mandatoryCustomerId ?? false,
+              lowStockThreshold: existingOps?.lowStockThreshold ?? 5,
+              ticketFooterMessage: existingOps?.ticketFooterMessage ?? '¡Gracias por su compra!',
+              needsKitchenDefault: existingOps?.needsKitchenDefault ?? false,
+              defaultDeliveryFee: existingOps?.defaultDeliveryFee ?? 0,
+            };
+            await cacheSettings({
+              tenantId,
+              ivaRate: settings.ivaRate,
+              igtfRate: settings.igtfRate,
+              igtfEnabled: settings.igtfEnabled,
+              ...opsPartial,
+              updatedAt: new Date().toISOString(),
+            });
+            return success(settings);
           }
-          const opsPartial: OperationSettings = {
-            maxDiscountPct: existingOps?.maxDiscountPct ?? 100,
-            defaultMinStock: existingOps?.defaultMinStock ?? 5,
-            defaultCreditLimit: existingOps?.defaultCreditLimit ?? 100,
-            mandatoryCustomerId: existingOps?.mandatoryCustomerId ?? false,
-            lowStockThreshold: existingOps?.lowStockThreshold ?? 5,
-            ticketFooterMessage: existingOps?.ticketFooterMessage ?? '¡Gracias por su compra!',
-            needsKitchenDefault: existingOps?.needsKitchenDefault ?? false,
-            defaultDeliveryFee: existingOps?.defaultDeliveryFee ?? 0,
-          };
-          await cacheSettings({
-            tenantId,
-            ivaRate: settings.ivaRate,
-            igtfRate: settings.igtfRate,
-            igtfEnabled: settings.igtfEnabled,
-            ...opsPartial,
-            updatedAt: new Date().toISOString(),
-          });
-          return success(settings);
-        }
-      } catch { /* fall through */ }
+        } catch { logger.warn('SETTINGS', 'fall through en getFiscalSettings:', 'error al consultar Supabase') }
+      }
     }
 
     return success({
@@ -189,7 +192,7 @@ export const settingsService = {
             return failure(new AppError('SETTINGS_FISCAL_BLOCKED', SettingsErrors.SETTINGS_FISCAL_BLOCKED));
           }
         }
-      } catch { /* fall through - best effort */ }
+      } catch { logger.warn('SETTINGS', 'fall through en updateFiscalSettings:', 'error al consultar Supabase sessions') }
     }
 
     try {
@@ -221,61 +224,64 @@ export const settingsService = {
         const db = getDb();
         const cached = await db.tenantSettings.get(tenantId);
         if (cached) return success(toOperationSettings(cached));
-      } catch { /* fall through */ }
+      } catch { logger.warn('SETTINGS', 'fall through en getOperationSettings:', 'error al leer Dexie') }
     }
 
     if (navigator.onLine) {
-      try {
-        const { data, error } = await supabase
-          .from('tenant_settings')
-          .select('max_discount_pct, default_min_stock, default_credit_limit, mandatory_customer_id, low_stock_threshold, ticket_footer_message, needs_kitchen_default, default_delivery_fee, pago_movil_enabled, pago_movil_bank, pago_movil_holder, pago_movil_id, pago_movil_phone')
-          .eq('tenant_id', tenantId)
-          .single();
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+      if (tenantUuid) {
+        try {
+          const { data, error } = await supabase
+            .from('tenant_settings')
+            .select('max_discount_pct, default_min_stock, default_credit_limit, mandatory_customer_id, low_stock_threshold, ticket_footer_message, needs_kitchen_default, default_delivery_fee, pago_movil_enabled, pago_movil_bank, pago_movil_holder, pago_movil_id, pago_movil_phone')
+            .eq('tenant_id', tenantUuid)
+            .single();
 
-        if (!error && data) {
-          const settings: OperationSettings = {
-            maxDiscountPct: data.max_discount_pct as number,
-            defaultMinStock: data.default_min_stock as number,
-            defaultCreditLimit: data.default_credit_limit as number,
-            mandatoryCustomerId: data.mandatory_customer_id as boolean,
-            lowStockThreshold: data.low_stock_threshold as number,
-            ticketFooterMessage: data.ticket_footer_message as string,
-            needsKitchenDefault: (data.needs_kitchen_default as boolean) ?? false,
-            defaultDeliveryFee: (data.default_delivery_fee as number) ?? 0,
-            pagoMovilEnabled: (data.pago_movil_enabled as boolean) ?? false,
-            pagoMovilBank: (data.pago_movil_bank as string) ?? '',
-            pagoMovilHolder: (data.pago_movil_holder as string) ?? '',
-            pagoMovilId: (data.pago_movil_id as string) ?? '',
-            pagoMovilPhone: (data.pago_movil_phone as string) ?? '',
-          };
-          // Preserve existing fiscal settings in Dexie, only overwrite operation fields
-          let existingFiscal: DexieTenantSettings | undefined;
-          if (isDbReady()) {
-            try {
-              const d = getDb();
-              existingFiscal = await d.tenantSettings.get(tenantId);
-            } catch { /* fall through */ }
+          if (!error && data) {
+            const settings: OperationSettings = {
+              maxDiscountPct: data.max_discount_pct as number,
+              defaultMinStock: data.default_min_stock as number,
+              defaultCreditLimit: data.default_credit_limit as number,
+              mandatoryCustomerId: data.mandatory_customer_id as boolean,
+              lowStockThreshold: data.low_stock_threshold as number,
+              ticketFooterMessage: data.ticket_footer_message as string,
+              needsKitchenDefault: (data.needs_kitchen_default as boolean) ?? false,
+              defaultDeliveryFee: (data.default_delivery_fee as number) ?? 0,
+              pagoMovilEnabled: (data.pago_movil_enabled as boolean) ?? false,
+              pagoMovilBank: (data.pago_movil_bank as string) ?? '',
+              pagoMovilHolder: (data.pago_movil_holder as string) ?? '',
+              pagoMovilId: (data.pago_movil_id as string) ?? '',
+              pagoMovilPhone: (data.pago_movil_phone as string) ?? '',
+            };
+            // Preserve existing fiscal settings in Dexie, only overwrite operation fields
+            let existingFiscal: DexieTenantSettings | undefined;
+            if (isDbReady()) {
+              try {
+                const d = getDb();
+                existingFiscal = await d.tenantSettings.get(tenantId);
+              } catch { logger.warn('SETTINGS', 'fall through en getOperationSettings:', 'error al leer Dexie - existingFiscal') }
+            }
+            const fiscalPartial: FiscalSettings = {
+              ivaRate: existingFiscal?.ivaRate ?? IVA_RATE,
+              igtfRate: existingFiscal?.igtfRate ?? IGTF_RATE,
+              igtfEnabled: existingFiscal?.igtfEnabled ?? IGTF_RATE > 0,
+            };
+            await cacheSettings({
+              tenantId,
+              ...fiscalPartial,
+              maxDiscountPct: settings.maxDiscountPct,
+              defaultMinStock: settings.defaultMinStock,
+              defaultCreditLimit: settings.defaultCreditLimit,
+              mandatoryCustomerId: settings.mandatoryCustomerId,
+              lowStockThreshold: settings.lowStockThreshold,
+              ticketFooterMessage: settings.ticketFooterMessage,
+              needsKitchenDefault: settings.needsKitchenDefault ?? false,
+              updatedAt: new Date().toISOString(),
+            });
+            return success(settings);
           }
-          const fiscalPartial: FiscalSettings = {
-            ivaRate: existingFiscal?.ivaRate ?? IVA_RATE,
-            igtfRate: existingFiscal?.igtfRate ?? IGTF_RATE,
-            igtfEnabled: existingFiscal?.igtfEnabled ?? IGTF_RATE > 0,
-          };
-          await cacheSettings({
-            tenantId,
-            ...fiscalPartial,
-            maxDiscountPct: settings.maxDiscountPct,
-            defaultMinStock: settings.defaultMinStock,
-            defaultCreditLimit: settings.defaultCreditLimit,
-            mandatoryCustomerId: settings.mandatoryCustomerId,
-            lowStockThreshold: settings.lowStockThreshold,
-            ticketFooterMessage: settings.ticketFooterMessage,
-            needsKitchenDefault: settings.needsKitchenDefault ?? false,
-            updatedAt: new Date().toISOString(),
-          });
-          return success(settings);
-        }
-      } catch { /* fall through */ }
+        } catch { logger.warn('SETTINGS', 'fall through en getOperationSettings:', 'error al consultar Supabase') }
+      }
     }
 
     return success({
@@ -343,27 +349,30 @@ export const settingsService = {
       }
 
       if (!row && navigator.onLine) {
-        const { data, error } = await supabase
-          .from('tenant_settings')
-          .select('*')
-          .eq('tenant_id', tenantId)
-          .single();
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+        if (tenantUuid) {
+          const { data, error } = await supabase
+            .from('tenant_settings')
+            .select('*')
+            .eq('tenant_id', tenantUuid)
+            .single();
 
-        if (!error && data) {
-          row = {
-            tenantId,
-            ivaRate: data.iva_rate as number,
-            igtfRate: data.igtf_rate as number,
-            igtfEnabled: data.igtf_enabled as boolean,
-            maxDiscountPct: data.max_discount_pct as number,
-            defaultMinStock: data.default_min_stock as number,
-            defaultCreditLimit: data.default_credit_limit as number,
-            mandatoryCustomerId: data.mandatory_customer_id as boolean,
-            lowStockThreshold: data.low_stock_threshold as number,
-            ticketFooterMessage: data.ticket_footer_message as string,
-            updatedAt: (data.updated_at as string) ?? new Date().toISOString(),
-          };
-          await cacheSettings(row);
+          if (!error && data) {
+            row = {
+              tenantId,
+              ivaRate: data.iva_rate as number,
+              igtfRate: data.igtf_rate as number,
+              igtfEnabled: data.igtf_enabled as boolean,
+              maxDiscountPct: data.max_discount_pct as number,
+              defaultMinStock: data.default_min_stock as number,
+              defaultCreditLimit: data.default_credit_limit as number,
+              mandatoryCustomerId: data.mandatory_customer_id as boolean,
+              lowStockThreshold: data.low_stock_threshold as number,
+              ticketFooterMessage: data.ticket_footer_message as string,
+              updatedAt: (data.updated_at as string) ?? new Date().toISOString(),
+            };
+            await cacheSettings(row);
+          }
         }
       }
 
@@ -408,29 +417,32 @@ export const settingsService = {
             logoUrl: ref.logoUrl ?? null,
           });
         }
-      } catch { /* fall through */ }
+      } catch { logger.warn('SETTINGS', 'fall through en getBusinessInfo:', 'error al leer Dexie') }
     }
 
     if (navigator.onLine) {
-      try {
-        const { data, error } = await supabase
-          .from('tenants')
-          .select('name, rif, direccion, telefono, logo_url')
-          .eq('id', tenantId)
-          .is('deleted_at', null)
-          .single();
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+      if (tenantUuid) {
+        try {
+          const { data, error } = await supabase
+            .from('tenants')
+            .select('name, rif, direccion, telefono, logo_url')
+            .eq('id', tenantUuid)
+            .is('deleted_at', null)
+            .single();
 
-        if (!error && data) {
-          const info: BusinessInfo = {
-            name: data.name as string,
-            rif: (data.rif as string) ?? '',
-            address: (data.direccion as string) ?? '',
-            phone: (data.telefono as string) ?? '',
-            logoUrl: (data.logo_url as string) ?? null,
-          };
-          return success(info);
-        }
-      } catch { /* fall through */ }
+          if (!error && data) {
+            const info: BusinessInfo = {
+              name: data.name as string,
+              rif: (data.rif as string) ?? '',
+              address: (data.direccion as string) ?? '',
+              phone: (data.telefono as string) ?? '',
+              logoUrl: (data.logo_url as string) ?? null,
+            };
+            return success(info);
+          }
+        } catch { logger.warn('SETTINGS', 'fall through en getBusinessInfo:', 'error al consultar Supabase') }
+      }
     }
 
     return failure(new AppError('SETTINGS_LOAD_FAILED', 'No se pudo cargar la información del negocio.'));
@@ -476,14 +488,17 @@ export const settingsService = {
       // Then try Supabase (online)
       if (Object.keys(payload).length > 0) {
         if (navigator.onLine) {
-          const { error: updateError } = await supabase
-            .from('tenants')
-            .update(payload)
-            .eq('id', tenantId);
+          const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+          if (tenantUuid) {
+            const { error: updateError } = await supabase
+              .from('tenants')
+              .update(payload)
+              .eq('id', tenantUuid);
 
-          if (updateError) {
-            logger.warn(MODULE_NAME, 'updateBusinessInfo: Supabase update failed, enqueuing sync:', updateError);
-            await syncQueue.enqueue('tenants', 'UPDATE', tenantId, payload, tenantId);
+            if (updateError) {
+              logger.warn(MODULE_NAME, 'updateBusinessInfo: Supabase update failed, enqueuing sync:', updateError);
+              await syncQueue.enqueue('tenants', 'UPDATE', tenantId, payload, tenantId);
+            }
           }
         } else {
           // Offline: enqueue sync for later
@@ -614,7 +629,7 @@ export const settingsService = {
     const { error: updateError } = await supabase
       .from('tenants')
       .update({ logo_url: publicUrl })
-      .eq('id', tenantId);
+      .eq('id', tenantUuid);
 
     if (updateError) {
       return failure(new AppError('LOGO_UPLOAD_FAILED', 'Logo subido pero no se pudo guardar la referencia.'));
@@ -647,11 +662,14 @@ export const settingsService = {
     if (error) return failure(new AppError('LOGO_DELETE_FAILED', error.message));
 
     if (navigator.onLine) {
-      const { error: updateError } = await supabase
-        .from('tenants')
-        .update({ logo_url: null })
-        .eq('id', tenantId);
-      if (updateError) logger.warn(MODULE_NAME, 'deleteBusinessLogo: Supabase update failed:', updateError);
+      const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+      if (tenantUuid) {
+        const { error: updateError } = await supabase
+          .from('tenants')
+          .update({ logo_url: null })
+          .eq('id', tenantUuid);
+        if (updateError) logger.warn(MODULE_NAME, 'deleteBusinessLogo: Supabase update failed:', updateError);
+      }
     }
 
     if (isDbReady()) {
