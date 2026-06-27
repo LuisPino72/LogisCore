@@ -50,8 +50,8 @@ interface ProductionStore extends ProductionState {
   calculateRecipeCost: (recipeId: string, batchCount: number) => Promise<{ totalCost: number; warnings: string[] }>;
 
   // UI State
-  activeTab: 'recipes' | 'produce' | 'history';
-  setActiveTab: (tab: 'recipes' | 'produce' | 'history') => void;
+  activeTab: 'recipes' | 'produce' | 'history' | 'kitchen';
+  setActiveTab: (tab: 'recipes' | 'produce' | 'history' | 'kitchen') => void;
 
   // Refresh
   refresh: (tenantId: string) => Promise<void>;

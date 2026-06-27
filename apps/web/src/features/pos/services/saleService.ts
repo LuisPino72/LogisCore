@@ -2,7 +2,7 @@ import { type Result, success, failure, AppError, SystemEvents } from '@logiscor
 import { preciseRound, toSnake, generateId } from '@logiscore/shared';
 import { productionService, recipeQtyToStorageBase } from '../../production/services/productionService';
 import { getDb } from '../../../services/dexie/db';
-import type { DexieCashRegister } from '../../../services/dexie/db';
+import type { DexieCashRegister, DexieSale } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -1558,6 +1558,25 @@ export async function confirmDelivery(saleId: string): Promise<Result<void, AppE
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en confirmDelivery:', err);
     return failure(new AppError('ORDER_DELIVER_FAILED', 'Error al confirmar la entrega.'));
+  }
+}
+
+export async function getKitchenOrders(tenantId: string): Promise<Result<DexieSale[], AppError>> {
+  try {
+    const db = getDb();
+    const orders = await db.sales
+      .where('tenantId')
+      .equals(tenantId)
+      .filter(sale =>
+        sale.needsKitchen === true &&
+        ['pedida', 'preparacion', 'lista'].includes(sale.status) &&
+        !sale.deletedAt
+      )
+      .toArray();
+    return success(orders);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en getKitchenOrders:', err);
+    return failure(new AppError('KITCHEN_ORDERS_FETCH_FAILED', 'Error al cargar órdenes de cocina.'));
   }
 }
 

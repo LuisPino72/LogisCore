@@ -59,6 +59,9 @@ export function useProduction(tenantId: string | null) {
       EventBus.on(SystemEvents.PURCHASE_RECEIVED, refreshOnEvent),
       EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, refreshOnEvent),
       EventBus.on(SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED, refreshOnEvent),
+      EventBus.on(SystemEvents.ORDER_CREATED, refreshOnEvent),
+      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, refreshOnEvent),
+      EventBus.on(SystemEvents.ORDER_CANCELLED, refreshOnEvent),
     ];
 
     return () => { subs.forEach((s) => EventBus.off(s)); };

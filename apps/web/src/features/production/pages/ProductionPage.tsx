@@ -1,14 +1,17 @@
-import { useState, useMemo } from 'react';
-import { ChefHat, Plus, History, Utensils, Package, AlertTriangle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ChefHat, Plus, History, Utensils, Package, AlertTriangle, Flame } from 'lucide-react';
 import { Button, Card, EmptyState, BottomNav, Spinner, ModuleOnboarding, Modal } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { useProduction } from '../hooks/useProduction';
+import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { RecipeList } from '../components/RecipeList';
 import { RecipeForm } from '../components/RecipeForm';
 import { ProduceModal } from '../components/ProduceModal';
 import { ProductionHistory } from '../components/ProductionHistory';
 import type { Recipe } from '../types';
 import type { BottomNavItem } from '../../../common/components';
+
+const KitchenDisplay = React.lazy(() => import('../components/KitchenDisplay'));
 
 interface ProductionPageProps {
   tenantId: string | null;
@@ -21,6 +24,7 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
     userId,
     cancelOrder,
   } = useProduction(tenantId);
+  const { pendingCount: pendingKitchenCount } = useKitchenOrders();
   const { addToast } = useToastStore();
 
   const [showRecipeForm, setShowRecipeForm] = useState(false);
@@ -34,8 +38,9 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
   const bottomNavItems: BottomNavItem[] = useMemo(() => [
     { id: 'recipes', label: 'Recetas', icon: <ChefHat size={20} />, onClick: () => setActiveTab('recipes') },
     { id: 'produce', label: 'Producir', icon: <Utensils size={20} />, onClick: () => setActiveTab('produce') },
+    { id: 'kitchen', label: 'Cocina', icon: <Flame size={20} />, onClick: () => setActiveTab('kitchen'), badge: pendingKitchenCount > 0 ? pendingKitchenCount : undefined },
     { id: 'history', label: 'Historial', icon: <History size={20} />, onClick: () => setActiveTab('history') },
-  ], [setActiveTab]);
+  ], [setActiveTab, pendingKitchenCount]);
 
   const handleCreateRecipe = () => {
     setEditRecipe(null);
@@ -146,6 +151,13 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
                 {batchRecipes}
               </span>
             )}
+            {tab.id === 'kitchen' && pendingKitchenCount > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
+                activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {pendingKitchenCount}
+              </span>
+            )}
             {tab.id === 'history' && completedOrders > 0 && (
               <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full min-w-[18px] text-center ${
                 activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'
@@ -230,6 +242,11 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
                 </div>
               )}
             </div>
+          )}
+          {activeTab === 'kitchen' && (
+            <React.Suspense fallback={<div className="flex justify-center py-8"><Spinner /></div>}>
+              <KitchenDisplay />
+            </React.Suspense>
           )}
           {activeTab === 'history' && (
             <ProductionHistory
