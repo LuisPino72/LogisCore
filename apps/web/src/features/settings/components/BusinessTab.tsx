@@ -47,6 +47,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
   const [newMotorizadoName, setNewMotorizadoName] = useState('');
   const [newMotorizadoPhone, setNewMotorizadoPhone] = useState('');
   const [loadingDelivery, setLoadingDelivery] = useState(true);
+  const [deleteMotorizadoTarget, setDeleteMotorizadoTarget] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -209,9 +210,9 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     }
   }, [tenantId, userId, newMotorizadoName, newMotorizadoPhone, addToast]);
 
-  const handleRemoveMotorizado = useCallback(async (id: string, name: string) => {
-    if (!window.confirm(`¿Eliminar motorizado "${name}"?`)) return;
-    if (!tenantId || !userId) return;
+  const handleRemoveMotorizado = useCallback(async () => {
+    if (!deleteMotorizadoTarget || !tenantId || !userId) return;
+    const { id } = deleteMotorizadoTarget;
     const result = await removeDeliveryPerson(id, tenantId, userId);
     if (result.ok) {
       setDeliveryPersons((prev) => prev.filter((p) => p.id !== id));
@@ -219,7 +220,8 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
     } else {
       setLocalError(result.error.message);
     }
-  }, [tenantId, userId, addToast]);
+    setDeleteMotorizadoTarget(null);
+  }, [deleteMotorizadoTarget, tenantId, userId, addToast]);
 
   if (loading) {
     return (
@@ -442,7 +444,7 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleRemoveMotorizado(person.id, person.name)}
+                  onClick={() => setDeleteMotorizadoTarget({ id: person.id, name: person.name })}
                   className="text-gray-400 hover:text-danger min-w-[44px] min-h-[44px]"
                   aria-label={`Eliminar motorizado ${person.name}`}
                 >
@@ -506,6 +508,27 @@ export const BusinessTab: FC<BusinessTabProps> = ({ tenantId }) => {
         </div>
       </Modal>
     )}
+
+    <Modal
+      isOpen={!!deleteMotorizadoTarget}
+      onClose={() => setDeleteMotorizadoTarget(null)}
+      title="Eliminar motorizado"
+      size="sm"
+      footer={
+        <div className="flex gap-2 w-full">
+          <Button variant="ghost" className="flex-1" onClick={() => setDeleteMotorizadoTarget(null)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" className="flex-1" onClick={handleRemoveMotorizado}>
+            Eliminar
+          </Button>
+        </div>
+      }
+    >
+      <p className="text-sm text-gray-600">
+        ¿Eliminar motorizado "{deleteMotorizadoTarget?.name}"? Esta acción no se puede deshacer.
+      </p>
+    </Modal>
     </>
   );
 };

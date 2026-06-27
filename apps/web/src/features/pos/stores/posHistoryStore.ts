@@ -1,6 +1,7 @@
 import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
 import { MAX_PARKED_CARTS } from '../../../specs/pos';
+import { logger } from '../../../lib/logger';
 import type { ParkedCart, SaleItem, Sale } from '../types';
 import type { Product } from '../../../specs/inventory';
 
@@ -85,7 +86,7 @@ export const createHistorySlice = (set: any, get: () => HistoryGetter): PosHisto
       get().fetchParkedCarts(tenantId);
       return true;
     }
-    console.error('[parkCart] Error:', result.error);
+    logger.error('POS', '[parkCart] Error:', result.error);
     set({ loading: false, error: result.error.message });
     return false;
   },

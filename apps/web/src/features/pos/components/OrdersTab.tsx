@@ -1,8 +1,9 @@
 import { useState, useEffect, useDeferredValue, useMemo, useCallback } from 'react';
-import { Badge, Button, Spinner, EmptyState } from '@/common/components';
+import { Badge, Button, Input, Spinner, EmptyState } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
 import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2 } from 'lucide-react';
+import { EventBus, SystemEvents } from '@logiscore/core';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pedida: { label: 'Pedida', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
@@ -62,6 +63,16 @@ export function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDeli
     return () => clearInterval(interval);
   }, [reload]);
 
+  useEffect(() => {
+    const subs = [
+      EventBus.on(SystemEvents.ORDER_CREATED, () => { reload(); }),
+      EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, () => { reload(); }),
+      EventBus.on(SystemEvents.ORDER_CANCELLED, () => { reload(); }),
+      EventBus.on(SystemEvents.ORDER_DELIVERED, () => { reload(); }),
+    ];
+    return () => { subs.forEach((s) => EventBus.off(s)); };
+  }, [reload]);
+
   const filtered = useMemo(() => {
     if (!deferredSearch.trim()) return orders;
     const q = deferredSearch.toLowerCase();
@@ -93,13 +104,12 @@ export function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDeli
   return (
     <div className="flex flex-col gap-3 p-3">
       <div className="relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
+        <Input
           placeholder="Buscar por # o cliente..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2.5 min-h-11 rounded-xl border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+          className="pl-9"
         />
       </div>
 

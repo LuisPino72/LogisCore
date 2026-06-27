@@ -140,7 +140,8 @@ export function CartSummary({
             <button
               type="button"
               onClick={onClearDiscount}
-              className="ml-1 p-2 min-w-11 min-h-11 rounded hover:bg-danger/10 transition-colors flex items-center justify-center"
+              className="ml-1 p-2 min-w-11 min-h-11 rounded hover:bg-danger/10 transition-colors flex items-center justify-center text-danger"
+              aria-label="Quitar descuento"
             >
               <X size={12} />
             </button>
@@ -162,13 +163,15 @@ export function CartSummary({
           </p>
           {hasCustomerWithCredit && (
             <div className="relative shrink-0">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowCreditInfo(!showCreditInfo)}
-                className="p-1.5 rounded-md hover:bg-primary/10 transition-colors text-primary flex items-center justify-center"
+                className="p-1.5 rounded-md"
+                aria-label="Información de crédito"
               >
                 <Info size={13} />
-              </button>
+              </Button>
               {showCreditInfo && (
                 <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-border rounded-lg shadow-lg p-3 min-w-[180px]">
                   <p className="text-xs font-medium text-gray-900 mb-1">Crédito</p>
@@ -190,43 +193,47 @@ export function CartSummary({
               )}
             </div>
           )}
-           <button
-            type="button"
+           <Button
+            variant="ghost"
+            size="sm"
             onClick={onSelectCustomer}
-            className="text-xs font-medium text-primary hover:text-primary-dark px-2 py-1 rounded-md hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0"
+            className="text-xs font-medium text-primary px-2 py-1 rounded-md"
           >
             Cambiar
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost-danger"
+            size="sm"
             onClick={onClearCustomer}
-            className="p-1.5 rounded-md hover:bg-danger/10 transition-colors text-gray-800 hover:text-danger flex items-center justify-center shrink-0"
+            className="p-1.5 rounded-md"
             aria-label="Quitar cliente"
           >
             <X size={14} />
-          </button>
+          </Button>
          
         </div>
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onSelectCustomer}
-          className="w-full flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-xl text-xs font-medium text-text-secondary border border-border hover:border-primary/30 hover:text-primary transition-colors"
+          className="w-full min-h-11"
         >
           <UserPlus size={14} />
           Asignar cliente
-        </button>
+        </Button>
       )}
 
       {!discount && items.length > 0 && !showDiscountInput && (
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setShowDiscountInput(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-xl text-xs font-medium text-primary border border-primary/30 hover:bg-primary/5 transition-colors"
+          className="w-full min-h-11"
         >
           <Percent size={14} />
           Agregar descuento
-        </button>
+        </Button>
       )}
 
       {showDiscountInput && (

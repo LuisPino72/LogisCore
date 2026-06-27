@@ -2,6 +2,7 @@ import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
 import { getDb } from '../../../services/dexie/db';
+import { logger } from '../../../lib/logger';
 import type { Product, Category } from '../../../specs/inventory';
 import type { Presentation } from '../../../specs/inventory';
 
@@ -128,7 +129,7 @@ export const createCatalogSlice = (set: any, get: () => CatalogGetter): PosCatal
         await db.productFavorites.bulkAdd(newFavorites);
       }
     } catch (err) {
-      console.warn('[posStore] restoreFavorites failed:', err);
+      logger.warn('POS', '[posStore] restoreFavorites failed:', err);
     }
   },
 
