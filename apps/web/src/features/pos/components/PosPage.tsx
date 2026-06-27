@@ -1,13 +1,16 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip, Modal, Spinner } from '../../../common/components';
+import { Alert, Badge, Button, BottomNav, ModuleOnboarding, Tooltip } from '../../../common/components';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
-import { AlertTriangle, CheckCircle2, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, FileText, MessageCircle, User, Truck } from 'lucide-react';
+import { AlertTriangle, Scan, Package, History as HistoryIcon, ShoppingCart, DollarSign, MessageCircle, Truck } from 'lucide-react';
 import { usePos } from '../hooks/usePos';
 import { usePosNavigation } from '../hooks/usePosNavigation';
 import { usePosModals } from '../hooks/usePosModals';
 import { usePosVerification } from '../hooks/usePosVerification';
+import { useBarcodeScan } from '../hooks/useBarcodeScan';
+import { useKitchenNotifications } from '../hooks/useKitchenNotifications';
+import { useWhatsAppShare } from '../hooks/useWhatsAppShare';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
 import { FlyToCart } from './FlyToCart';
@@ -17,6 +20,11 @@ import { RegisterSelectionModal } from './RegisterSelectionModal';
 import { CashStatusBadge } from './CashStatusBadge';
 import { ParkCartModal } from './ParkCartModal';
 import { DeliveryPromptModal } from './DeliveryPromptModal';
+import { VoidConfirmModal } from './VoidConfirmModal';
+import { PayConfirmModal } from './PayConfirmModal';
+import { CompletedSaleModal } from './CompletedSaleModal';
+import { VerifyConfirmModal } from './VerifyConfirmModal';
+import { OrderPayModal } from './OrderPayModal';
 import { OrdersTab } from './OrdersTab';
 import { SalesHistory } from './SalesHistory';
 import { TableGrid } from './TableGrid';
@@ -36,13 +44,10 @@ import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { logger } from '../../../lib/logger';
 import { isSameDayVzla } from '../../../lib/date';
 import { preciseRound } from '@logiscore/shared';
-import { receiptService } from '../services/receiptService';
 import { dashboardService } from '../../dashboard/services/dashboardService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
-import { METADATA_PAGOS } from '../../../specs/pos';
-import { formatBs, formatUsd } from '@/lib/formatBs';
-import { failure, AppError, SystemEvents, EventBus } from '@logiscore/core';
-import { confirmOrderPayment, getSaleById } from '../services/saleService';
+import { failure, AppError } from '@logiscore/core';
+import { confirmOrderPayment } from '../services/saleService';
 import { confirmDelivery } from '../services/saleService';
 import { customerService } from '../../customers/services/customerService';
 
@@ -105,22 +110,26 @@ export function PosPage({ tenantId }: PosPageProps) {
   const [processing, setProcessing] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [parkTableNumber, setParkTableNumber] = useState<number | null>(null);
-  const [sharing, setSharing] = useState(false);
+  const { sharing, handleWhatsAppShare } = useWhatsAppShare();
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [tenantInfo, setTenantInfo] = useState<{ name: string; rif: string; direccion?: string; telefono?: string; logoUrl?: string } | null>(null);
   const [showRegisterSelection, setShowRegisterSelection] = useState(false);
-  const [kitchenReadyNotifs, setKitchenReadyNotifs] = useState<Array<{ saleId: string; customerName: string; orderNumber: string }>>([]);
+  const { kitchenReadyNotifs, dismissNotification } = useKitchenNotifications({ tenantId });
   const [showDispatchPanel, setShowDispatchPanel] = useState(false);
   const [dispatchSale, setDispatchSale] = useState<DexieSale | null>(null);
   const [dispatchCustomerName, setDispatchCustomerName] = useState('');
   const [dispatchCustomerPhone, setDispatchCustomerPhone] = useState('');
   const [orderPayModal, setOrderPayModal] = useState<{ sale: DexieSale; method: PaymentMethod | null } | null>(null);
 
-  // Global Barcode Listener State
-  const SCAN_TIMEOUT_MS = 120;
-  const MAX_BARCODE_LENGTH = 50;
-  const barcodeBuffer = useRef('');
-  const lastKeyTime = useRef(0);
+  const { handleBarcodeScan } = useBarcodeScan({
+    tenantId,
+    onProductFound: async (product) => {
+      await addToCart(product, 1);
+    },
+    onWeightedProduct: (product) => openWeightModal(product),
+    onPresentationNeeded: (product) => openPresModal(product),
+    onError: (msg) => addToast({ type: 'warning', message: msg, duration: 3000 }),
+  });
   const [showPayConfirm, setShowPayConfirm] = useState(false);
 
   // Bug #6: Re-evaluar isFromPreviousDay al cruzar medianoche
@@ -197,53 +206,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     }
   }, [addToast]);
 
-  const fetchOrderData = useCallback(async (saleId: string) => {
-    const saleResult = await getSaleById(saleId);
-    if (!saleResult.ok || !saleResult.data) return null;
-    const sale = saleResult.data;
-    let customerName = 'Cliente';
-    if (sale.customerId && tenantId) {
-      const custResult = await customerService.getCustomerById(sale.customerId, tenantId);
-      if (custResult.ok && custResult.data) customerName = custResult.data.name;
-    }
-    return { customerName, orderNumber: sale.orderNumber ?? saleId.slice(0, 8) };
-  }, [tenantId]);
 
-  useEffect(() => {
-    const sub = EventBus.on(
-      SystemEvents.ORDER_STATUS_CHANGED,
-      (payload: unknown) => {
-        const data = payload as { saleId?: string; newStatus?: string };
-        if (data?.newStatus === 'lista' && data?.saleId) {
-          fetchOrderData(data.saleId).then((info) => {
-            if (!info) return;
-            setKitchenReadyNotifs((prev) => {
-              const next = [...prev, {
-                saleId: data.saleId!,
-                customerName: info.customerName,
-                orderNumber: info.orderNumber,
-              }];
-              return next.slice(-3);
-            });
-            if (activeTab !== 'orders') {
-              try {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = 400;
-                gain.gain.value = 0.1;
-                osc.start();
-                osc.stop(ctx.currentTime + 0.4);
-              } catch { logger.warn('POS', 'AudioContext beep failed'); }
-            }
-          });
-        }
-      },
-    );
-    return () => { EventBus.off(sub); };
-  }, [activeTab, fetchOrderData]);
 
   // Confirmar si el usuario intenta recargar con productos en el carrito
   useEffect(() => {
@@ -256,66 +219,9 @@ export function PosPage({ tenantId }: PosPageProps) {
     return () => window.removeEventListener('beforeunload', handler);
   }, [cart.length]);
 
-  const handleBarcodeScan = useCallback(
-    async (code: string) => {
-      if (!tenantId) return;
-      const cleaned = code.replace(/^\]\w{1,2}\d?/, '').split('').filter((c) => c >= ' ').join('').trim();
-      if (!cleaned) return;
-      const result = await inventoryService.getProductBySku(cleaned, tenantId);
-      if (result.ok && result.data) {
-        if (result.data.isWeighted) {
-          addToast({ type: 'info', message: `${result.data.name} es pesable. Agrégalo manualmente.`, duration: 3000 });
-          return;
-        }
-        if (navigator.vibrate) {
-          navigator.vibrate(100);
-        }
-        const presentation = await inventoryService.getPresentationByBarcode(cleaned, tenantId);
-        if (presentation?.id) {
-          addToCart(result.data, 1, { id: presentation.id, name: presentation.name, priceUsd: presentation.priceUsd, unitMultiplier: presentation.unitMultiplier });
-        } else {
-          addToCart(result.data, 1);
-        }
-        addToast({ type: 'success', message: `${result.data.name} agregado`, duration: 2000 });
-      } else {
-        addToast({ type: 'error', message: `Producto con código "${cleaned}" no encontrado.`, duration: 4000 });
-      }
-    },
-    [tenantId, addToCart, addToast],
-  );
 
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (
-        document.activeElement instanceof HTMLInputElement || 
-        document.activeElement instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
 
-      const now = Date.now();
-      if (now - lastKeyTime.current > SCAN_TIMEOUT_MS) {
-        barcodeBuffer.current = '';
-      }
-      lastKeyTime.current = now;
 
-      if (e.key === 'Enter') {
-        if (barcodeBuffer.current.length > 2) {
-          handleBarcodeScan(barcodeBuffer.current);
-        }
-        barcodeBuffer.current = '';
-      } else if (e.key.length === 1) {
-        if (e.key < ' ') return;
-        barcodeBuffer.current += e.key;
-        if (barcodeBuffer.current.length > MAX_BARCODE_LENGTH) {
-          barcodeBuffer.current = '';
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleBarcodeScan]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -450,84 +356,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     setShowPayConfirm(false);
   }, []);
 
-  const handleWhatsAppShare = useCallback(async (mode: 'ticket' | 'text') => {
-    if (!completedSale || !tenantInfo) return;
-    setSharing(true);
-    await new Promise((r) => setTimeout(r, 300));
-    try {
-      const enrichedTenantInfo = {
-        ...tenantInfo,
-        footerMessage: useSettingsStore.getState().ticketFooterMessage,
-        ivaRate: useSettingsStore.getState().ivaRate,
-        igtfRate: useSettingsStore.getState().igtfRate,
-      };
-      if (mode === 'text') {
-        const link = receiptService.generateWhatsAppLink(
-          {
-            id: completedSale.saleId,
-            createdAt: new Date().toISOString(),
-            paymentMethod: completedSale.paymentMethod,
-            exchangeRate: completedSale.exchangeRate,
-            subtotalBs: completedSale.subtotalBs,
-            igtfBs: 0,
-            ivaBs: 0,
-            totalBs: completedSale.totalBs,
-            subtotalUsd: completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0,
-            igtfUsd: 0,
-            ivaUsd: 0,
-            totalUsd: completedSale.totalUsd,
-          },
-          completedSale.items.map((i) => ({
-            productName: i.name,
-            presentationName: i.presentationName,
-            quantity: i.quantity,
-            unitPriceUsd: i.unitPriceUsd,
-            totalPriceUsd: i.totalPriceUsd,
-          })),
-          completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
-          enrichedTenantInfo,
-        );
-        if (link) {
-          window.open(link, '_blank');
-        } else {
-          addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado', duration: 4000 });
-        }
-      } else {
-        const result = await receiptService.sharePdfViaWhatsApp(
-          {
-            id: completedSale.saleId,
-            createdAt: new Date().toISOString(),
-            paymentMethod: completedSale.paymentMethod,
-            exchangeRate: completedSale.exchangeRate,
-            subtotalBs: completedSale.subtotalBs,
-            igtfBs: 0,
-            ivaBs: 0,
-            totalBs: completedSale.totalBs,
-            subtotalUsd: completedSale.exchangeRate > 0 ? completedSale.subtotalBs / completedSale.exchangeRate : 0,
-            igtfUsd: 0,
-            ivaUsd: 0,
-            totalUsd: completedSale.totalUsd,
-          },
-          completedSale.items.map((i) => ({
-            productName: i.name,
-            presentationName: i.presentationName,
-            quantity: i.quantity,
-            unitPriceUsd: i.unitPriceUsd,
-            totalPriceUsd: i.totalPriceUsd,
-          })),
-          completedSale.customerName ? { name: completedSale.customerName, phone: completedSale.customerPhone } : null,
-          enrichedTenantInfo,
-        );
-        if (!result.ok) {
-          addToast({ type: 'warning', message: result.error.message, duration: 4000 });
-        }
-      }
-    } catch {
-      addToast({ type: 'error', message: 'Error al enviar por WhatsApp', duration: 5000 });
-    } finally {
-      setSharing(false);
-    }
-  }, [completedSale, tenantInfo, addToast]);
+
 
   const isFromPreviousDay = useMemo(() => {
     if (!cashRegister?.isOpen || !cashRegister?.openedAt) return false;
@@ -868,8 +697,8 @@ export function PosPage({ tenantId }: PosPageProps) {
                         saleId={n.saleId}
                         customerName={n.customerName}
                         orderNumber={n.orderNumber}
-                        onDismiss={() => setKitchenReadyNotifs((prev) => prev.filter((x) => x.saleId !== n.saleId))}
-                        onViewOrder={() => setKitchenReadyNotifs((prev) => prev.filter((x) => x.saleId !== n.saleId))}
+                        onDismiss={() => dismissNotification(n.saleId)}
+                        onViewOrder={() => dismissNotification(n.saleId)}
                       />
                     ))}
                   </div>
@@ -979,38 +808,15 @@ export function PosPage({ tenantId }: PosPageProps) {
         referenceDate={isFromPreviousDay && cashRegister?.openedAt ? new Date(cashRegister.openedAt) : undefined}
       />
 
-      <Modal
+      <VerifyConfirmModal
         isOpen={showVerifyConfirm}
+        loading={verifyLoading}
+        verifyCounts={verifyCounts}
+        isFromPreviousDay={isFromPreviousDay}
+        onVerify={handleVerifyYes}
+        onSkip={handleVerifyNo}
         onClose={closeVerifyConfirm}
-        title="Verificar inventario"
-        size="sm"
-      >
-        {verifyLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Spinner />
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4 animate-slide-down">
-            <div className="flex flex-col items-center gap-3 pt-2">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-primary/20 bg-primary/10">
-                <Package size={24} className="text-primary" />
-              </div>
-              <p className="text-sm text-gray-600 text-center">
-                Hay <strong>{verifyCounts.sold + verifyCounts.lowStock}</strong> producto{(verifyCounts.sold + verifyCounts.lowStock) > 1 ? 's' : ''} para verificar
-                {verifyCounts.sold > 0 && <> (<strong>{verifyCounts.sold}</strong> vendido{verifyCounts.sold > 1 ? 's' : ''} {isFromPreviousDay ? 'ayer' : 'hoy'}</>}
-                {verifyCounts.sold > 0 && verifyCounts.lowStock > 0 ? <>, </> : null}
-                {verifyCounts.lowStock > 0 ? <><strong>{verifyCounts.lowStock}</strong> con bajo stock</> : null}
-                {verifyCounts.sold > 0 ? <> )</> : null}.
-                ¿Deseas verificar el stock físico antes de cerrar caja?
-              </p>
-            </div>
-            <div className="flex gap-2 justify-end pt-1">
-              <Button variant="ghost" onClick={handleVerifyNo}>Solo cerrar</Button>
-              <Button variant="primary" onClick={handleVerifyYes}>Verificar</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      />
 
       <ParkCartModal
         isOpen={showParkModal}
@@ -1030,69 +836,23 @@ export function PosPage({ tenantId }: PosPageProps) {
         needsKitchenDefault={needsKitchenDefault}
       />
 
-      <Modal
+      <VoidConfirmModal
         isOpen={!!voidConfirmId}
-        onClose={() => setVoidConfirmId(null)}
-        title="¿Anular venta?"
-        size="sm"
-        footer={
-          <div className="flex gap-2 w-full">
-            <Button variant="ghost" className="flex-1" onClick={() => setVoidConfirmId(null)}>Cancelar</Button>
-            <Button variant="danger" className="flex-1" onClick={handleConfirmVoid}>Sí, anular</Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col items-center gap-3 pt-2 animate-slide-down">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center ring-1 ring-danger/20 bg-danger/10">
-            <AlertTriangle size={24} className="text-danger" />
-          </div>
-          <p className="text-sm text-gray-600 text-center">
-            Se restaurará el stock de todos los productos de esta venta. Esta acción no se puede deshacer.
-          </p>
-        </div>
-      </Modal>
+        onConfirm={handleConfirmVoid}
+        onCancel={() => setVoidConfirmId(null)}
+      />
 
-      <Modal
+      <PayConfirmModal
         isOpen={showPayConfirm}
-        onClose={handleCancelPay}
-        title="Confirmar venta"
-        size="sm"
-        footer={
-          <div className="flex gap-2 w-full">
-            <Button variant="ghost" className="flex-1" onClick={handleCancelPay}>Cancelar</Button>
-            <Button variant="primary" className="flex-1" onClick={handleConfirmPay} loading={processing}>Confirmar venta</Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-3 pt-2 animate-slide-down">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <ShoppingCart size={20} className="text-primary" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-gray-900">{formatUsd(cart.reduce((s, i) => s + i.totalPriceUsd, 0))}</p>
-              <p className="text-xs text-text-secondary">{formatBs(preciseRound(cart.reduce((s, i) => s + i.totalPriceUsd, 0) * exchangeRateBs, 2))}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-surface-alt rounded-lg p-2.5">
-              <p className="text-xs text-text-secondary">Productos</p>
-              <p className="font-semibold text-gray-900">{cart.reduce((s, i) => s + i.quantity, 0)} unidades</p>
-            </div>
-            <div className="bg-surface-alt rounded-lg p-2.5">
-              <p className="text-xs text-text-secondary">Método de pago</p>
-              <p className="font-semibold text-gray-900">{paymentMethod ? METADATA_PAGOS[paymentMethod]?.label ?? paymentMethod : '-'}</p>
-            </div>
-          </div>
-          {selectedCustomer && (
-            <div className="flex items-center gap-2 bg-primary/5 rounded-lg p-2.5 text-sm">
-              <User size={14} className="text-primary shrink-0" />
-              <span className="font-medium text-gray-900 truncate">{selectedCustomer.name}</span>
-              {isCreditSale && <Badge variant="warning" className="text-[10px]">Fiado</Badge>}
-            </div>
-          )}
-        </div>
-      </Modal>
+        cart={cart}
+        exchangeRateBs={exchangeRateBs}
+        paymentMethod={paymentMethod}
+        selectedCustomer={selectedCustomer}
+        isCreditSale={isCreditSale}
+        processing={processing}
+        onConfirm={handleConfirmPay}
+        onCancel={handleCancelPay}
+      />
 
       <BarcodeScannerModal
         isOpen={showBarcodeScanner}
@@ -1110,52 +870,12 @@ export function PosPage({ tenantId }: PosPageProps) {
         />
       )}
 
-      <Modal
-        isOpen={completedSale !== null}
+      <CompletedSaleModal
+        completedSale={completedSale}
+        sharing={sharing}
+        onShare={(mode) => handleWhatsAppShare(mode, completedSale, tenantInfo)}
         onClose={() => setCompletedSale(null)}
-        title="Venta completada"
-        size="sm"
-      >
-        {completedSale && (
-          <div className="flex flex-col items-center gap-4 py-2 animate-slide-down">
-            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center animate-check-pop">
-              <CheckCircle2 size={32} className="text-success" />
-            </div>
-            <p className="text-(length:--text-fluid-2xl) font-bold text-gray-900">{formatUsd(completedSale.totalUsd)}</p>
-            <p className="text-sm text-text-secondary -mt-2">{formatBs(completedSale.totalBs)}</p>
-            <Badge variant="success" className="text-xs">
-              {METADATA_PAGOS[completedSale.paymentMethod]?.label ?? completedSale.paymentMethod}
-            </Badge>
-
-            <div className="flex flex-col gap-2 w-full pt-2">
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => handleWhatsAppShare('ticket')}
-                disabled={sharing}
-                className="min-h-11"
-                style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
-              >
-                <FileText size={16} />
-                {sharing ? 'Enviando...' : 'Ticket por WhatsApp'}
-              </Button>
-              {completedSale.customerPhone && (
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => handleWhatsAppShare('text')}
-                  disabled={sharing}
-                  className="min-h-11"
-                  style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}
-                >
-                  <MessageCircle size={16} />
-                  {sharing ? 'Enviando...' : 'Solo texto por WhatsApp'}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
+      />
 
       <PresentationSelector
         isOpen={selectedProductForPres !== null}
@@ -1202,56 +922,14 @@ export function PosPage({ tenantId }: PosPageProps) {
         onComplete={() => {}}
       />
 
-      <Modal
+      <OrderPayModal
         isOpen={!!orderPayModal}
-        onClose={() => setOrderPayModal(null)}
-        title="Cobrar Pedido"
-        size="sm"
-        footer={
-          <div className="flex gap-2 w-full">
-            <Button variant="ghost" className="flex-1" onClick={() => setOrderPayModal(null)}>Cancelar</Button>
-            <Button
-              variant="primary"
-              className="flex-1"
-              onClick={handleConfirmPayOrder}
-              disabled={!orderPayModal?.method}
-              loading={processing}
-            >
-              Confirmar cobro
-            </Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-3 pt-2 animate-slide-down">
-          {orderPayModal?.sale && (
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <ShoppingCart size={20} className="text-primary" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-gray-900">{formatUsd(orderPayModal.sale.totalUsd)}</p>
-                <p className="text-xs text-text-secondary">{orderPayModal.sale.orderNumber}</p>
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-2">
-            {(['efectivo_bs', 'efectivo_usd', 'pago_movil', 'credito'] as PaymentMethod[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setOrderPayModal((prev) => prev ? { ...prev, method: m } : null)}
-                className={`p-2.5 rounded-xl border text-xs font-medium transition-all min-h-11 ${
-                  orderPayModal?.method === m
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-white text-gray-700 hover:border-primary/30'
-                }`}
-              >
-                {METADATA_PAGOS[m]?.label ?? m}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Modal>
+        sale={orderPayModal}
+        processing={processing}
+        onConfirm={handleConfirmPayOrder}
+        onCancel={() => setOrderPayModal(null)}
+        onMethodChange={(m) => setOrderPayModal((prev) => prev ? { ...prev, method: m } : null)}
+      />
 
       {dispatchSale && (
         <DeliveryDispatchPanel
