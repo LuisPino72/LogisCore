@@ -33,26 +33,6 @@ export async function getOverrides(userId: string): Promise<Result<DexieUserPerm
   }
 }
 
-export async function getOverridesForTenant(): Promise<Result<DexieUserPermissionOverride[], AppError>> {
-  try {
-    const db = getDb();
-    const session = useAuthStore.getState().session;
-    const tenantId = session?.tenantId;
-    if (!tenantId) {
-      return failure(new AppError('AUTH_NO_TENANT', 'No hay tenant activo.'));
-    }
-    const overrides = await db.userPermissionOverrides
-      .where('tenantId')
-      .equals(tenantId)
-      .filter((o) => !o.deletedAt)
-      .toArray();
-    return success(overrides);
-  } catch (err) {
-    logger.error(MODULE_NAME, 'Error en getOverridesForTenant:', err);
-    return failure(new AppError('OVERRIDES_FETCH_FAILED', 'Error al cargar permisos del tenant.'));
-  }
-}
-
 export async function addOverride(input: CreateOverrideInput): Promise<Result<DexieUserPermissionOverride, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'settings', 'manage')) {
@@ -190,7 +170,6 @@ export async function getOverridesForUser(userId: string): Promise<Result<string
 
 export const userPermissionOverrideService = {
   getOverrides,
-  getOverridesForTenant,
   addOverride,
   removeOverride,
   getOverridesForUser,
