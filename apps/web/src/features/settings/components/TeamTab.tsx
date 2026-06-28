@@ -168,7 +168,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
       render: (u: UserRole) => {
         if (u.role === 'owner') return null;
         return (
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {editingUserId === u.id ? (
               <>
                 <Button variant="ghost" size="sm" onClick={() => handleUpdateRole(u.id, editingRoleId)}>
@@ -284,7 +284,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
           <div className="space-y-2">
             {roles.filter(r => r.name !== 'admin' && r.name !== 'owner').map((role) => (
               <div key={role.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <Badge variant={role.rlsTier === 'owner' ? 'info' : 'neutral'}>{role.rlsTier}</Badge>
                   <div>
                     <div className="font-medium text-sm">{role.name}</div>

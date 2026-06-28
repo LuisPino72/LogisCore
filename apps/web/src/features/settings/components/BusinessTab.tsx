@@ -268,7 +268,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
             label="Nombre del negocio"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            validation={{ required: true, maxLength: 25 }}
+            validation={{ required: true, maxLength: 30 }}
             autoComplete="organization"
           />
           <Input
@@ -295,8 +295,8 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
           label="Mensaje pie de ticket"
           value={ticketFooterMessage}
           onChange={(e) => setTicketFooterMessage(e.target.value)}
-          validation={{ maxLength: 100 }}
-          hint="Texto que aparece al final del ticket de venta (máx. 100 caracteres)."
+          validation={{ maxLength: 50 }}
+          hint="Texto que aparece al final del ticket de venta (máx. 50 caracteres)."
           autoResize
           maxRows={3}
         />

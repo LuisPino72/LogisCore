@@ -190,7 +190,7 @@ export function DataTable<T>({
           const imageContent = imageCol?.render ? imageCol.render(item) : null;
           const nameContent = nameCol?.render ? nameCol.render(item) : String((item as Record<string, unknown>)[nameCol?.key ?? ''] ?? '');
           return (
-            <Card key={keyExtractor(item)} className={cn('mb-3', rowClassName?.(item))}>
+            <Card key={keyExtractor(item)} className={cn('mb-3 overflow-hidden', rowClassName?.(item))}>
               <div className="card-body">
                 <div className="flex flex-col items-center gap-3">
                   {imageContent && (
@@ -205,7 +205,7 @@ export function DataTable<T>({
                     if (col.hideOnMobile || col.key === 'image' || col.key === 'name') return null;
                     const content = col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? '');
                     if (col.key === 'actions') {
-                      return <div key={col.key} className="mt-2 flex items-center justify-center gap-0.5">{content}</div>;
+                      return <div key={col.key} className="mt-2 flex flex-wrap items-center justify-center gap-0.5">{content}</div>;
                     }
                     return (
                       <div key={col.key} className="flex items-center justify-center gap-2">
