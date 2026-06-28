@@ -3,6 +3,7 @@ import { success, failure, type Result, AppError } from '@logiscore/core';
 import { logger } from '../../../lib/logger';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 
 export interface DeliverySettlementRow {
   name: string;
@@ -19,7 +20,7 @@ export async function getDeliverySettlement(
 ): Promise<Result<DeliverySettlementRow[], AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'reports', 'read')) {
-    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+    return failure(new AppError('REPORTS_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
   }
   try {
     if (!isDbReady()) return failure(new AppError('DB_NOT_READY', 'Base de datos no disponible.'));
@@ -104,7 +105,7 @@ export async function markDeliverySettlementPaid(
 ): Promise<Result<number, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'reports', 'read')) {
-    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+    return failure(new AppError('REPORTS_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
   }
   try {
     if (!isDbReady()) return failure(new AppError('DB_NOT_READY', 'Base de datos no disponible.'));

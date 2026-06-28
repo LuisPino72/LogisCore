@@ -12,6 +12,7 @@ import { PurchaseErrors } from '../../../specs/purchases/errors';
 import type { Supplier, CreateSupplierInput } from '../../../specs/purchases';
 import { CreateSupplierInputSchema } from '../../../specs/purchases';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 const PURCHASES_MODULE = 'PURCHASES';
@@ -39,7 +40,7 @@ export async function createSupplier(
 ): Promise<Result<Supplier, AppError>> {
   const _session = useAuthStore.getState().session;
   if (!_session || !hasActionPermission(_session, 'purchases', 'create')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'create')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -109,7 +110,7 @@ export async function updateSupplier(
 ): Promise<Result<Supplier, AppError>> {
   const _session = useAuthStore.getState().session;
   if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'update')));
   }
   try {
     const networkCheck = requireNetwork();
@@ -165,7 +166,7 @@ export async function updateSupplier(
 export async function softDeleteSupplier(id: string, tenantId: string): Promise<Result<void, AppError>> {
   const _session = useAuthStore.getState().session;
   if (!_session || !hasActionPermission(_session, 'purchases', 'delete')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'delete')));
   }
   try {
     const networkCheck = requireNetwork();

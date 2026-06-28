@@ -14,6 +14,7 @@ import { imageCacheService } from '../../../services/imageCache/imageCacheServic
 import type { Product, CreateProductInput, ProductFilters, Presentation, CreatePresentationInput } from '../types';
 import { convertToStorage, unitToStorageType } from '../types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toProduct, toPresentation } from './mappers';
 import { CreateProductInputSchema } from '../../../specs/inventory';
@@ -107,7 +108,7 @@ export async function createProduct(
 ): Promise<Result<Product, AppError>> {
   const _createProdSession = useAuthStore.getState().session;
   if (!_createProdSession || !hasActionPermission(_createProdSession, 'inventory', 'create')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'create')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -226,7 +227,7 @@ export async function createProductWithPresentations(
 ): Promise<Result<{ product: Product; presentations: Presentation[] }, AppError>> {
   const _createPresSession = useAuthStore.getState().session;
   if (!_createPresSession || !hasActionPermission(_createPresSession, 'inventory', 'create')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'create')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -405,7 +406,7 @@ export async function createProductWithPresentations(
 export async function updateProduct(id: string, input: Partial<Product>, tenantId: string): Promise<Result<Product, AppError>> {
   const _updateProdSession = useAuthStore.getState().session;
   if (!_updateProdSession || !hasActionPermission(_updateProdSession, 'inventory', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'update')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -669,7 +670,7 @@ export async function getProductById(tenantId: string, id: string): Promise<Resu
 export async function softDeleteProduct(id: string, tenantId: string): Promise<Result<void, AppError>> {
   const _deleteProdSession = useAuthStore.getState().session;
   if (!_deleteProdSession || !hasActionPermission(_deleteProdSession, 'inventory', 'delete')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'delete')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -750,7 +751,7 @@ export async function softDeleteProduct(id: string, tenantId: string): Promise<R
 export async function uploadProductImage(file: File, tenantId: string, productId: string): Promise<Result<string, AppError>> {
   const _uploadImgSession = useAuthStore.getState().session;
   if (!_uploadImgSession || !hasActionPermission(_uploadImgSession, 'inventory', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'update')));
   }
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const MAX_ORIGINAL_SIZE = 10 * 1024 * 1024;

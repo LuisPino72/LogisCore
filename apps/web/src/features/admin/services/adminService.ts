@@ -15,6 +15,7 @@ import type { DexieRegisterConfig, DexieCashRegister } from '../../../services/d
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { useAuthStore } from '../../../features/auth/stores/authStore';
 import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../../features/auth/permissions/messages';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -1141,7 +1142,7 @@ export const adminService = {
 
     const _fcSession = useAuthStore.getState().session;
     if (!_fcSession || !hasActionPermission(_fcSession, 'pos', 'manager_close')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('pos', 'manager_close')));
     }
 
     const db = getDb();

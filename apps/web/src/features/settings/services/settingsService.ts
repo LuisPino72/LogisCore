@@ -9,6 +9,7 @@ import { toSnake } from '@logiscore/shared';
 import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { isSameDayVzla, startOfDayVzla } from '../../../lib/date';
 import { SettingsErrors } from '../types/errors';
@@ -173,7 +174,7 @@ export const settingsService = {
 
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'settings', 'manage')) {
-      return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
+      return failure(new AppError('SETTINGS_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
     }
 
     if (isDbReady()) {
@@ -336,7 +337,7 @@ export const settingsService = {
 
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'settings', 'manage')) {
-      return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
+      return failure(new AppError('SETTINGS_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
     }
 
     try {
@@ -494,7 +495,7 @@ export const settingsService = {
 
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'settings', 'manage')) {
-      return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
+      return failure(new AppError('SETTINGS_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
     }
 
     try {
@@ -607,7 +608,7 @@ export const settingsService = {
   async uploadBusinessLogo(tenantId: string, file: File): Promise<Result<string, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'settings', 'manage')) {
-      return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
+      return failure(new AppError('SETTINGS_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
     }
 
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -685,7 +686,7 @@ export const settingsService = {
   async deleteBusinessLogo(tenantId: string, logoUrl: string): Promise<Result<void, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'settings', 'manage')) {
-      return failure(new AppError('SETTINGS_SCOPE_DENIED', SettingsErrors.SETTINGS_SCOPE_DENIED));
+      return failure(new AppError('SETTINGS_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
     }
 
     const filePath = logoUrl.split('/').pop();

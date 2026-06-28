@@ -10,6 +10,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { usePosStore } from '../../pos/stores/posStore';
 import {
@@ -63,7 +64,7 @@ export const customerService = {
     try {
       const _createSession = useAuthStore.getState().session;
       if (!_createSession || !hasActionPermission(_createSession, 'customers', 'create')) {
-        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+        return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('customers', 'create')));
       }
 
       const networkCheck = requireNetwork();
@@ -150,7 +151,7 @@ export const customerService = {
     try {
       const _updateSession = useAuthStore.getState().session;
       if (!_updateSession || !hasActionPermission(_updateSession, 'customers', 'update')) {
-        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+        return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('customers', 'update')));
       }
 
       const networkCheck = requireNetwork();
@@ -234,7 +235,7 @@ export const customerService = {
     try {
       const _deleteSession = useAuthStore.getState().session;
       if (!_deleteSession || !hasActionPermission(_deleteSession, 'customers', 'delete')) {
-        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+        return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('customers', 'delete')));
       }
 
       const networkCheck = requireNetwork();
@@ -707,7 +708,7 @@ export const customerService = {
     try {
       const _collectSession = useAuthStore.getState().session;
       if (!_collectSession || !hasActionPermission(_collectSession, 'customers', 'update')) {
-        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+        return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('customers', 'update')));
       }
 
       const db = getDb();

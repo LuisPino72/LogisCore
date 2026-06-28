@@ -11,6 +11,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import type { Category } from '../types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toCategory } from './mappers';
 import { CreateCategoryInputSchema, UpdateCategoryInputSchema } from '../../../specs/inventory';
@@ -20,7 +21,7 @@ const INVENTORY_MODULE = 'INVENTORY';
 export async function createCategory(input: { name: string; tenantId: string }): Promise<Result<Category, AppError>> {
   const _createCatSession = useAuthStore.getState().session;
   if (!_createCatSession || !hasActionPermission(_createCatSession, 'inventory', 'create')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'create')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -59,7 +60,7 @@ export async function createCategory(input: { name: string; tenantId: string }):
 export async function updateCategory(id: string, name: string, tenantId: string): Promise<Result<Category, AppError>> {
   const _updateCatSession = useAuthStore.getState().session;
   if (!_updateCatSession || !hasActionPermission(_updateCatSession, 'inventory', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'update')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -156,7 +157,7 @@ export async function getCategories(tenantId: string): Promise<Result<Category[]
 export async function deleteCategory(id: string, tenantId: string): Promise<Result<void, AppError>> {
   const _deleteCatSession = useAuthStore.getState().session;
   if (!_deleteCatSession || !hasActionPermission(_deleteCatSession, 'inventory', 'delete')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'delete')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);

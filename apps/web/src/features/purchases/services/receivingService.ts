@@ -10,6 +10,7 @@ import { PurchaseErrors } from '../../../specs/purchases/errors';
 import type { PurchaseOrder, ReceivePurchaseOrderInput } from '../../../specs/purchases';
 import { convertToStorage, unitToStorageType } from '../../inventory/types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 const PURCHASES_MODULE = 'PURCHASES';
@@ -23,7 +24,7 @@ export async function receiveOrder(
 ): Promise<Result<PurchaseOrder, AppError>> {
   const _session = useAuthStore.getState().session;
   if (!_session || !hasActionPermission(_session, 'purchases', 'receive_order')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'receive_order')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);

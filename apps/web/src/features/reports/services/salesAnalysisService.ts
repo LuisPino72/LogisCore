@@ -7,6 +7,7 @@ import { ReportsErrors } from '../../../specs/reports/errors';
 import { ReportsFiltersSchema, ValidateTenantInputSchema, TopProductsLimitSchema } from '../../../specs/reports/index';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import type { ReportFilters, DailyProfitPoint, TopProductData, TopCategoryData, PaymentBreakdownData, SaleDetail, DiscountBreakdownItem, TicketDistributionItem } from '../types';
 import { getDateRange, fetchSalesWithItems, effectiveItemQuantity, calcItemCostBs, PAYMENT_LABELS } from './reportsHelpers';
 
@@ -22,7 +23,7 @@ export async function getProfitOverTime(tenantId: string, filters: ReportFilters
   try {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'reports', 'read')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
     }
     const { start, end } = getDateRange(filters);
     const data = await fetchSalesWithItems(tenantId, start, end);
@@ -342,7 +343,7 @@ export async function getSalesDetail(tenantId: string, filters: ReportFilters): 
   try {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'reports', 'read')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
     }
     const { start, end } = getDateRange(filters);
     const data = await fetchSalesWithItems(tenantId, start, end);

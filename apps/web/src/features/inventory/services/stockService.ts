@@ -13,6 +13,7 @@ import { InventoryErrors } from '../../../specs/inventory/errors';
 import type { Product, InventoryMovement, AdjustStockInput, ActiveLot } from '../types';
 import { convertToStorage, unitToStorageType, toDisplayValue } from '../types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toNumber, toMovement, toProduct } from './mappers';
 
@@ -51,7 +52,7 @@ export async function getAssemblyProductIds(tenantId: string): Promise<Set<strin
 export async function adjustStock(input: AdjustStockInput & { userId: string; tenantId: string }): Promise<Result<InventoryMovement, AppError>> {
   const _adjSession = useAuthStore.getState().session;
   if (!_adjSession || !hasActionPermission(_adjSession, 'inventory', 'adjust_stock')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'adjust_stock')));
   }
 
   const networkCheck = requireNetwork();

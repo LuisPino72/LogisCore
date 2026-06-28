@@ -9,6 +9,7 @@ import { outboxService } from '../../../services/outbox/outboxService';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { emitWithAudit, logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { logger } from '../../../lib/logger';
 
@@ -90,7 +91,7 @@ export const gastosService = {
   async create(tenantId: string, userId: string, input: unknown): Promise<Result<Gasto, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'gastos', 'create')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('gastos', 'create')));
     }
     // AUDIT-CRUD-006: requireNetwork para consistencia con resto del codebase
     const networkCheck = requireNetwork();
@@ -155,7 +156,7 @@ export const gastosService = {
   async update(tenantId: string, id: string, input: unknown, currentRate?: number): Promise<Result<Gasto, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'gastos', 'update')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('gastos', 'update')));
     }
     // AUDIT-CRUD-007: requireNetwork para consistencia
     const networkCheck = requireNetwork();
@@ -232,7 +233,7 @@ export const gastosService = {
   async remove(tenantId: string, id: string): Promise<Result<void, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'gastos', 'delete')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('gastos', 'delete')));
     }
     // AUDIT-CRUD-008: requireNetwork para consistencia
     const networkCheck = requireNetwork();
@@ -281,7 +282,7 @@ export const gastosService = {
   async getAllMonthly(tenantId: string, month?: string): Promise<Result<Gasto[], AppError>> {
     const _monthlySession = useAuthStore.getState().session;
     if (!_monthlySession || !hasActionPermission(_monthlySession, 'gastos', 'read')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('gastos', 'read')));
     }
     try {
       const db = getDb();
@@ -346,7 +347,7 @@ export const gastosService = {
   async checkAndGenerateRecurring(tenantId: string): Promise<Result<{ generated: Gasto[]; upcoming: { category: string; description?: string; id: string; date: string }[] }, AppError>> {
     const _recurSession = useAuthStore.getState().session;
     if (!_recurSession || !hasActionPermission(_recurSession, 'gastos', 'create')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('gastos', 'create')));
     }
     // AUDIT-CRUD-010: requireNetwork para consistencia
     const networkCheck = requireNetwork();
@@ -463,7 +464,7 @@ export const gastosService = {
   ): Promise<Result<void, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'gastos', 'update')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('gastos', 'update')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -525,7 +526,7 @@ export const gastosService = {
   async cancelOccurrence(tenantId: string, templateId: string, occurrenceDate: string): Promise<Result<void, AppError>> {
     const _cancelSession = useAuthStore.getState().session;
     if (!_cancelSession || !hasActionPermission(_cancelSession, 'gastos', 'update')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('gastos', 'update')));
     }
     // AUDIT-CRUD-009: requireNetwork para consistencia
     const networkCheck = requireNetwork();

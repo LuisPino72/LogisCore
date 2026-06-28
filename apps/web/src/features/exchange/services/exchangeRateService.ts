@@ -7,6 +7,7 @@ import { ExchangeRateErrors } from '../../../specs/exchange-rate/errors';
 import { ExchangeRateInputSchema } from '../../../specs/exchange-rate/index';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import type { ExchangeRateResponse } from '../types';
 import { createPersistentCache } from '../../../lib/cache';
@@ -136,7 +137,7 @@ export const exchangeRateService = {
   async setManualRate(tenantId: string, rate: number): Promise<Result<ExchangeRateResponse, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'exchange', 'update')) {
-      return failure(new AppError('AUTH_PERMISSION_DENIED', 'No tienes permiso para cambiar la tasa de cambio'));
+      return failure(new AppError('AUTH_PERMISSION_DENIED', getPermissionMessage('exchange', 'manage')));
     }
 
     const networkCheck = requireNetwork();

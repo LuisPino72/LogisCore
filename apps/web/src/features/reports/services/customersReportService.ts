@@ -5,13 +5,14 @@ import { ReportsErrors } from '../../../specs/reports/errors';
 import { ValidateTenantInputSchema } from '../../../specs/reports/index';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import type { CustomersSummaryData, CustomerRankingItem, ReportFilters } from '../types';
 import { getDateRange } from './reportsHelpers';
 
 export async function getCustomersSummary(tenantId: string, filters: ReportFilters): Promise<Result<CustomersSummaryData, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'reports', 'read')) {
-    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+    return failure(new AppError('REPORTS_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
   }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
@@ -127,7 +128,7 @@ export async function getCustomersSummary(tenantId: string, filters: ReportFilte
 export async function getCustomersRanking(tenantId: string, filters: ReportFilters): Promise<Result<CustomerRankingItem[], AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'reports', 'read')) {
-    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+    return failure(new AppError('REPORTS_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
   }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {

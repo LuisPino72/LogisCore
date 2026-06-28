@@ -25,6 +25,7 @@ import { logger } from '../../../lib/logger';
 import { type Transaction } from 'dexie';
 import { calculateConsumptionCost, selectFifoLots } from './costCalculator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { unitToStorageType, convertToStorage, displayQty } from '../../inventory/types';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability } from '../types';
@@ -50,7 +51,7 @@ export const productionService = {
   ): Promise<Result<Recipe, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'production', 'create')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'create')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -305,7 +306,7 @@ export const productionService = {
   ): Promise<Result<Recipe, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'production', 'update')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'update')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -451,7 +452,7 @@ export const productionService = {
   async deleteRecipe(id: string, tenantId: string): Promise<Result<void, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'production', 'delete')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'delete')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -631,7 +632,7 @@ export const productionService = {
   ): Promise<Result<ProductionOrder, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'production', 'produce_batch')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'produce_batch')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -933,7 +934,7 @@ export const productionService = {
   async cancelOrder(orderId: string, tenantId: string): Promise<Result<void, AppError>> {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'production', 'update')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'update')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -1216,7 +1217,7 @@ export const productionService = {
   ): Promise<Result<{ consumedLots: Array<{ lotId: string; quantity: number }>; totalIngredientCost: number }, AppError>> {
     const _consumeSession = useAuthStore.getState().session;
     if (!_consumeSession || !hasActionPermission(_consumeSession, 'production', 'produce_batch')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'produce_batch')));
     }
     const db = getDb();
     const now = new Date().toISOString();

@@ -38,6 +38,7 @@ export { Sidebar } from './Sidebar';
 export type { SidebarModule } from './Sidebar';
 export { Pagination } from './Pagination';
 export { DrillDownModal } from './DrillDownModal';
+export { PermissionDeniedModal } from './PermissionDeniedModal';
 
 export { SaleDetailModal } from './SaleDetailModal';
 export { AddEmployeeModal } from './AddEmployeeModal';

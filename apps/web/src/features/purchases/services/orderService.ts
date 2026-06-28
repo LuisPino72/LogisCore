@@ -16,6 +16,7 @@ import type {
   CreatePurchaseOrderInput,
 } from '../../../specs/purchases';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 const PURCHASES_MODULE = 'PURCHASES';
@@ -61,7 +62,7 @@ export async function createOrder(
 ): Promise<Result<PurchaseOrder, AppError>> {
   const _session2 = useAuthStore.getState().session;
   if (!_session2 || !hasActionPermission(_session2, 'purchases', 'create')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'create')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -177,7 +178,7 @@ export async function updateOrder(
 ): Promise<Result<PurchaseOrder, AppError>> {
   const _session = useAuthStore.getState().session;
   if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'update')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -276,7 +277,7 @@ export async function softDeleteOrder(id: string, tenantId: string): Promise<Res
   try {
     const _session = useAuthStore.getState().session;
     if (!_session || !hasActionPermission(_session, 'purchases', 'delete')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'delete')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -314,7 +315,7 @@ export async function confirmOrder(id: string, tenantId: string): Promise<Result
   try {
     const _session = useAuthStore.getState().session;
     if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'update')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);
@@ -353,7 +354,7 @@ export async function cancelOrder(id: string, tenantId: string): Promise<Result<
   try {
     const _session = useAuthStore.getState().session;
     if (!_session || !hasActionPermission(_session, 'purchases', 'update')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'update')));
     }
     const networkCheck = requireNetwork();
     if (!networkCheck.ok) return failure(networkCheck.error);

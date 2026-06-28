@@ -9,6 +9,7 @@ import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { TenantTranslator } from '../../../services/tenantTranslator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import imageCompression from 'browser-image-compression';
 import type { ImageLibrary } from '../../../specs/image-library';
@@ -102,7 +103,7 @@ export async function uploadLibraryImage(
 ): Promise<Result<ImageLibrary, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'inventory', 'manage_library')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta accion.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'manage_library')));
   }
 
   const networkCheck = requireNetwork();
@@ -229,7 +230,7 @@ export async function updateLibraryImage(
 ): Promise<Result<ImageLibrary, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'inventory', 'manage_library')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta accion.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'manage_library')));
   }
 
   try {
@@ -268,7 +269,7 @@ export async function updateLibraryImage(
 export async function deleteLibraryImage(id: string, tenantId: string): Promise<Result<void, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'inventory', 'manage_library')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta accion.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'manage_library')));
   }
 
   try {
@@ -421,7 +422,7 @@ export async function adminUploadImage(
 ): Promise<Result<ImageLibrary, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'inventory', 'manage_library')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta accion.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'manage_library')));
   }
 
   const networkCheck = requireNetwork();
@@ -547,7 +548,7 @@ export async function adminUpdateImage(
 ): Promise<Result<ImageLibrary, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'inventory', 'manage_library')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta accion.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'manage_library')));
   }
 
   try {
@@ -601,7 +602,7 @@ export async function adminUpdateImage(
 export async function adminDeleteImage(id: string): Promise<Result<void, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'inventory', 'manage_library')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta accion.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'manage_library')));
   }
 
   try {

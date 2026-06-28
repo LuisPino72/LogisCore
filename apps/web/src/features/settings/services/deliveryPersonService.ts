@@ -5,6 +5,7 @@ import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { logger } from '../../../lib/logger';
 
@@ -34,7 +35,7 @@ export async function addDeliveryPerson(data: {
 }): Promise<Result<DexieDeliveryPerson, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'settings', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
   }
 
   if (!data.name.trim()) {
@@ -95,7 +96,7 @@ export async function removeDeliveryPerson(
 ): Promise<Result<void, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'settings', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
   }
 
   try {
@@ -152,7 +153,7 @@ export async function updateDeliveryPerson(
 ): Promise<Result<DexieDeliveryPerson, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'settings', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
   }
 
   try {

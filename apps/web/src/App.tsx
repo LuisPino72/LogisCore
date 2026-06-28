@@ -22,6 +22,8 @@ import { Sidebar } from './common/components/Sidebar';
 import { ErrorBoundary } from './common/components/ErrorBoundary';
 import type { SidebarModule } from './common/components/Sidebar';
 import { OfflineBanner } from './common/components/OfflineBanner';
+import { PermissionDeniedModal } from './common/components/PermissionDeniedModal';
+import { usePermissionDenied } from './common/hooks/usePermissionDenied';
 import { isVenezuelanHoliday } from './lib/venezuelanHolidays';
 import {
   ShoppingCart,
@@ -615,6 +617,11 @@ function AppRoutes() {
   );
 }
 
+function PermissionDeniedGlobal() {
+  const { message, isOpen, hide } = usePermissionDenied();
+  return <PermissionDeniedModal isOpen={isOpen} onClose={hide} message={message} />;
+}
+
 const App = () => {
   const { isLoading } = useAuth();
   const error = useAuthStore((s) => s.error);
@@ -666,6 +673,7 @@ const App = () => {
       <AppRoutes />
       <ToastContainer />
       <OfflineBanner />
+      <PermissionDeniedGlobal />
     </BrowserRouter>
   );
 };

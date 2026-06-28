@@ -11,6 +11,7 @@ import { requireNetwork } from '../../../services/network/requireNetwork';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import type { Presentation, UpdatePresentationInput } from '../types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toPresentation } from './mappers';
 
@@ -126,7 +127,7 @@ export async function updatePresentation(
 ): Promise<Result<Presentation, AppError>> {
   const _updatePresSession = useAuthStore.getState().session;
   if (!_updatePresSession || !hasActionPermission(_updatePresSession, 'inventory', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'update')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);
@@ -201,7 +202,7 @@ export async function deletePresentation(
 ): Promise<Result<void, AppError>> {
   const _deletePresSession = useAuthStore.getState().session;
   if (!_deletePresSession || !hasActionPermission(_deletePresSession, 'inventory', 'delete')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('inventory', 'delete')));
   }
   const networkCheck = requireNetwork();
   if (!networkCheck.ok) return failure(networkCheck.error);

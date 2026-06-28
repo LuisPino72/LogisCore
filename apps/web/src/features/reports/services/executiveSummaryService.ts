@@ -6,6 +6,7 @@ import { ReportsFiltersSchema, ValidateTenantInputSchema } from '../../../specs/
 import { startOfDayVzla, endOfDayVzla } from '../../../lib/date';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import type { ReportFilters, ExecutiveSummaryData } from '../types';
 import { getDateRange, fetchSalesWithItems, effectiveItemQuantity, calcItemCostBs } from './reportsHelpers';
 import { getNonSellableExpenses } from './expensesService';
@@ -23,7 +24,7 @@ export async function getExecutiveSummary(tenantId: string, filters: ReportFilte
   try {
     const session = useAuthStore.getState().session;
     if (!session || !hasActionPermission(session, 'reports', 'read')) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+      return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
     }
     const { start, end } = getDateRange(filters);
     const data = await fetchSalesWithItems(tenantId, start, end);

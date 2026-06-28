@@ -19,6 +19,7 @@ import { saleFromSupabase, saleItemFromSupabase } from './mappers';
 import type { Sale, SaleItem, CreateSaleInput, PaymentMethod, CartItem } from '../types';
 import { convertToStorage, unitToStorageType } from '../../../features/inventory/types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 
@@ -335,7 +336,7 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
 
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'pos', 'create')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('pos', 'create')));
   }
 
   const parsed = CreateSaleInputSchema.safeParse(input);
@@ -803,7 +804,7 @@ export async function getSaleItems(tenantId: string, saleId: string): Promise<Re
 export async function voidSale(saleId: string, tenantId: string, userId: string): Promise<Result<void, AppError>> {
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'pos', 'void_sale')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('pos', 'void_sale')));
   }
 
   try {
@@ -1194,7 +1195,7 @@ export async function createOrder(input: {
 
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'pos', 'create')) {
-    return failure(new AppError('PERMISSION_DENIED', 'No tienes permiso para crear órdenes.'));
+    return failure(new AppError('PERMISSION_DENIED', getPermissionMessage('pos', 'create')));
   }
 
   const customer = await db.customers.get(customerId);
@@ -1707,7 +1708,7 @@ export async function confirmOrderPayment(
 
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'pos', 'create')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('pos', 'create')));
   }
 
   if (!exchangeRate || exchangeRate <= 0) {

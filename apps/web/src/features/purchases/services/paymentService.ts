@@ -9,6 +9,7 @@ import { logger } from '../../../lib/logger';
 import { PurchaseErrors } from '../../../specs/purchases/errors';
 import { SupplierPaymentMethodSchema } from '../../../specs/purchases';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 const PURCHASES_MODULE = 'PURCHASES';
@@ -25,7 +26,7 @@ export async function paySupplierDebt(
 ): Promise<Result<{ paymentId: string; newBalance: number; newOrderPaidAmount: number }, AppError>> {
   const _paySession = useAuthStore.getState().session;
   if (!_paySession || !hasActionPermission(_paySession, 'purchases', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'update')));
   }
 
   const db = getDb();
@@ -167,7 +168,7 @@ export async function reconcileSupplierBalance(
 ): Promise<Result<{ corrected: boolean; previousBalance: number; actualBalance: number }, AppError>> {
   const _reconSession = useAuthStore.getState().session;
   if (!_reconSession || !hasActionPermission(_reconSession, 'purchases', 'update')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('purchases', 'update')));
   }
 
   const db = getDb();

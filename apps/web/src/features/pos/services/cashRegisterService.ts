@@ -15,6 +15,7 @@ import { PosErrors } from '../../../specs/pos/errors';
 import { cashRegisterFromSupabase } from './mappers';
 import type { CashRegister, OpenCashRegisterInput, CloseCashRegisterInput } from '../types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 
 const MODULE_NAME = 'POS';
@@ -294,7 +295,7 @@ export async function openCashRegister(input: OpenCashRegisterInput): Promise<Re
 
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'pos', 'open_box')) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('pos', 'open_box')));
   }
 
   if (!openingBalanceBs || openingBalanceBs <= 0) {
@@ -525,7 +526,7 @@ export async function closeCashRegister(input: CloseCashRegisterInput): Promise<
 
   const session = useAuthStore.getState().session;
   if (!session) {
-    return failure(new AppError('AUTH_SCOPE_DENIED', 'No tienes permisos para esta acción.'));
+    return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('pos', 'close_box')));
   }
 
   let cashReg: DexieCashRegister | undefined;
