@@ -1449,8 +1449,17 @@ export const productionService = {
         ? preciseRound(totalCost / order.quantityTarget, 4)
         : 0);
 
+      // Fallback: si quantityProduced es 0, calcular desde movimientos production_output
+      let quantityProduced = order.quantityProduced;
+      if (!quantityProduced || quantityProduced === 0) {
+        const outputMovement = movements.find((m) => m.type === 'production_output');
+        if (outputMovement) {
+          quantityProduced = outputMovement.quantity;
+        }
+      }
+
       return success({
-        order: toProductionOrder(order as unknown as Record<string, unknown>),
+        order: toProductionOrder({ ...order, quantityProduced } as unknown as Record<string, unknown>),
         recipe: toRecipe(recipe as unknown as Record<string, unknown>),
         lines: expandedLines.map((l) => ({
           id: '',

@@ -82,7 +82,7 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
           productName: detailsResult.recipe.productId,
           batchCount: order.batchCount,
           quantityTarget: order.quantityTarget,
-          quantityProduced: order.quantityProduced,
+          quantityProduced: detailsResult.order.quantityProduced,
           wastePct: detailsResult.recipe.wastePct,
           wasteNotes: order.wasteNotes,
           createdAt: order.createdAt,
