@@ -293,6 +293,12 @@ export const settingsService = {
               lowStockThreshold: settings.lowStockThreshold,
               ticketFooterMessage: settings.ticketFooterMessage,
               needsKitchenDefault: settings.needsKitchenDefault ?? false,
+              defaultDeliveryFee: settings.defaultDeliveryFee ?? 0,
+              pagoMovilEnabled: settings.pagoMovilEnabled ?? false,
+              pagoMovilBank: settings.pagoMovilBank ?? '',
+              pagoMovilHolder: settings.pagoMovilHolder ?? '',
+              pagoMovilId: settings.pagoMovilId ?? '',
+              pagoMovilPhone: settings.pagoMovilPhone ?? '',
               updatedAt: new Date().toISOString(),
             });
             return success(settings);
@@ -388,6 +394,13 @@ export const settingsService = {
               mandatoryCustomerId: data.mandatory_customer_id as boolean,
               lowStockThreshold: data.low_stock_threshold as number,
               ticketFooterMessage: data.ticket_footer_message as string,
+              needsKitchenDefault: (data.needs_kitchen_default as boolean) ?? false,
+              defaultDeliveryFee: (data.default_delivery_fee as number) ?? 0,
+              pagoMovilEnabled: (data.pago_movil_enabled as boolean) ?? false,
+              pagoMovilBank: (data.pago_movil_bank as string) ?? '',
+              pagoMovilHolder: (data.pago_movil_holder as string) ?? '',
+              pagoMovilId: (data.pago_movil_id as string) ?? '',
+              pagoMovilPhone: (data.pago_movil_phone as string) ?? '',
               updatedAt: (data.updated_at as string) ?? new Date().toISOString(),
             };
             await cacheSettings(row);

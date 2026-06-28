@@ -32,6 +32,21 @@ export const OperationSettingsSchema = z.object({
   pagoMovilHolder: z.string().optional(),
   pagoMovilId: z.string().optional(),
   pagoMovilPhone: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.pagoMovilEnabled) {
+    if (!data.pagoMovilBank || data.pagoMovilBank.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El banco es requerido cuando el pago móvil está habilitado', path: ['pagoMovilBank'] });
+    }
+    if (!data.pagoMovilHolder || data.pagoMovilHolder.trim().length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El titular es requerido cuando el pago móvil está habilitado', path: ['pagoMovilHolder'] });
+    }
+    if (!data.pagoMovilId || !/^[VJEGP]\d{9}$/.test(data.pagoMovilId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Cédula/RIF inválido (ej: V123456789)', path: ['pagoMovilId'] });
+    }
+    if (!data.pagoMovilPhone || !/^0\d{10}$/.test(data.pagoMovilPhone)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Teléfono inválido (ej: 04121234567)', path: ['pagoMovilPhone'] });
+    }
+  }
 });
 
 export const BusinessInfoSchema = z.object({

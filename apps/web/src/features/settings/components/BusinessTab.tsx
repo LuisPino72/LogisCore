@@ -183,6 +183,21 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
         pagoMovilId,
         pagoMovilPhone,
       });
+      useSettingsStore.getState().setOperationSettings({
+        maxDiscountPct: store.maxDiscountPct,
+        defaultMinStock: store.defaultMinStock,
+        defaultCreditLimit: store.defaultCreditLimit,
+        mandatoryCustomerId: store.mandatoryCustomerId,
+        lowStockThreshold: store.lowStockThreshold,
+        ticketFooterMessage,
+        needsKitchenDefault: store.needsKitchenDefault,
+        defaultDeliveryFee: store.defaultDeliveryFee,
+        pagoMovilEnabled,
+        pagoMovilBank,
+        pagoMovilHolder,
+        pagoMovilId,
+        pagoMovilPhone,
+      });
       addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });
     } else {
       setLocalError(result.error.message);
@@ -284,6 +299,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
             onChange={(e) => { const formatted = formatPhone(e.target.value); setPhone(unformatPhone(formatted)); }}
             inputMode="tel"
             autoComplete="tel"
+            validation={{ maxLength: 15 }}
             hint="Ej: 0412-1234567"
           />
         </div>
@@ -292,8 +308,8 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
           label="Mensaje pie de ticket"
           value={ticketFooterMessage}
           onChange={(e) => setTicketFooterMessage(e.target.value)}
-          validation={{ maxLength: 25 }}
-          hint="Texto que aparece al final del ticket de venta (máx. 25 caracteres)."
+          validation={{ maxLength: 100 }}
+          hint="Texto que aparece al final del ticket de venta (máx. 100 caracteres)."
           autoResize
           maxRows={3}
         />
@@ -302,6 +318,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
           label="Dirección"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
+          validation={{ maxLength: 50 }}
           autoResize
           maxRows={3}
           hint="Dirección fiscal del negocio"
@@ -350,16 +367,6 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
           {logoError && <p className="text-danger text-xs mt-1">{logoError}</p>}
         </div>
 
-        <div className="pt-2">
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            loading={saving || uploading}
-            className="min-h-11 transition-all duration-200"
-          >
-            Guardar cambios
-          </Button>
-        </div>
       </div>
     </Card>
 
@@ -467,6 +474,17 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
       </div>
     </Card>
 
+    <div className="sticky bottom-0 bg-gray-50/95 backdrop-blur-sm -mx-4 px-4 py-4 md:mx-0 md:px-0 md:py-6 border-t border-gray-200 z-10">
+      <Button
+        variant="primary"
+        onClick={handleSave}
+        loading={saving || uploading}
+        className="w-full min-h-11 transition-all duration-200"
+      >
+        Guardar cambios
+      </Button>
+    </div>
+
     {showAddMotorizado && (
       <Modal
         isOpen={showAddMotorizado}
@@ -496,12 +514,14 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
             label="Nombre"
             value={newMotorizadoName}
             onChange={(e) => setNewMotorizadoName(e.target.value)}
+            validation={{ required: true, maxLength: 25 }}
           />
           <Input
             label="Teléfono"
             value={formatPhone(newMotorizadoPhone)}
             onChange={(e) => { const formatted = formatPhone(e.target.value); setNewMotorizadoPhone(unformatPhone(formatted)); }}
             inputMode="tel"
+            validation={{ required: true, maxLength: 15 }}
           />
         </div>
       </Modal>

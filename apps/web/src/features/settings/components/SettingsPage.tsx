@@ -28,7 +28,7 @@ type TabKey = (typeof TABS)[number]['key'];
 const tabsData = TABS.map((t) => ({ key: t.key, label: t.label }));
 
 export const SettingsPage: FC<SettingsPageProps> = ({ tenantId }) => {
-  const [activeTab, setActiveTab] = useState<TabKey>('fiscal');
+  const [activeTab, setActiveTab] = useState<TabKey>('business');
   const session = useAuthStore((s) => s.session);
   const { loading, error, refresh } = useSettings();
 
