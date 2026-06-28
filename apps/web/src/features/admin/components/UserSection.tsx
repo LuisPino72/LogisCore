@@ -234,6 +234,7 @@ export function UserSection({
         onClose={() => setOverridesTarget(null)}
         userId={overridesTarget?.userId ?? ''}
         userName={overridesTarget?.name ?? ''}
+        tenantId={selectedTenantId ?? ''}
       />
     </>
   );

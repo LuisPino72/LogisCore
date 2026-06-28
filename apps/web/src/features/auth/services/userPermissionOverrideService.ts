@@ -1,5 +1,6 @@
 import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
-import { getDb, type DexieUserPermissionOverride } from '../../../services/dexie/db';
+import { supabase } from '../../../services/supabase/client';
+import { getDb, isDbReady, type DexieUserPermissionOverride } from '../../../services/dexie/db';
 import { generateId, toSnake } from '@logiscore/shared';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -15,12 +16,12 @@ const MODULE_NAME = 'auth';
 
 export async function getOverrides(userId: string): Promise<Result<DexieUserPermissionOverride[], AppError>> {
   try {
-    const db = getDb();
     const session = useAuthStore.getState().session;
     const tenantId = session?.tenantId;
     if (!tenantId) {
-      return failure(new AppError('AUTH_NO_TENANT', 'No hay tenant activo.'));
+      return success([]);
     }
+    const db = getDb();
     const overrides = await db.userPermissionOverrides
       .where('[userId+tenantId]')
       .equals([userId, tenantId])
@@ -39,7 +40,8 @@ export async function addOverride(input: CreateOverrideInput): Promise<Result<De
     return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('settings', 'manage')));
   }
 
-  if (input.tenantId !== session.tenantId) {
+  const isGlobalAdmin = session.role === 'admin';
+  if (!isGlobalAdmin && input.tenantId !== session.tenantId) {
     return failure(new AppError('AUTH_SCOPE_DENIED', 'No se pueden gestionar permisos de otro tenant.'));
   }
 
@@ -49,59 +51,97 @@ export async function addOverride(input: CreateOverrideInput): Promise<Result<De
   }
 
   try {
-    const db = getDb();
-    const now = new Date().toISOString();
+    if (isDbReady()) {
+      const db = getDb();
+      const now = new Date().toISOString();
 
-    const result = await db.transaction('rw', [db.userPermissionOverrides, db.syncQueue, db.outbox], async (tx) => {
-      const existing = await db.userPermissionOverrides
-        .where('[userId+tenantId+permission]')
-        .equals([input.userId, input.tenantId, input.permission])
-        .first();
-      if (existing && !existing.deletedAt) {
-        if (existing.effect === input.effect) {
-          return failure(new AppError('OVERRIDE_ALREADY_EXISTS', 'Este permiso ya tiene este efecto configurado.'));
+      const result = await db.transaction('rw', [db.userPermissionOverrides, db.syncQueue, db.outbox], async (tx) => {
+        const existing = await db.userPermissionOverrides
+          .where('[userId+tenantId+permission]')
+          .equals([input.userId, input.tenantId, input.permission])
+          .first();
+        if (existing && !existing.deletedAt) {
+          if (existing.effect === input.effect) {
+            return failure(new AppError('OVERRIDE_ALREADY_EXISTS', 'Este permiso ya tiene este efecto configurado.'));
+          }
+          await db.userPermissionOverrides.update(existing.id, { effect: input.effect });
+          await syncQueue.enqueue('user_permission_overrides', 'UPDATE', existing.id, toSnake({ id: existing.id, effect: input.effect } as unknown as Record<string, unknown>), input.tenantId);
+          await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
+            action: 'override_updated', overrideId: existing.id, permission: input.permission, effect: input.effect,
+          }, tx);
+
+          const updated = await db.userPermissionOverrides.get(existing.id);
+          if (!updated) {
+            return failure(new AppError('OVERRIDE_NOT_FOUND', 'Permiso no encontrado después de actualizar.'));
+          }
+          return success(updated);
         }
-        await db.userPermissionOverrides.update(existing.id, { effect: input.effect });
-        await syncQueue.enqueue('user_permission_overrides', 'UPDATE', existing.id, toSnake({ id: existing.id, effect: input.effect } as unknown as Record<string, unknown>), input.tenantId);
+
+        const override: DexieUserPermissionOverride = {
+          id: generateId(),
+          userId: input.userId,
+          tenantId: input.tenantId,
+          permission: input.permission,
+          effect: input.effect,
+          createdAt: now,
+        };
+
+        await db.userPermissionOverrides.add(override);
+        await syncQueue.enqueue('user_permission_overrides', 'CREATE', override.id, toSnake(override as unknown as Record<string, unknown>), input.tenantId);
         await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
-          action: 'override_updated', overrideId: existing.id, permission: input.permission, effect: input.effect,
+          action: 'override_added', overrideId: override.id, permission: input.permission, effect: input.effect,
         }, tx);
 
-        const updated = await db.userPermissionOverrides.get(existing.id);
-        if (!updated) {
-          return failure(new AppError('OVERRIDE_NOT_FOUND', 'Permiso no encontrado después de actualizar.'));
-        }
-        return success(updated);
+        return success(override);
+      });
+
+      if (result.ok) {
+        await logAuditEventOnly({
+          eventName: SystemEvents.SETTINGS_BUSINESS_UPDATED,
+          module: MODULE_NAME,
+          payload: { action: 'override_added', overrideId: result.data.id, userId: input.userId, permission: input.permission, effect: input.effect },
+          context: { userId: session.userId, tenantId: input.tenantId },
+        });
       }
 
-      const override: DexieUserPermissionOverride = {
-        id: generateId(),
-        userId: input.userId,
-        tenantId: input.tenantId,
-        permission: input.permission,
-        effect: input.effect,
-        createdAt: now,
-      };
+      return result;
+    }
 
-      await db.userPermissionOverrides.add(override);
-      await syncQueue.enqueue('user_permission_overrides', 'CREATE', override.id, toSnake(override as unknown as Record<string, unknown>), input.tenantId);
-      await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
-        action: 'override_added', overrideId: override.id, permission: input.permission, effect: input.effect,
-      }, tx);
+    const { data: existing } = await supabase
+      .from('user_permission_overrides')
+      .select('*')
+      .eq('user_id', input.userId)
+      .eq('tenant_id', input.tenantId)
+      .eq('permission', input.permission)
+      .is('deleted_at', null)
+      .single();
 
-      return success(override);
-    });
-
-    if (result.ok) {
-      await logAuditEventOnly({
-        eventName: SystemEvents.SETTINGS_BUSINESS_UPDATED,
-        module: MODULE_NAME,
-        payload: { action: 'override_added', overrideId: result.data.id, userId: input.userId, permission: input.permission, effect: input.effect },
-        context: { userId: session.userId, tenantId: input.tenantId },
+    if (existing) {
+      if (existing.effect === input.effect) {
+        return failure(new AppError('OVERRIDE_ALREADY_EXISTS', 'Este permiso ya tiene este efecto configurado.'));
+      }
+      const { error } = await supabase
+        .from('user_permission_overrides')
+        .update({ effect: input.effect })
+        .eq('id', existing.id);
+      if (error) return failure(new AppError('OVERRIDE_UPDATE_FAILED', error.message));
+      return success({
+        id: existing.id, userId: input.userId, tenantId: input.tenantId,
+        permission: input.permission, effect: input.effect, createdAt: existing.created_at,
       });
     }
 
-    return result;
+    const overrideId = generateId();
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('user_permission_overrides').insert({
+      id: overrideId, user_id: input.userId, tenant_id: input.tenantId,
+      permission: input.permission, effect: input.effect, created_at: now,
+    });
+    if (error) return failure(new AppError('OVERRIDE_CREATE_FAILED', error.message));
+    return success({
+      id: overrideId, userId: input.userId, tenantId: input.tenantId,
+      permission: input.permission, effect: input.effect, createdAt: now,
+    });
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en addOverride:', err);
     return failure(new AppError('OVERRIDE_CREATE_FAILED', 'Error al crear permiso individual.'));
@@ -115,33 +155,45 @@ export async function removeOverride(id: string): Promise<Result<void, AppError>
   }
 
   try {
-    const db = getDb();
-    const existing = await db.userPermissionOverrides.get(id);
-    if (!existing || existing.deletedAt) {
-      return failure(new AppError('OVERRIDE_NOT_FOUND', 'Permiso no encontrado.'));
-    }
+    const isGlobalAdmin = session.role === 'admin';
 
-    if (existing.tenantId !== session.tenantId) {
-      return failure(new AppError('AUTH_SCOPE_DENIED', 'No tiene acceso a este registro.'));
+    if (isDbReady()) {
+      const db = getDb();
+      const existing = await db.userPermissionOverrides.get(id);
+      if (!existing || existing.deletedAt) {
+        return failure(new AppError('OVERRIDE_NOT_FOUND', 'Permiso no encontrado.'));
+      }
+
+      if (!isGlobalAdmin && existing.tenantId !== session.tenantId) {
+        return failure(new AppError('AUTH_SCOPE_DENIED', 'No tiene acceso a este registro.'));
+      }
+
+      const now = new Date().toISOString();
+
+      await db.transaction('rw', [db.userPermissionOverrides, db.syncQueue, db.outbox], async (tx) => {
+        await db.userPermissionOverrides.update(id, { deletedAt: now });
+        await syncQueue.enqueue('user_permission_overrides', 'UPDATE', id, toSnake({ id, deletedAt: now } as unknown as Record<string, unknown>), existing.tenantId);
+        await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
+          action: 'override_removed', overrideId: id, permission: existing.permission,
+        }, tx);
+      });
+
+      await logAuditEventOnly({
+        eventName: SystemEvents.SETTINGS_BUSINESS_UPDATED,
+        module: MODULE_NAME,
+        payload: { action: 'override_removed', overrideId: id, userId: existing.userId, permission: existing.permission },
+        context: { userId: session.userId, tenantId: existing.tenantId },
+      });
+
+      return success(undefined);
     }
 
     const now = new Date().toISOString();
-
-    await db.transaction('rw', [db.userPermissionOverrides, db.syncQueue, db.outbox], async (tx) => {
-      await db.userPermissionOverrides.update(id, { deletedAt: now });
-      await syncQueue.enqueue('user_permission_overrides', 'UPDATE', id, toSnake({ id, deletedAt: now } as unknown as Record<string, unknown>), existing.tenantId);
-      await outboxService.enqueue(SystemEvents.SETTINGS_BUSINESS_UPDATED, MODULE_NAME, {
-        action: 'override_removed', overrideId: id, permission: existing.permission,
-      }, tx);
-    });
-
-    await logAuditEventOnly({
-      eventName: SystemEvents.SETTINGS_BUSINESS_UPDATED,
-      module: MODULE_NAME,
-      payload: { action: 'override_removed', overrideId: id, userId: existing.userId, permission: existing.permission },
-      context: { userId: session.userId, tenantId: existing.tenantId },
-    });
-
+    const { error } = await supabase
+      .from('user_permission_overrides')
+      .update({ deleted_at: now })
+      .eq('id', id);
+    if (error) return failure(new AppError('OVERRIDE_DELETE_FAILED', error.message));
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en removeOverride:', err);
@@ -151,17 +203,28 @@ export async function removeOverride(id: string): Promise<Result<void, AppError>
 
 export async function getOverridesForUser(userId: string): Promise<Result<string[], AppError>> {
   try {
-    const db = getDb();
     const session = useAuthStore.getState().session;
     const tenantId = session?.tenantId;
     if (!tenantId) return success([]);
 
-    const overrides = await db.userPermissionOverrides
-      .where('[userId+tenantId]')
-      .equals([userId, tenantId])
-      .filter((o) => !o.deletedAt)
-      .toArray();
-    return success(overrides.map((o) => o.permission));
+    if (isDbReady()) {
+      const db = getDb();
+      const overrides = await db.userPermissionOverrides
+        .where('[userId+tenantId]')
+        .equals([userId, tenantId])
+        .filter((o) => !o.deletedAt)
+        .toArray();
+      return success(overrides.map((o) => o.permission));
+    }
+
+    const { data, error } = await supabase
+      .from('user_permission_overrides')
+      .select('permission')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
+    if (error) return failure(new AppError('OVERRIDES_FETCH_FAILED', error.message));
+    return success((data ?? []).map((r: Record<string, unknown>) => r.permission as string));
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en getOverridesForUser:', err);
     return failure(new AppError('OVERRIDES_FETCH_FAILED', 'Error al cargar permisos del usuario.'));

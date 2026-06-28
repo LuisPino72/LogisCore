@@ -9,7 +9,7 @@ import { TenantTranslator } from '../../../services/tenantTranslator';
 import type { Role, CreateRoleInput, UpdateRoleInput } from '../../../specs/roles';
 import { CreateRoleInputSchema, UpdateRoleInputSchema } from '../../../specs/roles';
 import { RoleErrors, ROLE_ERROR_MESSAGES } from '../../../specs/roles/errors';
-import { getDb } from '../../../services/dexie/db';
+import { getDb, isDbReady } from '../../../services/dexie/db';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import type { DexieRegisterConfig, DexieCashRegister } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
@@ -1171,7 +1171,6 @@ export const adminService = {
   // ============================================================
 
   async createRegister(input: { tenantId: string; name: string }): Promise<Result<DexieRegisterConfig, AppError>> {
-    const db = getDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     const config: DexieRegisterConfig = {
@@ -1181,41 +1180,88 @@ export const adminService = {
       isActive: true,
       createdAt: now,
     };
-    await db.registerConfigs.add(config);
-    await syncQueue.enqueue('registers_config', 'CREATE', id, {
+    if (isDbReady()) {
+      const db = getDb();
+      await db.registerConfigs.add(config);
+      await syncQueue.enqueue('registers_config', 'CREATE', id, {
+        id, name: input.name, is_active: true, created_at: now, updated_at: now, tenant_id: input.tenantId,
+      }, input.tenantId);
+      return success(config);
+    }
+    const { error } = await supabase.from('registers_config').insert({
       id, name: input.name, is_active: true, created_at: now, updated_at: now, tenant_id: input.tenantId,
-    }, input.tenantId);
+    });
+    if (error) return failure(new AppError('REGISTER_CREATE_FAILED', error.message));
     return success(config);
   },
 
   async updateRegister(id: string, input: Partial<Pick<DexieRegisterConfig, 'name' | 'isActive'>>): Promise<Result<DexieRegisterConfig, AppError>> {
-    const db = getDb();
     const updatedAt = new Date().toISOString();
-    await db.registerConfigs.update(id, { ...input, updatedAt });
-    const updated = await db.registerConfigs.get(id);
-    if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
+    if (isDbReady()) {
+      const db = getDb();
+      await db.registerConfigs.update(id, { ...input, updatedAt });
+      const updated = await db.registerConfigs.get(id);
+      if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
+      const remoteFields: Record<string, unknown> = { updated_at: updatedAt };
+      if (input.name !== undefined) remoteFields.name = input.name;
+      if (input.isActive !== undefined) remoteFields.is_active = input.isActive;
+      await syncQueue.enqueue('registers_config', 'UPDATE', id, remoteFields, updated.tenantId);
+      return success(updated);
+    }
     const remoteFields: Record<string, unknown> = { updated_at: updatedAt };
     if (input.name !== undefined) remoteFields.name = input.name;
     if (input.isActive !== undefined) remoteFields.is_active = input.isActive;
-    await syncQueue.enqueue('registers_config', 'UPDATE', id, remoteFields, updated.tenantId);
-    return success(updated);
+    const { error } = await supabase.from('registers_config').update(remoteFields).eq('id', id);
+    if (error) return failure(new AppError('REGISTER_UPDATE_FAILED', error.message));
+    const { data, error: fetchError } = await supabase.from('registers_config').select('*').eq('id', id).single();
+    if (fetchError || !data) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
+    return success({
+      id: data.id,
+      tenantId: data.tenant_id,
+      name: data.name,
+      isActive: data.is_active,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    });
   },
 
   async deleteRegister(id: string): Promise<Result<void, AppError>> {
-    const db = getDb();
-    const config = await db.registerConfigs.get(id);
-    if (!config) return success(undefined);
-    const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
-    if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
     const now = new Date().toISOString();
-    await db.registerConfigs.update(id, { deletedAt: now });
-    await syncQueue.enqueue('registers_config', 'UPDATE', id, { id, deleted_at: now }, config.tenantId);
+    if (isDbReady()) {
+      const db = getDb();
+      const config = await db.registerConfigs.get(id);
+      if (!config) return success(undefined);
+      const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
+      if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
+      await db.registerConfigs.update(id, { deletedAt: now });
+      await syncQueue.enqueue('registers_config', 'UPDATE', id, { id, deleted_at: now }, config.tenantId);
+      return success(undefined);
+    }
+    const { error } = await supabase.from('registers_config').update({ deleted_at: now }).eq('id', id);
+    if (error) return failure(new AppError('REGISTER_DELETE_FAILED', error.message));
     return success(undefined);
   },
 
   async getRegisters(tenantId: string): Promise<Result<DexieRegisterConfig[], AppError>> {
-    const db = getDb();
-    const registers = await db.registerConfigs.where('tenantId').equals(tenantId).toArray();
+    if (isDbReady()) {
+      const db = getDb();
+      const registers = await db.registerConfigs.where('tenantId').equals(tenantId).toArray();
+      return success(registers);
+    }
+    const { data, error } = await supabase
+      .from('registers_config')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
+    if (error) return failure(new AppError('REGISTERS_FETCH_FAILED', error.message));
+    const registers: DexieRegisterConfig[] = (data ?? []).map((r: Record<string, unknown>) => ({
+      id: r.id as string,
+      tenantId: r.tenant_id as string,
+      name: r.name as string,
+      isActive: r.is_active as boolean,
+      createdAt: r.created_at as string,
+      updatedAt: r.updated_at as string | undefined,
+    }));
     return success(registers);
   },
 };

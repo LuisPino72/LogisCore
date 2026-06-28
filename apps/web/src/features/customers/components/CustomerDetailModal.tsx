@@ -35,6 +35,7 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
   const fetchStats = useCustomerStore((s) => s.fetchCustomerStats);
   const resetModal = useCustomerStore((s) => s.resetModal);
   const [sendingMenu, setSendingMenu] = useState(false);
+  const { addToast } = useToastStore();
 
   useEffect(() => {
     if (isOpen && customer) {

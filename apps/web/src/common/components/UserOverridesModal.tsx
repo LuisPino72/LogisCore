@@ -12,15 +12,16 @@ interface UserOverridesModalProps {
   onClose: () => void;
   userId: string;
   userName: string;
+  tenantId?: string;
   onUpdate?: () => void;
 }
 
 const permissionOptions = getAllKnownPermissions().map((p) => ({ value: p, label: p }));
 
-export function UserOverridesModal({ isOpen, onClose, userId, userName, onUpdate }: UserOverridesModalProps) {
+export function UserOverridesModal({ isOpen, onClose, userId, userName, tenantId: propTenantId, onUpdate }: UserOverridesModalProps) {
   const { addToast } = useToastStore();
   const session = useAuthStore((s) => s.session);
-  const tenantId = session?.tenantId ?? '';
+  const tenantId = propTenantId || session?.tenantId || '';
 
   const [overrides, setOverrides] = useState<UserPermissionOverride[]>([]);
   const [loading, setLoading] = useState(false);

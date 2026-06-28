@@ -423,6 +423,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         onClose={() => setOverridesTarget(null)}
         userId={overridesTarget?.userId ?? ''}
         userName={overridesTarget?.name ?? ''}
+        tenantId={tenantId}
       />
     </div>
   );

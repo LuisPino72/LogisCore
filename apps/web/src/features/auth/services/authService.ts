@@ -164,11 +164,13 @@ export const authService = {
       return success({ ...userSession, permissions: ['pos:create', 'pos:read', 'customers:create', 'customers:read'] });
     }
 
-    const overridesResult = await userPermissionOverrideService.getOverrides(userSession.userId);
-    if (overridesResult.ok) {
-      const { useAuthStore } = await import('../stores/authStore');
-      useAuthStore.getState().userPermissionOverrides.length = 0;
-      useAuthStore.getState().userPermissionOverrides.push(...overridesResult.data);
+    if (userSession.tenantSlug) {
+      const overridesResult = await userPermissionOverrideService.getOverrides(userSession.userId);
+      if (overridesResult.ok) {
+        const { useAuthStore } = await import('../stores/authStore');
+        useAuthStore.getState().userPermissionOverrides.length = 0;
+        useAuthStore.getState().userPermissionOverrides.push(...overridesResult.data);
+      }
     }
 
     return success(userSession);
