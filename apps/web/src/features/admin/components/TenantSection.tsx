@@ -25,6 +25,7 @@ import {
 } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import type {
   Tenant,
   TenantAnalytics,
@@ -124,7 +125,7 @@ export function TenantSection({
       if (result.ok) {
         addToast({ type: 'success', message: 'Local desactivado correctamente.', duration: 4000 });
       } else {
-        addToast({ type: 'error', message: result.error.message, duration: 5000 });
+        handleServiceError(result);
       }
     } catch (err) {
       addToast({ type: 'error', message: err instanceof Error ? err.message : 'Error al desactivar el local', duration: 5000 });
@@ -137,7 +138,7 @@ export function TenantSection({
       if (result.ok) {
         addToast({ type: 'success', message: 'Local eliminado permanentemente.', duration: 4000 });
       } else {
-        addToast({ type: 'error', message: result.error.message, duration: 5000 });
+        handleServiceError(result);
       }
     } catch (err) {
       addToast({ type: 'error', message: err instanceof Error ? err.message : 'Error al eliminar el local', duration: 5000 });

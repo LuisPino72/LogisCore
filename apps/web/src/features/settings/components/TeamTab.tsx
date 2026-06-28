@@ -3,6 +3,7 @@ import { Users, ShoppingBag, Plus, Shield } from 'lucide-react';
 import { Card, Button, DataTable, Skeleton, Alert, Badge, Select, Modal, Input } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import { adminService } from '../../admin/services/adminService';
 import { settingsService } from '../services/settingsService';
 import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
@@ -105,7 +106,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
       setEditingUserId(null);
       await loadUsers();
     } else {
-      addToast({ type: 'error', message: result.error.message, duration: 6000 });
+      handleServiceError(result);
     }
   }, [addToast, loadUsers]);
 
@@ -117,7 +118,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
       setDeletingUser(null);
       await loadUsers();
     } else {
-      addToast({ type: 'error', message: result.error.message, duration: 6000 });
+      handleServiceError(result);
     }
   }, [deletingUser, addToast, loadUsers]);
 
@@ -129,7 +130,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
       setResetPasswordUser(null);
       setNewResetPassword('');
     } else {
-      addToast({ type: 'error', message: result.error.message, duration: 6000 });
+      handleServiceError(result);
     }
   }, [resetPasswordUser, newResetPassword, addToast]);
 

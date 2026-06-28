@@ -4,6 +4,7 @@ import { KeyRound, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, DataTable, Pagination, Tooltip } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import type { UserRole } from '../types';
 import type { Role } from '../../../specs/roles';
 import { SectionHeader } from './SectionHeader';
@@ -56,7 +57,7 @@ export function UserSection({
     if (result.ok) {
       addToast({ type: 'success', message: 'Empleado eliminado.', duration: 4000 });
     } else {
-      addToast({ type: 'error', message: result.error.message, duration: 5000 });
+      handleServiceError(result);
     }
   }, [deleteTarget, removeEmployee, addToast]);
 
@@ -77,7 +78,7 @@ export function UserSection({
     if (result.ok) {
       addToast({ type: 'success', message: `Rol actualizado a ${roleName}.`, duration: 4000 });
     } else {
-      addToast({ type: 'error', message: result.error.message, duration: 5000 });
+      handleServiceError(result);
     }
     setEditingRole(null);
   }, [roles, updateUserRole, addToast]);

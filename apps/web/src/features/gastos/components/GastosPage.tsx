@@ -7,6 +7,7 @@ import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { gastosService } from '../services/gastosService';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import { useGastos } from '../hooks/useGastos';
 import { useRecurringGastos } from '../hooks/useRecurringGastos';
 import { useGastosStore } from '../stores/gastosStore';
@@ -74,7 +75,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     if (!tenantId) return;
     const result = await removeGasto(id);
     if (!result.ok) {
-      addToast({ type: 'error', message: result.error.message });
+      handleServiceError(result);
       return;
     }
     setMonthlyRefreshKey((k) => k + 1);
@@ -106,7 +107,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
         useGastosStore.getState().setRecurringTemplates(templatesResult.data);
       }
     } else {
-      addToast({ type: 'error', message: result.error.message });
+      handleServiceError(result);
     }
   }, [tenantId, selectedIds, currentRate, addToast, clearSelection]);
 

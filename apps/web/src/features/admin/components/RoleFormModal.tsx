@@ -4,6 +4,7 @@ import { Button, Checkbox, Input, Modal, Select, Spinner } from '../../../common
 import { useAdminPanel } from '../hooks/useAdminPanel';
 import { ALL_MODULES, CRUD_ACTIONS, SPECIAL_ACTIONS } from '../../../specs/roles';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import type { Role } from '../../../specs/roles';
 
 interface Props {
@@ -88,14 +89,14 @@ export function RoleFormModal({ role, onClose }: Props) {
       });
 
       if (!updateResult.ok) {
-        addToast({ type: 'error', message: updateResult.error.message });
+        handleServiceError(updateResult);
         setSaving(false);
         return;
       }
 
       const permResult = await upsertRolePermissions(role.id, Array.from(selectedPermissions));
       if (!permResult.ok) {
-        addToast({ type: 'error', message: permResult.error.message });
+        handleServiceError(permResult);
         setSaving(false);
         return;
       }
@@ -110,7 +111,7 @@ export function RoleFormModal({ role, onClose }: Props) {
       });
 
       if (!result.ok) {
-        addToast({ type: 'error', message: result.error.message });
+        handleServiceError(result);
         setSaving(false);
         return;
       }

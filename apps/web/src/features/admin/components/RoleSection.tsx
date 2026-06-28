@@ -5,6 +5,7 @@ import { useAdminPanel } from '../hooks/useAdminPanel';
 import { RoleFormModal } from './RoleFormModal';
 import type { Role } from '../../../specs/roles';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 
 const RLS_TIER_LABELS: Record<string, string> = {
   admin: 'Admin global',
@@ -45,7 +46,7 @@ export function RoleSection() {
     if (result.ok) {
       addToast({ type: 'success', message: 'Rol eliminado' });
     } else {
-      addToast({ type: 'error', message: result.error.message });
+      handleServiceError(result);
     }
     setDeletingId(null);
   };

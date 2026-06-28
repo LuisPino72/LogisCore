@@ -11,6 +11,7 @@ import { usePosVerification } from '../hooks/usePosVerification';
 import { useBarcodeScan } from '../hooks/useBarcodeScan';
 import { useKitchenNotifications } from '../hooks/useKitchenNotifications';
 import { useWhatsAppShare } from '../hooks/useWhatsAppShare';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
 import { FlyToCart } from './FlyToCart';
@@ -176,7 +177,7 @@ export function PosPage({ tenantId }: PosPageProps) {
           addToast({ type: 'success', message: 'Pedido pagado', duration: 3000 });
         }
       } else {
-        addToast({ type: 'error', message: result.error?.message || 'Error al cobrar', duration: 5000 });
+        handleServiceError(result);
       }
     } catch (err) {
       logger.error('POS', 'Error en handleOrderPayment', err);
@@ -207,7 +208,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     if (result.ok) {
       addToast({ type: 'success', message: 'Entrega confirmada', duration: 3000 });
     } else {
-      addToast({ type: 'error', message: result.error?.message || 'Error al confirmar entrega', duration: 4000 });
+      handleServiceError(result);
     }
   }, [addToast]);
 
@@ -334,7 +335,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         clearCart();
         closeMobileCart();
       } else {
-        addToast({ type: 'error', message: saleResult.error?.message || 'Error al completar la venta.', duration: 5000 });
+        handleServiceError(saleResult);
       }
     } catch (err) {
       logger.error('POS', 'Error inesperado al procesar el pago', err);
@@ -523,7 +524,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       addToast({ type: 'success', message: 'Venta anulada. Stock restaurado.', duration: 4000 });
       fetchSalesHistory(tenantId);
     } else {
-      addToast({ type: 'error', message: result.error?.message ?? 'Error al anular la venta. Verifica tu conexión e intenta de nuevo.', duration: 4000 });
+      handleServiceError(result);
     }
   }, [voidConfirmId, tenantId, userId, addToast, fetchSalesHistory]);
 

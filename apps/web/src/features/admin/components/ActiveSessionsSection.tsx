@@ -3,6 +3,7 @@ import { AlertTriangle, Lock, RefreshCw } from 'lucide-react';
 import { Button, Card, DataTable, Select } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import { useActiveSessions } from '../hooks/useActiveSessions';
 import { adminService } from '../services/adminService';
 
@@ -25,7 +26,7 @@ export function ActiveSessionsSection({ tenants }: ActiveSessionsSectionProps) {
       addToast({ type: 'success', message: 'Sesión cerrada forzosamente', duration: 4000 });
       refresh();
     } else {
-      addToast({ type: 'error', message: result.error.message, duration: 5000 });
+      handleServiceError(result);
     }
     setForcingId(null);
   };

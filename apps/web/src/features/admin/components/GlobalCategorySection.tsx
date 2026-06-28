@@ -4,6 +4,7 @@ import { Button, Card, DataTable, Pagination, SearchInput } from '../../../commo
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import type { GlobalCategory, CreateGlobalCategoryInput } from '../types';
 import type { Result, AppError } from '@logiscore/core';
 import { GlobalCategoryFormModal } from './GlobalCategoryFormModal';
@@ -130,7 +131,7 @@ export function GlobalCategorySection({
           if (result.ok) {
             addToast({ type: 'success', message: 'Categoría eliminada.', duration: 4000 });
           } else {
-            addToast({ type: 'error', message: result.error.message, duration: 5000 });
+            handleServiceError(result);
           }
         }}
       />

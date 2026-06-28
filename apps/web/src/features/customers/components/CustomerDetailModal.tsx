@@ -9,6 +9,7 @@ import { PaymentModal } from './PaymentModal';
 import { generateMenuText, normalizeWaPhone } from '../../pos/services/receiptService';
 import { logger } from '../../../lib/logger';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -80,7 +81,7 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
     try {
       const result = await generateMenuText(tenantId);
       if (!result.ok) {
-        addToast({ type: 'error', message: result.error?.message ?? 'Error al generar el menú' });
+        handleServiceError(result);
         return;
       }
       const menuText = result.data;

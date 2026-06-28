@@ -6,6 +6,7 @@ import { dispatchDelivery, generateMapsLink } from '../services/saleService';
 import { normalizeWaPhone } from '../services/receiptService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import type { DexieSale } from '../../../services/dexie/types';
 import type { DexieDeliveryPerson } from '../../../services/dexie/db';
 
@@ -116,7 +117,7 @@ export function DeliveryDispatchPanel({
         addToast({ type: 'success', message: 'Delivery despachado correctamente', duration: 3000 });
         onClose();
       } else {
-        addToast({ type: 'error', message: result.error?.message || 'Error al despachar', duration: 4000 });
+        handleServiceError(result);
       }
     } finally {
       setLoading(false);
