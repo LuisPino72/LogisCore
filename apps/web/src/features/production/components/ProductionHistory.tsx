@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Badge, Button, Card, EmptyState, Pagination } from '../../../common/components';
 import { History, Clock, CheckCircle2, XCircle, AlertCircle, Eye, Package, Hash } from 'lucide-react';
-import type { Recipe, ProductionOrder } from '../types';
+import type { ProductionOrder } from '../types';
 import { ProductionDetailModal } from './ProductionDetailModal';
 import { useProductionStore } from '../stores/productionStore';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
+import { displayQty } from '../../inventory/types';
 
 interface ProductionHistoryProps {
   orders: ProductionOrder[];
-  recipes: Recipe[];
   // PLAN-115 (CODE-MIN-7): handler para cancelar orden (callback al padre que
   // muestra confirmacion). Solo se invoca si order.status === 'confirmed'.
   onCancel?: (orderId: string) => void;
@@ -18,6 +18,7 @@ interface ProductionHistoryProps {
 }
 
 const PAGE_SIZE = 10;
+const CANCEL_WINDOW_DAYS = 7;
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'danger' | 'warning' | 'info' | 'neutral'; icon: React.ReactNode }> = {
   draft: { label: 'Borrador', variant: 'neutral', icon: <Clock size={12} /> },
@@ -27,11 +28,11 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'dange
   cancelled: { label: 'Cancelada', variant: 'danger', icon: <XCircle size={12} /> },
 };
 
-export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId, tenantId }: ProductionHistoryProps) {
+export function ProductionHistory({ orders, onCancel, cancellingOrderId, tenantId }: ProductionHistoryProps) {
   const [page, setPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [ordersWithSales, setOrdersWithSales] = useState<Set<string>>(new Set());
-  const { hasOrderSales } = useProductionStore();
+  const { hasOrderSales, allRecipes } = useProductionStore();
 
   // Verificar ventas asociadas para órdenes confirmadas
   useEffect(() => {
@@ -54,13 +55,14 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
     }
   }, [orders, tenantId, hasOrderSales]);
 
+  // Usar allRecipes (incluye eliminadas) para mostrar nombre en historial
   const recipeMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const recipe of recipes) {
+    for (const recipe of allRecipes) {
       map.set(recipe.id, recipe.name);
     }
     return map;
-  }, [recipes]);
+  }, [allRecipes]);
 
   const products = useInventoryStore((s) => s.products);
   const productUnitMap = useMemo(() => {
@@ -116,7 +118,8 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
       <div className="history-stagger">
       {paginatedOrders.map((order) => {
         const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.draft;
-        const canCancel = order.status === 'confirmed' && onCancel != null && !ordersWithSales.has(order.id);
+        const daysSinceCreation = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        const canCancel = order.status === 'confirmed' && onCancel != null && !ordersWithSales.has(order.id) && daysSinceCreation < CANCEL_WINDOW_DAYS;
         const isCancelling = cancellingOrderId === order.id;
 
         return (
@@ -141,7 +144,7 @@ export function ProductionHistory({ orders, recipes, onCancel, cancellingOrderId
                   </span>
                   <span className="flex items-center gap-1">
                     <Hash size={11} className="text-gray-400" />
-                    {order.quantityTarget} {productUnitMap.get(order.productId) || 'unid.'}
+                    {displayQty(order.quantityTarget, productUnitMap.get(order.productId) || 'unidad')}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock size={11} className="text-gray-400" />

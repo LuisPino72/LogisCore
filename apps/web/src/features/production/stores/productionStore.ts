@@ -7,6 +7,7 @@ import { productionService } from '../services/productionService';
 interface ProductionStore extends ProductionState {
   // Recipes
   recipes: Recipe[];
+  allRecipes: Recipe[]; // Incluye eliminadas — para mostrar nombre en historial
   fetchRecipes: (tenantId: string, filters?: RecipeFilters, silent?: boolean) => Promise<void>;
   createRecipe: (tenantId: string, userId: string, input: CreateRecipeInput) => Promise<Recipe | null>;
   updateRecipe: (id: string, input: UpdateRecipeInput, tenantId: string) => Promise<boolean>;
@@ -72,6 +73,7 @@ const initialState: ProductionState = {
 
 export const useProductionStore = create<ProductionStore>((set, get) => ({
   ...initialState,
+  allRecipes: [],
   activeTab: 'recipes',
 
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -84,6 +86,13 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       const result = await productionService.getRecipes(tenantId, filters);
       if (result.ok) {
         set({ recipes: result.data, loading: false });
+        // Cargar todas las recetas (incluyendo eliminadas) para el historial
+        if (!filters?.includeDeleted) {
+          const allResult = await productionService.getRecipes(tenantId, { includeDeleted: true });
+          if (allResult.ok) set({ allRecipes: allResult.data });
+        } else {
+          set({ allRecipes: result.data });
+        }
       } else {
         set({ loading: false, error: result.error });
       }

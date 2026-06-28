@@ -224,7 +224,6 @@ export function ProductionPage({ tenantId }: ProductionPageProps) {
           {activeTab === 'history' && (
             <ProductionHistory
               orders={productionOrders}
-              recipes={recipes}
               onCancel={requestCancelOrder}
               cancellingOrderId={cancellingOrderId}
               tenantId={tenantId || ''}

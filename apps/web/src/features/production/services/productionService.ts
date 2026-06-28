@@ -35,6 +35,11 @@ import { calculateRecipeCost as calculateRecipeCostFn } from './costService';
 
 const PRODUCTION_MODULE = 'PRODUCTION';
 
+// Límite de tiempo para cancelar órdenes de producción (7 días naturales).
+// Después de este período, la orden no se puede cancelar para evitar
+// revertir ingredientes que ya pudieron ser usados en otras operaciones.
+const CANCEL_WINDOW_DAYS = 7;
+
 export const productionService = {
   // ===== RECIPE CRUD =====
 
@@ -494,12 +499,12 @@ export const productionService = {
     }
   },
 
-  async getRecipes(tenantId: string, filters?: { query?: string; mode?: string; isActive?: boolean }): Promise<Result<Recipe[], AppError>> {
+  async getRecipes(tenantId: string, filters?: { query?: string; mode?: string; isActive?: boolean; includeDeleted?: boolean }): Promise<Result<Recipe[], AppError>> {
     try {
       const db = getDb();
       let rows = await db.recipes
         .where({ tenantId })
-        .filter((r) => !r.deletedAt)
+        .filter((r) => filters?.includeDeleted ? true : !r.deletedAt)
         .toArray();
 
       if (filters?.query) {
@@ -942,6 +947,22 @@ export const productionService = {
     if (!order) {
       return failure(new AppError(ProductionErrors.ORDER_NOT_FOUND, 'Orden de producción no encontrada.'));
     }
+
+    // SERVER-SIDE: Validar que no existan ventas del producto terminado antes de revertir.
+    // Esto previene stock negativo si alguien llama a cancelOrder directamente (sin UI).
+    const salesCheck = await this.hasOrderSales(tenantId, orderId);
+    if (salesCheck.ok && salesCheck.data) {
+      return failure(new AppError('ORDER_HAS_SALES', 'No se puede cancelar: existen ventas del producto terminado de esta orden.'));
+    }
+
+    // SERVER-SIDE: Validar que la orden esté dentro de la ventana de cancelación (7 días).
+    // Evita revertir ingredientes de órdenes antiguas que ya pudieron ser reasignados.
+    const orderCreated = new Date(order.createdAt);
+    const daysSinceCreation = Math.floor((Date.now() - orderCreated.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceCreation >= CANCEL_WINDOW_DAYS) {
+      return failure(new AppError('ORDER_CANCEL_EXPIRED', `No se puede cancelar: la orden tiene más de ${CANCEL_WINDOW_DAYS} días de antigüedad.`));
+    }
+
     const now = new Date().toISOString();
 
     try {
@@ -1006,37 +1027,42 @@ export const productionService = {
             await syncQueue.enqueue('inventory_movements', 'CREATE', revertMovementId, toSnake(revertMovement as unknown as Record<string, unknown>), tenantId);
           }
         } else {
+          // Fallback legacy: buscar recipeLines directamente (no expandRecipe,
+          // que rechaza recetas eliminadas). Para órdenes legacy sin movimientos FK,
+          // leemos las líneas originales de la receta para calcular qué ingredientes revertir.
           const recipe = await db.recipes.get(order.recipeId);
           if (recipe) {
-            const expandResult = await expandRecipe(order.recipeId, order.batchCount);
-            if (expandResult.ok) {
-              const wasteMultiplier = 1 + (recipe.wastePct / 100);
-              for (const line of expandResult.data) {
-                const product = await db.products.where({ id: line.productId, tenantId }).first();
-                if (!product) continue;
-                const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
-                const needed = Math.ceil(neededInStorage);
-                const previousStock = product.stock;
-                const newStock = previousStock + needed;
-                await db.products.update(line.productId, { stock: newStock });
-                await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...product, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+            const recipeLines = await db.recipeLines
+              .where({ recipeId: order.recipeId })
+              .filter((l) => !l.deletedAt)
+              .toArray();
 
-                const revertMovementId = generateId();
-                const revertMovement = {
-                  id: revertMovementId,
-                  tenantId,
-                  productId: line.productId,
-                  userId: order.createdBy,
-                  type: 'adjustment' as const,
-                  quantity: needed,
-                  previousStock,
-                  newStock,
-                  reasonType: 'ajuste_manual',
-                  createdAt: now,
-                };
-                await db.inventoryMovements.add(revertMovement);
-                await syncQueue.enqueue('inventory_movements', 'CREATE', revertMovementId, toSnake(revertMovement as unknown as Record<string, unknown>), tenantId);
-              }
+            const wasteMultiplier = 1 + ((recipe.wastePct ?? 0) / 100);
+            for (const line of recipeLines) {
+              const product = await db.products.where({ id: line.productId, tenantId }).first();
+              if (!product) continue;
+              const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
+              const needed = Math.ceil(neededInStorage);
+              const previousStock = product.stock;
+              const newStock = previousStock + needed;
+              await db.products.update(line.productId, { stock: newStock });
+              await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...product, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+
+              const revertMovementId = generateId();
+              const revertMovement = {
+                id: revertMovementId,
+                tenantId,
+                productId: line.productId,
+                userId: order.createdBy,
+                type: 'adjustment' as const,
+                quantity: needed,
+                previousStock,
+                newStock,
+                reasonType: 'ajuste_manual',
+                createdAt: now,
+              };
+              await db.inventoryMovements.add(revertMovement);
+              await syncQueue.enqueue('inventory_movements', 'CREATE', revertMovementId, toSnake(revertMovement as unknown as Record<string, unknown>), tenantId);
             }
           }
         }

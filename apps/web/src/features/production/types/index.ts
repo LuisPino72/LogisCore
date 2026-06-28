@@ -34,6 +34,7 @@ export interface RecipeFilters {
   query?: string;
   mode?: RecipeMode;
   isActive?: boolean;
+  includeDeleted?: boolean;
 }
 
 export interface ProductionOrderFilters {
