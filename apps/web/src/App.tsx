@@ -358,7 +358,7 @@ function DashboardLayout() {
                 variant="success"
                 className="hidden! sm:inline-flex! active:scale-[0.98] cursor-pointer transition-transform"
               >
-                {role === 'owner' ? 'Dueño' : role === 'employee' ? 'Empleado' : role}
+                {role === 'owner' ? 'Dueño' : role === 'employee' ? (session?.roleName || 'Empleado') : role}
               </Badge>
             )}
             {effectiveTenantId && <RateBadgeMobile />}

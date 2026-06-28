@@ -1,6 +1,8 @@
 import { getDb, isDbReady } from '../../../services/dexie/db';
 import { success, failure, type Result, AppError } from '@logiscore/core';
 import { logger } from '../../../lib/logger';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 export interface DeliverySettlementRow {
   name: string;
@@ -15,6 +17,10 @@ export async function getDeliverySettlement(
   startDate: string,
   endDate: string,
 ): Promise<Result<DeliverySettlementRow[], AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   try {
     if (!isDbReady()) return failure(new AppError('DB_NOT_READY', 'Base de datos no disponible.'));
     const db = getDb();
@@ -96,6 +102,10 @@ export async function markDeliverySettlementPaid(
   startDate: string,
   endDate: string,
 ): Promise<Result<number, AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   try {
     if (!isDbReady()) return failure(new AppError('DB_NOT_READY', 'Base de datos no disponible.'));
     const db = getDb();

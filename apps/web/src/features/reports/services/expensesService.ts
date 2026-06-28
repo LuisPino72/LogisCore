@@ -4,10 +4,16 @@ import { getDb } from '../../../services/dexie/db';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import { ValidateTenantInputSchema, ReportsFiltersSchema } from '../../../specs/reports/index';
 import { logger } from '../../../lib/logger';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import type { AdjustmentLossExpenses, ExpenseBreakdownItem, ReportFilters } from '../types';
 import { getDateRange, fetchSalesWithItems, effectiveItemQuantity, calcItemCostBs, getRateForDateCached } from './reportsHelpers';
 
 export async function getNonSellableExpenses(tenantId: string, start: string, end: string): Promise<Result<{ totalUsd: number; totalBs: number }, AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
     return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
@@ -49,6 +55,10 @@ export async function getNonSellableExpenses(tenantId: string, start: string, en
 }
 
 export async function getAdjustmentLossExpenses(tenantId: string, start: string, end: string): Promise<Result<AdjustmentLossExpenses, AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
     return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
@@ -143,6 +153,10 @@ export async function getAdjustmentLossExpenses(tenantId: string, start: string,
 }
 
 export async function getExpenseBreakdown(tenantId: string, filters: ReportFilters): Promise<Result<ExpenseBreakdownItem[], AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
     return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));

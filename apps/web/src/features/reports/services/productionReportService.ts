@@ -4,10 +4,15 @@ import { getDb } from '../../../services/dexie/db';
 import { ReportsErrors } from '../../../specs/reports/errors';
 import { ValidateTenantInputSchema } from '../../../specs/reports/index';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import type { ProductionSummaryData, RecipeProfitabilityItem, ReportFilters } from '../types';
 import { getDateRange } from './reportsHelpers';
 
 export async function getProductionSummary(tenantId: string, filters: ReportFilters): Promise<Result<ProductionSummaryData, AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
     return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
@@ -81,6 +86,10 @@ export async function getProductionSummary(tenantId: string, filters: ReportFilt
 }
 
 export async function getRecipeProfitability(tenantId: string, filters: ReportFilters): Promise<Result<RecipeProfitabilityItem[], AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
     return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));

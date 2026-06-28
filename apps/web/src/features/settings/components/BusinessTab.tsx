@@ -77,7 +77,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
     setPagoMovilHolder(store.pagoMovilHolder);
     setPagoMovilId(store.pagoMovilId);
     setPagoMovilPhone(store.pagoMovilPhone);
-  }, [store.ticketFooterMessage, store.pagoMovilEnabled, store.pagoMovilBank, store.pagoMovilHolder, store.pagoMovilId, store.pagoMovilPhone]);
+  }, [store.ticketFooterMessage, store.needsKitchenDefault, store.defaultDeliveryFee, store.pagoMovilEnabled, store.pagoMovilBank, store.pagoMovilHolder, store.pagoMovilId, store.pagoMovilPhone]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -168,7 +168,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
       setLogoUrl(finalLogoUrl);
       setLogoFile(null);
       setLogoPreview(null);
-      await settingsService.updateOperationSettings(tenantId, userId, {
+      const operationData = {
         maxDiscountPct: store.maxDiscountPct,
         defaultMinStock: store.defaultMinStock,
         defaultCreditLimit: store.defaultCreditLimit,
@@ -182,22 +182,9 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
         pagoMovilHolder,
         pagoMovilId,
         pagoMovilPhone,
-      });
-      useSettingsStore.getState().setOperationSettings({
-        maxDiscountPct: store.maxDiscountPct,
-        defaultMinStock: store.defaultMinStock,
-        defaultCreditLimit: store.defaultCreditLimit,
-        mandatoryCustomerId: store.mandatoryCustomerId,
-        lowStockThreshold: store.lowStockThreshold,
-        ticketFooterMessage,
-        needsKitchenDefault: store.needsKitchenDefault,
-        defaultDeliveryFee: store.defaultDeliveryFee,
-        pagoMovilEnabled,
-        pagoMovilBank,
-        pagoMovilHolder,
-        pagoMovilId,
-        pagoMovilPhone,
-      });
+      };
+      await settingsService.updateOperationSettings(tenantId, userId, operationData);
+      useSettingsStore.getState().setOperationSettings(operationData);
       addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });
     } else {
       setLocalError(result.error.message);

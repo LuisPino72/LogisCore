@@ -7,10 +7,16 @@ import { ReportsErrors } from '../../../specs/reports/errors';
 import { ValidateTenantInputSchema, ReportsFiltersSchema } from '../../../specs/reports/index';
 import type { PaymentMethod } from '../../../specs/pos';
 import { startOfDayFromDateStringVzla, endOfDayFromDateStringVzla } from '../../../lib/date';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import type { CashRegisterSummaryData, RegisterCashAnalysis, GlobalCashAnalysis, ReportFilters } from '../types';
 import { getDateRange } from './reportsHelpers';
 
 export async function getCashAnalysis(tenantId: string, filters: ReportFilters): Promise<Result<CashRegisterSummaryData[], AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
     return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
@@ -256,6 +262,10 @@ export async function getCashAnalysis(tenantId: string, filters: ReportFilters):
 }
 
 export async function getCashAnalysisByRegister(tenantId: string, date: string): Promise<Result<RegisterCashAnalysis[], AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', 'No tienes permiso para ver reportes'));
+  }
   const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
   if (!tenantCheck.success) {
     return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));

@@ -1,8 +1,14 @@
 import { preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 export async function getPendingPayables(tenantId: string): Promise<number> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return 0;
+  }
   const db = getDb();
   const suppliers = await db.suppliers
     .where({ tenantId })
