@@ -32,22 +32,6 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   const email = userEmail ?? session?.email ?? 'Usuario';
   const navigate = useNavigate();
 
-  if (role === 'employee') {
-    return (
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-danger/10 flex items-center justify-center mb-6 ring-1 ring-danger/20">
-            <ShieldBan size={40} className="text-danger" />
-          </div>
-          <h2 className="text-xl font-title font-bold text-gray-900 mb-2">Acceso restringido</h2>
-          <p className="text-sm text-gray-500 max-w-sm">
-            Solo el propietario del local puede acceder al Dashboard. Ve a la sección de Ventas desde el menú.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   const {
     tenantInfo,
     subscription,
@@ -75,7 +59,6 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
     fetchLowStock(tenantId);
   }, [tenantId, fetchTopProducts, fetchLowStock]);
 
-  // Load recipe product IDs to identify produced products
   useEffect(() => {
     if (!tenantId) return;
     let cancelled = false;
@@ -97,6 +80,22 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
   }, [tenantId]);
 
   const top5LowStock = useMemo(() => lowStockProducts.slice(0, 5), [lowStockProducts]);
+
+  if (role === 'employee') {
+    return (
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-danger/10 flex items-center justify-center mb-6 ring-1 ring-danger/20">
+            <ShieldBan size={40} className="text-danger" />
+          </div>
+          <h2 className="text-xl font-title font-bold text-gray-900 mb-2">Acceso restringido</h2>
+          <p className="text-sm text-gray-500 max-w-sm">
+            Solo el propietario del local puede acceder al Dashboard. Ve a la sección de Ventas desde el menú.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const topQty = topProducts.length > 0 ? topProducts[0].totalQty : 1;
 

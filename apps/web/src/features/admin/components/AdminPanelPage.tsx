@@ -36,9 +36,6 @@ export function AdminPanelPage() {
   // Defense-in-depth: AdminRoute en App.tsx ya protege esta ruta,
   // pero verificamos aquí también por seguridad en capas.
   const role = useAuthStore((s) => s.session?.role);
-  if (role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
 
   const {
     tenants, users, allUsers, subscriptions, globalCategories, analytics, isLoading, error,
@@ -71,6 +68,10 @@ export function AdminPanelPage() {
     fetchGlobalCategories();
     fetchRoles();
   }, [fetchTenants, fetchAllUsers, fetchSubscriptions, fetchGlobalCategories, fetchRoles]);
+
+  if (role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSelectTenant = (tenant: Tenant) => {
     setSelectedTenantId(tenant.id);
