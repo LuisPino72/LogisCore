@@ -12,6 +12,7 @@ import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
 import { UserOverridesModal } from '../../../common/components/UserOverridesModal';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
 
 const PAGE_SIZE = 10;
 
@@ -41,6 +42,8 @@ export function UserSection({
   onCloseAddEmployeeModal,
 }: UserSectionProps) {
   const { addToast } = useToastStore();
+  const session = useAuthStore((s) => s.session);
+  const canManage = session?.role === 'owner' || session?.role === 'admin';
 
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -135,7 +138,7 @@ export function UserSection({
       render: (u) => (
         <div className="flex gap-1 items-center">
           {u.role === 'owner' && <Badge variant="info">Propietario</Badge>}
-          {u.role !== 'owner' && (
+          {u.role !== 'owner' && canManage && (
             <Tooltip content="Permisos individuales" variant="help" position="top">
               <Button
                 variant="ghost-primary"

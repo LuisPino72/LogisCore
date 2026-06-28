@@ -87,7 +87,7 @@ export function UserOverridesModal({ isOpen, onClose, userId, userName, onUpdate
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Shield size={16} />
-          <span>Permisos individuales que se叠加 sobre el rol base.</span>
+          <span>Permisos individuales que se superponen sobre el rol base.</span>
         </div>
 
         {loading ? (

@@ -62,6 +62,7 @@ export const UserPermissionOverrideSchema = z.object({
   permission: PermissionSchema,
   effect: OverrideEffectSchema,
   createdAt: z.string(),
+  deletedAt: z.string().nullable().optional(),
 });
 
 export type UserPermissionOverride = z.infer<typeof UserPermissionOverrideSchema>;

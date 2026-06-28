@@ -11,7 +11,9 @@ import { sessionGuard } from './sessionGuardService';
 import { offlineGrace } from './offlineGraceService';
 
 import { isValidRole } from '../types';
+import { useAuthStore } from '../stores/authStore';
 import { extractRole, extractRoleName, extractTenantId, extractPermissions, isJWTExpired } from '../../../lib/jwt';
+import { userPermissionOverrideService } from './userPermissionOverrideService';
 export { extractRole, extractRoleName, extractTenantId, extractPermissions, decodeJWTPayload, isJWTExpired } from '../../../lib/jwt';
 
 function sanitizeEmail(email: string): string {
@@ -162,6 +164,13 @@ export const authService = {
       return success({ ...userSession, permissions: ['pos:create', 'pos:read', 'customers:create', 'customers:read'] });
     }
 
+    const overridesResult = await userPermissionOverrideService.getOverrides(userSession.userId);
+    if (overridesResult.ok) {
+      const { useAuthStore } = await import('../stores/authStore');
+      useAuthStore.getState().userPermissionOverrides.length = 0;
+      useAuthStore.getState().userPermissionOverrides.push(...overridesResult.data);
+    }
+
     return success(userSession);
   },
 
@@ -232,6 +241,12 @@ export const authService = {
       offlineGrace.extend(userSession.tenantSlug);
     }
 
+    const overridesLoginResult = await userPermissionOverrideService.getOverrides(userSession.userId);
+    if (overridesLoginResult.ok) {
+      useAuthStore.getState().userPermissionOverrides.length = 0;
+      useAuthStore.getState().userPermissionOverrides.push(...overridesLoginResult.data);
+    }
+
     await logAuditEvent({
       eventName: 'USER.LOGIN',
       module: 'AUTH',
@@ -264,6 +279,7 @@ export const authService = {
       { name: 'tenant_settings', type: 'catalog', conflictStrategy: 'LWW', localIdField: 'tenantId', remoteIdField: 'tenant_id' },
       { name: 'exchange_rates', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
       { name: 'registers_config', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
+      { name: 'user_permission_overrides', type: 'transactional', conflictStrategy: 'LWW', localIdField: 'id', remoteIdField: 'id' },
     ];
     allTables.forEach((cfg) => syncEngine.registerTable(cfg));
     syncEngine.start();

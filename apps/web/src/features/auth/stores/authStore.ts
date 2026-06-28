@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { UserSession } from '@logiscore/core';
+import type { UserPermissionOverride } from '../../../specs/roles';
 import { authService } from '../services/authService';
 import { sessionGuard } from '../services/sessionGuardService';
 import { LoginInputSchema } from '../types';
@@ -22,6 +23,7 @@ interface AuthState {
   fieldErrors: FieldErrors;
   loginAttempts: number;
   loginCooldownUntil: number;
+  userPermissionOverrides: UserPermissionOverride[];
 
   setLoading: () => void;
   setSession: (session: UserSession) => void;
@@ -44,6 +46,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fieldErrors: {},
   loginAttempts: 0,
   loginCooldownUntil: 0,
+  userPermissionOverrides: [],
 
   setLoading: () => set({ status: 'loading', error: null }),
   setSession: (session) => set({ status: 'authenticated', session, error: null }),
@@ -55,11 +58,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setLoggingOut: (value) => set({ isLoggingOut: value }),
   clearSession: (error) => {
     localStorage.removeItem('selectedTenantSlug');
-    set({ status: 'unauthenticated', session: null, selectedTenantSlug: null, error: error ?? null, isLoggingOut: false });
+    set({ status: 'unauthenticated', session: null, selectedTenantSlug: null, error: error ?? null, isLoggingOut: false, userPermissionOverrides: [] });
   },
   reset: () => {
     localStorage.removeItem('selectedTenantSlug');
-    set({ status: 'idle', session: null, selectedTenantSlug: null, error: null });
+    set({ status: 'idle', session: null, selectedTenantSlug: null, error: null, userPermissionOverrides: [] });
   },
 
   login: async (email, password) => {

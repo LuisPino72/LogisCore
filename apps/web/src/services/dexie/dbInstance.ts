@@ -149,6 +149,9 @@ export class LogisCoreDB extends Dexie {
     this.version(34).stores({
       userPermissionOverrides: 'id, userId, tenantId, permission, [userId+tenantId]',
     });
+    this.version(35).stores({
+      userPermissionOverrides: 'id, userId, tenantId, permission, &[userId+tenantId+permission]',
+    });
 
   }
 }
