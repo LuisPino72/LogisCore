@@ -5,6 +5,8 @@ import type { Supplier } from '../../../specs/purchases';
 import { getInitials } from '../../../lib/utils';
 import { formatUsd } from '@/lib/formatBs';
 import { PaySupplierModal } from './PaySupplierModal';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 
 interface SupplierListProps {
   suppliers: Supplier[];
@@ -22,6 +24,9 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
   const [page, setPage] = useState(1);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [paySupplierId, setPaySupplierId] = useState<string | null>(null);
+  const session = useAuthStore((s) => s.session);
+  const canUpdate = hasActionPermission(session, 'purchases', 'update');
+  const canDelete = hasActionPermission(session, 'purchases', 'delete');
 
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
@@ -93,23 +98,27 @@ export function SupplierList({ suppliers, loading, isOwner, activeOrdersBySuppli
             </div>
             {isOwner && (
               <div className="flex gap-1">
-                {(s as any).balance > 0 && (
+                {(s as any).balance > 0 && canUpdate && (
                   <Tooltip content="Pagar" variant="help">
                     <Button variant="primary" size="sm" onClick={() => setPaySupplierId(s.id)} className="p-1.5 min-w-8 min-h-8">
                       <DollarSign size={14} />
                     </Button>
                   </Tooltip>
                 )}
-                <Tooltip content="Editar" variant="help">
-                  <Button variant="ghost-primary" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8">
-                    <Pencil size={14} />
-                  </Button>
-                </Tooltip>
-                <Tooltip content="Eliminar" variant="danger">
-                  <Button variant="ghost-danger" size="sm" onClick={() => onDelete(s.id, s.name)} className="p-1.5 min-w-8 min-h-8">
-                    <Trash2 size={14} />
-                  </Button>
-                </Tooltip>
+                {canUpdate && (
+                  <Tooltip content="Editar" variant="help">
+                    <Button variant="ghost-primary" size="sm" onClick={() => onEdit(s)} className="p-1.5 min-w-8 min-h-8">
+                      <Pencil size={14} />
+                    </Button>
+                  </Tooltip>
+                )}
+                {canDelete && (
+                  <Tooltip content="Eliminar" variant="danger">
+                    <Button variant="ghost-danger" size="sm" onClick={() => onDelete(s.id, s.name)} className="p-1.5 min-w-8 min-h-8">
+                      <Trash2 size={14} />
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
             )}
           </div>

@@ -3,6 +3,8 @@ import { ChefHat, Edit3, Trash2, Utensils, Package, AlertTriangle } from 'lucide
 import { Card, EmptyState, Button, Badge, Modal, SearchInput, Tooltip } from '../../../common/components';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 import type { Recipe } from '../types';
 
 interface RecipeListProps {
@@ -17,6 +19,10 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
   const [confirmDelete, setConfirmDelete] = useState<Recipe | null>(null);
   const { deleteRecipe } = useProductionStore();
   const { addToast } = useToastStore();
+  const session = useAuthStore((s) => s.session);
+  const canEdit = hasActionPermission(session, 'production', 'update');
+  const canDelete = hasActionPermission(session, 'production', 'delete');
+  const canProduce = hasActionPermission(session, 'production', 'produce_batch');
 
   const filteredRecipes = recipes.filter((r) =>
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -90,7 +96,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                 </div>
 
                 <div className="flex items-center gap-1 justify-center sm:justify-end sm:shrink-0">
-                  {recipe.mode === 'batch' && (
+                  {recipe.mode === 'batch' && canProduce && (
                     <Tooltip content="Producir esta receta" variant="help">
                       <Button
                         variant="primary"
@@ -103,26 +109,30 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                       </Button>
                     </Tooltip>
                   )}
-                  <Tooltip content="Editar receta" variant="help">
-                    <Button
-                      variant="ghost-primary"
-                      size="sm"
-                      onClick={() => onEdit(recipe)}
-                      className="p-2 min-h-[44px] min-w-[44px]"
-                    >
-                      <Edit3 size={16} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Eliminar receta" variant="danger">
-                    <Button
-                      variant="ghost-danger"
-                      size="sm"
-                      onClick={() => setConfirmDelete(recipe)}
-                      className="p-2 min-h-[44px] min-w-[44px]"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </Tooltip>
+                  {canEdit && (
+                    <Tooltip content="Editar receta" variant="help">
+                      <Button
+                        variant="ghost-primary"
+                        size="sm"
+                        onClick={() => onEdit(recipe)}
+                        className="p-2 min-h-[44px] min-w-[44px]"
+                      >
+                        <Edit3 size={16} />
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {canDelete && (
+                    <Tooltip content="Eliminar receta" variant="danger">
+                      <Button
+                        variant="ghost-danger"
+                        size="sm"
+                        onClick={() => setConfirmDelete(recipe)}
+                        className="p-2 min-h-[44px] min-w-[44px]"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             </Card>

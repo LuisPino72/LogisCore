@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { ListTree, Trash2, Edit3 } from 'lucide-react';
 import { Button, SearchInput, Input, Modal, EmptyState, Pagination, Tooltip } from '../../../common/components';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import type { Category, Product } from '../types';
 
 const PAGE_SIZE = 10;
@@ -26,6 +28,10 @@ export function CategoryManager({ categories, products, isOwner, onCreate, onUpd
   const [formName, setFormName] = useState('');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const session = useAuthStore((s) => s.session);
+  const canUpdate = hasActionPermission(session, 'inventory', 'update');
+  const canDelete = hasActionPermission(session, 'inventory', 'delete');
 
   const filtered = useFuzzySearch(categories, search, { keys: ['name'] });
 
@@ -131,16 +137,20 @@ export function CategoryManager({ categories, products, isOwner, onCreate, onUpd
               </span>
               {isOwner && (
                 <div className="flex gap-1">
-                  <Tooltip content="Editar" variant="help">
-                    <Button variant="ghost-primary" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-11 min-h-11">
-                      <Edit3 size={14} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Eliminar" variant="danger">
-                    <Button variant="ghost-danger" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-11 min-h-11">
-                      <Trash2 size={14} />
-                    </Button>
-                  </Tooltip>
+                  {canUpdate && (
+                    <Tooltip content="Editar" variant="help">
+                      <Button variant="ghost-primary" size="sm" onClick={() => openEdit(cat)} className="p-1.5 min-w-11 min-h-11">
+                        <Edit3 size={14} />
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {canDelete && (
+                    <Tooltip content="Eliminar" variant="danger">
+                      <Button variant="ghost-danger" size="sm" onClick={() => handleDelete(cat.id, cat.name)} className="p-1.5 min-w-11 min-h-11">
+                        <Trash2 size={14} />
+                      </Button>
+                    </Tooltip>
+                  )}
                 </div>
               )}
             </div>

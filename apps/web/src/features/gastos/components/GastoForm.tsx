@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { type Result } from '@logiscore/core';
 import { Alert, Button, Input, Modal, Select, Textarea, Toggle, SearchableSelect } from '@/common/components';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 import { CreateGastoInputSchema } from '../../../specs/gastos';
-import { UI_EXPENSE_CATEGORIES, type ExpenseCategory, type CreateGastoInput } from '../types';
+import { UI_EXPENSE_CATEGORIES, type ExpenseCategory, type CreateGastoInput, type Gasto } from '../types';
 import { formatBs } from '@/lib/formatBs';
 
 interface GastoFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateGastoInput) => Promise<boolean>;
+  onSubmit: (data: CreateGastoInput) => Promise<Result<Gasto>>;
 }
 
 export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
@@ -107,15 +109,15 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
 
     setSubmitting(true);
     setFieldErrors({});
-    const ok = await onSubmit(payload);
+    const result = await onSubmit(payload);
     setSubmitting(false);
 
-    if (ok) {
+    if (result.ok) {
       addToast({ type: 'success', message: 'Gasto creado correctamente', duration: 3000 });
       setConfirmClose(false);
       onClose();
     } else {
-      setFieldErrors({ form: 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.' });
+      handleServiceError(result);
     }
   };
 
@@ -214,10 +216,6 @@ export function GastoForm({ isOpen, onClose, onSubmit }: GastoFormProps) {
                 <option value="yearly">Anual</option>
               </Select>
             </div>
-          )}
-
-          {fieldErrors.form && (
-            <Alert variant="error">{fieldErrors.form}</Alert>
           )}
         </div>
       </Modal>

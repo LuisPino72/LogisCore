@@ -9,6 +9,8 @@ import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 
 interface CartSummaryProps {
   items: CartItem[];
@@ -55,6 +57,8 @@ export const CartSummary = memo(function CartSummary({
   const { addToast } = useToastStore();
   const { ivaRate, igtfRate, igtfEnabled, maxDiscountPct } = useSettingsStore();
   const activeParkedCartId = usePosStore((s) => s.activeParkedCartId);
+  const session = useAuthStore((s) => s.session);
+  const canApplyDiscount = hasActionPermission(session, 'pos', 'apply_discount');
 
   const totals = useMemo(
     () => calculateSaleTotals(items, exchangeRateBs, paymentMethod ?? '', discount, {
@@ -138,15 +142,17 @@ export const CartSummary = memo(function CartSummary({
         <div className="flex justify-between text-sm text-danger">
           <span className="flex items-center gap-1">
             Descuento ({discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`})
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearDiscount}
-              className="ml-1 p-2 min-w-11 min-h-11 rounded text-danger"
-              aria-label="Quitar descuento"
-            >
-              <X size={12} />
-            </Button>
+            {canApplyDiscount && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClearDiscount}
+                className="ml-1 p-2 min-w-11 min-h-11 rounded text-danger"
+                aria-label="Quitar descuento"
+              >
+                <X size={12} />
+              </Button>
+            )}
           </span>
           <span>-{formatUsd(discountUsd)} / -{formatBs(discountBs)}</span>
         </div>
@@ -226,7 +232,7 @@ export const CartSummary = memo(function CartSummary({
         </Button>
       )}
 
-      {!discount && items.length > 0 && !showDiscountInput && (
+      {!discount && items.length > 0 && !showDiscountInput && canApplyDiscount && (
         <Button
           variant="outline"
           size="sm"

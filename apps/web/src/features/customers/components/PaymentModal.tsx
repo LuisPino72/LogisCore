@@ -8,6 +8,7 @@ import { formatUsd, formatBs } from '@/lib/formatBs';
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { customerService } from '../services/customerService';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
 
 interface PaymentModalProps {
   customer: Customer;
@@ -116,7 +117,7 @@ export function PaymentModal({ customer, tenantId, isOpen, onClose, onPaymentSuc
       onPaymentSuccess?.();
       onClose();
     } else {
-      setError(result.error.message);
+      handleServiceError(result);
     }
   };
 

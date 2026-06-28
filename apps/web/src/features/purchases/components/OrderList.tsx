@@ -7,6 +7,8 @@ import { OrderReceive } from './OrderReceive';
 import { formatUsd } from '@/lib/formatBs';
 import { formatDate } from '../../../lib/formatDate';
 import { getInitials } from '../../../lib/utils';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 
 function getStatusBorderColor(status: PurchaseOrderStatus): string {
   switch (status) {
@@ -138,6 +140,10 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
   const [detailOrder, setDetailOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [page, setPage] = useState(1);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const session = useAuthStore((s) => s.session);
+  const canConfirm = hasActionPermission(session, 'purchases', 'receive_order');
+  const canUpdate = hasActionPermission(session, 'purchases', 'update');
+  const canDelete = hasActionPermission(session, 'purchases', 'delete');
 
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
@@ -265,35 +271,37 @@ export function OrderList({ orders, loading, isOwner, isOnline, onConfirm, onRec
               {/* Action buttons */}
               {isOwner && (
                 <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
-                    {order.status === 'draft' && (
+                    {order.status === 'draft' && canConfirm && (
                       <>
                         <Button variant="primary" size="sm" onClick={() => setConfirmId(order.id)} disabled={!isOnline}>
                           <CheckCircle size={14} />
                           <span className="ml-1">Confirmar</span>
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0" disabled={!isOnline} aria-label="Editar orden">
-                          <Pencil size={14} />
-                        </Button>
+                        {canUpdate && (
+                          <Button variant="ghost" size="sm" onClick={() => onEdit(order)} className="shrink-0" disabled={!isOnline} aria-label="Editar orden">
+                            <Pencil size={14} />
+                          </Button>
+                        )}
                       </>
                     )}
-                    {(order.status === 'confirmed' || order.status === 'partially_received') && (
+                    {(order.status === 'confirmed' || order.status === 'partially_received') && canConfirm && (
                       <Button variant="primary" size="sm" onClick={() => setReceiveOrderId(order.id)} disabled={!isOnline}>
                         <Package size={14} />
                         <span className="ml-1">Recibir</span>
                       </Button>
                     )}
-                    {(order.status === 'draft' || order.status === 'confirmed') && (
+                    {(order.status === 'draft' || order.status === 'confirmed') && canUpdate && (
                       <Button variant="ghost" size="sm" onClick={() => onCancel(order.id, tenantId)} className="shrink-0 text-danger" disabled={!isOnline} aria-label="Cancelar orden">
                         <XCircle size={14} />
                       </Button>
                     )}
-                    {(order.status === 'received' || order.status === 'partially_received') && (order as any).paymentStatus !== 'paid' && (
+                    {(order.status === 'received' || order.status === 'partially_received') && (order as any).paymentStatus !== 'paid' && canUpdate && (
                       <Button variant="primary" size="sm" onClick={() => onPayOrder(order)} disabled={!isOnline}>
                         <DollarSign size={14} />
                         <span className="ml-1">Pagar</span>
                       </Button>
                     )}
-                    {order.status === 'cancelled' && (
+                    {order.status === 'cancelled' && canDelete && (
                         <Button variant="ghost" size="sm" onClick={() => onDeleteOrder(order.id, order.supplierName ?? '')} className="text-danger" disabled={!isOnline} aria-label="Eliminar orden">
                         <Trash2 size={14} />
                         <span className="ml-1">Eliminar</span>

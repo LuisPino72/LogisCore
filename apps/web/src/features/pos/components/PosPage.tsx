@@ -12,6 +12,8 @@ import { useBarcodeScan } from '../hooks/useBarcodeScan';
 import { useKitchenNotifications } from '../hooks/useKitchenNotifications';
 import { useWhatsAppShare } from '../hooks/useWhatsAppShare';
 import { handleServiceError } from '../../../common/utils/handleServiceError';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 import { ProductGrid } from './ProductGrid';
 import { CartPanel } from './CartPanel';
 import { FlyToCart } from './FlyToCart';
@@ -86,6 +88,12 @@ export function PosPage({ tenantId }: PosPageProps) {
   const needsKitchenDefault = useSettingsStore((s) => s.needsKitchenDefault);
 
   const { addToast } = useToastStore();
+
+  const session = useAuthStore((s) => s.session);
+  const canOpenBox = hasActionPermission(session, 'pos', 'open_box');
+  const canCloseBox = hasActionPermission(session, 'pos', 'close_box');
+  const canManageRegisters = hasActionPermission(session, 'pos', 'manage_registers');
+  const canVoidSale = hasActionPermission(session, 'pos', 'void_sale');
 
   const { activeTab, mobileCartOpen, switchToSell, switchToHistory, switchToOrders, toggleMobileCart, closeMobileCart } = usePosNavigation();
   const {
@@ -426,6 +434,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Sesión incompleta. Recarga la página.'));
       const result = await openCashRegister(tenantId, balance, userId);
       if (!result.ok) {
+        handleServiceError(result);
         setCashError(result.error?.message ?? 'Error al abrir la caja.');
         return failure(result.error);
       }
@@ -439,6 +448,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       if (!tenantId || !userId) return failure(new AppError('SALE_FAILED', 'Sesión incompleta. Recarga la página.'));
       const result = await closeCashRegister(tenantId, declared, userId);
       if (!result.ok) {
+        handleServiceError(result);
         setCashError(result.error?.message ?? 'Error al cerrar la caja.');
         return failure(result.error);
       }
@@ -555,9 +565,9 @@ export function PosPage({ tenantId }: PosPageProps) {
       <div className="flex-1 min-w-0 h-full flex flex-col">
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
           <Tooltip content={isOnline ? (isOpen ? 'Haz click para cerrar.' : 'Haz click para abrir.') : 'Necesitas internet para abrir o cerrar caja'} position="bottom">
-            <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} disabled={!isOnline} />
+            <CashStatusBadge isOpen={isOpen} onClick={isOpen ? handleCloseCash : handleOpenCash} role={role} disabled={!isOnline} canInteract={isOpen ? canCloseBox : canOpenBox} />
           </Tooltip>
-          {registerName && isOpen && (
+          {registerName && isOpen && canManageRegisters && (
             <div className="flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full min-h-8">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               {registerName}
@@ -740,7 +750,7 @@ export function PosPage({ tenantId }: PosPageProps) {
               total={salesHistoryTotal}
               onVoid={(saleId) => setVoidConfirmId(saleId)}
               loading={salesHistoryLoading}
-              canVoid={role === 'owner' || role === 'admin'}
+              canVoid={canVoidSale}
             />
           </div>
         )}

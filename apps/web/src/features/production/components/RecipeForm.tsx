@@ -6,6 +6,9 @@ import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { formatUsd } from '@/lib/formatBs';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
+import { createAppError } from '@logiscore/core';
+import type { Result } from '@logiscore/core';
 import type { Recipe } from '../types';
 
 interface RecipeFormProps {
@@ -149,8 +152,8 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           addToast({ type: 'success', message: 'Receta actualizada.' });
           onClose();
         } else {
-          const errMsg = storeError?.message || 'Error al actualizar la receta. Verifica tu conexión e intenta de nuevo.';
-          addToast({ type: 'error', message: errMsg });
+          const errResult: Result<null> = { ok: false, error: storeError || createAppError({ code: 'RECIPE_UPDATE_FAILED', message: 'Error al actualizar la receta. Verifica tu conexión e intenta de nuevo.' }) };
+          handleServiceError(errResult);
         }
       } else {
         const result = await createRecipe(tenantId, userId, input);
@@ -158,8 +161,8 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
           addToast({ type: 'success', message: 'Receta creada.' });
           onClose();
         } else {
-          const errMsg = storeError?.message || 'Error al crear la receta. Verifica tu conexión e intenta de nuevo.';
-          addToast({ type: 'error', message: errMsg });
+          const errResult: Result<null> = { ok: false, error: storeError || createAppError({ code: 'RECIPE_CREATE_FAILED', message: 'Error al crear la receta. Verifica tu conexión e intenta de nuevo.' }) };
+          handleServiceError(errResult);
         }
       }
     } finally {

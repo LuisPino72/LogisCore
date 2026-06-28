@@ -8,6 +8,9 @@ import {
   CreateCustomerInputSchema,
 } from '../../../specs/customers';
 import type { CreateCustomerInput, Customer } from '../../../specs/customers';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
+import { useCustomerStore } from '../stores/customerStore';
+import { createAppError } from '@logiscore/core';
 
 interface CustomerFormProps {
   isOpen: boolean;
@@ -72,7 +75,9 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
       setFormData(EMPTY_FORM);
       onClose();
     } else {
-      setFieldErrors({ form: 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.' });
+      const storeError = useCustomerStore.getState().error;
+      const errResult: import('@logiscore/core').Result<null> = { ok: false, error: createAppError({ code: 'CUSTOMER_SAVE_FAILED', message: storeError || 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.' }) };
+      handleServiceError(errResult);
     }
   };
 

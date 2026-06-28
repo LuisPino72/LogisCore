@@ -3,6 +3,7 @@ import { createAppError } from '@logiscore/core';
 import { logger } from '../../../lib/logger';
 import type { Recipe, RecipeLine, ProductionOrder, ProductionState, RecipeFilters, ProductionOrderFilters, IngredientAvailability, RecipeWithLines, CreateRecipeInput, UpdateRecipeInput, CreateProductionOrderInput } from '../types';
 import { productionService } from '../services/productionService';
+import { showPermissionDenied } from '../../../common/hooks/usePermissionDenied';
 
 interface ProductionStore extends ProductionState {
   // Recipes
@@ -110,6 +111,11 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
         set((s) => ({ recipes: [result.data, ...s.recipes], loading: false }));
         return result.data;
       }
+      // Handle permission errors with modal
+      const PERMISSION_CODES = new Set(['AUTH_SCOPE_DENIED', 'AUTH_PERMISSION_DENIED', 'PERMISSION_DENIED']);
+      if (PERMISSION_CODES.has(result.error.code)) {
+        showPermissionDenied(result.error.message);
+      }
       set({ loading: false, error: result.error });
       return null;
     } catch (err) {
@@ -129,6 +135,11 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       }));
       return true;
     }
+    // Handle permission errors with modal
+    const PERMISSION_CODES = new Set(['AUTH_SCOPE_DENIED', 'AUTH_PERMISSION_DENIED', 'PERMISSION_DENIED']);
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
+    }
     set({ error: result.error });
     return false;
   },
@@ -139,6 +150,11 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
     if (result.ok) {
       set((s) => ({ recipes: s.recipes.filter((r) => r.id !== id), loading: false }));
       return true;
+    }
+    // Handle permission errors with modal
+    const PERMISSION_CODES = new Set(['AUTH_SCOPE_DENIED', 'AUTH_PERMISSION_DENIED', 'PERMISSION_DENIED']);
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
     }
     set({ loading: false, error: result.error });
     return false;
@@ -182,6 +198,11 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       set((s) => ({ productionOrders: [result.data, ...s.productionOrders], loading: false }));
       return result.data;
     }
+    // Handle permission errors with modal
+    const PERMISSION_CODES = new Set(['AUTH_SCOPE_DENIED', 'AUTH_PERMISSION_DENIED', 'PERMISSION_DENIED']);
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
+    }
     set({ loading: false, error: result.error });
     return null;
   },
@@ -196,6 +217,11 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
         ),
       }));
       return true;
+    }
+    // Handle permission errors with modal
+    const PERMISSION_CODES = new Set(['AUTH_SCOPE_DENIED', 'AUTH_PERMISSION_DENIED', 'PERMISSION_DENIED']);
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
     }
     set({ error: result.error });
     return false;

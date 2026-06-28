@@ -8,6 +8,8 @@ import { useStockAlerts } from '../hooks/useStockAlerts';
 import { useToastStore } from '../../../stores/toastStore';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { getDb } from '../../../services/dexie/db';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { ProductList } from './ProductList';
 import { ProductForm } from './ProductForm';
 import { ProductLots } from './ProductLots';
@@ -86,6 +88,10 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
   });
 
   const isOwner = role === 'owner' || role === 'admin';
+
+  const session = useAuthStore((s) => s.session);
+  const canCreate = hasActionPermission(session, 'inventory', 'create');
+  const canImportCsv = hasActionPermission(session, 'inventory', 'import_csv');
 
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [producedProductIds, setProducedProductIds] = useState<Set<string>>(new Set());
@@ -175,13 +181,13 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {isOwner && activeTab === 'productos' && (
+            {isOwner && canImportCsv && activeTab === 'productos' && (
               <Button variant="outline" size="sm" onClick={() => setShowCsvImport(true)} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para importar' : undefined}>
                 <Upload size={16} />
                 <span className="hidden sm:inline">Importar CSV</span>
               </Button>
             )}
-            {isOwner && activeTab !== 'historial' && (
+            {isOwner && canCreate && activeTab !== 'historial' && (
               <Button variant="primary" size="sm" onClick={activeTab === 'categorias' ? openNewCategory : openNewProduct} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para esta acción' : undefined}>
                 <Plus size={16} />
                 <span className="hidden sm:inline">{activeTab === 'categorias' ? 'Nueva categoría' : 'Nuevo producto'}</span>

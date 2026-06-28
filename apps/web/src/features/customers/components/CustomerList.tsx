@@ -4,6 +4,8 @@ import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/
 import type { Customer } from '../../../specs/customers';
 import { getInitials, formatTimeAgo, formatPhone } from '../../../lib/utils';
 import { formatUsd } from '@/lib/formatBs';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 
 const PAGE_SIZE = 20;
 
@@ -19,6 +21,9 @@ interface CustomerListProps {
 export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, onViewHistory }: CustomerListProps) {
   const [page, setPage] = useState(1);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const session = useAuthStore((s) => s.session);
+  const canUpdate = hasActionPermission(session, 'customers', 'update');
+  const canDelete = hasActionPermission(session, 'customers', 'delete');
 
   useEffect(() => {
     if (!loading && !hasLoadedOnce) setHasLoadedOnce(true);
@@ -119,26 +124,30 @@ export function CustomerList({ customers, loading, isOwner, onEdit, onDelete, on
               </Tooltip>
               {isOwner && (
                 <>
-                  <Tooltip content="Editar" variant="help" position="top">
-                    <Button
-                      variant="ghost-accent"
-                      size="sm"
-                      onClick={() => onEdit(c)}
-                      className="p-1.5 min-w-11 min-h-11"
-                    >
-                      <Pencil size={14} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Eliminar" variant="danger" position="top">
-                    <Button
-                      variant="ghost-danger"
-                      size="sm"
-                      onClick={() => onDelete(c.id, c.name)}
-                      className="p-1.5 min-w-11 min-h-11"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </Tooltip>
+                  {canUpdate && (
+                    <Tooltip content="Editar" variant="help" position="top">
+                      <Button
+                        variant="ghost-accent"
+                        size="sm"
+                        onClick={() => onEdit(c)}
+                        className="p-1.5 min-w-11 min-h-11"
+                      >
+                        <Pencil size={14} />
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {canDelete && (
+                    <Tooltip content="Eliminar" variant="danger" position="top">
+                      <Button
+                        variant="ghost-danger"
+                        size="sm"
+                        onClick={() => onDelete(c.id, c.name)}
+                        className="p-1.5 min-w-11 min-h-11"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </Tooltip>
+                  )}
                 </>
               )}
             </div>

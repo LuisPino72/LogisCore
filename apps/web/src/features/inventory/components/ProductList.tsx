@@ -9,6 +9,8 @@ import { displayQty, toDisplayValue } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { inventoryService } from '../services/inventoryService';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 interface ProductListProps {
   products: Product[];
@@ -105,6 +107,9 @@ interface ProductActionsProps {
   product: Product;
   bulkMode: boolean;
   isOwner: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canAdjustStock: boolean;
   isOnline: boolean;
   selectedForBulk: Set<string>;
   onToggleBulk: (id: string) => void;
@@ -114,7 +119,7 @@ interface ProductActionsProps {
   onViewLots: (id: string) => void;
 }
 
-function ProductActions({ product, bulkMode, isOwner, isOnline, selectedForBulk, onToggleBulk, onEdit, onDelete, onAdjust, onViewLots }: ProductActionsProps) {
+function ProductActions({ product, bulkMode, isOwner, canUpdate, canDelete, canAdjustStock, isOnline, selectedForBulk, onToggleBulk, onEdit, onDelete, onAdjust, onViewLots }: ProductActionsProps) {
   if (!isOwner) return null;
 
   if (bulkMode) {
@@ -142,21 +147,27 @@ function ProductActions({ product, bulkMode, isOwner, isOnline, selectedForBulk,
 
   return (
     <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-row sm:items-center sm:justify-end sm:gap-0 sm:flex-nowrap max-w-[120px] sm:max-w-none">
-      <Tooltip content="Editar producto" variant="help">
-        <Button variant="ghost-primary" size="sm" onClick={() => onEdit(product)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Editar" disabled={!isOnline}>
-          <Edit3 size={15} />
-        </Button>
-      </Tooltip>
-      <Tooltip content="Eliminar producto" variant="danger">
-        <Button variant="ghost-danger" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Eliminar" disabled={!isOnline}>
-          <Trash2 size={15} />
-        </Button>
-      </Tooltip>
-      <Tooltip content="Ajustar stock" variant="help">
-        <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Ajustar stock" disabled={!isOnline}>
-          <Settings size={15} />
-        </Button>
-      </Tooltip>
+      {canUpdate && (
+        <Tooltip content="Editar producto" variant="help">
+          <Button variant="ghost-primary" size="sm" onClick={() => onEdit(product)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Editar" disabled={!isOnline}>
+            <Edit3 size={15} />
+          </Button>
+        </Tooltip>
+      )}
+      {canDelete && (
+        <Tooltip content="Eliminar producto" variant="danger">
+          <Button variant="ghost-danger" size="sm" onClick={() => onDelete(product.id, product.name)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Eliminar" disabled={!isOnline}>
+            <Trash2 size={15} />
+          </Button>
+        </Tooltip>
+      )}
+      {canAdjustStock && (
+        <Tooltip content="Ajustar stock" variant="help">
+          <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Ajustar stock" disabled={!isOnline}>
+            <Settings size={15} />
+          </Button>
+        </Tooltip>
+      )}
       <Tooltip content="Ver lotes" variant="help">
         <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1 min-w-0 min-h-10 sm:min-w-10" aria-label="Lotes">
           <Layers size={15} />
@@ -179,6 +190,12 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
   const [variantModalLoading, setVariantModalLoading] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+
+  const session = useAuthStore((s) => s.session);
+  const canCreate = hasActionPermission(session, 'inventory', 'create');
+  const canUpdate = hasActionPermission(session, 'inventory', 'update');
+  const canDelete = hasActionPermission(session, 'inventory', 'delete');
+  const canAdjustStock = hasActionPermission(session, 'inventory', 'adjust_stock');
 
   const openVariantModal = async (productId: string) => {
     setVariantModalProductId(productId);
@@ -440,6 +457,9 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
             product={product}
             bulkMode={bulkMode}
             isOwner={isOwner}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
+            canAdjustStock={canAdjustStock}
             isOnline={isOnline}
             selectedForBulk={selectedForBulk}
             onToggleBulk={(id) => {
@@ -460,7 +480,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
     }
 
     return cols;
-  }, [isOwner, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewLots, bulkMode, selectedForBulk]);
+  }, [isOwner, canUpdate, canDelete, canAdjustStock, isOnline, onAdjust, onEditProduct, onRequestDelete, categories, onViewLots, bulkMode, selectedForBulk]);
 
   if (products.length === 0 && !searchQuery && !filterCategory) {
     return (
@@ -470,7 +490,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
           title="Aún no tienes productos"
           description="Agrega tu primer producto al inventario para empezar a controlar tu stock."
           action={
-            isOwner ? (
+            isOwner && canCreate ? (
               <Button variant="primary" size="sm" onClick={onNewProduct}>
                 <Plus size={16} /> Nuevo producto
               </Button>
@@ -551,15 +571,17 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                 Salir del conteo
               </button>
               <span className="text-xs text-text-secondary">{selectedForBulk.size} seleccionado{selectedForBulk.size !== 1 ? 's' : ''}</span>
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={selectedForBulk.size === 0 || !isOnline}
-                onClick={() => onBulkAdjust?.(Array.from(selectedForBulk))}
-              >
-                <ClipboardCheck size={14} />
-                Ajustar stock
-              </Button>
+              {canAdjustStock && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={selectedForBulk.size === 0 || !isOnline}
+                  onClick={() => onBulkAdjust?.(Array.from(selectedForBulk))}
+                >
+                  <ClipboardCheck size={14} />
+                  Ajustar stock
+                </Button>
+              )}
               <Button
                 variant="primary"
                 size="sm"
@@ -692,15 +714,21 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
                       </button>
                     ) : (
                       <>
-                        <Button variant="ghost-primary" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Editar" disabled={!isOnline}>
-                          <Edit3 size={15} />
-                        </Button>
-                        <Button variant="ghost-danger" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Eliminar" disabled={!isOnline}>
-                          <Trash2 size={15} />
-                        </Button>
-                        <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Ajustar stock" disabled={!isOnline}>
-                          <Settings size={15} />
-                        </Button>
+                        {canUpdate && (
+                          <Button variant="ghost-primary" size="sm" onClick={() => onEditProduct(product)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Editar" disabled={!isOnline}>
+                            <Edit3 size={15} />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button variant="ghost-danger" size="sm" onClick={() => onRequestDelete(product.id, product.name)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Eliminar" disabled={!isOnline}>
+                            <Trash2 size={15} />
+                          </Button>
+                        )}
+                        {canAdjustStock && (
+                          <Button variant="ghost-accent" size="sm" onClick={() => onAdjust(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Ajustar stock" disabled={!isOnline}>
+                            <Settings size={15} />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => onViewLots(product.id)} className="p-1.5 min-w-0 min-h-11 sm:min-w-11" aria-label="Lotes">
                           <Layers size={15} />
                         </Button>

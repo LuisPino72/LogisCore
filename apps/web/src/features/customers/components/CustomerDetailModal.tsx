@@ -10,6 +10,8 @@ import { generateMenuText, normalizeWaPhone } from '../../pos/services/receiptSe
 import { logger } from '../../../lib/logger';
 import { useToastStore } from '../../../stores/toastStore';
 import { handleServiceError } from '../../../common/utils/handleServiceError';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -20,10 +22,9 @@ interface CustomerDetailModalProps {
   onClose: () => void;
   onEdit?: (customer: Customer) => void;
   onRefresh?: () => void;
-  canEdit?: boolean;
 }
 
-export const CustomerDetailModal = memo(function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, onRefresh, canEdit = false }: CustomerDetailModalProps) {
+export const CustomerDetailModal = memo(function CustomerDetailModal({ customer, isOpen, tenantId, onClose, onEdit, onRefresh }: CustomerDetailModalProps) {
   const [page, setPage] = useState(1);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -36,6 +37,8 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
   const resetModal = useCustomerStore((s) => s.resetModal);
   const [sendingMenu, setSendingMenu] = useState(false);
   const { addToast } = useToastStore();
+  const session = useAuthStore((s) => s.session);
+  const canUpdate = hasActionPermission(session, 'customers', 'update');
 
   useEffect(() => {
     if (isOpen && customer) {
@@ -118,7 +121,7 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
       title="Detalle del cliente"
       footer={
         <div className="flex gap-2 w-full">
-          {canEdit && onEdit && (
+          {canUpdate && onEdit && (
             <Button variant="primary" className="flex-1" onClick={() => onEdit(customer)}>
               Editar
             </Button>
@@ -200,7 +203,7 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
         </div>
 
         {/* Debt Section */}
-        {customer.balance > 0 && (
+        {customer.balance > 0 && canUpdate && (
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

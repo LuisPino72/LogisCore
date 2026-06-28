@@ -3,9 +3,12 @@ import type { Supplier, PurchaseOrderWithItems, CreateSupplierInput, CreatePurch
 import { purchaseService } from '../services/purchaseService';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
+import { showPermissionDenied } from '../../../common/hooks/usePermissionDenied';
 import type { Product } from '../../../specs/inventory';
 import type { Presentation } from '../../inventory/types';
 import type { TabKey, TabState } from '../types';
+
+const PERMISSION_CODES = new Set(['AUTH_SCOPE_DENIED', 'AUTH_PERMISSION_DENIED', 'PERMISSION_DENIED']);
 
 const DEFAULT_TAB_STATE: TabState = { searchQuery: '', statusFilter: 'all', dateFilter: '' };
 
@@ -113,6 +116,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
       await get().fetchSuppliers(tenantId);
       return result.data.id;
     }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
+    }
     set({ loading: false, error: result.error.message });
     return null;
   },
@@ -123,6 +129,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
       await get().fetchSuppliers(tenantId);
       return true;
     }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
+    }
     return false;
   },
 
@@ -132,6 +141,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     if (result.ok) {
       set({ suppliers: get().suppliers.filter((s) => s.id !== id), loading: false });
       return true;
+    }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
     }
     set({ loading: false, error: result.error.message });
     return false;
@@ -144,6 +156,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
       await get().fetchOrders(tenantId);
       return true;
     }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
+    }
     set({ loading: false, error: result.error.message });
     return false;
   },
@@ -154,6 +169,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     if (result.ok) {
       await get().fetchOrders(tenantId);
       return true;
+    }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
     }
     set({ loading: false, error: result.error.message });
     return false;
@@ -166,6 +184,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
       set({ orders: get().orders.filter((o) => o.id !== id), loading: false });
       return true;
     }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
+    }
     set({ loading: false, error: result.error.message });
     return false;
   },
@@ -176,6 +197,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     if (result.ok) {
       await get().fetchOrders(tenantId);
       return true;
+    }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
     }
     set({ loading: false, error: result.error.message });
     return false;
@@ -189,6 +213,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
       await get().fetchOrders(tenantId);
       return true;
     }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
+    }
     set({ loading: false, error: result.error.message });
     return false;
   },
@@ -199,6 +226,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
     if (result.ok) {
       await get().fetchOrders(tenantId);
       return true;
+    }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
     }
     set({ loading: false, error: result.error.message });
     return false;
@@ -213,6 +243,9 @@ export const usePurchaseStore = create<PurchaseStore>((set, get) => ({
         get().fetchOrders(tenantId),
       ]);
       return result.data;
+    }
+    if (PERMISSION_CODES.has(result.error.code)) {
+      showPermissionDenied(result.error.message);
     }
     set({ loading: false, error: result.error.message });
     return null;

@@ -13,6 +13,8 @@ import { OrderList } from './OrderList';
 import { PaySupplierModal } from './PaySupplierModal';
 import { OrderForm } from './OrderForm';
 import { usePurchaseStore } from '../stores/purchaseStore';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 import type { Product } from '../../../specs/inventory';
 import type { TabKey } from '../types';
 import type { CreateSupplierInput, CreatePurchaseOrderInput, Supplier, PurchaseOrderWithItems, PurchaseOrderStatus } from '../../../specs/purchases';
@@ -63,6 +65,8 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
   ];
 
   const isOwner = role === 'owner' || role === 'admin';
+  const session = useAuthStore((s) => s.session);
+  const canCreate = hasActionPermission(session, 'purchases', 'create');
 
   useEffect(() => {
     const state = location.state as { preSelectedProductIds?: string[] } | null;
@@ -209,7 +213,7 @@ export function PurchasePage({ tenantId }: PurchasePageProps) {
             <p className="text-xs text-text-secondary hidden sm:block">Gestiona órdenes y proveedores</p>
           </div>
         </div>
-        {isOwner && (
+        {isOwner && canCreate && (
           <Button variant="primary" size="sm" onClick={activeTab === 'ordenes' ? openNewOrder : openNewSupplier} disabled={!isOnline} title={!isOnline ? 'Necesitas internet para esta acción' : undefined}>
             <Plus size={16} />
             <span className="hidden sm:inline">{activeTab === 'ordenes' ? 'Nueva orden' : 'Nuevo proveedor'}</span>

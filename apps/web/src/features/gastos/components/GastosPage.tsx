@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Receipt, RotateCcw, DollarSign } from 'lucide-react';
+import { type Result, failure, AppError } from '@logiscore/core';
 import { Button, Card, BottomNav, ModuleOnboarding, type BottomNavItem } from '@/common/components';
 import { useFuzzySearch } from '@/lib/useFuzzySearch';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { gastosService } from '../services/gastosService';
@@ -43,6 +45,10 @@ export function GastosPage({ tenantId }: GastosPageProps) {
 
   const [activeTab, setActiveTab] = useState<'gastos' | 'recurrentes'>('gastos');
 
+  const session = useAuthStore((s) => s.session);
+  const canCreate = hasActionPermission(session, 'gastos', 'create');
+  const canUpdate = hasActionPermission(session, 'gastos', 'update');
+  const canDelete = hasActionPermission(session, 'gastos', 'delete');
   const isOwner = role === 'owner' || role === 'admin';
 
   const baseList = activeTab === 'gastos' ? gastos : recurringTemplates;
@@ -64,11 +70,11 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     return list;
   }, [fuzzyGastos, filters.status, filters.category, filters.month]);
 
-  const handleSubmit = async (data: CreateGastoInput) => {
-    if (!tenantId) return false;
+  const handleSubmit = async (data: CreateGastoInput): Promise<Result<Gasto>> => {
+    if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay negocio activo.'));
     const result = await createGasto(data);
     if (result.ok) setMonthlyRefreshKey((k) => k + 1);
-    return result.ok;
+    return result;
   };
 
   const handleDelete = async (id: string) => {
@@ -152,10 +158,12 @@ export function GastosPage({ tenantId }: GastosPageProps) {
             <p className="text-xs text-text-secondary hidden sm:block">Gestiona gastos operativos y recurrentes</p>
           </div>
         </div>
-        <Button variant="primary" size="sm" onClick={handleOpenNew} disabled={!isOnline}>
-          <Plus size={16} />
-          <span className="ml-1 hidden sm:inline">Nuevo gasto</span>
-        </Button>
+        {canCreate && (
+          <Button variant="primary" size="sm" onClick={handleOpenNew} disabled={!isOnline}>
+            <Plus size={16} />
+            <span className="ml-1 hidden sm:inline">Nuevo gasto</span>
+          </Button>
+        )}
       </div>
 
       <div className="hidden sm:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-1 sticky top-0 z-10 shadow-sm">
@@ -188,6 +196,8 @@ export function GastosPage({ tenantId }: GastosPageProps) {
             gastos={filteredGastos}
             loading={loading}
             isOwner={isOwner}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
             onDelete={handleDelete}
             onToggleStatus={handleToggleStatus}
           />

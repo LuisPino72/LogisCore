@@ -3,6 +3,9 @@ import { Utensils, AlertTriangle, CheckCircle2, XCircle, HelpCircle, Package } f
 import { Alert, Button, Card, Modal, Input, Spinner } from '../../../common/components';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
+import { createAppError } from '@logiscore/core';
+import type { Result } from '@logiscore/core';
 import type { Recipe, IngredientAvailability } from '../types';
 
 interface ProduceModalProps {
@@ -14,6 +17,7 @@ interface ProduceModalProps {
 
 export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModalProps) {
   const { checkIngredientsAvailability, calculateRecipeCost, createOrder } = useProductionStore();
+  const storeError = useProductionStore((s) => s.error);
   const { addToast } = useToastStore();
 
   const [batchCount, setBatchCountState] = useState(1);
@@ -114,7 +118,8 @@ export function ProduceModal({ recipe, tenantId, userId, onClose }: ProduceModal
     } else {
       setIsProducing(false);
       setConfirmStep(false);
-      setError('Error al producir. Verifica que la receta esté activa y haya stock suficiente.');
+      const errResult: Result<null> = { ok: false, error: storeError || createAppError({ code: 'PRODUCE_FAILED', message: 'Error al producir. Verifica que la receta esté activa y haya stock suficiente.' }) };
+      handleServiceError(errResult);
     }
   };
 

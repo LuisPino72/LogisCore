@@ -246,11 +246,19 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
   const handleConfirmDelete = useCallback(async () => {
     if (!confirmDelete || !tenantId) return;
     if (confirmDelete.type === 'product') {
-      const ok = await deleteProduct(confirmDelete.id, tenantId);
-      addToast({ type: ok ? 'success' : 'error', message: ok ? 'Producto eliminado.' : 'No se pudo eliminar el producto. Verifica que el stock esté en 0 y no tenga órdenes de compra activas.', duration: 5000 });
+      const result = await deleteProduct(confirmDelete.id, tenantId);
+      if (result === true) {
+        addToast({ type: 'success', message: 'Producto eliminado.', duration: 3000 });
+      } else {
+        addToast({ type: 'error', message: 'No se pudo eliminar el producto. Verifica que el stock esté en 0 y no tenga órdenes de compra activas.', duration: 5000 });
+      }
     } else {
-      const ok = await deleteCategory(confirmDelete.id, tenantId);
-      addToast({ type: ok ? 'success' : 'error', message: ok ? 'Categoría eliminada.' : 'No se pudo eliminar la categoría. Verifica que no tenga productos asociados.', duration: 5000 });
+      const result = await deleteCategory(confirmDelete.id, tenantId);
+      if (result === true) {
+        addToast({ type: 'success', message: 'Categoría eliminada.', duration: 3000 });
+      } else {
+        addToast({ type: 'error', message: 'No se pudo eliminar la categoría. Verifica que no tenga productos asociados.', duration: 5000 });
+      }
     }
     setConfirmDelete(null);
   }, [confirmDelete, tenantId, deleteProduct, deleteCategory, addToast]);

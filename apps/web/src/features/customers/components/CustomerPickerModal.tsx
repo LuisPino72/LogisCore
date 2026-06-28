@@ -8,6 +8,8 @@ import { formatPhone, unformatPhone } from '../../../lib/utils';
 import type { CreateCustomerInput, Customer } from '../../../specs/customers';
 import { CreateCustomerInputSchema } from '../../../specs/customers';
 import { useToastStore } from '../../../stores/toastStore';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
 
 interface CustomerPickerModalProps {
   isOpen: boolean;
@@ -21,6 +23,8 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
   const { customers, loading, fetchCustomers } = useCustomers(tenantId);
   const createCustomer = useCustomerStore((s) => s.createCustomer);
   const { addToast } = useToastStore();
+  const session = useAuthStore((s) => s.session);
+  const canCreate = hasActionPermission(session, 'customers', 'create');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -174,16 +178,18 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
             </div>
           )}
 
-          <Button
-            variant="outline"
-            fullWidth
-            onClick={() => setShowCreateForm(true)}
-            disabled={loading}
-            className="shadow-sm hover:shadow-md transition-shadow"
-          >
-            <UserPlus size={14} />
-            Crear nuevo cliente
-          </Button>
+          {canCreate && (
+            <Button
+              variant="outline"
+              fullWidth
+              onClick={() => setShowCreateForm(true)}
+              disabled={loading}
+              className="shadow-sm hover:shadow-md transition-shadow"
+            >
+              <UserPlus size={14} />
+              Crear nuevo cliente
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

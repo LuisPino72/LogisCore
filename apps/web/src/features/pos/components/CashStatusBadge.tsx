@@ -3,10 +3,11 @@ interface CashStatusBadgeProps {
   onClick: () => void;
   role: string | null;
   disabled?: boolean;
+  canInteract?: boolean;
 }
 
-export function CashStatusBadge({ isOpen, onClick, role, disabled }: CashStatusBadgeProps) {
-  const canInteract = role === 'owner' || role === 'admin';
+export function CashStatusBadge({ isOpen, onClick, role, disabled, canInteract: canInteractProp }: CashStatusBadgeProps) {
+  const canInteract = canInteractProp ?? (role === 'owner' || role === 'admin');
   const classes = isOpen
     ? 'bg-gradient-to-r from-primary to-primary-light text-white shadow-xs'
     : 'bg-gradient-to-r from-danger to-red-400 text-white shadow-xs';

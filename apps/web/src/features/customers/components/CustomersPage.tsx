@@ -13,6 +13,10 @@ import { CustomerForm } from './CustomerForm';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { GlobalHistoryView } from './GlobalHistoryView';
 import type { Customer } from '../../../specs/customers';
+import { useAuthStore } from '../../../features/auth/stores/authStore';
+import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { handleServiceError } from '../../../common/utils/handleServiceError';
+import { createAppError } from '@logiscore/core';
 
 type TabKey = 'clientes' | 'historial-global';
 
@@ -22,7 +26,7 @@ interface CustomersPageProps {
 
 export function CustomersPage({ tenantId }: CustomersPageProps) {
   const {
-    customers, loading, error,
+    customers, loading,
     history, historyLoading,
     createCustomer, updateCustomer, deleteCustomer, fetchCustomers, fetchHistory,
     role, reset,
@@ -61,6 +65,9 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
     return () => reset();
   }, [reset]);
 
+  const session = useAuthStore((s) => s.session);
+  const canCreate = hasActionPermission(session, 'customers', 'create');
+  const canUpdate = hasActionPermission(session, 'customers', 'update');
   const isOwner = role === 'owner' || role === 'admin';
   const fuzzyCustomers = useFuzzySearch(customers, searchQuery, { keys: ['name', 'phone'] });
 
@@ -80,7 +87,9 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
     if (ok) {
       addToast({ type: 'success', message: 'Cliente eliminado.', duration: 3000 });
     } else {
-      addToast({ type: 'error', message: error || 'No se pudo eliminar el cliente. Verifica tu conexión e intenta de nuevo.' });
+      const storeError = useCustomerStore.getState().error;
+      const errResult: import('@logiscore/core').Result<null> = { ok: false, error: createAppError({ code: 'CUSTOMER_DELETE_FAILED', message: storeError || 'No se pudo eliminar el cliente. Verifica tu conexión e intenta de nuevo.' }) };
+      handleServiceError(errResult);
     }
     setConfirmDelete(null);
   };
@@ -119,7 +128,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
             <p className="text-xs text-text-secondary hidden sm:block">Gestiona tus clientes y su historial de compras</p>
           </div>
         </div>
-        {isOwner && activeTab === 'clientes' && (
+        {canCreate && activeTab === 'clientes' && (
           <Button
             variant="primary"
             size="sm"
@@ -216,7 +225,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
         isOpen={!!viewCustomer}
         tenantId={tenantId}
         onClose={() => setViewCustomer(null)}
-        onEdit={isOwner ? (c) => { setViewCustomer(null); setEditCustomer(c); setShowForm(true); } : undefined}
+        onEdit={canUpdate ? (c) => { setViewCustomer(null); setEditCustomer(c); setShowForm(true); } : undefined}
         onRefresh={async () => {
           await fetchCustomers(tenantId, true);
           if (viewCustomer) {
@@ -224,7 +233,6 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
             if (updated) setViewCustomer(updated);
           }
         }}
-        canEdit={isOwner}
       />
 
       {confirmDelete && (

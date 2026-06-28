@@ -12,6 +12,8 @@ interface GastoListProps {
   gastos: Gasto[];
   loading: boolean;
   isOwner: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string, status: 'paid' | 'pending') => void;
 }
@@ -22,13 +24,13 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warni
   cancelled: { label: 'Cancelado', variant: 'danger', dot: 'bg-danger' },
 };
 
-export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }: GastoListProps) {
+export function GastoList({ gastos, loading, isOwner, canUpdate, canDelete, onDelete, onToggleStatus }: GastoListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
   const [confirmPayTarget, setConfirmPayTarget] = useState<{ id: string; category: string; amountUsd: number } | null>(null);
   const [exitingId, setExitingId] = useState<string | null>(null);
   const { selectedIds, toggleSelect } = useGastosStore();
 
-  const handleDeleteWithAnimation = (id: string) => {
+  const handleDeleteWithAnimation = async (id: string) => {
     setExitingId(id);
     setTimeout(() => {
       onDelete(id);
@@ -102,28 +104,32 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
       width: '100px',
       render: (g) => (
         <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost-success"
-            size="sm"
-            disabled={g.status !== 'pending'}
-            onClick={() => setConfirmPayTarget({ id: g.id, category: g.category, amountUsd: g.amountUsd })}
-            aria-label="Marcar pagado"
-          >
-            <CheckCircle size="16" />
-          </Button>
-          <Button
-            variant="ghost-danger"
-            size="sm"
-            disabled={!isOwner || g.status === 'paid'}
-            onClick={() => setDeleteTarget({ id: g.id, category: g.category })}
-            aria-label="Eliminar"
-          >
-            <Trash2 size="16" />
-          </Button>
+          {canUpdate && (
+            <Button
+              variant="ghost-success"
+              size="sm"
+              disabled={g.status !== 'pending'}
+              onClick={() => setConfirmPayTarget({ id: g.id, category: g.category, amountUsd: g.amountUsd })}
+              aria-label="Marcar pagado"
+            >
+              <CheckCircle size="16" />
+            </Button>
+          )}
+          {canDelete && (
+            <Button
+              variant="ghost-danger"
+              size="sm"
+              disabled={!isOwner || g.status === 'paid'}
+              onClick={() => setDeleteTarget({ id: g.id, category: g.category })}
+              aria-label="Eliminar"
+            >
+              <Trash2 size="16" />
+            </Button>
+          )}
         </div>
       ),
     },
-  ], [selectedIds, toggleSelect, isOwner]);
+  ], [selectedIds, toggleSelect, isOwner, canUpdate, canDelete]);
 
   if (loading && gastos.length === 0) {
     return (
@@ -164,6 +170,8 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
             key={gasto.id}
             gasto={gasto}
             isOwner={isOwner}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
             onDelete={setDeleteTarget}
             onPay={setConfirmPayTarget}
             isSelected={selectedIds.includes(gasto.id)}
@@ -226,6 +234,8 @@ export function GastoList({ gastos, loading, isOwner, onDelete, onToggleStatus }
 function MobileCard({
   gasto,
   isOwner,
+  canUpdate,
+  canDelete,
   onDelete,
   onPay,
   isSelected,
@@ -234,6 +244,8 @@ function MobileCard({
 }: {
   gasto: Gasto;
   isOwner: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
   onDelete: (t: { id: string; category: string }) => void;
   onPay: (t: { id: string; category: string; amountUsd: number }) => void;
   isSelected: boolean;
@@ -292,25 +304,29 @@ function MobileCard({
 
       {/* Botones de acción */}
       <div className="flex items-stretch border-t border-border">
-        <Button
-          variant="ghost-success"
-          disabled={!isPending}
-          className="flex-1 rounded-none relative overflow-hidden group"
-          onClick={() => onPay({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
-        >
-          <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-          <CheckCircle size={15} className="relative z-10" />
-          <span className="relative z-10">Pagar</span>
-        </Button>
-        <Button
-          variant="ghost-danger"
-          disabled={!isOwner || gasto.status === 'paid'}
-          className="flex-1 rounded-none border-l border-border"
-          onClick={() => onDelete({ id: gasto.id, category: gasto.category })}
-        >
-          <Trash2 size={14} />
-          <span className="hidden min-[360px]:inline">Eliminar</span>
-        </Button>
+        {canUpdate && (
+          <Button
+            variant="ghost-success"
+            disabled={!isPending}
+            className="flex-1 rounded-none relative overflow-hidden group"
+            onClick={() => onPay({ id: gasto.id, category: gasto.category, amountUsd: gasto.amountUsd })}
+          >
+            <span className="absolute inset-0 bg-linear-to-r from-success/0 via-success/10 to-success/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+            <CheckCircle size={15} className="relative z-10" />
+            <span className="relative z-10">Pagar</span>
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            variant="ghost-danger"
+            disabled={!isOwner || gasto.status === 'paid'}
+            className={cn("flex-1 rounded-none", canUpdate && "border-l border-border")}
+            onClick={() => onDelete({ id: gasto.id, category: gasto.category })}
+          >
+            <Trash2 size={14} />
+            <span className="hidden min-[360px]:inline">Eliminar</span>
+          </Button>
+        )}
       </div>
     </Card>
   );
