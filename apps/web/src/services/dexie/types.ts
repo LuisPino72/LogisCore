@@ -474,3 +474,13 @@ export interface DexieDeliveryPerson {
   createdAt: string;
   deletedAt?: string;
 }
+
+export interface DexieUserPermissionOverride {
+  id: string;
+  userId: string;
+  tenantId: string;
+  permission: string;
+  effect: 'allow' | 'deny';
+  createdAt: string;
+  deletedAt?: string | null;
+}

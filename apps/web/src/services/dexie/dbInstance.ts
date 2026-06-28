@@ -11,7 +11,7 @@ import type {
   DexieSupplier, DexieCustomer, DexiePurchaseOrder, DexiePurchaseOrderItem,
   DexieNotification, DexieExpense, DexieRecipe, DexieRecipeLine,
   DexieProductionOrder, DexieRolePermission, DexieSupplierPayment, DexieCreditPayment,
-  DexieImageLibrary, DexieDeliveryPerson,
+  DexieImageLibrary, DexieDeliveryPerson, DexieUserPermissionOverride,
 } from './types';
 
 export class LogisCoreDB extends Dexie {
@@ -48,6 +48,7 @@ export class LogisCoreDB extends Dexie {
   tenantSettings!: Table<DexieTenantSettings, string>;
   imageLibrary!: Table<DexieImageLibrary, string>;
   deliveryPersons!: Table<DexieDeliveryPerson, string>;
+  userPermissionOverrides!: Table<DexieUserPermissionOverride, string>;
 
   constructor(tenantSlug: string) {
     super(`LogisCore_${tenantSlug}`);
@@ -144,6 +145,9 @@ export class LogisCoreDB extends Dexie {
     });
     this.version(33).stores({
       parkedCarts: 'id, tenantId, [tenantId+createdAt], orderType',
+    });
+    this.version(34).stores({
+      userPermissionOverrides: 'id, userId, tenantId, permission, [userId+tenantId]',
     });
 
   }

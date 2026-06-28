@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Result, AppError } from '@logiscore/core';
-import { KeyRound, Trash2 } from 'lucide-react';
+import { KeyRound, Trash2, Shield } from 'lucide-react';
 import { Badge, Button, Card, DataTable, Pagination, Tooltip } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
@@ -11,6 +11,7 @@ import { SectionHeader } from './SectionHeader';
 import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
+import { UserOverridesModal } from '../../../common/components/UserOverridesModal';
 
 const PAGE_SIZE = 10;
 
@@ -45,6 +46,7 @@ export function UserSection({
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [resetTarget, setResetTarget] = useState<{ userId: string; email: string; name: string } | null>(null);
   const [editingRole, setEditingRole] = useState<{ id: string; currentRole: string } | null>(null);
+  const [overridesTarget, setOverridesTarget] = useState<{ userId: string; name: string } | null>(null);
 
   useEffect(() => { setPage(1); }, [users.length]);
 
@@ -133,6 +135,19 @@ export function UserSection({
       render: (u) => (
         <div className="flex gap-1 items-center">
           {u.role === 'owner' && <Badge variant="info">Propietario</Badge>}
+          {u.role !== 'owner' && (
+            <Tooltip content="Permisos individuales" variant="help" position="top">
+              <Button
+                variant="ghost-primary"
+                size="sm"
+                className="min-h-11 admin-ripple"
+                aria-label="Permisos individuales"
+                onClick={() => setOverridesTarget({ userId: u.userId, name: u.name })}
+              >
+                <Shield size={16} />
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip content="Restablecer contraseña" variant="help" position="top">
             <Button
               variant="ghost-primary"
@@ -209,6 +224,13 @@ export function UserSection({
         userName={resetTarget?.name ?? ''}
         userId={resetTarget?.userId ?? ''}
         onReset={handleResetPassword}
+      />
+
+      <UserOverridesModal
+        isOpen={overridesTarget !== null}
+        onClose={() => setOverridesTarget(null)}
+        userId={overridesTarget?.userId ?? ''}
+        userName={overridesTarget?.name ?? ''}
       />
     </>
   );

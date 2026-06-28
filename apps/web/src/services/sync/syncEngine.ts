@@ -40,6 +40,7 @@ const PULL_TABLES: { name: string; timeCol: string }[] = [
   { name: 'registers_config', timeCol: 'updated_at' },
   { name: 'exchange_rates', timeCol: 'updated_at' },
   { name: 'delivery_persons', timeCol: 'updated_at' },
+  { name: 'user_permission_overrides', timeCol: 'created_at' },
 ];
 
 export class SyncEngine {

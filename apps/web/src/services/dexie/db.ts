@@ -36,6 +36,7 @@ export type {
   DexieCreditPayment,
   DexieImageLibrary,
   DexieDeliveryPerson,
+  DexieUserPermissionOverride,
   OrderStatus,
 } from './types';
 

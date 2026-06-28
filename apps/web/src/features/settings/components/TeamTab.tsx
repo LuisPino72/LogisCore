@@ -9,6 +9,7 @@ import { settingsService } from '../services/settingsService';
 import { AddEmployeeModal } from '../../../common/components/AddEmployeeModal';
 import { RegisterManagerModal } from '../../../common/components/RegisterManagerModal';
 import { RolePermissionsModal } from '../../../common/components/RolePermissionsModal';
+import { UserOverridesModal } from '../../../common/components/UserOverridesModal';
 import { useAuthStore } from '../../auth/stores/authStore';
 import type { UserRole } from '../../admin/types';
 import type { DexieRegisterConfig } from '../../../services/dexie/db';
@@ -44,6 +45,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
   const [newResetPassword, setNewResetPassword] = useState('');
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [overridesTarget, setOverridesTarget] = useState<{ userId: string; name: string } | null>(null);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -180,6 +182,9 @@ export function TeamTab({ tenantId }: TeamTabProps) {
               <>
                 <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }} aria-label={`Editar rol de ${u.name || u.email}`}>
                   Editar rol
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setOverridesTarget({ userId: u.userId, name: u.name || u.email })} aria-label={`Permisos individuales de ${u.name || u.email}`}>
+                  Permisos
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setResetPasswordUser(u)} aria-label={`Restablecer contraseña de ${u.name || u.email}`}>
                   Restablecer contraseña
@@ -411,6 +416,13 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         onClose={() => { setShowRoleModal(false); setEditingRole(null); }}
         role={editingRole}
         onSave={() => { loadRoles(); setShowRoleModal(false); setEditingRole(null); }}
+      />
+
+      <UserOverridesModal
+        isOpen={overridesTarget !== null}
+        onClose={() => setOverridesTarget(null)}
+        userId={overridesTarget?.userId ?? ''}
+        userName={overridesTarget?.name ?? ''}
       />
     </div>
   );

@@ -46,3 +46,4 @@ export { RegisterManagerModal } from './RegisterManagerModal';
 
 export { KpiCard, KpiSkeleton } from './KpiCard';
 export { ChartCenterLabel } from './ChartCenterLabel';
+export { UserOverridesModal } from './UserOverridesModal';

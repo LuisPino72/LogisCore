@@ -27,7 +27,8 @@ export type RealtimeTable =
   | 'tenant_settings'
   | 'registers_config'
   | 'exchange_rates'
-  | 'delivery_persons';
+  | 'delivery_persons'
+  | 'user_permission_overrides';
 
 export const REALTIME_TABLES: RealtimeTable[] = [
   'sales',
@@ -50,6 +51,7 @@ export const REALTIME_TABLES: RealtimeTable[] = [
   'registers_config',
   'exchange_rates',
   'delivery_persons',
+  'user_permission_overrides',
 ];
 
 export type RealtimeCallback = (tableName: string, record: Record<string, unknown>) => Promise<void>;
