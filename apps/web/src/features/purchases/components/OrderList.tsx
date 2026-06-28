@@ -7,8 +7,8 @@ import { OrderReceive } from './OrderReceive';
 import { formatUsd } from '@/lib/formatBs';
 import { formatDate } from '../../../lib/formatDate';
 import { getInitials } from '../../../lib/utils';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 function getStatusBorderColor(status: PurchaseOrderStatus): string {
   switch (status) {

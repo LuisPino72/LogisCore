@@ -5,8 +5,8 @@ import type { Supplier } from '../../../specs/purchases';
 import { getInitials } from '../../../lib/utils';
 import { formatUsd } from '@/lib/formatBs';
 import { PaySupplierModal } from './PaySupplierModal';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 interface SupplierListProps {
   suppliers: Supplier[];

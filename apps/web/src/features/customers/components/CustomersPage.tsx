@@ -13,10 +13,10 @@ import { CustomerForm } from './CustomerForm';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { GlobalHistoryView } from './GlobalHistoryView';
 import type { Customer } from '../../../specs/customers';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { handleServiceError } from '../../../common/utils/handleServiceError';
-import { createAppError } from '@logiscore/core';
+import { createAppError, type Result } from '@logiscore/core';
 
 type TabKey = 'clientes' | 'historial-global';
 
@@ -88,7 +88,7 @@ export function CustomersPage({ tenantId }: CustomersPageProps) {
       addToast({ type: 'success', message: 'Cliente eliminado.', duration: 3000 });
     } else {
       const storeError = useCustomerStore.getState().error;
-      const errResult: import('@logiscore/core').Result<null> = { ok: false, error: createAppError({ code: 'CUSTOMER_DELETE_FAILED', message: storeError || 'No se pudo eliminar el cliente. Verifica tu conexión e intenta de nuevo.' }) };
+      const errResult: Result<null> = { ok: false, error: createAppError({ code: 'CUSTOMER_DELETE_FAILED', message: storeError || 'No se pudo eliminar el cliente. Verifica tu conexión e intenta de nuevo.' }) };
       handleServiceError(errResult);
     }
     setConfirmDelete(null);

@@ -4,8 +4,8 @@ import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
 import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2 } from 'lucide-react';
 import { EventBus, SystemEvents } from '@logiscore/core';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pedida: { label: 'Pedida', color: 'text-info', bg: 'bg-info/5 border-info/20' },
@@ -45,7 +45,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
   const deferredSearch = useDeferredValue(search);
   const cancelledRef = useRef(false);
   const session = useAuthStore((s) => s.session);
-  const canCreate = hasActionPermission(session, 'pos', 'create');
+  const canPayOrder = hasActionPermission(session, 'pos', 'create');
 
   const reload = useCallback(async () => {
     const result = await getActiveOrders(tenantId);
@@ -190,7 +190,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                   </div>
                 </div>
 
-                {order.status === 'lista' && onPayOrder && canCreate && (
+                {order.status === 'lista' && onPayOrder && canPayOrder && (
                   <div className="mt-2 pt-2 border-t border-black/5">
                     <Button
                       variant="primary"

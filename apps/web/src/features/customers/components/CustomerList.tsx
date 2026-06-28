@@ -4,8 +4,8 @@ import { Button, Badge, EmptyState, Pagination, Tooltip } from '../../../common/
 import type { Customer } from '../../../specs/customers';
 import { getInitials, formatTimeAgo, formatPhone } from '../../../lib/utils';
 import { formatUsd } from '@/lib/formatBs';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 const PAGE_SIZE = 20;
 

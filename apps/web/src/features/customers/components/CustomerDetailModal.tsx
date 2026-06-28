@@ -10,8 +10,8 @@ import { generateMenuText, normalizeWaPhone } from '../../pos/services/receiptSe
 import { logger } from '../../../lib/logger';
 import { useToastStore } from '../../../stores/toastStore';
 import { handleServiceError } from '../../../common/utils/handleServiceError';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 const HISTORY_PAGE_SIZE = 20;
 
@@ -121,7 +121,7 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
       title="Detalle del cliente"
       footer={
         <div className="flex gap-2 w-full">
-          {canUpdate && onEdit && (
+          {onEdit && (
             <Button variant="primary" className="flex-1" onClick={() => onEdit(customer)}>
               Editar
             </Button>

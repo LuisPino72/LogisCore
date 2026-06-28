@@ -9,8 +9,8 @@ import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { useToastStore } from '../../../stores/toastStore';
 import { usePosStore } from '../stores/posStore';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 interface CartSummaryProps {
   items: CartItem[];

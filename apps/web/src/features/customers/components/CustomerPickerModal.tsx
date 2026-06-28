@@ -8,8 +8,8 @@ import { formatPhone, unformatPhone } from '../../../lib/utils';
 import type { CreateCustomerInput, Customer } from '../../../specs/customers';
 import { CreateCustomerInputSchema } from '../../../specs/customers';
 import { useToastStore } from '../../../stores/toastStore';
-import { useAuthStore } from '../../../features/auth/stores/authStore';
-import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 
 interface CustomerPickerModalProps {
   isOpen: boolean;
