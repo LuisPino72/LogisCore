@@ -13,6 +13,7 @@ import type {
   RecipeProfitabilityItem,
 } from '../types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { displayQty } from '../../inventory/types';
 
 function formatDual(bs: number, usd: number): string {
   return `${formatBs(bs)} / ${formatUsd(usd)}`;
@@ -514,7 +515,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <KpiCard label="Merma Promedio" value={`${productionSummary.averageWastePct}%`} />
               <KpiCard label="Costo Ingredientes" value={formatDual(productionSummary.totalIngredientCostBs, productionSummary.totalIngredientCostUsd)} />
               {productionSummary.mostProducedRecipe && (
-                <KpiCard label="Más Producida" value={productionSummary.mostProducedRecipe} subtitle={`${productionSummary.mostProducedQuantity} unidades`} />
+                <KpiCard label="Más Producida" value={productionSummary.mostProducedRecipe} subtitle={displayQty(productionSummary.mostProducedQuantity ?? 0, 'unidad')} />
               )}
             </div>
           )}

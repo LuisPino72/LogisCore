@@ -5,6 +5,7 @@ import { usePurchaseStore } from '../stores/purchaseStore';
 import type { PurchaseOrderWithItems } from '../../../specs/purchases';
 import type { Product } from '../../../specs/inventory';
 import { formatUsd } from '@/lib/formatBs';
+import { displayQty } from '../../inventory/types';
 
 interface OrderReceiveProps {
   isOpen: boolean;
@@ -46,13 +47,13 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
 
   const getProductInfo = (productId: string) => {
     const p = products.get(productId);
-    if (!p) return { isWeighted: false, unit: 'Und' };
+    if (!p) return { isWeighted: false, unit: 'Und', rawUnit: 'unidad' };
     if (p.isWeighted) {
-      if (p.unit === 'lt') return { isWeighted: true, unit: 'Lt' };
-      if (p.unit === 'm') return { isWeighted: true, unit: 'm' };
-      return { isWeighted: true, unit: 'Kg' };
+      if (p.unit === 'lt') return { isWeighted: true, unit: 'Lt', rawUnit: p.unit };
+      if (p.unit === 'm') return { isWeighted: true, unit: 'm', rawUnit: p.unit };
+      return { isWeighted: true, unit: 'Kg', rawUnit: p.unit };
     }
-    return { isWeighted: false, unit: 'Und' };
+    return { isWeighted: false, unit: 'Und', rawUnit: 'unidad' };
   };
 
   const handleQtyChange = (itemId: string, val: number) => {
@@ -181,7 +182,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
                         {info.unit}
                       </span>
                     </div>
-                    <p className="text-xs text-text-secondary">Pendiente: {hasDecimals ? pending.toFixed(2) : pending} {info.unit}</p>
+                    <p className="text-xs text-text-secondary">Pendiente: {displayQty(pending, info.rawUnit)}</p>
                   </div>
                   {isComplete && (
                     <span className="animate-completion-pop">
@@ -215,7 +216,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
                       inputClassName="text-sm"
                     />
                   </div>
-                  <span className="text-xs text-text-secondary whitespace-nowrap shrink-0">/ {hasDecimals ? pending.toFixed(2) : pending} {info.unit}</span>
+                  <span className="text-xs text-text-secondary whitespace-nowrap shrink-0">/ {displayQty(pending, info.rawUnit)}</span>
                   {pending > 0 && received < pending && (
                     <button
                       type="button"

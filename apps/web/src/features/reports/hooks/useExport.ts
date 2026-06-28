@@ -14,6 +14,7 @@ import type {
   RecipeProfitabilityItem,
 } from '../types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { displayQty } from '../../inventory/types';
 
 interface ExportAllData {
   summary: ExecutiveSummaryData | null;
@@ -254,7 +255,7 @@ function buildProductionSheet(summary: ProductionSummaryData | null, profitabili
       ['Unidades Producidas', summary.totalQuantityProduced, '', '', '', '', ''],
       ['Merma Promedio %', `${summary.averageWastePct}%`, '', '', '', '', ''],
       ['Costo Total Ingredientes', formatBs(summary.totalIngredientCostBs), formatUsd(summary.totalIngredientCostUsd), '', '', '', ''],
-      ['Más Producida', summary.mostProducedRecipe ?? 'N/A', summary.mostProducedQuantity ? `${summary.mostProducedQuantity} unidades` : '', '', '', '', ''],
+      ['Más Producida', summary.mostProducedRecipe ?? 'N/A', summary.mostProducedQuantity ? displayQty(summary.mostProducedQuantity, 'unidad') : '', '', '', '', ''],
       ['', '', '', '', '', '', ''],
       ['--- RANKING RECETAS ---', '', '', '', '', '', ''],
     );

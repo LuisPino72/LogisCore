@@ -7,6 +7,7 @@ import { useInventoryStore } from '../stores/inventoryStore';
 import { getDb } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import type { Product, CreateProductInput, CreatePresentationInput, AdjustmentReason, AdjustStockInput } from '../types';
+import { toDisplayValue } from '../types';
 
 export interface ConfirmDelete {
   type: 'product' | 'category';
@@ -108,8 +109,7 @@ export function useInventoryActions(options: UseInventoryActionsOptions) {
     if (bulkAdjMode === 'restar') {
       const exceedsProducts: string[] = [];
       for (const product of bulkProducts) {
-        const maxStock = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
-          ? (product.stock / 1000) : product.stock;
+        const maxStock = toDisplayValue(product.stock, product.unit);
         if (rawQty > maxStock) {
           const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : 'unidades';
           exceedsProducts.push(`"${product.name}" (max: ${maxStock} ${unitLabel})`);

@@ -137,15 +137,6 @@ export function StockVerificationModal({
     onComplete();
   }, [items, userId, tenantId, addToast, onComplete]);
 
-  const unitsLabel = (unit: string): string => {
-    if (unit === 'kg') return 'kg';
-    if (unit === 'lt') return 'lt';
-    if (unit === 'm') return 'm';
-    if (unit === 'gr') return 'gr';
-    if (unit === 'und') return 'und';
-    return unit;
-  };
-
   const footerContent = !loading && !error && items.length > 0 ? (
     showExcessiveConfirm ? (() => {
       const excessiveItems = getExcessiveItems();
@@ -272,7 +263,7 @@ export function StockVerificationModal({
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm leading-tight truncate">{item.productName}</p>
                       <p className="text-xs text-gray-600 mt-0.5">
-                        {item.soldToday > 0 && `Vendido: ${item.soldToday} ${unitsLabel(item.unit)}`}
+                        {item.soldToday > 0 && `Vendido: ${displayQty(item.soldToday, item.unit)}`}
                         {item.isLowStock && !item.isZeroStock && <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-warning/10 text-warning px-1.5 py-0.5 rounded-full ml-1">Bajo stock</span>}
                         {item.isZeroStock && <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-danger/10 text-danger px-1.5 py-0.5 rounded-full ml-1">Agotado</span>}
                       </p>

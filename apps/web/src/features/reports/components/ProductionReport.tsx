@@ -2,6 +2,7 @@ import { Card, EmptyState, KpiCard, KpiSkeleton } from '@/common/components';
 import { ChefHat, Package, AlertTriangle, TrendingUp, Hash, DollarSign } from 'lucide-react';
 import type { ProductionSummaryData, DrillDownType } from '@/features/reports/types';
 import { formatUsd } from '@/lib/formatBs';
+import { displayQty } from '../../inventory/types';
 
 interface ProductionReportProps {
   data: ProductionSummaryData | null;
@@ -85,7 +86,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
           <KpiCard
             label="Más Producida"
             value={data.mostProducedRecipe}
-            subtitle={`${data.mostProducedQuantity} unidades`}
+            subtitle={displayQty(data.mostProducedQuantity ?? 0, 'unidad')}
             icon={<TrendingUp size={14} className="sm:w-4 sm:h-4" />}
             gradient="blue"
             onClick={() => onKpiClick?.('produccionRecetas')}

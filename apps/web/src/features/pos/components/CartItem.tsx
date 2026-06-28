@@ -6,6 +6,7 @@ import { formatUsd, formatBs } from '@/lib/formatBs';
 import { preciseRound } from '@logiscore/shared';
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { useRepeatButton } from '../hooks/useRepeatButton';
+import { displayQty } from '../../inventory/types';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -85,7 +86,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     }, 300);
   }, [item.productId, item.presentationId, onRemove]);
 
-  const displayQty = localQty ?? (item.isWeighted ? item.quantity.toFixed(2) : item.quantity.toString());
+  const qtyFormatted = localQty ?? displayQty(item.quantity, item.unit);
 
   const btnBase = 'w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs hover:shadow-sm';
   const btnIdle = 'bg-surface-alt hover:bg-gray-200/80 active:bg-gray-300';
@@ -139,7 +140,7 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
                 type="text"
                 inputMode="decimal"
                 step={step}
-                value={displayQty}
+                value={qtyFormatted}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 validation={{ required: true, min: 0.01, max: 99999 }}

@@ -4,7 +4,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import type { CartItem, PresentationSelection } from '../types';
 import type { Product } from '../../../specs/inventory';
-import { displayQty } from '../../inventory/types';
+import { displayQty, toDisplayValue } from '../../inventory/types';
 
 export interface PosCartSlice {
   cart: CartItem[];
@@ -160,7 +160,7 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
     const safeUnit = product.unit || 'unidad';
     const safeStock = typeof product.stock === 'number' && Number.isFinite(product.stock) ? product.stock : 0;
 
-    const stockInDisplayUnits = safeIsWeighted ? safeStock / 1000 : safeStock;
+    const stockInDisplayUnits = toDisplayValue(safeStock, safeUnit);
     if (!isAssembly && totalRequested > stockInDisplayUnits) {
       const available = displayQty(safeStock, safeUnit);
       set({ error: `Stock insuficiente. Disponible: ${available}` });
@@ -182,7 +182,7 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
     if (existing) {
       const foundProduct = get().products.find(p => p.id === product.id);
       const isAssemblyProd = foundProduct?.hasAssemblyRecipe;
-      const maxQty = isAssemblyProd ? Infinity : (safeIsWeighted ? safeStock / 1000 : safeStock);
+      const maxQty = isAssemblyProd ? Infinity : toDisplayValue(safeStock, safeUnit);
       const newQty = Math.min(preciseRound(existing.quantity + quantity, 2), maxQty);
       set({
         cart: cart.map((item) =>
@@ -193,7 +193,7 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
       });
     } else {
       const isAssemblyProd = product.hasAssemblyRecipe;
-      const maxQty = isAssemblyProd ? Infinity : (safeIsWeighted ? safeStock / 1000 : safeStock);
+      const maxQty = isAssemblyProd ? Infinity : toDisplayValue(safeStock, safeUnit);
       const finalQty = Math.min(quantity, maxQty);
       set({
         cart: [
@@ -253,8 +253,8 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
       if (!product) { get().removeFromCart(productId, presentationId); return; }
       const isAssemblyProd = product.hasAssemblyRecipe;
       const safeStock = typeof product.stock === 'number' && Number.isFinite(product.stock) ? product.stock : 0;
-      const safeIsWeighted = product.isWeighted === true;
-      maxQty = isAssemblyProd ? Infinity : (safeIsWeighted ? safeStock / 1000 : safeStock);
+      const safeUnit = product.unit || 'unidad';
+      maxQty = isAssemblyProd ? Infinity : toDisplayValue(safeStock, safeUnit);
     }
 
     const product = get().products.find(p => p.id === productId);

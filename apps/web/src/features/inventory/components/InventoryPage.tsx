@@ -415,7 +415,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 <div className="space-y-1.5">
                   {bulkProducts.map(p => {
                     const displayStock = displayQty(p.stock, p.unit);
-                    const unitLabel = p.unit === 'kg' ? 'Kg' : p.unit === 'lt' ? 'Lt' : p.unit === 'm' ? 'm' : 'un';
                     const currentQty = hasValidQty ? rawQty : 0;
                     const newStock = bulkAdjMode === 'restar'
                       ? p.stock - (p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm' ? currentQty * 1000 : currentQty)
@@ -427,12 +426,12 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                       <div key={p.id} className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
                         <span className="text-gray-700 truncate min-w-0 flex-1 mr-2">{p.name}</span>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-xs text-gray-500">{displayStock} {unitLabel}</span>
+                          <span className="text-xs text-gray-500">{displayStock}</span>
                           {hasValidQty && (
                             <>
                               <span className="text-xs text-gray-400">→</span>
                               <span className={`text-xs font-medium ${wouldGoNegative ? 'text-danger' : 'text-primary'}`}>
-                                {newDisplay} {unitLabel}
+                                {newDisplay}
                               </span>
                             </>
                           )}
@@ -586,7 +585,6 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
             {lowStockProducts.map((product) => {
               const displayStock_val = displayQty(product.stock, product.unit);
               const displayMin = displayQty(product.stockMin ?? 0, product.unit);
-              const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : '';
               const isSelected = selectedForOrder.has(product.id);
               const isZero = product.stock <= 0;
               const isProduced = producedProductIds.has(product.id);
@@ -617,8 +615,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-800 wrap-break-word">{product.name}</p>
                       <p className="text-xs text-text-secondary mt-0.5">
-                        Stock: <span className={`font-medium ${isZero ? 'text-danger' : ''}`}>{displayStock_val} {unitLabel}</span>
-                        {' / '}Mín: {displayMin} {unitLabel}
+                        Stock: <span className={`font-medium ${isZero ? 'text-danger' : ''}`}>{displayStock_val}</span>
+                        {' / '}Mín: {displayMin}
                       </p>
                       {isProduced && (
                         <p className="text-[10px] text-info mt-0.5 font-medium">Se produce, no se puede comprar</p>

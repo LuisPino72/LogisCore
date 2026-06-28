@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Product, AdjustmentReason } from '../types';
+import { toDisplayValue } from '../types';
 import { inventoryService } from '../services/inventoryService';
 
 interface UseStockAdjustmentOptions {
@@ -81,8 +82,7 @@ export function useStockAdjustment({ products, onAdjustStock, onSuccess }: UseSt
 
     if (adjMode === 'restar') {
       if (product) {
-        const maxStock = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
-          ? (product.stock / 1000) : product.stock;
+        const maxStock = toDisplayValue(product.stock, product.unit);
         if (rawQty > maxStock) {
           const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : 'unidades';
           setAdjError(`No puedes restar más de ${maxStock} ${unitLabel} (stock actual)`);

@@ -5,7 +5,7 @@ import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
 import type { Product, Category, TabState, StockFilter, ProductTypeFilter } from '../types';
-import { displayQty } from '../types';
+import { displayQty, toDisplayValue } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { inventoryService } from '../services/inventoryService';
@@ -69,14 +69,11 @@ function getStockBadgeContent(stock: number, unit: string, isWeighted: boolean):
 
 function getDisplayStockMin(product: { stockMin?: number; isWeighted: boolean; unit: string }): number | undefined {
   if (product.stockMin == null) return undefined;
-  if (product.isWeighted && (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm')) {
-    return product.stockMin / 1000;
-  }
-  return product.stockMin;
+  return toDisplayValue(product.stockMin, product.unit);
 }
 
 function applyStockFilter(stock: number, product: { stockMin?: number; isWeighted: boolean; unit: string }, filter: StockFilter): boolean {
-  const displayStock = product.isWeighted ? (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm' ? stock / 1000 : stock) : stock;
+  const displayStock = toDisplayValue(stock, product.unit);
   const threshold = getDisplayStockMin(product) ?? 5;
   switch (filter) {
     case 'all': return true;
@@ -87,9 +84,7 @@ function applyStockFilter(stock: number, product: { stockMin?: number; isWeighte
 }
 
 function getStockVariant(stock: number, product: { stockMin?: number; isWeighted: boolean; unit: string }): 'success' | 'warning' | 'danger' {
-  const displayStock = product.isWeighted && (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm')
-    ? stock / 1000
-    : stock;
+  const displayStock = toDisplayValue(stock, product.unit);
   const min = getDisplayStockMin(product);
   if (min && displayStock <= min) return 'danger';
   if (min && displayStock <= min * 2) return 'warning';
@@ -414,7 +409,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               <Badge variant={getStockVariant(product.stock, product)}>
                 {getStockBadgeContent(product.stock, product.unit, product.isWeighted)}
               </Badge>
-              {product.stockMin && product.stock / (product.isWeighted && (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm') ? 1000 : 1) <= getDisplayStockMin(product)! && (
+              {product.stockMin && toDisplayValue(product.stock, product.unit) <= getDisplayStockMin(product)! && (
                 <AlertTriangle size={12} className="text-danger shrink-0" />
               )}
             </div>
@@ -613,7 +608,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         keyExtractor={(p: Product) => p.id}
         rowClassName={(p: Product) => {
           if (bulkMode && selectedForBulk.has(p.id)) return 'bg-primary/5 border-primary/20';
-          return p.stockMin && p.stock / (p.isWeighted && (p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm') ? 1000 : 1) <= getDisplayStockMin(p)! ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
+          return p.stockMin && toDisplayValue(p.stock, p.unit) <= getDisplayStockMin(p)! ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
         }}
         emptyMessage="No encontramos productos. Intenta con otro nombre o limpia los filtros."
         renderCardOnMobile

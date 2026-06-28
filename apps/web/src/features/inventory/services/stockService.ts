@@ -11,7 +11,7 @@ import { logger } from '../../../lib/logger';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { InventoryErrors } from '../../../specs/inventory/errors';
 import type { Product, InventoryMovement, AdjustStockInput, ActiveLot } from '../types';
-import { convertToStorage, unitToStorageType, displayStock } from '../types';
+import { convertToStorage, unitToStorageType, toDisplayValue } from '../types';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toNumber, toMovement, toProduct } from './mappers';
@@ -434,9 +434,9 @@ export async function getLowStockProducts(tenantId: string): Promise<Result<Prod
   }
 
   const lowStock = rows.filter((p) => {
-    const stock = displayStock(p.stock, p.unit);
-    const stockMin = displayStock(p.stockMin!, p.unit);
-    return parseFloat(stock) <= parseFloat(stockMin);
+    const stock = toDisplayValue(p.stock, p.unit);
+    const stockMin = toDisplayValue(p.stockMin!, p.unit);
+    return stock <= stockMin;
   });
   return success(lowStock.map((r) => toProduct(r as unknown as Record<string, unknown>)));
 }
