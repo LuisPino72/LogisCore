@@ -4,6 +4,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import type { CartItem, PresentationSelection } from '../types';
 import type { Product } from '../../../specs/inventory';
+import { displayQty } from '../../inventory/types';
 
 export interface PosCartSlice {
   cart: CartItem[];
@@ -161,10 +162,8 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
 
     const stockInDisplayUnits = safeIsWeighted ? safeStock / 1000 : safeStock;
     if (!isAssembly && totalRequested > stockInDisplayUnits) {
-      const available = safeUnit === 'kg' || safeUnit === 'lt'
-        ? (safeStock / 1000).toFixed(2)
-        : safeStock;
-      set({ error: `Stock insuficiente. Disponible: ${available} ${safeUnit === 'lt' ? 'Lt' : safeUnit === 'kg' ? 'Kg' : ''}` });
+      const available = displayQty(safeStock, safeUnit);
+      set({ error: `Stock insuficiente. Disponible: ${available}` });
       return false;
     }
 

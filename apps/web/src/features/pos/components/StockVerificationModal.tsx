@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Input, Spinner } from '../../../common/components';
 import { posService } from '../services/posService';
 import { inventoryService } from '../../inventory/services/inventoryService';
-import { displayStock } from '../../inventory/types';
+import { displayQty } from '../../inventory/types';
 import { useToastStore } from '../../../stores/toastStore';
 
 interface VerificationItem {
@@ -53,7 +53,7 @@ export function StockVerificationModal({
       if (result.ok) {
         const verified = result.data.map((item) => ({
           ...item,
-          physicalInput: displayStock(item.logicalStock, item.unit),
+          physicalInput: displayQty(item.logicalStock, item.unit),
         }));
         setItems(verified);
       } else {
@@ -79,7 +79,7 @@ export function StockVerificationModal({
   }, []);
 
   const getLogicalDisplay = (item: VerificationItem): number => {
-    return parseFloat(displayStock(item.logicalStock, item.unit));
+    return parseFloat(displayQty(item.logicalStock, item.unit));
   };
 
   const getDifference = (item: VerificationItem): number => {
@@ -278,14 +278,14 @@ export function StockVerificationModal({
                       </p>
                     </div>
                     <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${diff > 0 ? 'bg-success/10 text-success' : diff < 0 ? 'bg-danger/10 text-danger' : 'bg-gray-100 text-gray-400'}`}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                      {diff > 0 ? '+' : ''}{displayQty(diff, item.unit)}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
                     <div>
                       <label className="text-xs text-gray-600 font-medium uppercase tracking-wide">Stock registrado</label>
-                      <p className="text-sm font-mono font-semibold mt-0.5">{displayStock(item.logicalStock, item.unit)}</p>
+                      <p className="text-sm font-mono font-semibold mt-0.5">{displayQty(item.logicalStock, item.unit)}</p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-600 font-medium uppercase tracking-wide">Stock físico</label>
@@ -302,7 +302,7 @@ export function StockVerificationModal({
                     <div>
                       <label className="text-xs text-gray-600 font-medium uppercase tracking-wide">Diferencia</label>
                       <p className={`text-sm font-mono font-semibold mt-0.5 ${diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : ''}`}>
-                        {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                        {diff > 0 ? '+' : ''}{displayQty(diff, item.unit)}
                       </p>
                     </div>
                   </div>

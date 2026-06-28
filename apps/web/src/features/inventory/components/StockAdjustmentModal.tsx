@@ -1,6 +1,7 @@
 import { Package, Plus, Minus } from 'lucide-react';
 import { Button, Modal, Input, SearchableSelect, Alert } from '../../../common/components';
 import type { AdjustmentReason, Product } from '../types';
+import { displayQty } from '../types';
 
 const REASON_OPTIONS: { value: AdjustmentReason; label: string }[] = [
   { value: 'inventario_inicial', label: 'Error de ingreso inicial' },
@@ -39,12 +40,7 @@ export function StockAdjustmentModal({
   onSetMode, onSetQuantity, onSetReasonType, onSetCostTotal,
   onSetShowCostInput, onSetError, onSubmit,
 }: StockAdjustmentModalProps) {
-  const displayStockValue = product ? (() => {
-    if (product.unit === 'kg') return (product.stock / 1000).toFixed(2);
-    if (product.unit === 'lt') return (product.stock / 1000).toFixed(2);
-    if (product.unit === 'm') return (product.stock / 1000).toFixed(2);
-    return product.stock.toString();
-  })() : '';
+  const displayStockValue = product ? displayQty(product.stock, product.unit) : '';
   const unitLabel = product?.unit === 'kg' ? 'Kg' : product?.unit === 'lt' ? 'Lt' : product?.unit === 'm' ? 'm' : '';
 
   return (

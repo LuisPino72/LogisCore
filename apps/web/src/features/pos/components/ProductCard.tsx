@@ -3,7 +3,7 @@ import { Star } from 'lucide-react';
 import { EventBus } from '@logiscore/core';
 import { Card, Badge, ImageWithFallback } from '../../../common/components';
 import type { Product } from '../../../specs/inventory';
-import { displayStock } from '../../inventory/types';
+import { displayQty } from '../../inventory/types';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 
 interface ProductCardProps {
@@ -26,7 +26,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
     : null;
 
   const displayQuantity = product.isWeighted
-    ? displayStock(product.stock, product.unit)
+    ? displayQty(product.stock, product.unit)
     : product.stock.toString();
 
   const stockInDisplay = product.isWeighted

@@ -26,7 +26,7 @@ import { type Transaction } from 'dexie';
 import { calculateConsumptionCost, selectFifoLots } from './costCalculator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { unitToStorageType, convertToStorage, displayProductionQty } from '../../inventory/types';
+import { unitToStorageType, convertToStorage, displayQty } from '../../inventory/types';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability } from '../types';
 import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder, DexieProduct } from '../../../services/dexie/db';
 import { recipeQtyToStorage, recipeQtyToStorageBase, toRecipe, toRecipeLine, toProductionOrder } from './productionMappers';
@@ -1534,11 +1534,11 @@ export const productionService = {
           productName: product?.name || 'Desconocido',
           type: m.type,
           quantity: m.quantity,
-          displayQuantity: `${sign}${displayProductionQty(m.quantity, productUnit)}`,
+          displayQuantity: `${sign}${displayQty(m.quantity, productUnit)}`,
           previousStock: m.previousStock,
-          displayPreviousStock: displayProductionQty(m.previousStock, productUnit),
+          displayPreviousStock: displayQty(m.previousStock, productUnit),
           newStock: m.newStock,
-          displayNewStock: displayProductionQty(m.newStock, productUnit),
+          displayNewStock: displayQty(m.newStock, productUnit),
           productUnit,
           createdAt: m.createdAt,
         });

@@ -22,6 +22,7 @@ import { useBulkPriceUpdate } from '../hooks/useBulkPriceUpdate';
 import { useInventoryActions } from '../hooks/useInventoryActions';
 
 import type { AdjustmentReason, Product } from '../types';
+import { displayQty } from '../types';
 
 interface InventoryPageProps {
   tenantId: string | null;
@@ -413,17 +414,13 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
                 </p>
                 <div className="space-y-1.5">
                   {bulkProducts.map(p => {
-                    const displayStock = p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm'
-                      ? (p.stock / 1000).toFixed(2)
-                      : p.stock.toString();
+                    const displayStock = displayQty(p.stock, p.unit);
                     const unitLabel = p.unit === 'kg' ? 'Kg' : p.unit === 'lt' ? 'Lt' : p.unit === 'm' ? 'm' : 'un';
                     const currentQty = hasValidQty ? rawQty : 0;
                     const newStock = bulkAdjMode === 'restar'
                       ? p.stock - (p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm' ? currentQty * 1000 : currentQty)
                       : p.stock + (p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm' ? currentQty * 1000 : currentQty);
-                    const newDisplay = p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm'
-                      ? (newStock / 1000).toFixed(2)
-                      : Math.round(newStock).toString();
+                    const newDisplay = displayQty(newStock, p.unit);
                     const wouldGoNegative = bulkAdjMode === 'restar' && newStock < 0;
 
                     return (
@@ -587,12 +584,8 @@ export function InventoryPage({ tenantId }: InventoryPageProps) {
         >
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {lowStockProducts.map((product) => {
-              const displayStock_val = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
-                ? (product.stock / 1000).toFixed(2)
-                : product.stock.toString();
-              const displayMin = product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm'
-                ? ((product.stockMin ?? 0) / 1000).toFixed(2)
-                : (product.stockMin ?? 0).toString();
+              const displayStock_val = displayQty(product.stock, product.unit);
+              const displayMin = displayQty(product.stockMin ?? 0, product.unit);
               const unitLabel = product.unit === 'kg' ? 'Kg' : product.unit === 'lt' ? 'Lt' : product.unit === 'm' ? 'm' : '';
               const isSelected = selectedForOrder.has(product.id);
               const isZero = product.stock <= 0;

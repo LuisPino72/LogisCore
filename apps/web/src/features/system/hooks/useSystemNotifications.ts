@@ -3,7 +3,7 @@ import { EventBus, SystemEvents } from '@logiscore/core';
 import { useNotificationStore } from '../../../stores/notificationStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { systemNotificationService } from '../services/systemNotificationService';
-import { displayStock } from '../../inventory/types';
+import { displayQty } from '../../inventory/types';
 
 const HIGH_SALE_THRESHOLD_USD = 100;
 
@@ -14,7 +14,7 @@ async function checkLowStock(tenantId: string): Promise<void> {
       await useNotificationStore.getState().addNotification({
         type: 'low_stock',
         title: 'Stock crítico',
-        message: `${product.name} — ${displayStock(product.stock, product.unit)} ${product.unit} (mín: ${displayStock(product.stockMin!, product.unit)})`,
+        message: `${product.name} — ${displayQty(product.stock, product.unit)} (mín: ${displayQty(product.stockMin!, product.unit)})`,
       });
     }
   } catch {

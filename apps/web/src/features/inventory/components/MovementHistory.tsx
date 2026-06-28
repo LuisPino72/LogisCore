@@ -4,7 +4,7 @@ import { Card, SearchInput, Pagination } from '../../../common/components';
 import { useFuzzySearch } from '../../../lib/useFuzzySearch';
 import { useMovementHistory } from '../hooks/useMovementHistory';
 import type { Product } from '../types';
-import { displayStock } from '../types';
+import { displayQty } from '../types';
 import type { InventoryMovement } from '../../../specs/inventory';
 
 interface MovementHistoryProps {
@@ -60,8 +60,8 @@ function getSignedQty(mov: InventoryMovement, prod?: Product): string {
   const sign = mov.type === 'sale' ? -1 : (mov.type === 'purchase' ? 1 : Math.sign(mov.quantity));
   const absQty = Math.abs(mov.quantity);
   if (prod?.isWeighted) {
-    const display = displayStock(absQty, prod.unit);
-    return `${sign >= 0 ? '+' : '-'}${display} ${prod.unit}`;
+    const display = displayQty(absQty, prod.unit);
+    return `${sign >= 0 ? '+' : '-'}${display}`;
   }
   const signedQty = absQty * sign;
   return `${signedQty > 0 ? '+' : ''}${signedQty}`;
@@ -117,7 +117,7 @@ export function MovementHistory({ products, tenantId }: MovementHistoryProps) {
     const badgeColor = isNegative ? 'text-danger' : mov.type === 'purchase' || (mov.type === 'adjustment' && mov.quantity > 0) ? 'text-success' : 'text-warning';
 
     const stockText = prod?.isWeighted
-      ? `${displayStock(mov.previousStock, prod.unit)} → ${displayStock(mov.newStock, prod.unit)} ${prod.unit}`
+      ? `${displayQty(mov.previousStock, prod.unit)} → ${displayQty(mov.newStock, prod.unit)}`
       : mov.previousStock !== mov.newStock
         ? `${mov.previousStock} → ${mov.newStock}`
         : null;

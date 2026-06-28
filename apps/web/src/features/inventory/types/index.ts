@@ -128,12 +128,13 @@ export function displayStock(stock: number, unit: string): string {
 }
 
 /**
- * Formatea cantidad de storage (g/ml) para producción:
+ * Formatea cantidad de storage (g/ml) para mostrar al usuario:
  * - < 1000 g → muestra en gramos (ej: "500 g")
  * - >= 1000 g → muestra en kg (ej: "1.5 kg")
  * - Mismo patrón para ml/lt
+ * - Para unidades no pesables, muestra "Uni" (ej: "24 Uni")
  */
-export function displayProductionQty(storageQty: number, unit: string): string {
+export function displayQty(storageQty: number, unit: string): string {
   const absQty = Math.abs(storageQty);
   if (unit === 'kg') {
     if (absQty < 1000) return `${absQty} g`;
@@ -145,7 +146,22 @@ export function displayProductionQty(storageQty: number, unit: string): string {
   }
   if (unit === 'gr') return `${absQty} g`;
   if (unit === 'm') return `${mmToM(absQty).toFixed(2).replace(/\.00$/, '')} m`;
-  return absQty.toString();
+  return `${absQty} Uni`;
+}
+
+/**
+ * Convierte cantidad de storage a valor numérico de display (sin sufijo).
+ * Útil para comparaciones numéricas (ej: stock < stockMin).
+ * - kg: g → kg (÷1000)
+ * - lt: ml → lt (÷1000)
+ * - otros: retorna tal cual
+ */
+export function toDisplayValue(storageQty: number, unit: string): number {
+  const absQty = Math.abs(storageQty);
+  if (unit === 'kg') return gramsToKg(absQty);
+  if (unit === 'lt') return mlToLt(absQty);
+  if (unit === 'm') return mmToM(absQty);
+  return absQty;
 }
 
 export function convertToStorage(value: number, productType: string): number {

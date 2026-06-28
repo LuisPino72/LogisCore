@@ -5,7 +5,7 @@ import type { Column } from '../../../common/components';
 import { ProductSearchInput } from './ProductSearchInput';
 import { useProductFuzzySearch } from '../hooks/useProductFuzzySearch';
 import type { Product, Category, TabState, StockFilter, ProductTypeFilter } from '../types';
-import { displayStock } from '../types';
+import { displayQty } from '../types';
 import { formatUsd } from '@/lib/formatBs';
 import { useInventoryStore } from '../stores/inventoryStore';
 import { inventoryService } from '../services/inventoryService';
@@ -62,7 +62,7 @@ function ProductBadge({ type, className = '' }: { type: ProductBadgeType; classN
 }
 
 function getStockBadgeContent(stock: number, unit: string, isWeighted: boolean): string {
-  const display = displayStock(stock, unit);
+  const display = displayQty(stock, unit);
   const label = getStockLabel(isWeighted, unit);
   return `${display} ${label}`;
 }
@@ -414,7 +414,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
               <Badge variant={getStockVariant(product.stock, product)}>
                 {getStockBadgeContent(product.stock, product.unit, product.isWeighted)}
               </Badge>
-              {product.stockMin && parseFloat(displayStock(product.stock, product.unit)) <= getDisplayStockMin(product)! && (
+              {product.stockMin && product.stock / (product.isWeighted && (product.unit === 'kg' || product.unit === 'lt' || product.unit === 'm') ? 1000 : 1) <= getDisplayStockMin(product)! && (
                 <AlertTriangle size={12} className="text-danger shrink-0" />
               )}
             </div>
@@ -613,7 +613,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
         keyExtractor={(p: Product) => p.id}
         rowClassName={(p: Product) => {
           if (bulkMode && selectedForBulk.has(p.id)) return 'bg-primary/5 border-primary/20';
-          return p.stockMin && parseFloat(displayStock(p.stock, p.unit)) <= getDisplayStockMin(p)! ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
+          return p.stockMin && p.stock / (p.isWeighted && (p.unit === 'kg' || p.unit === 'lt' || p.unit === 'm') ? 1000 : 1) <= getDisplayStockMin(p)! ? 'ring-1 ring-danger/40 bg-danger/[0.03]' : undefined;
         }}
         emptyMessage="No encontramos productos. Intenta con otro nombre o limpia los filtros."
         renderCardOnMobile

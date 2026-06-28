@@ -9,7 +9,7 @@ import { RecentActivityWidget } from './RecentActivityWidget';
 import { useRecentActivity } from '../hooks/useRecentActivity';
 import { EmptyState, Card, Badge, Tooltip } from '../../../common/components';
 import { Package, AlertTriangle, TrendingUp, ShieldBan, Trophy, Medal, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
-import { displayStock } from '../../inventory/types';
+import { displayQty } from '../../inventory/types';
 import { getDb } from '../../../services/dexie/db';
 
 interface DashboardPageProps {
@@ -255,7 +255,7 @@ export const DashboardPage: FC<DashboardPageProps> = ({ tenantId: propTenantId, 
                           <span className="text-sm font-medium text-gray-800 wrap-break-word min-w-0 flex-1" title={p.name}>{p.name}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             <Badge variant={isZero ? 'danger' : 'warning'}>
-                              {displayStock(p.stock, p.unit)} {p.unit}
+                              {displayQty(p.stock, p.unit)}
                             </Badge>
                             {!isProduced && (
                               <Tooltip content="Crear orden de compra" variant="help">

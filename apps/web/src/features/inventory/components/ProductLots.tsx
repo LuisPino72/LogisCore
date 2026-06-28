@@ -4,26 +4,12 @@ import { Card, Badge, Spinner, EmptyState } from '@/common/components';
 import { formatDate } from '../../../lib/formatDate';
 import { inventoryService } from '../services/inventoryService';
 import type { ActiveLot } from '../types';
-import { gramsToKg, mlToLt, mmToM } from '../types';
+import { displayQty } from '../types';
 
 interface ProductLotsProps {
   productId: string;
   tenantId: string;
   unit?: string;
-}
-
-function displayQty(value: number, unit?: string): string {
-  if (unit === 'kg') return gramsToKg(value).toFixed(2);
-  if (unit === 'lt') return mlToLt(value).toFixed(2);
-  if (unit === 'm') return mmToM(value).toFixed(2);
-  return value.toString();
-}
-
-function unitLabel(unit?: string): string {
-  if (unit === 'kg') return 'Kg';
-  if (unit === 'lt') return 'Lt';
-  if (unit === 'm') return 'm';
-  return '';
 }
 
 export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLotsProps) {
@@ -77,7 +63,6 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
         const consumed = lot.quantityAdded - lot.remainingQuantity;
         const pct = lot.quantityAdded > 0 ? Math.round((consumed / lot.quantityAdded) * 100) : 0;
         const isFirst = index === 0;
-        const label = unitLabel(unit);
 
         return (
           <Card key={lot.id} className={`p-4 transition-shadow hover:shadow-md ${isFirst ? 'border-l-4 border-l-accent' : ''}`}>
@@ -91,7 +76,7 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
                 )}
               </div>
               <Badge variant={lot.remainingQuantity > 0 ? 'success' : 'neutral'}>
-                {displayQty(lot.remainingQuantity, unit)} {label} restantes
+                {displayQty(lot.remainingQuantity, unit ?? '')} restantes
               </Badge>
             </div>
 
@@ -99,7 +84,7 @@ export function ProductLots({ productId, tenantId: _tenantId, unit }: ProductLot
               <div className="space-y-1 mb-3">
                 <div className="flex justify-between text-xs text-text-secondary">
                   <span>Consumo</span>
-                  <span>{displayQty(consumed, unit)}/{displayQty(lot.quantityAdded, unit)} ({pct}%)</span>
+                  <span>{displayQty(consumed, unit ?? '')}/{displayQty(lot.quantityAdded, unit ?? '')} ({pct}%)</span>
                 </div>
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden progress-bar-shimmer">
                   <div
