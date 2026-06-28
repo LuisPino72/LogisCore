@@ -76,7 +76,6 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
     );
   };
 
-  const { addToast } = useToastStore();
   const handleSendMenu = async () => {
     setSendingMenu(true);
     try {
