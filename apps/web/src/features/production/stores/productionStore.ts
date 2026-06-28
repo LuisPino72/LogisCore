@@ -40,8 +40,12 @@ interface ProductionStore extends ProductionState {
     productName: string;
     type: string;
     quantity: number;
+    displayQuantity: string;
     previousStock: number;
+    displayPreviousStock: string;
     newStock: number;
+    displayNewStock: string;
+    productUnit: string;
     createdAt: string;
   }> | null>;
   hasOrderSales: (tenantId: string, orderId: string) => Promise<boolean>;

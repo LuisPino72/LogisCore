@@ -127,6 +127,27 @@ export function displayStock(stock: number, unit: string): string {
   return stock.toString();
 }
 
+/**
+ * Formatea cantidad de storage (g/ml) para producción:
+ * - < 1000 g → muestra en gramos (ej: "500 g")
+ * - >= 1000 g → muestra en kg (ej: "1.5 kg")
+ * - Mismo patrón para ml/lt
+ */
+export function displayProductionQty(storageQty: number, unit: string): string {
+  const absQty = Math.abs(storageQty);
+  if (unit === 'kg') {
+    if (absQty < 1000) return `${absQty} g`;
+    return `${gramsToKg(absQty).toFixed(2).replace(/\.00$/, '')} kg`;
+  }
+  if (unit === 'lt') {
+    if (absQty < 1000) return `${absQty} ml`;
+    return `${mlToLt(absQty).toFixed(2).replace(/\.00$/, '')} lt`;
+  }
+  if (unit === 'gr') return `${absQty} g`;
+  if (unit === 'm') return `${mmToM(absQty).toFixed(2).replace(/\.00$/, '')} m`;
+  return absQty.toString();
+}
+
 export function convertToStorage(value: number, productType: string): number {
   if (productType === 'pesable_kg') return kgToGrams(value);
   if (productType === 'pesable_lt') return ltToMl(value);

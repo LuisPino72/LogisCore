@@ -26,7 +26,7 @@ import { type Transaction } from 'dexie';
 import { calculateConsumptionCost, selectFifoLots } from './costCalculator';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { unitToStorageType, convertToStorage } from '../../inventory/types';
+import { unitToStorageType, convertToStorage, displayProductionQty } from '../../inventory/types';
 import type { Recipe, RecipeLine, ProductionOrder, CreateRecipeInput, CreateProductionOrderInput, UpdateRecipeInput, RecipeWithLines, IngredientAvailability } from '../types';
 import type { DexieRecipe, DexieRecipeLine, DexieProductionOrder, DexieProduct } from '../../../services/dexie/db';
 import { recipeQtyToStorage, recipeQtyToStorageBase, toRecipe, toRecipeLine, toProductionOrder } from './productionMappers';
@@ -768,7 +768,7 @@ export const productionService = {
           productId: recipe.productId,
           batchCount: input.batchCount,
           quantityTarget,
-          quantityProduced: 0,
+          quantityProduced: quantityTarget,
           status: 'confirmed',
           plannedDate: input.plannedDate,
           wasteNotes: input.notes,
@@ -912,7 +912,7 @@ export const productionService = {
 
       return success(toProductionOrder({
         id: orderId, tenantId, recipeId: input.recipeId, productId: recipe.productId,
-        batchCount: input.batchCount, quantityTarget, quantityProduced: 0,
+        batchCount: input.batchCount, quantityTarget, quantityProduced: quantityTarget,
         status: 'confirmed', plannedDate: input.plannedDate, createdBy: userId,
         createdAt: now, updatedAt: now,
         totalCost: preciseRound(totalIngredientCost, 2),
@@ -1428,12 +1428,17 @@ export const productionService = {
         const lineCost = needed * costPerStorageUnit;
         totalCost += lineCost;
 
+        // Costo por unidad de display ($/kg, $/lt, $/unidad)
+        const costPerDisplayUnit = product?.isWeighted
+          ? costPerStorageUnit * 1000
+          : costPerStorageUnit;
+
         ingredientCosts.push({
           productId: line.productId,
           productName,
           quantity: preciseRound(displayQty, 2),
           unit: displayUnit,
-          costPerUnit: preciseRound(costPerStorageUnit, 4),
+          costPerUnit: preciseRound(costPerDisplayUnit, 4),
           totalCost: preciseRound(lineCost, 2),
         });
       }
@@ -1476,8 +1481,12 @@ export const productionService = {
     productName: string;
     type: string;
     quantity: number;
+    displayQuantity: string;
     previousStock: number;
+    displayPreviousStock: string;
     newStock: number;
+    displayNewStock: string;
+    productUnit: string;
     createdAt: string;
   }>, AppError>> {
     try {
@@ -1518,13 +1527,19 @@ export const productionService = {
       const result = [];
       for (const m of movements) {
         const product = await db.products.where({ id: m.productId, tenantId }).first();
+        const productUnit = product?.unit || 'unidades';
+        const sign = m.quantity > 0 ? '+' : '';
         result.push({
           id: m.id,
           productName: product?.name || 'Desconocido',
           type: m.type,
           quantity: m.quantity,
+          displayQuantity: `${sign}${displayProductionQty(m.quantity, productUnit)}`,
           previousStock: m.previousStock,
+          displayPreviousStock: displayProductionQty(m.previousStock, productUnit),
           newStock: m.newStock,
+          displayNewStock: displayProductionQty(m.newStock, productUnit),
+          productUnit,
           createdAt: m.createdAt,
         });
       }

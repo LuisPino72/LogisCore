@@ -49,8 +49,12 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
     productName: string;
     type: string;
     quantity: number;
+    displayQuantity: string;
     previousStock: number;
+    displayPreviousStock: string;
     newStock: number;
+    displayNewStock: string;
+    productUnit: string;
     createdAt: string;
   }>>([]);
 
@@ -269,14 +273,14 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
                   <div className="flex justify-between items-start">
                     <span className="text-sm font-semibold text-gray-900 min-w-0">{m.productName}</span>
                     <span className={`text-sm font-medium shrink-0 ml-2 ${m.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {m.quantity > 0 ? '+' : ''}{m.quantity}
+                      {m.displayQuantity}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500">
                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${m.type === 'production_output' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                       {m.type === 'production_output' ? 'Producción' : 'Consumo'}
                     </span>
-                    <span>{m.previousStock} → {m.newStock}</span>
+                    <span>{m.displayPreviousStock} → {m.displayNewStock}</span>
                   </div>
                 </div>
               ))}
@@ -300,10 +304,10 @@ export function ProductionDetailModal({ isOpen, onClose, order, tenantId }: Prod
                         {m.type === 'production_output' ? 'Producción' : 'Consumo'}
                       </td>
                       <td className={`py-2 text-right font-medium ${m.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {m.quantity > 0 ? '+' : ''}{m.quantity}
+                        {m.displayQuantity}
                       </td>
-                      <td className="py-2 text-right text-gray-700">{m.previousStock}</td>
-                      <td className="py-2 text-right text-gray-900">{m.newStock}</td>
+                      <td className="py-2 text-right text-gray-700">{m.displayPreviousStock}</td>
+                      <td className="py-2 text-right text-gray-900">{m.displayNewStock}</td>
                     </tr>
                   ))}
                 </tbody>
