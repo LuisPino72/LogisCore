@@ -6,15 +6,31 @@ import { systemNotificationService } from '../services/systemNotificationService
 import { displayQty } from '../../inventory/types';
 
 const HIGH_SALE_THRESHOLD_USD = 100;
+const stockCheckPending = new Map<string, Promise<void>>();
+const zeroStockCheckPending = new Map<string, Promise<void>>();
 
 async function checkLowStock(tenantId: string): Promise<void> {
   try {
     const lowStock = await systemNotificationService.getLowStockProducts(tenantId);
-    for (const product of lowStock) {
+    if (lowStock.length === 0) return;
+
+    if (lowStock.length === 1) {
+      const product = lowStock[0];
       await useNotificationStore.getState().addNotification({
         type: 'low_stock',
         title: 'Stock crítico',
         message: `${product.name} — ${displayQty(product.stock, product.unit)} (mín: ${displayQty(product.stockMin!, product.unit)})`,
+        dedupKey: `low_stock|${product.id}`,
+      });
+    } else {
+      const summary = lowStock
+        .map((p) => `${p.name} (${displayQty(p.stock, p.unit)})`)
+        .join(', ');
+      await useNotificationStore.getState().addNotification({
+        type: 'low_stock',
+        title: 'Stock crítico',
+        message: `${lowStock.length} productos con stock bajo: ${summary}`,
+        dedupKey: 'low_stock_batch',
       });
     }
   } catch {
@@ -25,16 +41,50 @@ async function checkLowStock(tenantId: string): Promise<void> {
 async function checkLowStockZero(tenantId: string): Promise<void> {
   try {
     const agotados = await systemNotificationService.getZeroStockProducts(tenantId);
-    for (const product of agotados) {
+    if (agotados.length === 0) return;
+
+    if (agotados.length === 1) {
+      const product = agotados[0];
       await useNotificationStore.getState().addNotification({
         type: 'product_agotado',
         title: 'Producto agotado',
         message: `${product.name} — sin stock disponible`,
+        dedupKey: `product_agotado|${product.id}`,
+      });
+    } else {
+      const summary = agotados.map((p) => p.name).join(', ');
+      await useNotificationStore.getState().addNotification({
+        type: 'product_agotado',
+        title: 'Producto agotado',
+        message: `${agotados.length} productos agotados: ${summary}`,
+        dedupKey: 'product_agotado_batch',
       });
     }
   } catch {
     // silencioso
   }
+}
+
+async function checkLowStockDebounced(tenantId: string): Promise<void> {
+  const existing = stockCheckPending.get(tenantId);
+  if (existing) return existing;
+
+  const promise = checkLowStock(tenantId).finally(() => {
+    stockCheckPending.delete(tenantId);
+  });
+  stockCheckPending.set(tenantId, promise);
+  return promise;
+}
+
+async function checkLowStockZeroDebounced(tenantId: string): Promise<void> {
+  const existing = zeroStockCheckPending.get(tenantId);
+  if (existing) return existing;
+
+  const promise = checkLowStockZero(tenantId).finally(() => {
+    zeroStockCheckPending.delete(tenantId);
+  });
+  zeroStockCheckPending.set(tenantId, promise);
+  return promise;
 }
 
 async function checkOpenRegister(tenantId: string): Promise<void> {
@@ -78,11 +128,11 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
     // así que si por alguna razón se ejecuta 2 veces, no se duplica.
     if (stockCheckedFor.current !== tenantId) {
       stockCheckedFor.current = tenantId;
-      checkLowStock(tenantId);
+      checkLowStockDebounced(tenantId);
     }
     if (zeroStockCheckedFor.current !== tenantId) {
       zeroStockCheckedFor.current = tenantId;
-      checkLowStockZero(tenantId);
+      checkLowStockZeroDebounced(tenantId);
     }
     checkOpenRegister(tenantId);
 
@@ -163,34 +213,34 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
 
     // Re-evaluar stock bajo/agotado cuando se recibe una compra
     subs.push(
-      EventBus.on(SystemEvents.PURCHASE_RECEIVED, () => {
+      EventBus.on(SystemEvents.PURCHASE_RECEIVED, async () => {
         if (!tenantId) return;
-        useNotificationStore.getState().dismissByType('low_stock');
-        useNotificationStore.getState().dismissByType('product_agotado');
-        checkLowStock(tenantId);
-        checkLowStockZero(tenantId);
+        await useNotificationStore.getState().dismissByType('low_stock');
+        await useNotificationStore.getState().dismissByType('product_agotado');
+        await checkLowStockDebounced(tenantId);
+        await checkLowStockZeroDebounced(tenantId);
       }),
     );
 
     // Re-evaluar cuando se actualiza inventario (ajuste manual, edición)
     subs.push(
-      EventBus.on(SystemEvents.INVENTORY_UPDATED, () => {
+      EventBus.on(SystemEvents.INVENTORY_UPDATED, async () => {
         if (!tenantId) return;
-        useNotificationStore.getState().dismissByType('low_stock');
-        useNotificationStore.getState().dismissByType('product_agotado');
-        checkLowStock(tenantId);
-        checkLowStockZero(tenantId);
+        await useNotificationStore.getState().dismissByType('low_stock');
+        await useNotificationStore.getState().dismissByType('product_agotado');
+        await checkLowStockDebounced(tenantId);
+        await checkLowStockZeroDebounced(tenantId);
       }),
     );
 
     // Re-evaluar cuando se completa una producción
     subs.push(
-      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, () => {
+      EventBus.on(SystemEvents.PRODUCTION_COMPLETED, async () => {
         if (!tenantId) return;
-        useNotificationStore.getState().dismissByType('low_stock');
-        useNotificationStore.getState().dismissByType('product_agotado');
-        checkLowStock(tenantId);
-        checkLowStockZero(tenantId);
+        await useNotificationStore.getState().dismissByType('low_stock');
+        await useNotificationStore.getState().dismissByType('product_agotado');
+        await checkLowStockDebounced(tenantId);
+        await checkLowStockZeroDebounced(tenantId);
       }),
     );
 

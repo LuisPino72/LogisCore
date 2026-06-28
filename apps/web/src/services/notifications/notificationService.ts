@@ -37,12 +37,13 @@ export const notificationService = {
     type: string;
     title: string;
     message: string;
+    dedupKey?: string;
     actionLabel?: string;
     actionPayload?: unknown;
   }): Promise<Result<ReturnType<typeof mapNotification>, AppError>> {
     try {
       const db = getDb();
-      const fingerprint = `${data.type}|${data.title}|${data.message}`;
+      const fingerprint = data.dedupKey ?? `${data.type}|${data.title}|${data.message}`;
       const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
       const recent = await db.notifications
         .where('tenantId')
@@ -53,9 +54,10 @@ export const notificationService = {
           return true;
         })
         .toArray();
-      const existing = recent.find(
-        (n) => `${n.type}|${n.title}|${n.message}` === fingerprint,
-      );
+      const existing = recent.find((n) => {
+        const fp = data.dedupKey ?? `${n.type}|${n.title}|${n.message}`;
+        return fp === fingerprint;
+      });
       if (existing) {
         return success(mapNotification(existing));
       }

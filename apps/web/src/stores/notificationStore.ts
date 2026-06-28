@@ -18,7 +18,7 @@ interface NotificationState {
   tenantId: string | null;
   setTenantId: (id: string) => void;
   loadNotifications: (tenantId: string) => Promise<void>;
-  addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => Promise<void>;
+  addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'> & { dedupKey?: string }) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   dismissNotification: (id: string) => Promise<void>;
   dismissByType: (type: string) => Promise<void>;

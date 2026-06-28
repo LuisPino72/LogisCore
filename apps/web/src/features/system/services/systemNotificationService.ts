@@ -80,6 +80,7 @@ export const systemNotificationService = {
                 name: p.name as string,
                 stock,
                 stockMin,
+                unit: (p as Record<string, unknown>).unit as string ?? 'unidad',
                 deletedAt: p.deleted_at ?? undefined,
               } as typeof rows[number]);
             }
@@ -120,6 +121,7 @@ export const systemNotificationService = {
                 tenantId,
                 name: p.name as string,
                 stock,
+                unit: (p as Record<string, unknown>).unit as string ?? 'unidad',
                 deletedAt: p.deleted_at ?? undefined,
               } as typeof rows[number]);
             }
