@@ -14,19 +14,37 @@ import { getAllKnownPermissions } from '../../../specs/roles';
 
 const MODULE_NAME = 'auth';
 
-export async function getOverrides(userId: string): Promise<Result<DexieUserPermissionOverride[], AppError>> {
+export async function getOverrides(userId: string, overrideTenantId?: string): Promise<Result<DexieUserPermissionOverride[], AppError>> {
   try {
     const session = useAuthStore.getState().session;
-    const tenantId = session?.tenantId;
+    const tenantId = overrideTenantId || session?.tenantId;
     if (!tenantId) {
       return success([]);
     }
-    const db = getDb();
-    const overrides = await db.userPermissionOverrides
-      .where('[userId+tenantId]')
-      .equals([userId, tenantId])
-      .filter((o) => !o.deletedAt)
-      .toArray();
+    if (isDbReady()) {
+      const db = getDb();
+      const overrides = await db.userPermissionOverrides
+        .where('[userId+tenantId]')
+        .equals([userId, tenantId])
+        .filter((o) => !o.deletedAt)
+        .toArray();
+      return success(overrides);
+    }
+    const { data, error } = await supabase
+      .from('user_permission_overrides')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null);
+    if (error) return failure(new AppError('OVERRIDES_FETCH_FAILED', error.message));
+    const overrides: DexieUserPermissionOverride[] = (data ?? []).map((r: Record<string, unknown>) => ({
+      id: r.id as string,
+      userId: r.user_id as string,
+      tenantId: r.tenant_id as string,
+      permission: r.permission as string,
+      effect: r.effect as 'allow' | 'deny',
+      createdAt: r.created_at as string,
+    }));
     return success(overrides);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en getOverrides:', err);
@@ -107,14 +125,14 @@ export async function addOverride(input: CreateOverrideInput): Promise<Result<De
       return result;
     }
 
-    const { data: existing } = await supabase
+    const { data: existingRows } = await supabase
       .from('user_permission_overrides')
       .select('*')
       .eq('user_id', input.userId)
       .eq('tenant_id', input.tenantId)
       .eq('permission', input.permission)
-      .is('deleted_at', null)
-      .single();
+      .is('deleted_at', null);
+    const existing = existingRows?.[0] ?? null;
 
     if (existing) {
       if (existing.effect === input.effect) {

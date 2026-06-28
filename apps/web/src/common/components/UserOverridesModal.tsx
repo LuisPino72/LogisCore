@@ -32,12 +32,12 @@ export function UserOverridesModal({ isOpen, onClose, userId, userName, tenantId
   const loadOverrides = useCallback(async () => {
     if (!userId || !isOpen) return;
     setLoading(true);
-    const result = await userPermissionOverrideService.getOverrides(userId);
+    const result = await userPermissionOverrideService.getOverrides(userId, tenantId);
     if (result.ok) {
       setOverrides(result.data as UserPermissionOverride[]);
     }
     setLoading(false);
-  }, [userId, isOpen]);
+  }, [userId, isOpen, tenantId]);
 
   useEffect(() => {
     loadOverrides();
