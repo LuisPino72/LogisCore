@@ -1,6 +1,7 @@
 import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, type DexieExpense } from '../../../services/dexie/db';
+import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
@@ -238,7 +239,6 @@ export async function receiveOrder(
       });
     });
 
-    // @ts-expect-error - syncEngine está disponible globalmente
     syncEngine.pushNow().catch((err: unknown) => logger.warn('Receiving', 'pushNow failed:', err));
 
     await logAuditEventOnly({

@@ -33,6 +33,13 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
   useEffect(() => {
     if (!isOpen) return;
     submittedRef.current = false;
+    const map: Record<string, number> = {};
+    for (const item of order.items) {
+      const pending = item.quantity - item.receivedQuantity;
+      map[item.id] = pending > 0 ? pending : 0;
+    }
+    setQuantities(map);
+    setError('');
     const productIds = order.items.map((i) => i.productId);
     usePurchaseStore.getState().fetchProductsForOrder(tenantId).then((res) => {
       if (res.ok) {
@@ -131,7 +138,7 @@ export function OrderReceive({ isOpen, onClose, onSubmit, order, tenantId }: Ord
       title="Recibir mercancía"
       footer={
         <div className="flex gap-3 w-full">
-          <Button variant="ghost" fullWidth onClick={handleClose}>Cancelar</Button>
+          <Button variant="ghost" fullWidth onClick={handleClose} disabled={submitting}>Cancelar</Button>
           <Button variant="primary" fullWidth onClick={handleSubmit} disabled={submitting}>
             {submitting ? 'Procesando...' : (
               <>

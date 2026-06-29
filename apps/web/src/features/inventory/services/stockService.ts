@@ -2,6 +2,7 @@ import { type Result, success, failure, AppError, SystemEvents } from '@logiscor
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, isDbClosing } from '../../../services/dexie/db';
 import { type Transaction } from 'dexie';
+import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { outboxService } from '../../../services/outbox/outboxService';
 import { logAuditEventOnly } from '../../../services/audit/emitWithAudit';
@@ -173,7 +174,6 @@ export async function adjustStock(input: AdjustStockInput & { userId: string; te
       });
     });
 
-    // @ts-expect-error - syncEngine está disponible globalmente
     syncEngine.pushNow().catch((err: unknown) => logger.warn('Inventory', 'pushNow failed:', err));
 
     await logAuditEventOnly({

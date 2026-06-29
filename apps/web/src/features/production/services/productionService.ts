@@ -16,6 +16,7 @@
 import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, type DexieInventoryLot } from '../../../services/dexie/db';
+import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { emitWithAudit, emitWithPersistence } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
@@ -910,7 +911,6 @@ export const productionService = {
         await ev.enqueueInTransaction(tx);
       });
 
-      // @ts-expect-error - syncEngine está disponible globalmente
       syncEngine.pushNow().catch((err: unknown) => logger.warn('Production', 'pushNow failed:', err));
 
       // 7. Audit event
