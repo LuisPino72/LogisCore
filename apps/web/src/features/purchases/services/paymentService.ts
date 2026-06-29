@@ -233,7 +233,7 @@ export async function getPendingPayables(tenantId: string): Promise<number> {
 
   const orders = await db.purchaseOrders
     .where({ tenantId })
-    .filter((o) => !o.deletedAt && o.status !== 'cancelled')
+    .filter((o) => !o.deletedAt && (o.status === 'received' || o.status === 'partially_received'))
     .toArray();
   const orderTotal = orders.reduce((sum, o) => {
     const total = o.totalUsd || 0;
