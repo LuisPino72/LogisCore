@@ -32,11 +32,6 @@ interface ProductListProps {
   onBulkPriceUpdate?: (productIds: string[]) => void;
 }
 
-function getStockLabel(isWeighted: boolean, unit: string): string {
-  if (isWeighted) return unit === 'lt' ? 'Lt' : unit === 'm' ? 'm' : 'Kg';
-  return 'Total';
-}
-
 type ProductBadgeType = 'vendible' | 'no-vendible' | 'pesable' | 'materia-prima' | 'variantes';
 
 const PRODUCT_BADGE_STYLES: Record<ProductBadgeType, string> = {
@@ -65,8 +60,8 @@ function ProductBadge({ type, className = '' }: { type: ProductBadgeType; classN
 
 function getStockBadgeContent(stock: number, unit: string, isWeighted: boolean): string {
   const display = displayQty(stock, unit);
-  const label = getStockLabel(isWeighted, unit);
-  return `${display} ${label}`;
+  if (isWeighted) return display;
+  return `${display} Total`;
 }
 
 function getDisplayStockMin(product: { stockMin?: number; isWeighted: boolean; unit: string }): number | undefined {
