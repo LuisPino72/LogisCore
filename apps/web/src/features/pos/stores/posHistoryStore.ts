@@ -92,6 +92,7 @@ export const createHistorySlice = (set: (setter: Partial<HistoryGetter> | ((stat
     const result = await posService.parkCart(tenantId, name, cart, usePosStore.getState().selectedCustomerId ?? undefined, deliveryInfo);
     if (result.ok) {
       set({ cart: [], activeParkedCartId: null, error: null });
+      usePosStore.setState({ selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
       get().fetchParkedCarts(tenantId);
       return result;
     }

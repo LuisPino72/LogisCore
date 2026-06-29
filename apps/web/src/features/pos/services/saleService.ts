@@ -219,7 +219,7 @@ async function consumeSaleItems(
         productId: cartItem.productId,
         name: product.name,
         requested: cartItem.quantity,
-        available: cartItem.quantity - toConsume,
+        available: cartItem.quantity,
       });
       allConsumedLots.push(...consumedLots);
     }

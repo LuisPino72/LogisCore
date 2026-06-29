@@ -224,7 +224,7 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
       : get().cart.filter((item) => item.productId !== productId);
     set({ cart: next });
     if (next.length === 0) {
-      usePosStore.setState({ selectedCustomerId: null, selectedCustomer: null, isCreditSale: false });
+      usePosStore.setState({ selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
     }
   },
 
@@ -289,5 +289,5 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
     });
   },
 
-  clearCart: () => set({ cart: [] }),
+  clearCart: () => set({ cart: [], discount: null }),
 });

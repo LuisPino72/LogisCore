@@ -600,7 +600,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const handleParkTable = useCallback((tableNumber: number) => {
     if (parkTableNumber === tableNumber) return;
     setParkTableNumber(tableNumber);
-    usePosStore.setState({ cart: [], activeParkedCartId: null });
+    usePosStore.setState({ cart: [], activeParkedCartId: null, discount: null, selectedCustomerId: null, selectedCustomer: null, isCreditSale: false });
     addToast({ type: 'success', message: `Mesa ${tableNumber} seleccionada. Agrega productos y presiona "Poner en cola" para asignarla.`, duration: 3000 });
   }, [addToast, parkTableNumber]);
 

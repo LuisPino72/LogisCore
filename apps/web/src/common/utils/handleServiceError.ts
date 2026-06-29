@@ -1,5 +1,6 @@
 import type { Result } from '@logiscore/core';
 import { showPermissionDenied } from '../hooks/usePermissionDenied';
+import { useToastStore } from '../../stores/toastStore';
 
 const PERMISSION_ERROR_CODES = new Set([
   'AUTH_SCOPE_DENIED',
@@ -19,5 +20,6 @@ export function handleServiceError<T>(
     return false;
   }
 
+  useToastStore.getState().addToast({ type: 'error', message: result.error.message });
   return false;
 }

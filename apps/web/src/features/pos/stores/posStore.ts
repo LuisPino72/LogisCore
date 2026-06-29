@@ -66,7 +66,7 @@ export const usePosStore = create<PosStore>()(
               isUrgent,
             });
             if (orderResult.ok) {
-              set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false });
+              set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false, selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
               get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));
               return success(orderResult.data.id);
             }
@@ -77,7 +77,7 @@ export const usePosStore = create<PosStore>()(
 
         const result = await posService.parkCart(tenantId, name, cart, selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen, isUrgent });
         if (result.ok) {
-          set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false });
+          set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false, selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
           get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));
           return result;
         }
