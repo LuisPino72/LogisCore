@@ -1201,6 +1201,12 @@ export const adminService = {
       const db = getDb();
       const existing = await db.registerConfigs.get(id);
       if (existing) {
+        if (input.isActive === false && existing.isActive) {
+          const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
+          if (activeSession) {
+            return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede desactivar una caja con sesión activa. Cierra la caja primero.'));
+          }
+        }
         await db.registerConfigs.update(id, { ...input, updatedAt });
         const updated = await db.registerConfigs.get(id);
         if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
