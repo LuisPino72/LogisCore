@@ -58,6 +58,7 @@ export function GastoList({ gastos, loading, isOwner, canUpdate, canDelete, onDe
     {
       key: 'category',
       header: 'Categoría',
+      width: '25%',
       render: (g) => (
         <span className="font-medium text-gray-800 inline-flex items-center gap-1.5">
           {getExpenseCategoryLabel(g.category)}
@@ -69,22 +70,28 @@ export function GastoList({ gastos, loading, isOwner, canUpdate, canDelete, onDe
       key: 'amountUsd',
       header: 'Monto $',
       align: 'right',
+      width: '100px',
       render: (g) => <span className="font-bold text-primary text-base">{formatUsd(g.amountUsd)}</span>,
     },
     {
       key: 'date',
       header: 'Fecha',
+      align: 'center',
+      width: '90px',
       render: (g) => <span className="text-text-secondary whitespace-nowrap">{formatDate(g.date)}</span>,
     },
     {
       key: 'status',
       header: 'Estado',
+      align: 'center',
+      width: '80px',
       render: (g) => <StatusBadge status={g.status} />,
     },
     {
       key: 'recurring',
       header: 'Recurrente',
       align: 'center',
+      width: '80px',
       render: (g) => g.isRecurring ? (
         <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">
           <RotateCcw size={10} />
@@ -101,7 +108,7 @@ export function GastoList({ gastos, loading, isOwner, canUpdate, canDelete, onDe
       key: 'actions',
       header: 'Acciones',
       align: 'right',
-      width: '100px',
+      width: '90px',
       render: (g) => (
         <div className="flex items-center justify-end gap-1">
           {canUpdate && (
