@@ -82,6 +82,15 @@ export const SalesHistory = memo(function SalesHistory({ tenantId, sales, total,
 
   const columns: Column<Sale>[] = [
     {
+      key: 'saleCode',
+      header: 'Código',
+      render: (sale) => (
+        <span className="text-sm font-mono font-bold text-gray-700">
+          C-{sale.id.replace(/-/g, '').slice(0, 6).toUpperCase()}
+        </span>
+      ),
+    },
+    {
       key: 'createdAt',
       header: 'Fecha',
       sortable: true,
