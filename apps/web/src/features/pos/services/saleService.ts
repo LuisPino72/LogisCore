@@ -1,8 +1,8 @@
-import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
+import { type Result, success, failure, AppError, SystemEvents, EventBus } from '@logiscore/core';
 import { preciseRound, toSnake, generateId } from '@logiscore/shared';
 import { productionService, recipeQtyToStorageBase } from '../../production/services/productionService';
 import { getDb } from '../../../services/dexie/db';
-import type { DexieCashRegister, DexieSale } from '../../../services/dexie/db';
+import type { DexieCashRegister, DexieSale, DexieSaleItem } from '../../../services/dexie/db';
 import { syncQueue } from '../../../services/sync/syncQueue';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { outboxService } from '../../../services/outbox/outboxService';
@@ -1340,8 +1340,9 @@ export async function updateOrderStatus(
 
   try {
     await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
+      const freshSale = await db.sales.get(saleId);
       const historyEntry = { status: newStatus, timestamp: now, by: sale.userId };
-      const currentHistory = sale.statusHistory ?? [];
+      const currentHistory = freshSale?.statusHistory ?? [];
       const updates = {
         status: newStatus,
         ...(newStatus === 'lista' && { preparedAt: now }),
@@ -1695,6 +1696,24 @@ export async function reassignDelivery(saleId: string): Promise<Result<void, App
   }
 }
 
+function mapSaleItemsToCartItems(saleItems: DexieSaleItem[]): CartItem[] {
+  return saleItems.map((item) => ({
+    productId: item.productId,
+    name: item.productName,
+    sku: item.productSku || '',
+    quantity: item.quantity,
+    unitPriceUsd: item.unitPriceUsd,
+    totalPriceUsd: item.totalPriceUsd,
+    isWeighted: item.isWeighted,
+    isTaxable: true,
+    unit: item.unit,
+    stock: 0,
+    presentationId: item.presentationId,
+    presentationName: item.presentationName,
+    unitMultiplier: item.unitMultiplier ?? 1,
+  }));
+}
+
 export async function confirmOrderPayment(
   saleId: string,
   paymentMethod: PaymentMethod,
@@ -1807,7 +1826,7 @@ export async function confirmOrderPayment(
     await db.transaction('rw', txTables, async (tx) => {
       await db.saleItems.where({ saleId }).delete();
       const consumeResult = await consumeSaleItems(
-        tx, normalItems, assemblyItems, saleId, sale.tenantId, sale.userId, false, saleItems as unknown as CartItem[],
+        tx, normalItems, assemblyItems, saleId, sale.tenantId, sale.userId, false, mapSaleItemsToCartItems(saleItems),
       );
       if (!consumeResult.ok) throw consumeResult.error;
 
@@ -2024,16 +2043,23 @@ export async function batchMarkAsReady(
   _tenantId: string,
 ): Promise<Result<void, AppError>> {
   try {
-    for (const saleId of saleIds) {
-      const result = await updateOrderStatus(saleId, 'lista');
-      if (!result.ok) {
-        logger.error(MODULE_NAME, `batchMarkAsReady: failed for ${saleId}`, result.error);
+    const db = getDb();
+    await db.transaction('rw', db.sales, async () => {
+      for (const saleId of saleIds) {
+        const sale = await db.sales.get(saleId);
+        if (!sale || sale.deletedAt) continue;
+        const historyEntry = { status: 'lista', timestamp: new Date().toISOString(), by: 'batch' };
+        const currentHistory = sale.statusHistory ?? [];
+        await db.sales.update(saleId, {
+          status: 'lista',
+          statusHistory: [...currentHistory, historyEntry],
+        });
+        EventBus.emit(SystemEvents.ORDER_STATUS_CHANGED, { saleId, oldStatus: sale.status, newStatus: 'lista' });
       }
-    }
-
+    });
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en batchMarkAsReady:', err);
-    return failure(new AppError('BATCH_MARK_READY_FAILED', 'Error al marcar pedidos como listos.'));
+    return failure(new AppError('BATCH_UPDATE_FAILED', 'Error al marcar órdenes como listas'));
   }
 }

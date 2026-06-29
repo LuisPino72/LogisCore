@@ -124,24 +124,14 @@ const OrderCard = React.memo(function OrderCard({
             </Button>
           )}
           {order.status === 'preparacion' && (
-            <>
-              <Button
-                variant="primary"
-                className="flex-1 min-h-[80px] text-base font-semibold"
-                onClick={handleReady}
-                aria-label="Marcar como listo"
-              >
-                Listo
-              </Button>
-              <Button
-                variant="ghost"
-                className="min-h-[80px] px-4"
-                onClick={handleRevert}
-                aria-label="Revertir a estado anterior"
-              >
-                Revertir
-              </Button>
-            </>
+            <Button
+              variant="primary"
+              className="flex-1 min-h-[80px] text-base font-semibold"
+              onClick={handleReady}
+              aria-label="Marcar como listo"
+            >
+              Listo
+            </Button>
           )}
           {order.status === 'lista' && (
             <Button
@@ -211,9 +201,11 @@ export default function KitchenDisplay() {
       for (const item of order.items) {
         const existing = groups.get(item.name);
         if (existing) {
-          existing.totalQuantity += item.quantity;
-          existing.orderIds.push(order.id);
-          existing.orders.push(order);
+          if (!existing.orderIds.includes(order.id)) {
+            existing.totalQuantity += item.quantity;
+            existing.orderIds.push(order.id);
+            existing.orders.push(order);
+          }
         } else {
           groups.set(item.name, {
             productName: item.name,

@@ -22,7 +22,6 @@ export function DeliveryPromptModal({
   needsKitchenDefault,
 }: DeliveryPromptModalProps) {
   const [step, setStep] = useState<'choose' | 'kitchen'>('choose');
-  const [wantsKitchen, setWantsKitchen] = useState(needsKitchenDefault ?? false);
   const [isUrgent, setIsUrgent] = useState(false);
 
   const cart = usePosStore((s) => s.cart);
@@ -40,13 +39,16 @@ export function DeliveryPromptModal({
     return needsKitchenForCart(cart, productsMap);
   }, [cart, productsMap]);
 
+  const defaultKitchenChoice = useMemo(() => {
+    return autoNeedsKitchen || (needsKitchenDefault ?? false);
+  }, [autoNeedsKitchen, needsKitchenDefault]);
+
   const handleClose = () => {
     setStep('choose');
     onClose();
   };
 
   const handleDelivery = () => {
-    setWantsKitchen(autoNeedsKitchen || (needsKitchenDefault ?? false));
     setStep('kitchen');
   };
 
@@ -116,9 +118,9 @@ export function DeliveryPromptModal({
             <div className="flex flex-col gap-2">
               <Button
                 variant="outline"
-                onClick={() => { setWantsKitchen(true); handleKitchenChoice(true); }}
+                onClick={() => handleKitchenChoice(true)}
                 disabled={loading}
-                className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${wantsKitchen ? 'border-warning bg-warning/5' : ''}`}
+                className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${defaultKitchenChoice ? 'border-warning bg-warning/5' : ''}`}
                 aria-label="Sí, requiere preparación en cocina"
               >
                 <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
@@ -131,9 +133,9 @@ export function DeliveryPromptModal({
               </Button>
                <Button
                  variant="outline"
-                 onClick={() => { setWantsKitchen(false); handleKitchenChoice(false); }}
+                 onClick={() => handleKitchenChoice(false)}
                  disabled={loading}
-                 className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${!wantsKitchen ? 'border-success bg-success/5' : ''}`}
+                 className={`flex items-center gap-3 p-4 min-h-[56px] w-full justify-start ${!defaultKitchenChoice ? 'border-success bg-success/5' : ''}`}
                  aria-label="No, enviar directo a delivery"
                >
                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">

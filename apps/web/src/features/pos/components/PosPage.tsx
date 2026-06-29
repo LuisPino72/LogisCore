@@ -568,7 +568,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   );
 
   const handleDeliveryConfirm = useCallback(
-    async (needsKitchen: boolean) => {
+    async (needsKitchen: boolean, isUrgent?: boolean) => {
       if (!tenantId) return;
       if (cart.length === 0) {
         addToast({ type: 'warning', message: 'Agrega productos al carrito antes de poner en cola.', duration: 4000 });
@@ -576,7 +576,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       }
       const deliveryName = `Delivery #${parkedCarts.length + 1}`;
       setProcessing(true);
-      const result = await parkAsDelivery(tenantId, deliveryName, needsKitchen);
+      const result = await parkAsDelivery(tenantId, deliveryName, needsKitchen, isUrgent ?? false);
       setProcessing(false);
       if (result.ok) {
         addToast({ type: 'success', message: `${deliveryName} pausada${needsKitchen ? ' (requiere cocina)' : ''}.`, duration: 4000 });

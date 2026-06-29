@@ -75,7 +75,7 @@ export const usePosStore = create<PosStore>()(
           }
         }
 
-        const result = await posService.parkCart(tenantId, name, cart, selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen });
+        const result = await posService.parkCart(tenantId, name, cart, selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen, isUrgent });
         if (result.ok) {
           set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false });
           get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));

@@ -240,6 +240,7 @@ export interface DexieParkedCart {
   createdAt: string;
   orderType?: 'dine-in' | 'delivery';
   needsKitchen?: boolean;
+  isUrgent?: boolean;
 }
 
 export interface DexieProductFavorite {

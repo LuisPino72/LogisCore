@@ -13,7 +13,8 @@ export function needsKitchenForCart(
     const product = products.get(item.productId);
     if (!product) continue;
     if (product.hasAssemblyRecipe) return true;
-    if ((product.stock ?? 0) < item.quantity) return true;
+    const itemQty = product.isWeighted ? item.quantity * 1000 : item.quantity;
+    if ((product.stock ?? 0) < itemQty) return true;
   }
   return false;
 }

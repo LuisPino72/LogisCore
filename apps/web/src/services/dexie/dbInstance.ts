@@ -152,6 +152,16 @@ export class LogisCoreDB extends Dexie {
     this.version(35).stores({
       userPermissionOverrides: 'id, userId, tenantId, permission, &[userId+tenantId+permission]',
     });
+    this.version(36).stores({}).upgrade(async (tx) => {
+      await tx.table('sales').toCollection().modify((sale) => {
+        if (!sale.statusHistory) {
+          sale.statusHistory = [{ status: sale.status, timestamp: sale.createdAt }];
+        }
+        if (!sale.communicationLog) {
+          sale.communicationLog = [];
+        }
+      });
+    });
 
   }
 }

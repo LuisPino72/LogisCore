@@ -42,7 +42,7 @@ export async function parkCart(
   name: string,
   cart: CartItem[],
   customerId?: string,
-  deliveryInfo?: { orderType?: 'dine-in' | 'delivery'; needsKitchen?: boolean },
+  deliveryInfo?: { orderType?: 'dine-in' | 'delivery'; needsKitchen?: boolean; isUrgent?: boolean },
 ): Promise<Result<string, AppError>> {
   try {
     const db = getDb();
@@ -59,6 +59,7 @@ export async function parkCart(
       createdAt: new Date().toISOString(),
       orderType: deliveryInfo?.orderType,
       needsKitchen: deliveryInfo?.needsKitchen,
+      isUrgent: deliveryInfo?.isUrgent,
     });
     return success(id);
   } catch (err) {
