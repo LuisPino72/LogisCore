@@ -110,18 +110,20 @@ export function RegisterManagerModal({ isOpen, onClose, tenantId }: RegisterMana
       render: (r) => (
         <div className="flex gap-1 items-center">
           {editingId === r.id ? (
-            <div className="flex gap-1 items-center">
+            <div className="flex flex-col gap-2 w-full">
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 validation={{ maxLength: 50 }}
               />
-              <Button variant="primary" size="sm" onClick={() => handleUpdate(r.id)} disabled={saving}>
-                Guardar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
-                <X size={14} />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={() => handleUpdate(r.id)} disabled={saving} className="min-h-11">
+                  Guardar
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setEditingId(null)} className="min-h-11">
+                  <X size={14} />
+                </Button>
+              </div>
             </div>
           ) : (
             <>
@@ -145,18 +147,19 @@ export function RegisterManagerModal({ isOpen, onClose, tenantId }: RegisterMana
     <Modal isOpen={isOpen} onClose={onClose} title="Gestionar Cajas" size="lg">
       <div className="space-y-4">
         {showAddForm ? (
-          <div className="flex gap-2 items-end flex-wrap">
+          <div className="flex flex-col gap-3">
             <Input
-              placeholder="Nombre de la caja"
+              label="Nombre de la caja"
+              placeholder="Ej: Principal"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               validation={{ required: true, maxLength: 50 }}
             />
-            <div className="flex gap-1">
-              <Button variant="primary" onClick={handleCreate} disabled={saving || !newName.trim()}>
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={handleCreate} disabled={saving || !newName.trim()} className="min-h-11">
                 {saving ? 'Guardando...' : 'Guardar'}
               </Button>
-              <Button variant="ghost" onClick={() => { setShowAddForm(false); setNewName(''); }}>
+              <Button variant="secondary" onClick={() => { setShowAddForm(false); setNewName(''); }} className="min-h-11">
                 Cancelar
               </Button>
             </div>

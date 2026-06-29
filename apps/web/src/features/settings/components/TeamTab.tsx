@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Users, ShoppingBag, Plus, Shield } from 'lucide-react';
+import { Users, ShoppingBag, Plus, Shield, Pencil, Trash2, KeyRound, ShieldCheck } from 'lucide-react';
 import { Card, Button, DataTable, Skeleton, Alert, Badge, Select, Modal, Input } from '../../../common/components';
 import type { Column } from '../../../common/components/DataTable';
 import { useToastStore } from '../../../stores/toastStore';
@@ -136,6 +136,68 @@ export function TeamTab({ tenantId }: TeamTabProps) {
     }
   }, [resetPasswordUser, newResetPassword, addToast]);
 
+  const renderUserCard = useCallback((u: UserRole) => (
+    <div className="p-4 space-y-4">
+      <div className="text-center">
+        <div className="text-base font-semibold text-gray-900">{u.name || u.email || '—'}</div>
+      </div>
+
+      {u.role !== 'owner' && (
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="text-xs text-gray-500">Rol</span>
+          {editingUserId === u.id ? (
+            <Select
+              value={editingRoleId}
+              onChange={(e) => setEditingRoleId(e.target.value)}
+              className="text-xs w-full max-w-[200px]"
+            >
+              {roles.filter((r) => r.name !== 'admin' && r.name !== 'owner').map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </Select>
+          ) : (
+            <Badge variant="neutral">{u.role}</Badge>
+          )}
+        </div>
+      )}
+      {u.role === 'owner' && (
+        <div className="flex justify-center">
+          <Badge variant="info">Propietario</Badge>
+        </div>
+      )}
+
+      {isOwner && u.role !== 'owner' && (
+        <div className="flex flex-wrap justify-center gap-2 pt-1">
+          {editingUserId === u.id ? (
+            <>
+              <Button variant="primary" size="sm" onClick={() => handleUpdateRole(u.id, editingRoleId)} className="min-h-11">
+                Guardar
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setEditingUserId(null)} className="min-h-11">
+                Cancelar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost-primary" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }} className="p-1.5 min-w-11 min-h-11" aria-label={`Editar rol de ${u.name || u.email}`}>
+                <Pencil size={14} />
+              </Button>
+              <Button variant="ghost-primary" size="sm" onClick={() => setOverridesTarget({ userId: u.userId, name: u.name || u.email })} className="p-1.5 min-w-11 min-h-11" aria-label={`Permisos de ${u.name || u.email}`}>
+                <ShieldCheck size={14} />
+              </Button>
+              <Button variant="ghost-primary" size="sm" onClick={() => setResetPasswordUser(u)} className="p-1.5 min-w-11 min-h-11" aria-label={`Restablecer contraseña de ${u.name || u.email}`}>
+                <KeyRound size={14} />
+              </Button>
+              <Button variant="ghost-danger" size="sm" onClick={() => setDeletingUser(u)} className="p-1.5 min-w-11 min-h-11" aria-label={`Eliminar a ${u.name || u.email}`}>
+                <Trash2 size={14} />
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  ), [editingUserId, editingRoleId, roles, isOwner, handleUpdateRole, setOverridesTarget, setResetPasswordUser, setDeletingUser]);
+
   const userColumns: Column<UserRole>[] = useMemo(() => [
     { key: 'name', header: 'Nombre', render: (u) => u.name || u.email || '—' },
     {
@@ -171,26 +233,26 @@ export function TeamTab({ tenantId }: TeamTabProps) {
           <div className="flex flex-wrap gap-1">
             {editingUserId === u.id ? (
               <>
-                <Button variant="ghost" size="sm" onClick={() => handleUpdateRole(u.id, editingRoleId)}>
+                <Button variant="primary" size="sm" onClick={() => handleUpdateRole(u.id, editingRoleId)} className="min-h-11">
                   Guardar
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditingUserId(null)}>
+                <Button variant="secondary" size="sm" onClick={() => setEditingUserId(null)} className="min-h-11">
                   Cancelar
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }} aria-label={`Editar rol de ${u.name || u.email}`}>
-                  Editar rol
+                <Button variant="ghost-primary" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }} className="p-1.5 min-w-11 min-h-11" aria-label={`Editar rol de ${u.name || u.email}`}>
+                  <Pencil size={14} />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setOverridesTarget({ userId: u.userId, name: u.name || u.email })} aria-label={`Permisos individuales de ${u.name || u.email}`}>
-                  Permisos
+                <Button variant="ghost-primary" size="sm" onClick={() => setOverridesTarget({ userId: u.userId, name: u.name || u.email })} className="p-1.5 min-w-11 min-h-11" aria-label={`Permisos de ${u.name || u.email}`}>
+                  <ShieldCheck size={14} />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setResetPasswordUser(u)} aria-label={`Restablecer contraseña de ${u.name || u.email}`}>
-                  Restablecer contraseña
+                <Button variant="ghost-primary" size="sm" onClick={() => setResetPasswordUser(u)} className="p-1.5 min-w-11 min-h-11" aria-label={`Restablecer contraseña de ${u.name || u.email}`}>
+                  <KeyRound size={14} />
                 </Button>
-                <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeletingUser(u)} aria-label={`Eliminar a ${u.name || u.email}`}>
-                  Eliminar
+                <Button variant="ghost-danger" size="sm" onClick={() => setDeletingUser(u)} className="p-1.5 min-w-11 min-h-11" aria-label={`Eliminar a ${u.name || u.email}`}>
+                  <Trash2 size={14} />
                 </Button>
               </>
             )}
@@ -230,10 +292,11 @@ export function TeamTab({ tenantId }: TeamTabProps) {
             <Button
               variant="primary"
               size="sm"
-              className="min-h-11 transition-all duration-200"
+              className="min-h-11 min-w-11 transition-all duration-200"
               onClick={() => setShowAddEmployee(true)}
+              aria-label="Crear empleado"
             >
-              <Plus size={16} />
+              <Plus size={18} />
               <span className="hidden sm:inline ml-1">Crear empleado</span>
             </Button>
           </div>
@@ -253,6 +316,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
               emptyMessage="No hay empleados registrados."
               keyExtractor={(u) => u.id}
               renderCardOnMobile
+              renderCard={renderUserCard}
             />
           )}
         </div>
@@ -273,29 +337,29 @@ export function TeamTab({ tenantId }: TeamTabProps) {
             <Button
               variant="primary"
               size="sm"
-              className="min-h-11 transition-all duration-200"
+              className="min-h-11 min-w-11 transition-all duration-200"
               onClick={() => { setEditingRole(null); setShowRoleModal(true); }}
+              aria-label="Crear rol"
             >
-              <Plus size={16} />
+              <Plus size={18} />
               <span className="hidden sm:inline ml-1">Crear rol</span>
             </Button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {roles.filter(r => r.name !== 'admin' && r.name !== 'owner').map((role) => (
-              <div key={role.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant={role.rlsTier === 'owner' ? 'info' : 'neutral'}>{role.rlsTier}</Badge>
-                  <div>
-                    <div className="font-medium text-sm">{role.name}</div>
-                    {role.description && <div className="text-xs text-gray-500">{role.description}</div>}
-                  </div>
-                  <Badge variant="neutral" className="text-xs">{(role as Role & { permissionCount?: number }).permissionCount ?? 0} permisos</Badge>
-                </div>
-          <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => { setEditingRole(role); setShowRoleModal(true); }}>
-                    Editar
+              <div key={role.id} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{role.name}</span>
+                  <Button variant="ghost-primary" size="sm" onClick={() => { setEditingRole(role); setShowRoleModal(true); }} className="p-1.5 min-w-11 min-h-11" aria-label={`Editar rol ${role.name}`}>
+                    <Pencil size={14} />
                   </Button>
+                </div>
+                {role.description && (
+                  <div className="text-xs text-gray-500">{role.description}</div>
+                )}
+                <div>
+                  <Badge variant="neutral" className="text-xs">{(role as Role & { permissionCount?: number }).permissionCount ?? 0} permisos</Badge>
                 </div>
               </div>
             ))}
@@ -318,10 +382,11 @@ export function TeamTab({ tenantId }: TeamTabProps) {
             <Button
               variant="primary"
               size="sm"
-              className="min-h-11 transition-all duration-200"
+              className="min-h-11 min-w-11 transition-all duration-200"
               onClick={() => setShowRegisterManager(true)}
+              aria-label="Gestionar cajas"
             >
-              <Plus size={16} />
+              <Plus size={18} />
               <span className="hidden sm:inline ml-1">Gestionar cajas</span>
             </Button>
           </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Shield, ChevronDown, ChevronRight } from 'lucide-react';
-import { Modal, Button, Badge, Input, Select, Alert, Checkbox } from './index';
+import { Modal, Button, Badge, Input, Alert, Checkbox } from './index';
 import { adminService } from '../../features/admin/services/adminService';
 import { useToastStore } from '../../stores/toastStore';
 import { ALL_MODULES, CRUD_ACTIONS, SPECIAL_ACTIONS, type Role } from '../../specs/roles';
@@ -24,7 +24,6 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
   const { addToast } = useToastStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [rlsTier, setRlsTier] = useState<string>('employee');
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(ALL_MODULES));
   const [loading, setLoading] = useState(false);
@@ -38,7 +37,6 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
     if (role) {
       setName(role.name);
       setDescription(role.description ?? '');
-      setRlsTier('employee');
       setLoading(true);
       adminService.fetchRolePermissions(role.id).then((result) => {
         if (result.ok) {
@@ -49,7 +47,6 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
     } else {
       setName('');
       setDescription('');
-      setRlsTier('employee');
       setPermissions(new Set());
       setLoading(false);
     }
@@ -134,7 +131,7 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
     } finally {
       setLoading(false);
     }
-  }, [name, description, rlsTier, permissions, isEditing, role, addToast, onSave, onClose]);
+  }, [name, description, permissions, isEditing, role, addToast, onSave, onClose]);
 
   return (
     <Modal
@@ -173,15 +170,6 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
           onChange={(e) => setDescription(e.target.value)}
           validation={{ maxLength: 200 }}
         />
-
-        <Select
-          label="Nivel de acceso (RLS Tier)"
-          value={rlsTier}
-          onChange={(e) => setRlsTier(e.target.value)}
-          disabled
-        >
-          <option value="employee">Employee</option>
-        </Select>
 
         <div>
           <h3 className="text-sm font-medium text-gray-700 mb-3">Permisos</h3>

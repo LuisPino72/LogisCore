@@ -24,7 +24,7 @@ export const OperationSettingsSchema = z.object({
   lowStockThreshold: z.number()
     .min(0, 'Umbral de stock bajo no puede ser negativo'),
   ticketFooterMessage: z.string()
-    .max(30, 'Mensaje demasiado largo (máx 50 caracteres)'),
+    .max(30, 'Mensaje demasiado largo (máx 30 caracteres)'),
   needsKitchenDefault: z.boolean().optional().default(false),
   defaultDeliveryFee: z.number().min(0).optional().default(0),
   pagoMovilEnabled: z.boolean().optional(),
@@ -53,7 +53,7 @@ export const BusinessInfoSchema = z.object({
   name: z.string().min(1, 'El nombre del negocio es obligatorio').max(30, 'Nombre demasiado largo'),
   rif: z.string().regex(/^[VJEGP]\d{9}$/, 'RIF inválido (ej: J123456789)'),
   address: z.string().max(50, 'Dirección demasiado larga').optional().default(''),
-  phone: z.string().max(20, 'Teléfono demasiado largo').optional().default(''),
+  phone: z.string().max(15, 'Teléfono demasiado largo').optional().default(''),
   logoUrl: z.string().nullable().optional().default(null),
 });
 

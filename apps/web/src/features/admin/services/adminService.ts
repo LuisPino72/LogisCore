@@ -1199,14 +1199,17 @@ export const adminService = {
     const updatedAt = new Date().toISOString();
     if (isDbReady()) {
       const db = getDb();
-      await db.registerConfigs.update(id, { ...input, updatedAt });
-      const updated = await db.registerConfigs.get(id);
-      if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
-      const remoteFields: Record<string, unknown> = { updated_at: updatedAt };
-      if (input.name !== undefined) remoteFields.name = input.name;
-      if (input.isActive !== undefined) remoteFields.is_active = input.isActive;
-      await syncQueue.enqueue('registers_config', 'UPDATE', id, remoteFields, updated.tenantId);
-      return success(updated);
+      const existing = await db.registerConfigs.get(id);
+      if (existing) {
+        await db.registerConfigs.update(id, { ...input, updatedAt });
+        const updated = await db.registerConfigs.get(id);
+        if (!updated) return failure(new AppError('REGISTER_NOT_FOUND', 'Caja no encontrada'));
+        const remoteFields: Record<string, unknown> = { updated_at: updatedAt };
+        if (input.name !== undefined) remoteFields.name = input.name;
+        if (input.isActive !== undefined) remoteFields.is_active = input.isActive;
+        await syncQueue.enqueue('registers_config', 'UPDATE', id, remoteFields, updated.tenantId);
+        return success(updated);
+      }
     }
     const remoteFields: Record<string, unknown> = { updated_at: updatedAt };
     if (input.name !== undefined) remoteFields.name = input.name;
@@ -1230,12 +1233,13 @@ export const adminService = {
     if (isDbReady()) {
       const db = getDb();
       const config = await db.registerConfigs.get(id);
-      if (!config) return success(undefined);
-      const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
-      if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
-      await db.registerConfigs.update(id, { deletedAt: now });
-      await syncQueue.enqueue('registers_config', 'UPDATE', id, { id, deleted_at: now }, config.tenantId);
-      return success(undefined);
+      if (config) {
+        const activeSession = await db.cashRegisters.where({ registerId: id, isOpen: true }).first();
+        if (activeSession) return failure(new AppError('REGISTER_HAS_ACTIVE_SESSION', 'No se puede eliminar una caja con sesión activa'));
+        await db.registerConfigs.update(id, { deletedAt: now });
+        await syncQueue.enqueue('registers_config', 'UPDATE', id, { id, deleted_at: now }, config.tenantId);
+        return success(undefined);
+      }
     }
     const { error } = await supabase.from('registers_config').update({ deleted_at: now }).eq('id', id);
     if (error) return failure(new AppError('REGISTER_DELETE_FAILED', error.message));
@@ -1245,8 +1249,12 @@ export const adminService = {
   async getRegisters(tenantId: string): Promise<Result<DexieRegisterConfig[], AppError>> {
     if (isDbReady()) {
       const db = getDb();
-      const registers = await db.registerConfigs.where('tenantId').equals(tenantId).toArray();
-      return success(registers);
+      const registers = await db.registerConfigs
+        .where('tenantId')
+        .equals(tenantId)
+        .filter((r) => !r.deletedAt)
+        .toArray();
+      if (registers.length > 0) return success(registers);
     }
     const { data, error } = await supabase
       .from('registers_config')
