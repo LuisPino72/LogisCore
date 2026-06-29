@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { customerService } from '../../customers/services/customerService';
 import { getSaleById } from '../services/saleService';
-import { logger } from '../../../lib/logger';
+import { audioService } from '../../../services/audioService';
 
 interface KitchenNotification {
   saleId: string;
@@ -16,18 +16,6 @@ interface UseKitchenNotificationsOptions {
 
 export function useKitchenNotifications({ tenantId }: UseKitchenNotificationsOptions) {
   const [kitchenReadyNotifs, setKitchenReadyNotifs] = useState<KitchenNotification[]>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
-
-  useEffect(() => {
-    const AudioCtx = window.AudioContext || (window as unknown as Record<string, unknown>)['webkitAudioContext'];
-    if (AudioCtx) {
-      audioContextRef.current = new AudioCtx() as AudioContext;
-    }
-    return () => {
-      audioContextRef.current?.close();
-      audioContextRef.current = null;
-    };
-  }, []);
 
   const fetchOrderData = useCallback(async (saleId: string) => {
     const saleResult = await getSaleById(saleId);
@@ -52,22 +40,7 @@ export function useKitchenNotifications({ tenantId }: UseKitchenNotificationsOpt
             return next.slice(0, 3);
           });
 
-          try {
-            const ctx = audioContextRef.current;
-            if (!ctx) return;
-            if (ctx.state === 'suspended') { ctx.resume().catch((e) => logger.warn('useKitchenNotifications', 'resume falló:', e)); }
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            osc.type = 'sine';
-            gain.gain.value = 0.3;
-            osc.start();
-            osc.stop(ctx.currentTime + 0.2);
-          } catch (err) {
-            logger.warn('POS', 'Error reproduciendo beep de notificación', err);
-          }
+          audioService.kitchenReady();
         });
       }
     });

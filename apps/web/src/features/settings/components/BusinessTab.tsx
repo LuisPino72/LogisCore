@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo, type FC } from 'react';
-import { Building2, Upload, X, CreditCard, Bike } from 'lucide-react';
+import { Building2, Upload, X, CreditCard, Bike, Volume2 } from 'lucide-react';
 import { Card, Input, Button, Textarea, Alert, Skeleton, Checkbox, Modal } from '../../../common/components';
+import { audioService } from '../../../services/audioService';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { settingsService } from '../services/settingsService';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -43,6 +44,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
   const [pagoMovilHolder, setPagoMovilHolder] = useState('');
   const [pagoMovilId, setPagoMovilId] = useState('');
   const [pagoMovilPhone, setPagoMovilPhone] = useState('');
+  const [soundsEnabled, setSoundsEnabled] = useState(true);
   const [deliveryPersons, setDeliveryPersons] = useState<DexieDeliveryPerson[]>([]);
   const [showAddMotorizado, setShowAddMotorizado] = useState(false);
   const [newMotorizadoName, setNewMotorizadoName] = useState('');
@@ -77,7 +79,9 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
     setPagoMovilHolder(store.pagoMovilHolder);
     setPagoMovilId(store.pagoMovilId);
     setPagoMovilPhone(store.pagoMovilPhone);
-  }, [store.ticketFooterMessage, store.needsKitchenDefault, store.defaultDeliveryFee, store.pagoMovilEnabled, store.pagoMovilBank, store.pagoMovilHolder, store.pagoMovilId, store.pagoMovilPhone]);
+    setSoundsEnabled(store.soundsEnabled);
+    audioService.enabled = store.soundsEnabled;
+  }, [store.ticketFooterMessage, store.needsKitchenDefault, store.defaultDeliveryFee, store.pagoMovilEnabled, store.pagoMovilBank, store.pagoMovilHolder, store.pagoMovilId, store.pagoMovilPhone, store.soundsEnabled]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -182,10 +186,12 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
         pagoMovilHolder,
         pagoMovilId,
         pagoMovilPhone,
+        soundsEnabled,
       };
       const opResult = await settingsService.updateOperationSettings(tenantId, userId, operationData);
       if (opResult.ok) {
         useSettingsStore.getState().setOperationSettings(operationData);
+        audioService.enabled = soundsEnabled;
         addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });
       } else {
         addToast({ type: 'warning', message: 'Negocio guardado, pero ajustes de operación fallaron. Intente de nuevo.' });
@@ -193,7 +199,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
     } else {
       setLocalError(result.error.message);
     }
-  }, [tenantId, userId, name, rif, address, phone, logoFile, logoUrl, ticketFooterMessage, store.ticketFooterMessage, store.maxDiscountPct, store.defaultMinStock, store.defaultCreditLimit, store.mandatoryCustomerId, store.lowStockThreshold, store.needsKitchenDefault, store.defaultDeliveryFee, pagoMovilEnabled, pagoMovilBank, pagoMovilHolder, pagoMovilId, pagoMovilPhone, addToast]);
+  }, [tenantId, userId, name, rif, address, phone, logoFile, logoUrl, ticketFooterMessage, store.ticketFooterMessage, store.maxDiscountPct, store.defaultMinStock, store.defaultCreditLimit, store.mandatoryCustomerId, store.lowStockThreshold, store.needsKitchenDefault, store.defaultDeliveryFee, pagoMovilEnabled, pagoMovilBank, pagoMovilHolder, pagoMovilId, pagoMovilPhone, soundsEnabled, addToast]);
 
   const handleAddMotorizado = useCallback(async () => {
     if (!tenantId || !userId) return;
@@ -415,6 +421,29 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
               />
             </>
           )}
+        </div>
+      </div>
+    </Card>
+
+    <Card className="hover:shadow-md transition-shadow duration-200">
+      <div className="p-4 sm:p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+            <Volume2 size={20} className="text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Sonidos</h2>
+            <p className="text-sm text-gray-500">
+              Activar efectos de sonido en la app.
+            </p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <Checkbox
+            label="Habilitar sonidos"
+            checked={soundsEnabled}
+            onChange={(e) => setSoundsEnabled(e.target.checked)}
+          />
         </div>
       </div>
     </Card>

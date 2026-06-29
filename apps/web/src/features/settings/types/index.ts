@@ -32,6 +32,7 @@ export const OperationSettingsSchema = z.object({
   pagoMovilHolder: z.string().max(25, 'Nombre del titular demasiado largo').optional(),
   pagoMovilId: z.string().max(11, 'Cédula/RIF demasiado largo').optional(),
   pagoMovilPhone: z.string().max(15, 'Teléfono demasiado largo').optional(),
+  soundsEnabled: z.boolean().optional().default(true),
 }).superRefine((data, ctx) => {
   if (data.pagoMovilEnabled) {
     if (!data.pagoMovilBank || data.pagoMovilBank.trim().length === 0) {

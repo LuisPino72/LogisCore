@@ -18,10 +18,12 @@ export interface SettingsStore {
   pagoMovilHolder: string;
   pagoMovilId: string;
   pagoMovilPhone: string;
+  soundsEnabled: boolean;
   loading: boolean;
   loaded: boolean;
   setFiscalSettings: (data: FiscalSettings) => void;
   setOperationSettings: (data: OperationSettings) => void;
+  setSoundsEnabled: (v: boolean) => void;
   setLoading: (v: boolean) => void;
   setLoaded: (v: boolean) => void;
   lastUpdatedAt: number;
@@ -46,6 +48,7 @@ const initialState = {
   pagoMovilHolder: '',
   pagoMovilId: '',
   pagoMovilPhone: '',
+  soundsEnabled: true,
   loading: false,
   loaded: false,
   lastUpdatedAt: 0,
@@ -80,8 +83,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       pagoMovilHolder: data.pagoMovilHolder ?? '',
       pagoMovilId: data.pagoMovilId ?? '',
       pagoMovilPhone: data.pagoMovilPhone ?? '',
+      soundsEnabled: data.soundsEnabled ?? true,
     });
   },
+
+  setSoundsEnabled: (v: boolean) => set({ soundsEnabled: v }),
 
   setLoading: (v: boolean) => set({ loading: v }),
 

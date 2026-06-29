@@ -229,6 +229,7 @@ export interface DexieTenantSettings {
   pagoMovilPhone?: string;
   needsKitchenDefault?: boolean;
   defaultDeliveryFee?: number;
+  soundsEnabled?: boolean;
 }
 
 export interface DexieParkedCart {

@@ -30,6 +30,7 @@ import { VerifyConfirmModal } from './VerifyConfirmModal';
 import { OrderPayModal } from './OrderPayModal';
 import { OrdersTab } from './OrdersTab';
 import { SalesHistory } from './SalesHistory';
+import { audioService } from '../../../services/audioService';
 import { receiptService, normalizeWaPhone } from '../services/receiptService';
 import { TableGrid } from './TableGrid';
 import { StockVerificationModal } from './StockVerificationModal';
@@ -403,6 +404,7 @@ export function PosPage({ tenantId }: PosPageProps) {
     try {
       const saleResult = await completeSale(tenantId, paymentMethod, userId);
       if (saleResult.ok) {
+        audioService.saleComplete();
         const saleId = saleResult.data;
         const totalUsd = cart.reduce((sum, item) => sum + item.totalPriceUsd, 0);
         const totalBs = exchangeRateBs > 0 ? preciseRound(totalUsd * exchangeRateBs, 2) : 0;

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useDebouncedCallback } from '../../../common/hooks/useDebouncedCallback';
 import { getKitchenOrders, updateOrderStatus, revertOrderStatus } from '../../pos/services/saleService';
 import { logger } from '../../../lib/logger';
+import { audioService } from '../../../services/audioService';
 import { getDb } from '../../../services/dexie/db';
 import type { DexieSale, DexieSaleItem } from '../../../services/dexie/db';
 
@@ -29,23 +30,7 @@ function formatElapsed(createdAt: string): string {
   return `${min}:${sec.toString().padStart(2, '0')}`;
 }
 
-function playBeep(): void {
-  try {
-    const AudioCtx = window.AudioContext || (window as unknown as Record<string, unknown>)['webkitAudioContext'];
-    if (!AudioCtx) return;
-    const audioCtx = new AudioCtx() as AudioContext;
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch((err) => logger.warn('useKitchenOrders', 'audioCtx.resume falló:', err));
-    }
-    const osc = audioCtx.createOscillator();
-    osc.frequency.value = 800;
-    osc.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
-  } catch (err) {
-    logger.warn('useKitchenOrders', 'AudioContext no soportado:', err);
-  }
-}
+
 
 export function useKitchenOrders(enabled = true): {
   orders: KitchenOrderView[];
@@ -166,7 +151,7 @@ export function useKitchenOrders(enabled = true): {
   const prevBeepCount = useRef(0);
   useEffect(() => {
     if (prevBeepCount.current > 0 && orders.length > prevBeepCount.current) {
-      playBeep();
+      audioService.kitchenNewOrder();
     }
     prevBeepCount.current = orders.length;
   }, [orders.length]);
@@ -203,32 +188,12 @@ export function useKitchenOrders(enabled = true): {
   }, [loadOrders]);
 
   const resumeAudio = useCallback(() => {
-    try {
-      const AudioCtx = window.AudioContext || (window as unknown as Record<string, unknown>)['webkitAudioContext'];
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(() => setAudioSuspended(false)).catch((err) => logger.warn('useKitchenOrders', 'ctx.resume falló:', err));
-      } else {
-        setAudioSuspended(false);
-      }
-    } catch (err) {
-      logger.warn('useKitchenOrders', 'resumeAudio falló:', err);
-    }
+    audioService.resume();
+    setAudioSuspended(audioService.isSuspended);
   }, []);
 
   useEffect(() => {
-    try {
-      const AudioCtx = window.AudioContext || (window as unknown as Record<string, unknown>)['webkitAudioContext'];
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      setAudioSuspended(ctx.state === 'suspended');
-      const handler = () => setAudioSuspended(ctx.state === 'suspended');
-      ctx.addEventListener('statechange', handler);
-      return () => ctx.removeEventListener('statechange', handler);
-    } catch (err) {
-      logger.warn('useKitchenOrders', 'AudioContext state check falló:', err);
-    }
+    setAudioSuspended(audioService.isSuspended);
   }, []);
 
   return {

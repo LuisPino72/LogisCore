@@ -42,6 +42,7 @@ function toOperationSettings(row: DexieTenantSettings): OperationSettings {
     pagoMovilHolder: row.pagoMovilHolder ?? '',
     pagoMovilId: row.pagoMovilId ?? '',
     pagoMovilPhone: row.pagoMovilPhone ?? '',
+    soundsEnabled: row.soundsEnabled ?? true,
   };
 }
 
@@ -77,6 +78,7 @@ async function buildSettingsRow(tenantId: string, fiscal?: FiscalSettings, opera
     pagoMovilHolder: operations?.pagoMovilHolder ?? existing?.pagoMovilHolder ?? store.pagoMovilHolder,
     pagoMovilId: operations?.pagoMovilId ?? existing?.pagoMovilId ?? store.pagoMovilId,
     pagoMovilPhone: operations?.pagoMovilPhone ?? existing?.pagoMovilPhone ?? store.pagoMovilPhone,
+    soundsEnabled: operations?.soundsEnabled ?? existing?.soundsEnabled ?? store.soundsEnabled,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -140,6 +142,7 @@ export const settingsService = {
               ticketFooterMessage: existingOps?.ticketFooterMessage ?? '¡Gracias por su compra!',
               needsKitchenDefault: existingOps?.needsKitchenDefault ?? false,
               defaultDeliveryFee: existingOps?.defaultDeliveryFee ?? 0,
+              soundsEnabled: existingOps?.soundsEnabled ?? true,
             };
             await cacheSettings({
               tenantId,
@@ -278,6 +281,7 @@ export const settingsService = {
               pagoMovilHolder: (data.pago_movil_holder as string) ?? '',
               pagoMovilId: (data.pago_movil_id as string) ?? '',
               pagoMovilPhone: (data.pago_movil_phone as string) ?? '',
+              soundsEnabled: true,
             };
             // Preserve existing fiscal settings in Dexie, only overwrite operation fields
             let existingFiscal: DexieTenantSettings | undefined;
@@ -305,6 +309,7 @@ export const settingsService = {
               ticketFooterMessage: settings.ticketFooterMessage,
               needsKitchenDefault: settings.needsKitchenDefault ?? false,
               defaultDeliveryFee: settings.defaultDeliveryFee ?? 0,
+              soundsEnabled: settings.soundsEnabled ?? true,
               pagoMovilEnabled: settings.pagoMovilEnabled ?? false,
               pagoMovilBank: settings.pagoMovilBank ?? '',
               pagoMovilHolder: settings.pagoMovilHolder ?? '',
@@ -327,14 +332,15 @@ export const settingsService = {
       mandatoryCustomerId: false,
       lowStockThreshold: 5,
       ticketFooterMessage: '¡Gracias por su compra!',
-      needsKitchenDefault: false,
-      defaultDeliveryFee: 0,
-      pagoMovilEnabled: false,
-      pagoMovilBank: '',
-      pagoMovilHolder: '',
-      pagoMovilId: '',
-      pagoMovilPhone: '',
-    });
+              needsKitchenDefault: false,
+              defaultDeliveryFee: 0,
+              soundsEnabled: true,
+              pagoMovilEnabled: false,
+              pagoMovilBank: '',
+              pagoMovilHolder: '',
+              pagoMovilId: '',
+              pagoMovilPhone: '',
+            });
   },
 
   async updateOperationSettings(
@@ -417,6 +423,7 @@ export const settingsService = {
               ticketFooterMessage: data.ticket_footer_message as string,
               needsKitchenDefault: (data.needs_kitchen_default as boolean) ?? false,
               defaultDeliveryFee: (data.default_delivery_fee as number) ?? 0,
+              soundsEnabled: (data.sounds_enabled as boolean) ?? true,
               pagoMovilEnabled: (data.pago_movil_enabled as boolean) ?? false,
               pagoMovilBank: (data.pago_movil_bank as string) ?? '',
               pagoMovilHolder: (data.pago_movil_holder as string) ?? '',

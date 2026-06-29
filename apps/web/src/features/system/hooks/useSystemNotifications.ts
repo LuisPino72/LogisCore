@@ -3,6 +3,7 @@ import { EventBus, SystemEvents } from '@logiscore/core';
 import { useNotificationStore } from '../../../stores/notificationStore';
 import { useExchangeRateStore } from '../../exchange/stores/exchangeRateStore';
 import { systemNotificationService } from '../services/systemNotificationService';
+import { audioService } from '../../../services/audioService';
 import { displayQty } from '../../inventory/types';
 
 const HIGH_SALE_THRESHOLD_USD = 100;
@@ -16,6 +17,7 @@ async function checkLowStock(tenantId: string): Promise<void> {
 
     if (lowStock.length === 1) {
       const product = lowStock[0];
+      audioService.lowStock();
       await useNotificationStore.getState().addNotification({
         type: 'low_stock',
         title: 'Stock crítico',
@@ -23,6 +25,7 @@ async function checkLowStock(tenantId: string): Promise<void> {
         dedupKey: `low_stock|${product.id}`,
       });
     } else {
+      audioService.lowStock();
       const summary = lowStock
         .map((p) => `${p.name} (${displayQty(p.stock, p.unit)})`)
         .join(', ');
@@ -202,6 +205,7 @@ export function useSystemNotifications(tenantId: string | null, role: string | n
     // Alerta de tasa que falló al cargar — SIN TASA, los precios son 0
     subs.push(
       EventBus.on(SystemEvents.EXCHANGE_RATE_FAILED, () => {
+        audioService.rateFailed();
         store.addNotification({
           type: 'tasa_failed',
           title: 'Tasa BCV no disponible',

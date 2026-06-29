@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { inventoryService } from '../../inventory/services/inventoryService';
 import { logger } from '../../../lib/logger';
+import { audioService } from '../../../services/audioService';
 import type { Product } from '../../../specs/inventory';
 
 interface UseBarcodeScanOptions {
@@ -26,6 +27,7 @@ export function useBarcodeScan({ tenantId, onProductFound, onWeightedProduct, on
       const productResult = await inventoryService.getProductBySku(tenantId, cleanCode);
       if (productResult.ok && productResult.data) {
         navigator.vibrate?.(50);
+        audioService.scanSuccess();
         if (productResult.data.isWeighted) {
           onWeightedProduct(productResult.data);
         } else {
