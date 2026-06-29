@@ -33,8 +33,8 @@ export function DeliveryPromptModal({
   };
 
   const handleKitchenChoice = (needsKitchen: boolean) => {
-    onDelivery(needsKitchen);
     setStep('choose');
+    onDelivery(needsKitchen);
   };
 
   return (

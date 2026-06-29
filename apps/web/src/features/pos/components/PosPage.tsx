@@ -458,12 +458,8 @@ export function PosPage({ tenantId }: PosPageProps) {
   );
 
   const handlePark = useCallback(() => {
-    if (selectedCustomer) {
-      setShowDeliveryPrompt(true);
-    } else {
-      openParkModal();
-    }
-  }, [selectedCustomer, openParkModal, setShowDeliveryPrompt]);
+    setShowDeliveryPrompt(true);
+  }, [setShowDeliveryPrompt]);
 
   const handleParkConfirm = useCallback(
     async (name: string) => {
@@ -475,7 +471,7 @@ export function PosPage({ tenantId }: PosPageProps) {
       setProcessing(true);
       const ok = await parkCart(tenantId, name);
       setProcessing(false);
-      if (ok) {
+      if (ok.ok) {
         closeParkModal();
         setPaymentMethod(null);
         closeMobileCart();
@@ -503,12 +499,15 @@ export function PosPage({ tenantId }: PosPageProps) {
       }
       const deliveryName = `Delivery #${parkedCarts.length + 1}`;
       setProcessing(true);
-      const ok = await parkAsDelivery(tenantId, deliveryName, needsKitchen);
+      const result = await parkAsDelivery(tenantId, deliveryName, needsKitchen);
       setProcessing(false);
-      if (ok) {
+      if (result.ok) {
+        addToast({ type: 'success', message: `${deliveryName} pausada${needsKitchen ? ' (requiere cocina)' : ''}.`, duration: 4000 });
         setPaymentMethod(null);
         closeMobileCart();
         setParkTableNumber(null);
+      } else {
+        addToast({ type: 'error', message: result.error.message, duration: 5000 });
       }
     },
     [tenantId, cart.length, parkAsDelivery, parkedCarts.length, closeMobileCart, addToast],

@@ -1,6 +1,6 @@
 import { useCallback, useState, memo } from 'react';
 import { Button, EmptyState, Modal } from '../../../common/components';
-import { ShoppingCart, Trash2 } from 'lucide-react';
+import { ShoppingCart, Trash2, X } from 'lucide-react';
 import { CartItemRow } from './CartItem';
 import { CartSummary } from './CartSummary';
 import { usePosStore } from '../stores/posStore';
@@ -56,18 +56,40 @@ export const CartPanel = memo(function CartPanel({
   const renderContent = useCallback(
     () => (
       <div className="flex flex-col flex-1 min-h-0">
-        <div className="px-3 py-2 border-b border-border">
+        <div className="px-3 py-2 border-b border-border shrink-0">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Carrito ({itemCount})</h3>
             {cart.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost-danger"
+                  size="sm"
+                  onClick={() => setShowClearConfirm(true)}
+                  className="p-1.5 min-w-8 min-h-8"
+                  aria-label="Limpiar carrito"
+                >
+                  <Trash2 size={18} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onMobileToggle}
+                  className="p-1.5 min-w-8 min-h-8"
+                  aria-label="Cerrar carrito"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+            )}
+            {cart.length === 0 && (
               <Button
-                variant="ghost-danger"
+                variant="ghost"
                 size="sm"
-                onClick={() => setShowClearConfirm(true)}
+                onClick={onMobileToggle}
                 className="p-1.5 min-w-8 min-h-8"
-                aria-label="Limpiar carrito"
+                aria-label="Cerrar carrito"
               >
-                <Trash2 size={18} />
+                <X size={18} />
               </Button>
             )}
           </div>
@@ -101,7 +123,7 @@ export const CartPanel = memo(function CartPanel({
         </div>
 
         {cart.length > 0 && (
-          <div className="px-3 pb-3 shrink-0">
+          <div className="px-3 pb-3 shrink-0 border-t border-border">
             <CartSummary
               items={cart}
               exchangeRateBs={exchangeRateBs}
@@ -124,7 +146,7 @@ export const CartPanel = memo(function CartPanel({
         )}
       </div>
     ),
-    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onRemoveFromCart, onUpdateQuantity, onPay, isOpen, loading, itemCount, discount, setDiscount, clearDiscount, selectedCustomer, onSelectCustomer, isCreditSale, onSetIsCreditSale],
+    [cart, exchangeRateBs, paymentMethod, onPaymentMethodChange, onRemoveFromCart, onUpdateQuantity, onPay, isOpen, loading, itemCount, discount, setDiscount, clearDiscount, selectedCustomer, onSelectCustomer, isCreditSale, onSetIsCreditSale, onMobileToggle],
   );
 
   return (
@@ -156,7 +178,7 @@ export const CartPanel = memo(function CartPanel({
         <Modal
           isOpen={isMobileOpen}
           onClose={onMobileToggle}
-          title={`Carrito (${itemCount})`}
+          title="Carrito"
           className="max-w-none! m-0! modal-cart"
         >
           {renderContent()}
