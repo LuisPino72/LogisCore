@@ -318,7 +318,24 @@ export const dashboardService = {
         .where({ tenantId })
         .filter((e) => !e.deletedAt && e.status === 'pending' && !e.isRecurring)
         .toArray();
-      for (const exp of pendingExpenses) {
+
+      const deliveryExpenses = pendingExpenses.filter((e) => e.category === 'DELIVERY');
+      if (deliveryExpenses.length > 0) {
+        for (const exp of deliveryExpenses) {
+          tasks.push({
+            id: exp.id,
+            type: 'delivery',
+            title: `Pago a ${exp.description || 'Motorizado'}`,
+            subtitle: `${exp.amountUsd.toFixed(2)} USD`,
+            amount: exp.amountUsd,
+            route: '/delivery',
+            totalCount: deliveryExpenses.length,
+          });
+        }
+      }
+
+      const nonDeliveryExpenses = pendingExpenses.filter((e) => e.category !== 'DELIVERY');
+      for (const exp of nonDeliveryExpenses) {
         tasks.push({
           id: exp.id,
           type: 'expense',
@@ -326,7 +343,7 @@ export const dashboardService = {
           subtitle: exp.description || `${exp.amountUsd.toFixed(2)} USD`,
           amount: exp.amountUsd,
           route: '/gastos',
-          totalCount: pendingExpenses.length,
+          totalCount: nonDeliveryExpenses.length,
         });
       }
 

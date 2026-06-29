@@ -1,6 +1,7 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { logger } from '../../../lib/logger';
+import type { DexieSale } from '../../../services/dexie/types';
 
 const RECEIPT_TIMEOUT = 15000;
 
@@ -455,5 +456,32 @@ export const receiptService = {
       logger.error('receiptService', 'WhatsApp share error:', err);
       return failure(new AppError('WHATSAPP_SHARE_FAILED', 'Error al compartir. Intenta nuevamente.'));
     }
+  },
+
+  buildOrderSummaryText(sale: DexieSale, items: Array<{ productName: string; quantity: number; totalPriceUsd: number }>, customerName?: string): string {
+    const lines = [
+      `Hola ${customerName || 'Cliente'}!`,
+      '',
+      `*Resumen de tu pedido:*`,
+      '',
+    ];
+    for (const item of items) {
+      lines.push(`${item.quantity}x ${item.productName}  ${formatUsd(item.totalPriceUsd)}`);
+    }
+    lines.push('');
+    lines.push(`Subtotal: ${formatUsd(sale.subtotalUsd)}`);
+    if (sale.ivaUsd > 0) lines.push(`IVA: ${formatUsd(sale.ivaUsd)}`);
+    if (sale.deliveryFee && sale.deliveryFee > 0) lines.push(`Delivery: ${formatUsd(sale.deliveryFee)}`);
+    lines.push(`*Total: ${formatUsd(sale.totalUsd)}*`);
+    lines.push('');
+    lines.push('Cuando confirmes el pago, procederemos a despachar tu pedido. Gracias!');
+    return lines.join('\n');
+  },
+
+  generateOrderSummaryLink(sale: DexieSale, items: Array<{ productName: string; quantity: number; totalPriceUsd: number }>, customerPhone: string, customerName?: string): string | null {
+    const waPhone = normalizeWaPhone(customerPhone);
+    if (!waPhone) return null;
+    const text = encodeURIComponent(receiptService.buildOrderSummaryText(sale, items, customerName));
+    return `https://wa.me/${waPhone}?text=${text}`;
   },
 };

@@ -78,7 +78,7 @@ export function DeliveryDispatchPanel({
 
   useEffect(() => {
     if (isOpen) {
-      setDeliveryFee(String(defaultDeliveryFee || 2));
+      setDeliveryFee(String(sale.deliveryFee ?? defaultDeliveryFee ?? 2));
       setSelectedPerson('');
       setShowPreview(false);
     }
@@ -135,7 +135,8 @@ export function DeliveryDispatchPanel({
     window.open(`https://wa.me/${normalizedPhone}?text=${text}`, '_blank');
   }, [sale, customerPhone, customerName, selectedPerson, addToast]);
 
-  const canDispatch = selectedPerson && deliveryFee && parseFloat(deliveryFee) > 0;
+  const parsedFee = parseFloat(deliveryFee) || 0;
+  const canDispatch = selectedPerson && parsedFee > 0 && parsedFee <= 1000;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Despachar Delivery" size="sm">
@@ -206,9 +207,13 @@ export function DeliveryDispatchPanel({
                   label="Tarifa $"
                   type="number"
                   min="0"
+                  max="1000"
                   step="0.50"
                   value={deliveryFee}
-                  onChange={(e) => setDeliveryFee(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '' || (parseFloat(v) >= 0 && parseFloat(v) <= 1000)) setDeliveryFee(v);
+                  }}
                 />
 
                 {sale.deliveryAddress && (

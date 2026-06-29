@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, ShoppingCart, DollarSign, Clock, ArrowRight, CheckCircle } from 'lucide-react';
+import { CreditCard, ShoppingCart, DollarSign, Clock, ArrowRight, CheckCircle, Truck } from 'lucide-react';
 import { EmptyState } from '../../../common/components';
 import type { PendingTask } from '../types';
 
@@ -26,6 +26,12 @@ const TYPE_CONFIG = {
     color: '#EF4444',
     bgColor: 'rgba(239, 68, 68, 0.1)',
     label: 'Cobros pendientes',
+  },
+  delivery: {
+    icon: Truck,
+    color: '#8B5CF6',
+    bgColor: 'rgba(139, 92, 246, 0.1)',
+    label: 'Pagos a delivery',
   },
 } as const;
 
@@ -60,6 +66,7 @@ export function PendingTasksWidget({ tasks, loading }: PendingTasksWidgetProps) 
   }
 
   const grouped = {
+    delivery: tasks.filter((t) => t.type === 'delivery'),
     expense: tasks.filter((t) => t.type === 'expense'),
     order: tasks.filter((t) => t.type === 'order'),
     credit: tasks.filter((t) => t.type === 'credit'),

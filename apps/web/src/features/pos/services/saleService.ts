@@ -1694,6 +1694,7 @@ export async function confirmOrderPayment(
   paymentMethod: PaymentMethod,
   exchangeRate: number,
   cashRegisterId?: string,
+  deliveryFee?: number,
 ): Promise<Result<Sale, AppError>> {
   const db = getDb();
 
@@ -1782,7 +1783,10 @@ export async function confirmOrderPayment(
   );
   const { subtotalBs, igtfBs, ivaBs, discountBs, subtotalUsd, ivaUsd, totalUsd, discountUsd } = totals;
   const igtfUsd = exchangeRate > 0 ? preciseRound(igtfBs / exchangeRate, 4) : 0;
-  const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs, 2);
+  const deliveryFeeUsd = deliveryFee && deliveryFee > 0 ? deliveryFee : 0;
+  const deliveryFeeBs = deliveryFeeUsd > 0 ? preciseRound(deliveryFeeUsd * exchangeRate, 2) : 0;
+  const totalWithDeliveryUsd = preciseRound(totalUsd + deliveryFeeUsd, 4);
+  const totalBs = preciseRound(subtotalBs + igtfBs + ivaBs - discountBs + deliveryFeeBs, 2);
 
   const now = new Date().toISOString();
   const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
@@ -1790,7 +1794,8 @@ export async function confirmOrderPayment(
   try {
     const txTables: TxTables = [
       'sales', 'saleItems', 'inventoryLots', 'inventoryMovements',
-      'products', 'cashRegisters', 'syncQueue', 'outbox',
+      'products', 'cashRegisters', 'recipes', 'recipeLines',
+      'syncQueue', 'outbox',
     ];
 
     await db.transaction('rw', txTables, async (tx) => {
@@ -1811,16 +1816,18 @@ export async function confirmOrderPayment(
         subtotalUsd,
         ivaUsd,
         igtfUsd,
-        totalUsd,
+        totalUsd: totalWithDeliveryUsd,
         discountBs: discountBs > 0 ? discountBs : undefined,
         discountUsd: discountUsd > 0 ? discountUsd : undefined,
+        deliveryFee: deliveryFeeUsd > 0 ? deliveryFeeUsd : undefined,
       });
 
       await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
         id: saleId, tenant_id: tenantUuid, status: 'pagada', paid_at: now,
         payment_method: paymentMethod, exchange_rate: exchangeRate,
         subtotal_bs: subtotalBs, igtf_bs: igtfBs, iva_bs: ivaBs, total_bs: totalBs,
-        subtotal_usd: subtotalUsd, iva_usd: ivaUsd, igtf_usd: igtfUsd, total_usd: totalUsd,
+        subtotal_usd: subtotalUsd, iva_usd: ivaUsd, igtf_usd: igtfUsd, total_usd: totalWithDeliveryUsd,
+        delivery_fee: deliveryFeeUsd > 0 ? deliveryFeeUsd : undefined,
       } as unknown as Record<string, unknown>), sale.tenantId);
 
       const txCashReg = await db.cashRegisters.get(cashReg.id);

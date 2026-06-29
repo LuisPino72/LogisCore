@@ -2,7 +2,7 @@ import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo, useR
 import { Badge, Button, Input, Skeleton, EmptyState } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
-import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2, MessageCircle } from 'lucide-react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
@@ -36,9 +36,10 @@ interface OrdersTabProps {
   onPayOrder?: (sale: DexieSale) => void;
   onDispatchOrder?: (sale: DexieSale) => void;
   onConfirmDelivery?: (saleId: string) => void;
+  onSendOrderSummary?: (sale: DexieSale) => void;
 }
 
-export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery }: OrdersTabProps) {
+export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery, onSendOrderSummary }: OrdersTabProps) {
   const [orders, setOrders] = useState<DexieSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -191,17 +192,28 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                 </div>
 
                 {order.status === 'lista' && onPayOrder && canPayOrder && (
-                  <div className="mt-2 pt-2 border-t border-black/5">
+                  <div className="mt-2 pt-2 border-t border-black/5 flex gap-2">
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={() => onPayOrder(order)}
-                      className="min-h-11 text-xs w-full"
+                      className="min-h-11 text-xs flex-1"
                       aria-label={`Cobrar orden ${order.orderNumber || ''}`}
                     >
                       <DollarSign size={14} />
                       Cobrar
                     </Button>
+                    {onSendOrderSummary && order.orderType === 'delivery' && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onSendOrderSummary(order)}
+                        className="min-h-11 text-xs"
+                        aria-label={`Enviar resumen por WhatsApp`}
+                      >
+                        <MessageCircle size={14} />
+                      </Button>
+                    )}
                   </div>
                 )}
 

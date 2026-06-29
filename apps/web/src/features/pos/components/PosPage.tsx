@@ -30,6 +30,7 @@ import { VerifyConfirmModal } from './VerifyConfirmModal';
 import { OrderPayModal } from './OrderPayModal';
 import { OrdersTab } from './OrdersTab';
 import { SalesHistory } from './SalesHistory';
+import { receiptService } from '../services/receiptService';
 import { TableGrid } from './TableGrid';
 import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
@@ -86,6 +87,7 @@ export function PosPage({ tenantId }: PosPageProps) {
   const parkAsDelivery = usePosStore((s) => s.parkAsDelivery);
 
   const needsKitchenDefault = useSettingsStore((s) => s.needsKitchenDefault);
+  const defaultDeliveryFee = useSettingsStore((s) => s.defaultDeliveryFee);
 
   const { addToast } = useToastStore();
 
@@ -160,14 +162,14 @@ export function PosPage({ tenantId }: PosPageProps) {
     return { name: 'Cliente', phone: '' };
   }, []);
 
-  const handleOrderPayment = useCallback(async (saleId: string, method: PaymentMethod) => {
+  const handleOrderPayment = useCallback(async (saleId: string, method: PaymentMethod, deliveryFee?: number) => {
     if (!exchangeRateBs || exchangeRateBs <= 0) {
       addToast({ type: 'error', message: 'No hay tasa de cambio configurada.', duration: 4000 });
       return;
     }
     setProcessing(true);
     try {
-      const result = await confirmOrderPayment(saleId, method, exchangeRateBs, activeSessionId ?? undefined);
+      const result = await confirmOrderPayment(saleId, method, exchangeRateBs, activeSessionId ?? undefined, deliveryFee);
       if (result.ok) {
         const saleData = result.data;
         if (!saleData) {
@@ -200,9 +202,9 @@ export function PosPage({ tenantId }: PosPageProps) {
     setOrderPayModal({ sale, method: null });
   }, []);
 
-  const handleConfirmPayOrder = useCallback(() => {
+  const handleConfirmPayOrder = useCallback((deliveryFee?: number) => {
     if (!orderPayModal?.method || !orderPayModal?.sale) return;
-    handleOrderPayment(orderPayModal.sale.id, orderPayModal.method);
+    handleOrderPayment(orderPayModal.sale.id, orderPayModal.method, deliveryFee);
   }, [orderPayModal, handleOrderPayment]);
 
   const handleDispatchOrder = useCallback((sale: DexieSale) => {
@@ -210,6 +212,24 @@ export function PosPage({ tenantId }: PosPageProps) {
     setDispatchCustomerName('Cliente');
     setShowDispatchPanel(true);
   }, []);
+
+  const handleSendOrderSummary = useCallback(async (sale: DexieSale) => {
+    if (!tenantId) return;
+    const db = (await import('../../../services/dexie/db')).getDb();
+    const items = await db.saleItems.where({ saleId: sale.id }).filter(i => !i.deletedAt).toArray();
+    const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
+    const link = receiptService.generateOrderSummaryLink(
+      sale,
+      items.map(i => ({ productName: i.productName, quantity: i.quantity, totalPriceUsd: i.totalPriceUsd })),
+      customer?.phone ?? '',
+      customer?.name,
+    );
+    if (link) {
+      window.open(link, '_blank');
+    } else {
+      addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado.', duration: 4000 });
+    }
+  }, [tenantId, addToast]);
 
   const handleConfirmDeliveryOrder = useCallback(async (saleId: string) => {
     const result = await confirmDelivery(saleId);
@@ -736,6 +756,7 @@ export function PosPage({ tenantId }: PosPageProps) {
                     onPayOrder={handlePayOrder}
                     onDispatchOrder={handleDispatchOrder}
                     onConfirmDelivery={handleConfirmDeliveryOrder}
+                    onSendOrderSummary={handleSendOrderSummary}
                   />
                 </div>
               </div>
@@ -946,6 +967,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         onConfirm={handleConfirmPayOrder}
         onCancel={() => setOrderPayModal(null)}
         onMethodChange={(m) => setOrderPayModal((prev) => prev ? { ...prev, method: m } : null)}
+        defaultDeliveryFee={defaultDeliveryFee}
       />
 
       {dispatchSale && (

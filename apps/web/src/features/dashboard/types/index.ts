@@ -22,7 +22,7 @@ export interface TopProduct {
 
 export interface PendingTask {
   id: string;
-  type: 'expense' | 'order' | 'credit';
+  type: 'expense' | 'order' | 'credit' | 'delivery';
   title: string;
   subtitle: string;
   amount?: number;
