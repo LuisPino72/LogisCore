@@ -106,12 +106,12 @@ export function AddEmployeeModal({ isOpen, onClose, tenantId, tenantName, onAddE
           value={employee.roleId}
           onChange={(e) => setEmployee((p) => ({ ...p, roleId: e.target.value }))}
         >
-          <option value="">Default (employee)</option>
+          <option value="">Seleccionar rol</option>
           {roles
-            .filter((r) => !r.isSystem || r.name === 'employee')
+            .filter((r) => !r.isSystem)
             .map((r) => (
               <option key={r.id} value={r.id}>
-                {r.name}{r.isSystem ? ' (sistema)' : ''}
+                {r.name}
               </option>
             ))}
         </Select>

@@ -190,7 +190,7 @@ export function DataTable<T>({
           const imageContent = imageCol?.render ? imageCol.render(item) : null;
           const nameContent = nameCol?.render ? nameCol.render(item) : String((item as Record<string, unknown>)[nameCol?.key ?? ''] ?? '');
           return (
-            <Card key={keyExtractor(item)} className={cn('mb-3 overflow-hidden', rowClassName?.(item))}>
+            <Card key={keyExtractor(item)} className={cn('mb-3 overflow-visible', rowClassName?.(item))}>
               <div className="card-body">
                 <div className="flex flex-col items-center gap-3">
                   {imageContent && (

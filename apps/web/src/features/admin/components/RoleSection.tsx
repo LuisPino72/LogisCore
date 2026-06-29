@@ -79,7 +79,7 @@ export function RoleSection() {
           />
         ) : (
           <div className="space-y-2">
-            {roles.map((role) => {
+            {roles.filter((r) => r.name !== 'admin').map((role) => {
               const roleWithCount = role as Role & { permissionCount?: number };
               return (
                 <div

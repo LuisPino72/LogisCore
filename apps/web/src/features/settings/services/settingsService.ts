@@ -210,11 +210,21 @@ export const settingsService = {
     }
 
     try {
-      const db = getDb();
       const row = await buildSettingsRow(tenantId, parsed.data);
 
-      await db.tenantSettings.put(row);
-      await syncQueue.enqueue('tenant_settings', 'UPDATE', tenantId, toSnake(row as unknown as Record<string, unknown>), tenantId);
+      if (isDbReady()) {
+        const db = getDb();
+        await db.tenantSettings.put(row);
+        await syncQueue.enqueue('tenant_settings', 'UPDATE', tenantId, toSnake(row as unknown as Record<string, unknown>), tenantId);
+      } else if (navigator.onLine) {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+        if (tenantUuid) {
+          await supabase.from('tenant_settings').upsert({
+            tenant_id: tenantUuid,
+            ...toSnake(row as unknown as Record<string, unknown>),
+          });
+        }
+      }
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({
@@ -341,11 +351,21 @@ export const settingsService = {
     }
 
     try {
-      const db = getDb();
       const row = await buildSettingsRow(tenantId, undefined, parsed.data);
 
-      await db.tenantSettings.put(row);
-      await syncQueue.enqueue('tenant_settings', 'UPDATE', tenantId, toSnake(row as unknown as Record<string, unknown>), tenantId);
+      if (isDbReady()) {
+        const db = getDb();
+        await db.tenantSettings.put(row);
+        await syncQueue.enqueue('tenant_settings', 'UPDATE', tenantId, toSnake(row as unknown as Record<string, unknown>), tenantId);
+      } else if (navigator.onLine) {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
+        if (tenantUuid) {
+          await supabase.from('tenant_settings').upsert({
+            tenant_id: tenantUuid,
+            ...toSnake(row as unknown as Record<string, unknown>),
+          });
+        }
+      }
 
       const tenantUuid = await TenantTranslator.slugToUuid(tenantId).catch(() => null);
       await logAuditEventOnly({

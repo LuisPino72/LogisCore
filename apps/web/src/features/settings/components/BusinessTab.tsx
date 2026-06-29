@@ -183,9 +183,13 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
         pagoMovilId,
         pagoMovilPhone,
       };
-      await settingsService.updateOperationSettings(tenantId, userId, operationData);
-      useSettingsStore.getState().setOperationSettings(operationData);
-      addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });
+      const opResult = await settingsService.updateOperationSettings(tenantId, userId, operationData);
+      if (opResult.ok) {
+        useSettingsStore.getState().setOperationSettings(operationData);
+        addToast({ type: 'success', message: 'Datos del negocio actualizados correctamente' });
+      } else {
+        addToast({ type: 'warning', message: 'Negocio guardado, pero ajustes de operación fallaron. Intente de nuevo.' });
+      }
     } else {
       setLocalError(result.error.message);
     }

@@ -22,7 +22,7 @@ interface TeamTabProps {
 export function TeamTab({ tenantId }: TeamTabProps) {
   const { addToast } = useToastStore();
   const session = useAuthStore((s) => s.session);
-  const isOwner = session?.role === 'owner';
+  const canManageTeam = session?.role === 'owner' || session?.role === 'admin';
 
   const [users, setUsers] = useState<UserRole[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -104,7 +104,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
   const handleUpdateRole = useCallback(async (userRoleId: string, roleId: string) => {
     const result = await adminService.updateUserRole(userRoleId, roleId);
     if (result.ok) {
-      addToast({ type: 'success', message: 'Rol actualizado correctamente.', duration: 4000 });
+      addToast({ type: 'success', message: 'Rol actualizado. El empleado debe cerrar sesión y volver a entrar para que el cambio tome efecto.', duration: 6000 });
       setEditingUserId(null);
       await loadUsers();
     } else {
@@ -166,7 +166,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         </div>
       )}
 
-      {isOwner && u.role !== 'owner' && (
+      {canManageTeam && u.role !== 'owner' && (
         <div className="flex flex-wrap justify-center gap-2 pt-1">
           {editingUserId === u.id ? (
             <>
@@ -196,7 +196,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         </div>
       )}
     </div>
-  ), [editingUserId, editingRoleId, roles, isOwner, handleUpdateRole, setOverridesTarget, setResetPasswordUser, setDeletingUser]);
+  ), [editingUserId, editingRoleId, roles, canManageTeam, handleUpdateRole, setOverridesTarget, setResetPasswordUser, setDeletingUser]);
 
   const userColumns: Column<UserRole>[] = useMemo(() => [
     { key: 'name', header: 'Nombre', render: (u) => u.name || u.email || '—' },
@@ -224,7 +224,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         return <Badge variant="neutral">{u.role}</Badge>;
       },
     },
-    ...(isOwner ? [{
+    ...(canManageTeam ? [{
       key: 'actions',
       header: '',
       render: (u: UserRole) => {
@@ -260,7 +260,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
         );
       },
     }] : []),
-  ], [editingUserId, editingRoleId, roles, isOwner, handleUpdateRole]);
+  ], [editingUserId, editingRoleId, roles, canManageTeam, handleUpdateRole]);
 
   const registerColumns: Column<DexieRegisterConfig>[] = useMemo(() => [
     { key: 'name', header: 'Nombre' },
