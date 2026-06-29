@@ -4,6 +4,7 @@ import { getParkedCarts, parkCart, deleteParkedCart, toggleFavorite, getFavorite
 import { getProductsForSale, getTodaySoldProducts, getVerificationProducts } from './productService';
 import type { CartItem } from '../types';
 import type { Product } from '../../../specs/inventory';
+import { convertToStorage, unitToStorageType } from '../../inventory/types';
 
 export function needsKitchenForCart(
   cart: CartItem[],
@@ -13,7 +14,9 @@ export function needsKitchenForCart(
     const product = products.get(item.productId);
     if (!product) continue;
     if (product.hasAssemblyRecipe) return true;
-    const itemQty = product.isWeighted ? item.quantity * 1000 : item.quantity;
+    const itemQty = product.isWeighted 
+      ? convertToStorage(item.quantity, unitToStorageType(product.isWeighted, product.unit)) 
+      : item.quantity;
     if ((product.stock ?? 0) < itemQty) return true;
   }
   return false;

@@ -1,5 +1,6 @@
 import { type Result, success, failure, AppError } from '@logiscore/core';
 import { formatBs, formatUsd } from '@/lib/formatBs';
+import { preciseRound } from '@logiscore/shared';
 import { logger } from '../../../lib/logger';
 import type { DexieSale } from '../../../services/dexie/types';
 import { addCommunicationLog } from './saleService';
@@ -276,6 +277,11 @@ export async function generateMenuText(tenantId: string): Promise<Result<string,
       if (!cat.deletedAt) categoryMap.set(cat.id, cat.name);
     }
 
+    const rates = await db.exchangeRates
+      .where({ tenantId })
+      .toArray();
+    const rate = rates.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.rate ?? 1;
+
     const grouped = new Map<string, Array<{ name: string; price: number }>>();
     for (const p of products) {
       const catName = (p.categoryId && categoryMap.get(p.categoryId)) ?? 'Otros';
@@ -292,10 +298,15 @@ export async function generateMenuText(tenantId: string): Promise<Result<string,
       lines.push('');
       lines.push(catName);
       for (const item of items) {
-        const dots = '.'.repeat(Math.max(1, 30 - item.name.length - item.price.toFixed(2).length));
-        lines.push(`${item.name} ${dots} $${item.price.toFixed(2)}`);
+        const priceBs = preciseRound(item.price * rate, 2);
+        const priceStr = `$${item.price.toFixed(2)} / Bs. ${priceBs.toFixed(2)}`;
+        const dots = '.'.repeat(Math.max(1, 30 - item.name.length - priceStr.length));
+        lines.push(`${item.name} ${dots} ${priceStr}`);
       }
     }
+
+    lines.push('');
+    lines.push(`💱 Tasa: $1 = Bs. ${rate.toFixed(2)}`);
 
     if (businessPhone) {
       lines.push('');

@@ -6,7 +6,7 @@ import { formatUsd, formatBs } from '@/lib/formatBs';
 import { preciseRound } from '@logiscore/shared';
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { useRepeatButton } from '../hooks/useRepeatButton';
-import { displayQty } from '../../inventory/types';
+import { displayQty, convertToStorage, unitToStorageType } from '../../inventory/types';
 
 interface CartItemRowProps {
   item: CartItem;
@@ -86,7 +86,12 @@ export const CartItemRow = memo(function CartItemRow({ item, onRemove, onUpdateQ
     }, 300);
   }, [item.productId, item.presentationId, onRemove]);
 
-  const qtyFormatted = localQty ?? displayQty(item.quantity, item.unit);
+  const qtyFormatted = localQty ?? displayQty(
+    item.isWeighted 
+      ? convertToStorage(item.quantity, unitToStorageType(item.isWeighted, item.unit)) 
+      : item.quantity, 
+    item.unit
+  );
 
   const btnBase = 'w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 shadow-xs hover:shadow-sm';
   const btnIdle = 'bg-surface-alt hover:bg-gray-200/80 active:bg-gray-300';
