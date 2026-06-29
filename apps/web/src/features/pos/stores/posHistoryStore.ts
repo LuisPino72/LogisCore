@@ -89,7 +89,7 @@ export const createHistorySlice = (set: (setter: Partial<HistoryGetter> | ((stat
       set({ error: err.message });
       return failure(err);
     }
-    const result = await posService.parkCart(tenantId, name, cart, undefined, deliveryInfo);
+    const result = await posService.parkCart(tenantId, name, cart, usePosStore.getState().selectedCustomerId ?? undefined, deliveryInfo);
     if (result.ok) {
       set({ cart: [], activeParkedCartId: null, error: null });
       get().fetchParkedCarts(tenantId);
