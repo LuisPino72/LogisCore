@@ -40,8 +40,8 @@ export const OperationSettingsSchema = z.object({
     if (!data.pagoMovilHolder || data.pagoMovilHolder.trim().length === 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El titular es requerido cuando el pago móvil está habilitado', path: ['pagoMovilHolder'] });
     }
-    if (!data.pagoMovilId || !/^[VJEGP]\d{9}$/.test(data.pagoMovilId)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Cédula/RIF inválido (ej: V123456789)', path: ['pagoMovilId'] });
+    if (!data.pagoMovilId || !/^[VJEGP]\d{7,10}$/.test(data.pagoMovilId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Cédula/RIF inválido (ej: V12345678 o J123456789)', path: ['pagoMovilId'] });
     }
     if (!data.pagoMovilPhone || !/^0\d{10}$/.test(data.pagoMovilPhone)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Teléfono inválido (ej: 04121234567)', path: ['pagoMovilPhone'] });
@@ -51,7 +51,7 @@ export const OperationSettingsSchema = z.object({
 
 export const BusinessInfoSchema = z.object({
   name: z.string().min(1, 'El nombre del negocio es obligatorio').max(30, 'Nombre demasiado largo'),
-  rif: z.string().regex(/^[VJEGP]\d{9}$/, 'RIF inválido (ej: J123456789)'),
+  rif: z.string().regex(/^[VJEGP]\d{7,10}$/, 'RIF inválido (ej: J123456789)'),
   address: z.string().max(50, 'Dirección demasiado larga').optional().default(''),
   phone: z.string().max(15, 'Teléfono demasiado largo').optional().default(''),
   logoUrl: z.string().nullable().optional().default(null),

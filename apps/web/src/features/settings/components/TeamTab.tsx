@@ -179,7 +179,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
             </>
           ) : (
             <>
-              <Button variant="ghost-primary" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }} className="p-1.5 min-w-11 min-h-11" aria-label={`Editar rol de ${u.name || u.email}`}>
+              <Button variant="ghost-primary" size="sm" onClick={() => { const currentRole = roles.find((r) => r.name === u.role); setEditingUserId(u.id); setEditingRoleId(currentRole?.id || roles[0]?.id || ''); }} className="p-1.5 min-w-11 min-h-11" aria-label={`Editar rol de ${u.name || u.email}`}>
                 <Pencil size={14} />
               </Button>
               <Button variant="ghost-primary" size="sm" onClick={() => setOverridesTarget({ userId: u.userId, name: u.name || u.email })} className="p-1.5 min-w-11 min-h-11" aria-label={`Permisos de ${u.name || u.email}`}>
@@ -242,7 +242,7 @@ export function TeamTab({ tenantId }: TeamTabProps) {
               </>
             ) : (
               <>
-                <Button variant="ghost-primary" size="sm" onClick={() => { setEditingUserId(u.id); setEditingRoleId(u.role === 'employee' ? roles[0]?.id || '' : ''); }} className="p-1.5 min-w-11 min-h-11" aria-label={`Editar rol de ${u.name || u.email}`}>
+              <Button variant="ghost-primary" size="sm" onClick={() => { const currentRole = roles.find((r) => r.name === u.role); setEditingUserId(u.id); setEditingRoleId(currentRole?.id || roles[0]?.id || ''); }} className="p-1.5 min-w-11 min-h-11" aria-label={`Editar rol de ${u.name || u.email}`}>
                   <Pencil size={14} />
                 </Button>
                 <Button variant="ghost-primary" size="sm" onClick={() => setOverridesTarget({ userId: u.userId, name: u.name || u.email })} className="p-1.5 min-w-11 min-h-11" aria-label={`Permisos de ${u.name || u.email}`}>
