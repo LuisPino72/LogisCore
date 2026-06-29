@@ -2,6 +2,7 @@ import { type Result, success, failure, AppError } from '@logiscore/core';
 import { formatBs, formatUsd } from '@/lib/formatBs';
 import { logger } from '../../../lib/logger';
 import type { DexieSale } from '../../../services/dexie/types';
+import { addCommunicationLog } from './saleService';
 
 const RECEIPT_TIMEOUT = 15000;
 
@@ -317,6 +318,19 @@ export async function generateMenuText(tenantId: string): Promise<Result<string,
   }
 }
 
+async function logCommunication(
+  saleId: string,
+  type: 'menu_sent' | 'order_summary_sent' | 'delivery_address_sent'
+       | 'motorizado_contact_sent' | 'payment_confirmed',
+  phone: string,
+  messagePreview?: string,
+): Promise<void> {
+  const result = await addCommunicationLog(saleId, type, phone, messagePreview);
+  if (!result.ok) {
+    logger.warn('receiptService', 'Failed to log communication:', result.error);
+  }
+}
+
 async function renderToBlob(
   html: string,
 ): Promise<Blob> {
@@ -458,30 +472,89 @@ export const receiptService = {
     }
   },
 
-  buildOrderSummaryText(sale: DexieSale, items: Array<{ productName: string; quantity: number; totalPriceUsd: number }>, customerName?: string): string {
+  buildOrderSummaryText(
+    sale: DexieSale,
+    items: Array<{ productName: string; quantity: number; totalPriceUsd: number }>,
+    customerName?: string,
+    settings?: {
+      pagoMovilEnabled?: boolean;
+      pagoMovilBank?: string;
+      pagoMovilHolder?: string;
+      pagoMovilId?: string;
+      pagoMovilPhone?: string;
+      businessName?: string;
+      businessRif?: string;
+    },
+    deliveryPersonName?: string,
+  ): string {
     const lines = [
       `Hola ${customerName || 'Cliente'}!`,
       '',
-      `*Resumen de tu pedido:*`,
-      '',
+      `*Resumen de tu pedido*`,
     ];
+
+    if (sale.orderNumber) {
+      lines.push(`Pedido: #${sale.orderNumber}`);
+    }
+    if (settings?.businessName) {
+      lines.push(`${settings.businessName}${settings.businessRif ? ` (RIF: ${settings.businessRif})` : ''}`);
+    }
+    lines.push('');
+
+    lines.push('--- Productos ---');
     for (const item of items) {
       lines.push(`${item.quantity}x ${item.productName}  ${formatUsd(item.totalPriceUsd)}`);
     }
     lines.push('');
+
     lines.push(`Subtotal: ${formatUsd(sale.subtotalUsd)}`);
     if (sale.ivaUsd > 0) lines.push(`IVA: ${formatUsd(sale.ivaUsd)}`);
     if (sale.deliveryFee && sale.deliveryFee > 0) lines.push(`Delivery: ${formatUsd(sale.deliveryFee)}`);
     lines.push(`*Total: ${formatUsd(sale.totalUsd)}*`);
+
+    if (deliveryPersonName) {
+      lines.push('');
+      lines.push(`Delivery: ${deliveryPersonName}`);
+    }
+
+    if (settings?.pagoMovilEnabled && settings.pagoMovilBank) {
+      lines.push('');
+      lines.push('--- Pago Móvil ---');
+      lines.push(`Banco: ${settings.pagoMovilBank}`);
+      if (settings.pagoMovilHolder) lines.push(`Titular: ${settings.pagoMovilHolder}`);
+      if (settings.pagoMovilId) lines.push(`C.I.: ${settings.pagoMovilId}`);
+      if (settings.pagoMovilPhone) lines.push(`Tlf.: ${settings.pagoMovilPhone}`);
+    }
+
     lines.push('');
-    lines.push('Cuando confirmes el pago, procederemos a despachar tu pedido. Gracias!');
+    lines.push('Cuando confirmes el pago, procederemos a despachar tu pedido.');
+    lines.push('¡Gracias por tu compra!');
+
     return lines.join('\n');
   },
 
-  generateOrderSummaryLink(sale: DexieSale, items: Array<{ productName: string; quantity: number; totalPriceUsd: number }>, customerPhone: string, customerName?: string): string | null {
+  generateOrderSummaryLink(
+    sale: DexieSale,
+    items: Array<{ productName: string; quantity: number; totalPriceUsd: number }>,
+    customerPhone: string,
+    customerName?: string,
+    settings?: {
+      pagoMovilEnabled?: boolean;
+      pagoMovilBank?: string;
+      pagoMovilHolder?: string;
+      pagoMovilId?: string;
+      pagoMovilPhone?: string;
+      businessName?: string;
+      businessRif?: string;
+    },
+    deliveryPersonName?: string,
+  ): string | null {
     const waPhone = normalizeWaPhone(customerPhone);
     if (!waPhone) return null;
-    const text = encodeURIComponent(receiptService.buildOrderSummaryText(sale, items, customerName));
+    const text = encodeURIComponent(receiptService.buildOrderSummaryText(sale, items, customerName, settings, deliveryPersonName));
+    
+    logCommunication(sale.id, 'order_summary_sent', customerPhone, items.map(i => `${i.quantity}x ${i.productName}`).join(', '));
+    
     return `https://wa.me/${waPhone}?text=${text}`;
   },
 
@@ -497,6 +570,9 @@ export const receiptService = {
       sale.deliveryNotes ? `📝 ${sale.deliveryNotes}` : '',
       `💰 Tarifa: $${(sale.deliveryFee ?? 0).toFixed(2)}`,
     ].filter(Boolean).join('\n'));
+    
+    logCommunication(sale.id, 'delivery_address_sent', sale.deliveryPersonPhone, `Delivery para ${customerName}`);
+    
     return `https://wa.me/${phone}?text=${text}`;
   },
 };

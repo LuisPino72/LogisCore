@@ -140,6 +140,18 @@ export interface DexieSale {
   deliveredAt?: string;
   modifiedAt?: string;
   modificationCount?: number;
+  statusHistory?: Array<{
+    status: string;
+    timestamp: string;
+    by?: string;
+  }>;
+  communicationLog?: Array<{
+    type: 'menu_sent' | 'order_summary_sent' | 'delivery_address_sent'
+         | 'motorizado_contact_sent' | 'payment_confirmed';
+    phone: string;
+    timestamp: string;
+    messagePreview?: string;
+  }>;
 }
 
 export interface DexieSaleItem {

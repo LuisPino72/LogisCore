@@ -2,6 +2,21 @@ import { getSessionById, getOpenCashRegister, getLastClosedCashRegister, getOpen
 import { createSale, createOrder, getSalesHistory, getSaleItems, voidSale } from './saleService';
 import { getParkedCarts, parkCart, deleteParkedCart, toggleFavorite, getFavorites } from './cartService';
 import { getProductsForSale, getTodaySoldProducts, getVerificationProducts } from './productService';
+import type { CartItem } from '../types';
+import type { Product } from '../../../specs/inventory';
+
+export function needsKitchenForCart(
+  cart: CartItem[],
+  products: Map<string, Product>
+): boolean {
+  for (const item of cart) {
+    const product = products.get(item.productId);
+    if (!product) continue;
+    if (product.hasAssemblyRecipe) return true;
+    if ((product.stock ?? 0) < item.quantity) return true;
+  }
+  return false;
+}
 
 export const posService = {
   getSessionById,

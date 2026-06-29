@@ -212,16 +212,33 @@ export function PosPage({ tenantId }: PosPageProps) {
     setShowDispatchPanel(true);
   }, []);
 
-  const handleSendOrderSummary = useCallback(async (sale: DexieSale) => {
+  const handleSendOrderSummary = useCallback(async (saleIdOrSale: string | DexieSale) => {
     if (!tenantId) return;
     const db = (await import('../../../services/dexie/db')).getDb();
-    const items = await db.saleItems.where({ saleId: sale.id }).filter(i => !i.deletedAt).toArray();
+    const saleId = typeof saleIdOrSale === 'string' ? saleIdOrSale : saleIdOrSale.id;
+    const sale = typeof saleIdOrSale === 'string' 
+      ? await db.sales.get(saleIdOrSale)
+      : saleIdOrSale;
+    if (!sale) return;
+    const items = await db.saleItems.where({ saleId }).filter(i => !i.deletedAt).toArray();
     const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
+    const settingsStore = useSettingsStore.getState();
+    const tenantRef = await db.tenantRefs.get(tenantId);
     const link = receiptService.generateOrderSummaryLink(
       sale,
       items.map(i => ({ productName: i.productName, quantity: i.quantity, totalPriceUsd: i.totalPriceUsd })),
       customer?.phone ?? '',
       customer?.name,
+      {
+        pagoMovilEnabled: settingsStore.pagoMovilEnabled,
+        pagoMovilBank: settingsStore.pagoMovilBank,
+        pagoMovilHolder: settingsStore.pagoMovilHolder,
+        pagoMovilId: settingsStore.pagoMovilId,
+        pagoMovilPhone: settingsStore.pagoMovilPhone,
+        businessName: tenantRef?.name,
+        businessRif: tenantRef?.rif,
+      },
+      sale.deliveryPersonName,
     );
     if (link) {
       window.open(link, '_blank');
@@ -786,6 +803,7 @@ export function PosPage({ tenantId }: PosPageProps) {
                         orderNumber={n.orderNumber}
                         onDismiss={() => dismissNotification(n.saleId)}
                         onViewOrder={() => dismissNotification(n.saleId)}
+                        onSendSummary={handleSendOrderSummary}
                       />
                     ))}
                   </div>

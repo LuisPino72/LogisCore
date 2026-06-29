@@ -81,6 +81,17 @@ export const SaleSchema = z.object({
   deliveredAt: isoDateTime.optional(),
   modifiedAt: isoDateTime.optional(),
   modificationCount: z.number().int().min(0).optional(),
+  statusHistory: z.array(z.object({
+    status: z.string(),
+    timestamp: z.string(),
+    by: z.string().optional(),
+  })).optional(),
+  communicationLog: z.array(z.object({
+    type: z.enum(['menu_sent', 'order_summary_sent', 'delivery_address_sent', 'motorizado_contact_sent', 'payment_confirmed']),
+    phone: z.string(),
+    timestamp: z.string(),
+    messagePreview: z.string().optional(),
+  })).optional(),
 });
 
 export type Sale = z.infer<typeof SaleSchema>;

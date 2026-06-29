@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal, Button } from '@/common/components';
-import { Truck, Store, ChefHat, X } from 'lucide-react';
+import { Truck, Store, ChefHat, X, AlertCircle } from 'lucide-react';
+import { needsKitchenForCart } from '../services/posService';
+import { usePosStore } from '../stores/posStore';
 
 interface DeliveryPromptModalProps {
   isOpen: boolean;
@@ -23,13 +25,28 @@ export function DeliveryPromptModal({
   const [wantsKitchen, setWantsKitchen] = useState(needsKitchenDefault ?? false);
   const [isUrgent, setIsUrgent] = useState(false);
 
+  const cart = usePosStore((s) => s.cart);
+  const products = usePosStore((s) => s.products);
+
+  const productsMap = useMemo(() => {
+    const map = new Map<string, typeof products[number]>();
+    for (const p of products) {
+      map.set(p.id, p);
+    }
+    return map;
+  }, [products]);
+
+  const autoNeedsKitchen = useMemo(() => {
+    return needsKitchenForCart(cart, productsMap);
+  }, [cart, productsMap]);
+
   const handleClose = () => {
     setStep('choose');
     onClose();
   };
 
   const handleDelivery = () => {
-    setWantsKitchen(needsKitchenDefault ?? false);
+    setWantsKitchen(autoNeedsKitchen || (needsKitchenDefault ?? false));
     setStep('kitchen');
   };
 
@@ -88,6 +105,14 @@ export function DeliveryPromptModal({
             <p className="text-sm text-gray-600">
               ¿Esta orden requiere preparación en cocina?
             </p>
+            {autoNeedsKitchen && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-warning/10 border border-warning/20">
+                <AlertCircle size={14} className="text-warning shrink-0" />
+                <span className="text-xs text-warning font-medium">
+                  🍳 Productos detectados que requieren cocina
+                </span>
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               <Button
                 variant="outline"
@@ -136,10 +161,10 @@ export function DeliveryPromptModal({
                variant="ghost"
                onClick={() => setStep('choose')}
                className="mt-1"
-            >
-              <X size={14} className="mr-1" />
-              Volver
-            </Button>
+             >
+               <X size={14} className="mr-1" />
+               Volver
+             </Button>
           </>
         )}
       </div>

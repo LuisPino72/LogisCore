@@ -1259,6 +1259,7 @@ export async function createOrder(input: {
     deliveredAt: undefined,
     modifiedAt: undefined,
     modificationCount: 0,
+    statusHistory: [{ status: 'pedida', timestamp: now, by: userId }],
   };
 
   try {
@@ -1339,11 +1340,16 @@ export async function updateOrderStatus(
 
   try {
     await db.transaction('rw', [db.sales, db.syncQueue, db.outbox], async (tx) => {
-      const updates: Record<string, unknown> = { status: newStatus };
-      if (newStatus === 'lista') updates.preparedAt = now;
-      if (newStatus === 'pagada') updates.paidAt = now;
-      if (newStatus === 'despachada') updates.dispatchedAt = now;
-      if (newStatus === 'entregada') updates.deliveredAt = now;
+      const historyEntry = { status: newStatus, timestamp: now, by: sale.userId };
+      const currentHistory = sale.statusHistory ?? [];
+      const updates = {
+        status: newStatus,
+        ...(newStatus === 'lista' && { preparedAt: now }),
+        ...(newStatus === 'pagada' && { paidAt: now }),
+        ...(newStatus === 'despachada' && { dispatchedAt: now }),
+        ...(newStatus === 'entregada' && { deliveredAt: now }),
+        statusHistory: [...currentHistory, historyEntry],
+      };
 
       await tx.sales.update(saleId, updates);
 
@@ -1971,5 +1977,63 @@ export async function dispatchDelivery(
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en dispatchDelivery:', err);
     return failure(new AppError('DELIVERY_DISPATCH_FAILED', 'Error al despachar el delivery.'));
+  }
+}
+
+export async function addCommunicationLog(
+  saleId: string,
+  type: 'menu_sent' | 'order_summary_sent' | 'delivery_address_sent'
+       | 'motorizado_contact_sent' | 'payment_confirmed',
+  phone: string,
+  messagePreview?: string,
+): Promise<Result<void, AppError>> {
+  try {
+    const db = getDb();
+    const sale = await db.sales.get(saleId);
+    if (!sale) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+    if (sale.deletedAt) return failure(new AppError(PosErrors.ORDER_NOT_FOUND, 'La orden no existe.'));
+
+    const now = new Date().toISOString();
+
+    const entry = {
+      type,
+      phone,
+      timestamp: now,
+      messagePreview,
+    };
+
+    const currentLog = sale.communicationLog ?? [];
+    const updatedLog = [...currentLog, entry];
+
+    await db.sales.update(saleId, { communicationLog: updatedLog });
+    
+    const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
+    await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
+      id: saleId, tenant_id: tenantUuid, communication_log: updatedLog,
+    } as unknown as Record<string, unknown>), sale.tenantId);
+
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en addCommunicationLog:', err);
+    return failure(new AppError('COMMUNICATION_LOG_FAILED', 'Error al registrar comunicación.'));
+  }
+}
+
+export async function batchMarkAsReady(
+  saleIds: string[],
+  _tenantId: string,
+): Promise<Result<void, AppError>> {
+  try {
+    for (const saleId of saleIds) {
+      const result = await updateOrderStatus(saleId, 'lista');
+      if (!result.ok) {
+        logger.error(MODULE_NAME, `batchMarkAsReady: failed for ${saleId}`, result.error);
+      }
+    }
+
+    return success(undefined);
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en batchMarkAsReady:', err);
+    return failure(new AppError('BATCH_MARK_READY_FAILED', 'Error al marcar pedidos como listos.'));
   }
 }

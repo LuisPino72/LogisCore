@@ -1,8 +1,8 @@
 import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo, useRef } from 'react';
-import { Badge, Button, Input, Skeleton, EmptyState } from '@/common/components';
+import { Badge, Button, Input, Skeleton, EmptyState, Modal } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
-import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2, MessageCircle, Smartphone } from 'lucide-react';
+import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2, MessageCircle, Smartphone, Info, Send, MapPin, CreditCard } from 'lucide-react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
@@ -49,6 +49,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
   const cancelledRef = useRef(false);
   const session = useAuthStore((s) => s.session);
   const canPayOrder = hasActionPermission(session, 'pos', 'create');
+  const [selectedOrderForTimeline, setSelectedOrderForTimeline] = useState<DexieSale | null>(null);
 
   const reload = useCallback(async () => {
     const result = await getActiveOrders(tenantId);
@@ -188,6 +189,19 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                            🚨 Urgente
                          </Badge>
                        )}
+                       {order.status === 'lista' && (() => {
+                         const listaEntry = order.statusHistory
+                           ?.filter((h) => h.status === 'lista')
+                           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+                         if (listaEntry && (Date.now() - new Date(listaEntry.timestamp).getTime()) > 1800000) {
+                           return (
+                             <Badge variant="warning" className="text-[10px]">
+                               ⏰ Pendiente de pago
+                             </Badge>
+                           );
+                         }
+                           return null;
+                       })()}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 text-xs text-text-secondary">
                       <Clock size={12} />
@@ -196,6 +210,15 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                       <span className="font-medium text-gray-700">{order.totalUsd?.toFixed(2) ?? '0.00'} USD</span>
                     </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedOrderForTimeline(order)}
+                    className="min-h-11 min-w-11 p-0 shrink-0"
+                    aria-label="Ver historial de comunicación"
+                  >
+                    <Info size={16} className="text-gray-400" />
+                  </Button>
                 </div>
 
                 {order.status === 'lista' && onPayOrder && canPayOrder && (
@@ -280,6 +303,75 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
           })}
         </div>
       )}
+
+      <Modal
+        isOpen={!!selectedOrderForTimeline}
+        onClose={() => setSelectedOrderForTimeline(null)}
+        title={`Historial - ${selectedOrderForTimeline?.orderNumber ?? ''}`}
+        size="sm"
+      >
+        {selectedOrderForTimeline && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-900">Detalles del Pedido</h4>
+              <div className="text-xs text-gray-600 space-y-1">
+                <p>Estado: <span className="font-medium">{STATUS_CONFIG[selectedOrderForTimeline.status]?.label ?? selectedOrderForTimeline.status}</span></p>
+                <p>Total: <span className="font-medium">{selectedOrderForTimeline.totalUsd?.toFixed(2) ?? '0.00'} USD</span></p>
+                {selectedOrderForTimeline.deliveryPersonName && (
+                  <p>Delivery: <span className="font-medium">{selectedOrderForTimeline.deliveryPersonName}</span></p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-900">Historial de Estados</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {(selectedOrderForTimeline.statusHistory ?? []).map((entry, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs">
+                    <div className="w-2 h-2 rounded-full bg-primary mt-1 shrink-0" />
+                    <div>
+                      <span className="font-medium">{STATUS_CONFIG[entry.status]?.label ?? entry.status}</span>
+                      <span className="text-gray-400 ml-2">{timeAgo(entry.timestamp)}</span>
+                      {entry.by && <span className="text-gray-400 ml-1">por {entry.by.slice(0, 8)}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-900">Comunicaciones</h4>
+              {(selectedOrderForTimeline.communicationLog ?? []).length === 0 ? (
+                <p className="text-xs text-gray-400">No hay comunicaciones registradas.</p>
+              ) : (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {(selectedOrderForTimeline.communicationLog ?? []).map((entry, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs p-2 bg-gray-50 rounded-lg">
+                      <div className="shrink-0 mt-0.5">
+                        {entry.type === 'menu_sent' && <Send size={12} className="text-blue-500" />}
+                        {entry.type === 'order_summary_sent' && <MessageCircle size={12} className="text-green-500" />}
+                        {entry.type === 'delivery_address_sent' && <MapPin size={12} className="text-orange-500" />}
+                        {entry.type === 'motorizado_contact_sent' && <Smartphone size={12} className="text-purple-500" />}
+                        {entry.type === 'payment_confirmed' && <CreditCard size={12} className="text-emerald-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium capitalize">{entry.type.replace(/_/g, ' ')}</span>
+                          <span className="text-gray-400">{timeAgo(entry.timestamp)}</span>
+                        </div>
+                        <p className="text-gray-500 truncate">{entry.phone}</p>
+                        {entry.messagePreview && (
+                          <p className="text-gray-400 truncate mt-0.5">{entry.messagePreview}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 });

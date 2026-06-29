@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Flame, Clock, Volume2 } from 'lucide-react';
+import { Flame, Clock, Volume2, Package } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Skeleton } from '@/common/components';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import type { KitchenOrderView } from '../hooks/useKitchenOrders';
+import { batchMarkAsReady } from '../../pos/services/saleService';
+import { useAuthStore } from '../../auth/stores/authStore';
+import { logger } from '../../../lib/logger';
 
 const NOOP = () => {};
 
@@ -168,10 +171,14 @@ export default function KitchenDisplay() {
     loading,
     audioSuspended,
     resumeAudio,
+    refresh,
   } = useKitchenOrders();
 
   const [currentTime, setCurrentTime] = useState(formatTime());
   const oldestPendingRef = useRef<HTMLDivElement>(null);
+  const [groupByProduct, setGroupByProduct] = useState(false);
+  const session = useAuthStore((s) => s.session);
+  const tenantId = session?.tenantId;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -196,6 +203,39 @@ export default function KitchenDisplay() {
   const pendingOrders = useMemo(() => sortedOrders.filter((o) => o.status === 'pedida'), [sortedOrders]);
   const preparingOrders = useMemo(() => sortedOrders.filter((o) => o.status === 'preparacion'), [sortedOrders]);
   const readyOrders = useMemo(() => sortedOrders.filter((o) => o.status === 'lista'), [sortedOrders]);
+
+  const groupedByProduct = useMemo(() => {
+    if (!groupByProduct) return null;
+    const groups = new Map<string, { productName: string; totalQuantity: number; orderIds: string[]; orders: KitchenOrderView[] }>();
+    for (const order of preparingOrders) {
+      for (const item of order.items) {
+        const existing = groups.get(item.name);
+        if (existing) {
+          existing.totalQuantity += item.quantity;
+          existing.orderIds.push(order.id);
+          existing.orders.push(order);
+        } else {
+          groups.set(item.name, {
+            productName: item.name,
+            totalQuantity: item.quantity,
+            orderIds: [order.id],
+            orders: [order],
+          });
+        }
+      }
+    }
+    return Array.from(groups.values());
+  }, [groupByProduct, preparingOrders]);
+
+  const handleBatchMarkReady = useCallback(async (orderIds: string[]) => {
+    if (!tenantId) return;
+    const result = await batchMarkAsReady(orderIds, tenantId);
+    if (result.ok) {
+      refresh();
+    } else {
+      logger.error('KitchenDisplay', 'Failed to batch mark as ready', result.error);
+    }
+  }, [tenantId, refresh]);
 
   const totalCount = orders.length;
 
@@ -240,6 +280,15 @@ export default function KitchenDisplay() {
               <Volume2 size={14} /> Activar sonido
             </Button>
           )}
+          <Button
+            variant={groupByProduct ? "primary" : "ghost"}
+            size="sm"
+            onClick={() => setGroupByProduct(!groupByProduct)}
+            className="flex items-center gap-1.5 min-h-11"
+          >
+            <Package size={14} />
+            <span className="hidden sm:inline">Agrupar por producto</span>
+          </Button>
           <div className="flex items-center gap-1.5 text-sm text-gray-500">
             <Clock size={14} />
             <span className="font-mono">{currentTime}</span>
@@ -256,81 +305,115 @@ export default function KitchenDisplay() {
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Pendientes */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full inline-block bg-amber-400" />
-              <h3 className="font-semibold text-sm">Pendientes</h3>
-              <Badge variant="warning">{pendingCount}</Badge>
-            </div>
-            {pendingOrders.length === 0 ? (
-              <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
-                <Clock size={16} className="text-gray-300" />
-                Sin pedidos
+          {groupByProduct && groupedByProduct && groupedByProduct.length > 0 ? (
+            <div className="col-span-full space-y-3">
+              <div className="flex items-center gap-2">
+                <Package size={16} className="text-primary" />
+                <h3 className="font-semibold text-sm">Agrupado por producto</h3>
+                <Badge variant="info">{groupedByProduct.length} productos</Badge>
               </div>
-            ) : (
-              pendingOrders.map((order, i) => (
-                <div key={order.id} ref={i === 0 ? oldestPendingRef : undefined}>
-                  <OrderCard
-                    order={order}
-                    onStart={markAsPreparing}
-                    onReady={NOOP}
-                    onRevert={NOOP}
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {groupedByProduct.map((group) => (
+                  <Card key={group.productName} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-gray-900 truncate">{group.productName}</span>
+                        <Badge variant="info">{group.totalQuantity} total</Badge>
+                      </div>
+                      <p className="text-xs text-text-secondary">
+                        {group.orderIds.length} orden{group.orderIds.length !== 1 ? 'es' : ''}
+                      </p>
+                      <Button
+                        variant="primary"
+                        className="w-full min-h-11"
+                        onClick={() => handleBatchMarkReady(group.orderIds)}
+                      >
+                        ✅ Marcar todo listo
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Pendientes */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full inline-block bg-amber-400" />
+                  <h3 className="font-semibold text-sm">Pendientes</h3>
+                  <Badge variant="warning">{pendingCount}</Badge>
                 </div>
-              ))
-            )}
-          </div>
-
-          {/* Preparación */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full inline-block bg-blue-500" />
-              <h3 className="font-semibold text-sm">Preparación</h3>
-              <Badge variant="info">{preparingCount}</Badge>
-            </div>
-            {preparingOrders.length === 0 ? (
-              <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
-                <Flame size={16} className="text-gray-300" />
-                Sin pedidos
+                {pendingOrders.length === 0 ? (
+                  <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
+                    <Clock size={16} className="text-gray-300" />
+                    Sin pedidos
+                  </div>
+                ) : (
+                  pendingOrders.map((order, i) => (
+                    <div key={order.id} ref={i === 0 ? oldestPendingRef : undefined}>
+                      <OrderCard
+                        order={order}
+                        onStart={markAsPreparing}
+                        onReady={NOOP}
+                        onRevert={NOOP}
+                      />
+                    </div>
+                  ))
+                )}
               </div>
-            ) : (
-              preparingOrders.map((order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  onStart={NOOP}
-                  onReady={markAsReady}
-                  onRevert={revertToPreparing}
-                />
-              ))
-            )}
-          </div>
 
-          {/* Listos */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full inline-block bg-green-500" />
-              <h3 className="font-semibold text-sm">Listos</h3>
-              <Badge variant="success">{readyCount}</Badge>
-            </div>
-            {readyOrders.length === 0 ? (
-              <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
-                <Clock size={16} className="text-gray-300" />
-                Sin pedidos
+              {/* Preparación */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full inline-block bg-blue-500" />
+                  <h3 className="font-semibold text-sm">Preparación</h3>
+                  <Badge variant="info">{preparingCount}</Badge>
+                </div>
+                {preparingOrders.length === 0 ? (
+                  <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
+                    <Flame size={16} className="text-gray-300" />
+                    Sin pedidos
+                  </div>
+                ) : (
+                  preparingOrders.map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onStart={NOOP}
+                      onReady={markAsReady}
+                      onRevert={revertToPreparing}
+                    />
+                  ))
+                )}
               </div>
-            ) : (
-              readyOrders.map((order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  onStart={NOOP}
-                  onReady={NOOP}
-                  onRevert={revertToPreparing}
-                />
-              ))
-            )}
-          </div>
+
+              {/* Listos */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full inline-block bg-green-500" />
+                  <h3 className="font-semibold text-sm">Listos</h3>
+                  <Badge variant="success">{readyCount}</Badge>
+                </div>
+                {readyOrders.length === 0 ? (
+                  <div className="flex flex-col items-center gap-1 py-8 text-xs text-text-muted">
+                    <Clock size={16} className="text-gray-300" />
+                    Sin pedidos
+                  </div>
+                ) : (
+                  readyOrders.map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onStart={NOOP}
+                      onReady={NOOP}
+                      onRevert={revertToPreparing}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

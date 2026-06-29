@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button, Card } from '@/common/components';
-import { X, ChefHat } from 'lucide-react';
+import { X, ChefHat, Send } from 'lucide-react';
 
 interface KitchenReadyNotificationProps {
   saleId: string;
@@ -8,6 +8,7 @@ interface KitchenReadyNotificationProps {
   orderNumber: string;
   onDismiss: () => void;
   onViewOrder: () => void;
+  onSendSummary?: (saleId: string) => void;
 }
 
 export function KitchenReadyNotification({
@@ -16,6 +17,7 @@ export function KitchenReadyNotification({
   orderNumber,
   onDismiss,
   onViewOrder,
+  onSendSummary,
 }: KitchenReadyNotificationProps) {
   const [exiting, setExiting] = useState(false);
 
@@ -63,6 +65,17 @@ export function KitchenReadyNotification({
               <Button variant="primary" size="sm" onClick={handleView} className="min-h-11 text-xs">
                 Ver pedido
               </Button>
+              {onSendSummary && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => onSendSummary(saleId)}
+                  className="min-h-11 w-full text-xs"
+                >
+                  <Send size={14} className="mr-1" />
+                  Enviar resumen
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

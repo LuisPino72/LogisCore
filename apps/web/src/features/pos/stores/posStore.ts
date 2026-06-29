@@ -25,7 +25,7 @@ interface PosStore extends PosCartSlice, PosRegisterSlice, PosCatalogSlice, PosC
   reset: () => void;
   showDeliveryPrompt: boolean;
   setShowDeliveryPrompt: (v: boolean) => void;
-  parkAsDelivery: (tenantId: string, name: string, needsKitchen: boolean, isUrgent: boolean = false) => Promise<Result<string, AppError>>;
+  parkAsDelivery: (tenantId: string, name: string, needsKitchen: boolean, isUrgent?: boolean) => Promise<Result<string, AppError>>;
   parkNormal: (tenantId: string, name: string) => Promise<Result<string, AppError>>;
 }
 
