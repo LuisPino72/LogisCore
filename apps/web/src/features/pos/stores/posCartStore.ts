@@ -2,6 +2,7 @@ import { preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
+import { usePosStore } from './posStore';
 import type { CartItem, PresentationSelection } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { displayQty, toDisplayValue } from '../../inventory/types';
@@ -218,10 +219,12 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
   },
 
   removeFromCart: (productId, presentationId?) => {
-    if (presentationId) {
-      set({ cart: get().cart.filter((item) => !(item.productId === productId && item.presentationId === presentationId)) });
-    } else {
-      set({ cart: get().cart.filter((item) => item.productId !== productId) });
+    const next = presentationId
+      ? get().cart.filter((item) => !(item.productId === productId && item.presentationId === presentationId))
+      : get().cart.filter((item) => item.productId !== productId);
+    set({ cart: next });
+    if (next.length === 0) {
+      usePosStore.setState({ selectedCustomerId: null, selectedCustomer: null, isCreditSale: false });
     }
   },
 

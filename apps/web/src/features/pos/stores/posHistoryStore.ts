@@ -1,11 +1,14 @@
 import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
+import { customerService } from '../../customers/services/customerService';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { MAX_PARKED_CARTS } from '../../../specs/pos';
 import { logger } from '../../../lib/logger';
 import { type Result, type AppError, failure, AppError as AppErrorClass } from '@logiscore/core';
 import { useToastStore } from '../../../stores/toastStore';
 import type { ParkedCart, SaleItem, Sale } from '../types';
 import type { Product } from '../../../specs/inventory';
+import { usePosStore } from './posStore';
 
 export interface PosHistorySlice {
   salesHistory: Sale[];
@@ -20,7 +23,7 @@ export interface PosHistorySlice {
   fetchSaleItems: (tenantId: string, saleId: string) => Promise<void>;
   fetchParkedCarts: (tenantId: string) => Promise<void>;
   parkCart: (tenantId: string, name: string, deliveryInfo?: { orderType?: 'dine-in' | 'delivery'; needsKitchen?: boolean }) => Promise<Result<string, AppError>>;
-  loadParkedCart: (cart: ParkedCart) => void;
+  loadParkedCart: (parked: ParkedCart) => Promise<void>;
   deleteParkedCart: (tenantId: string, id: string) => Promise<void>;
   loadLowStockAlert: (tenantId: string) => Promise<void>;
 }
@@ -97,8 +100,17 @@ export const createHistorySlice = (set: (setter: Partial<HistoryGetter> | ((stat
     return failure(result.error);
   },
 
-  loadParkedCart: (parked) => {
+  loadParkedCart: async (parked) => {
     set({ cart: parked.cart, activeParkedCartId: parked.id, error: null });
+    const tenantId = useAuthStore.getState().session?.tenantId;
+    if (parked.customerId && tenantId) {
+      const result = await customerService.getCustomerById(parked.customerId, tenantId);
+      if (result.ok && result.data) {
+        usePosStore.getState().setSelectedCustomer(result.data);
+      }
+    } else {
+      usePosStore.getState().setSelectedCustomer(null);
+    }
   },
 
   deleteParkedCart: async (tenantId, id) => {
