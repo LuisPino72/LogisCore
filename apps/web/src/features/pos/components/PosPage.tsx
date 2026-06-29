@@ -30,7 +30,7 @@ import { VerifyConfirmModal } from './VerifyConfirmModal';
 import { OrderPayModal } from './OrderPayModal';
 import { OrdersTab } from './OrdersTab';
 import { SalesHistory } from './SalesHistory';
-import { receiptService } from '../services/receiptService';
+import { receiptService, normalizeWaPhone } from '../services/receiptService';
 import { TableGrid } from './TableGrid';
 import { StockVerificationModal } from './StockVerificationModal';
 import { PresentationSelector } from './PresentationSelector';
@@ -51,8 +51,7 @@ import { preciseRound } from '@logiscore/shared';
 import { dashboardService } from '../../dashboard/services/dashboardService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { failure, AppError } from '@logiscore/core';
-import { confirmOrderPayment } from '../services/saleService';
-import { confirmDelivery } from '../services/saleService';
+import { confirmOrderPayment, confirmDelivery, generateMapsLink } from '../services/saleService';
 import { customerService } from '../../customers/services/customerService';
 
 interface PosPageProps {
@@ -230,6 +229,47 @@ export function PosPage({ tenantId }: PosPageProps) {
       addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado.', duration: 4000 });
     }
   }, [tenantId, addToast]);
+
+  const handleSendAddressToMotorizado = useCallback(async (sale: DexieSale) => {
+    if (!sale.deliveryPersonPhone && !sale.deliveryPersonName) {
+      addToast({ type: 'warning', message: 'No hay motorizado asignado a esta orden.', duration: 4000 });
+      return;
+    }
+    const mapsLink = generateMapsLink(sale.deliveryLat, sale.deliveryLng, sale.deliveryAddress);
+    const db = (await import('../../../services/dexie/db')).getDb();
+    const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
+    const link = receiptService.generateAddressToMotorizadoLink(sale, customer?.name || 'Cliente', customer?.phone || '', mapsLink);
+    if (link) {
+      window.open(link, '_blank');
+    } else {
+      addToast({ type: 'warning', message: 'El motorizado no tiene teléfono registrado.', duration: 4000 });
+    }
+  }, [addToast]);
+
+  const handleNotifyCustomerAfterDispatch = useCallback(async (sale: DexieSale) => {
+    if (!sale.customerId) {
+      addToast({ type: 'warning', message: 'La orden no tiene cliente asignado.', duration: 4000 });
+      return;
+    }
+    const db = (await import('../../../services/dexie/db')).getDb();
+    const customer = await db.customers.get(sale.customerId);
+    if (!customer || !customer.phone) {
+      addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado.', duration: 4000 });
+      return;
+    }
+    const personPhone = sale.deliveryPersonPhone ? `+58${sale.deliveryPersonPhone.replace(/\D/g, '')}` : '';
+    const lines = [
+      `¡Hola ${customer.name}! Tu pedido va en camino con ${sale.deliveryPersonName || 'motorizado'} 🚴`,
+      personPhone ? `📞 Contacta al delivery: ${personPhone}` : '',
+    ].filter(Boolean).join('\n\n');
+    const text = encodeURIComponent(lines);
+    const normalizedPhone = normalizeWaPhone(customer.phone);
+    if (normalizedPhone) {
+      window.open(`https://wa.me/${normalizedPhone}?text=${text}`, '_blank');
+    } else {
+      addToast({ type: 'warning', message: 'Número de teléfono inválido.', duration: 4000 });
+    }
+  }, [addToast]);
 
   const handleConfirmDeliveryOrder = useCallback(async (saleId: string) => {
     const result = await confirmDelivery(saleId);
@@ -757,6 +797,8 @@ export function PosPage({ tenantId }: PosPageProps) {
                     onDispatchOrder={handleDispatchOrder}
                     onConfirmDelivery={handleConfirmDeliveryOrder}
                     onSendOrderSummary={handleSendOrderSummary}
+                    onSendAddressToMotorizado={handleSendAddressToMotorizado}
+                    onNotifyCustomerAfterDispatch={handleNotifyCustomerAfterDispatch}
                   />
                 </div>
               </div>

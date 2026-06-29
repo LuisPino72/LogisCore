@@ -484,4 +484,19 @@ export const receiptService = {
     const text = encodeURIComponent(receiptService.buildOrderSummaryText(sale, items, customerName));
     return `https://wa.me/${waPhone}?text=${text}`;
   },
+
+  generateAddressToMotorizadoLink(sale: DexieSale, customerName: string, customerPhone: string, mapsLink: string): string | null {
+    if (!sale.deliveryPersonPhone) return null;
+    const phone = normalizeWaPhone(sale.deliveryPersonPhone);
+    if (!phone) return null;
+    const text = encodeURIComponent([
+      `🚴 Delivery para ${customerName}`,
+      customerPhone ? `📞 ${customerPhone}` : '',
+      `📍 ${sale.deliveryAddress || 'Sin dirección'}`,
+      `🗺️ ${mapsLink}`,
+      sale.deliveryNotes ? `📝 ${sale.deliveryNotes}` : '',
+      `💰 Tarifa: $${(sale.deliveryFee ?? 0).toFixed(2)}`,
+    ].filter(Boolean).join('\n'));
+    return `https://wa.me/${phone}?text=${text}`;
+  },
 };

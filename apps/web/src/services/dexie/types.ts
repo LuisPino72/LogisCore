@@ -128,6 +128,7 @@ export interface DexieSale {
   kitchenNotes?: string;
   orderNumber?: string;
   deliveryPersonName?: string;
+  deliveryPersonPhone?: string;
   deliveryFee?: number;
   deliveryAddress?: string;
   deliveryLat?: number;

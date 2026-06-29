@@ -1918,6 +1918,7 @@ export async function dispatchDelivery(
         status: 'despachada',
         dispatchedAt: now,
         deliveryPersonName: data.deliveryPersonName.trim(),
+        deliveryPersonPhone: deliveryPerson.phone,
         deliveryFee: data.deliveryFee,
       });
 

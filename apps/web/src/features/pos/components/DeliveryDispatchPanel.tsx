@@ -20,12 +20,14 @@ interface DeliveryDispatchPanelProps {
 
 function buildWaText({
   customerName,
+  customerPhone,
   deliveryAddress,
   mapsLink,
   deliveryNotes,
   deliveryFee,
 }: {
   customerName: string;
+  customerPhone?: string;
   deliveryAddress?: string;
   mapsLink: string;
   deliveryNotes?: string;
@@ -33,6 +35,7 @@ function buildWaText({
 }) {
   return [
     `🚴 Delivery para ${customerName}`,
+    customerPhone ? `📞 ${customerPhone}` : '',
     `📍 ${deliveryAddress || 'Sin dirección'}`,
     `🗺️ ${mapsLink}`,
     deliveryNotes ? `📝 ${deliveryNotes}` : '',
@@ -90,8 +93,8 @@ export function DeliveryDispatchPanel({
   );
 
   const waMessageText = useMemo(
-    () => buildWaText({ customerName, deliveryAddress: sale.deliveryAddress, mapsLink, deliveryNotes: sale.deliveryNotes, deliveryFee }),
-    [customerName, sale.deliveryAddress, mapsLink, sale.deliveryNotes, deliveryFee]
+    () => buildWaText({ customerName, customerPhone, deliveryAddress: sale.deliveryAddress, mapsLink, deliveryNotes: sale.deliveryNotes, deliveryFee }),
+    [customerName, customerPhone, sale.deliveryAddress, mapsLink, sale.deliveryNotes, deliveryFee]
   );
 
   const handleDispatch = useCallback(async () => {
@@ -130,10 +133,16 @@ export function DeliveryDispatchPanel({
       addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado' });
       return;
     }
+    const person = deliveryPersons.find((p) => p.name === selectedPerson);
+    const personPhone = person?.phone ? `+58${person.phone.replace(/\D/g, '')}` : '';
     const normalizedPhone = normalizeWaPhone(customerPhone);
-    const text = encodeURIComponent(`¡Hola ${customerName}! Tu pedido va en camino con ${selectedPerson} 🚴`);
+    const lines = [
+      `¡Hola ${customerName}! Tu pedido va en camino con ${selectedPerson} 🚴`,
+      personPhone ? `📞 Contacta al delivery: ${personPhone}` : '',
+    ].filter(Boolean).join('\n\n');
+    const text = encodeURIComponent(lines);
     window.open(`https://wa.me/${normalizedPhone}?text=${text}`, '_blank');
-  }, [sale, customerPhone, customerName, selectedPerson, addToast]);
+  }, [sale, customerPhone, customerName, selectedPerson, deliveryPersons, addToast]);
 
   const parsedFee = parseFloat(deliveryFee) || 0;
   const canDispatch = selectedPerson && parsedFee > 0 && parsedFee <= 1000;

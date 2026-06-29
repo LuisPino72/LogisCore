@@ -2,7 +2,7 @@ import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo, useR
 import { Badge, Button, Input, Skeleton, EmptyState } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
-import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2, MessageCircle } from 'lucide-react';
+import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2, MessageCircle, Smartphone } from 'lucide-react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
@@ -37,9 +37,11 @@ interface OrdersTabProps {
   onDispatchOrder?: (sale: DexieSale) => void;
   onConfirmDelivery?: (saleId: string) => void;
   onSendOrderSummary?: (sale: DexieSale) => void;
+  onSendAddressToMotorizado?: (sale: DexieSale) => void;
+  onNotifyCustomerAfterDispatch?: (sale: DexieSale) => void;
 }
 
-export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery, onSendOrderSummary }: OrdersTabProps) {
+export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery, onSendOrderSummary, onSendAddressToMotorizado, onNotifyCustomerAfterDispatch }: OrdersTabProps) {
   const [orders, setOrders] = useState<DexieSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -233,17 +235,39 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                 )}
 
                 {order.status === 'despachada' && onConfirmDelivery && (
-                  <div className="mt-2 pt-2 border-t border-black/5">
+                  <div className="mt-2 pt-2 border-t border-black/5 flex flex-wrap gap-2">
                     <Button
                       variant="ghost-success"
                       size="sm"
                       onClick={() => onConfirmDelivery(order.id)}
-                      className="min-h-11 text-xs w-full"
+                      className="min-h-11 text-xs flex-1"
                       aria-label={`Confirmar entrega orden ${order.orderNumber || ''}`}
                     >
                       <CheckCircle2 size={14} />
                       Confirmar Entrega
                     </Button>
+                    {onSendAddressToMotorizado && order.deliveryPersonName && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onSendAddressToMotorizado(order)}
+                        className="min-h-11 text-xs"
+                        aria-label="Enviar dirección al motorizado"
+                      >
+                        <MessageCircle size={14} />
+                      </Button>
+                    )}
+                    {onNotifyCustomerAfterDispatch && order.customerId && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onNotifyCustomerAfterDispatch(order)}
+                        className="min-h-11 text-xs"
+                        aria-label="Notificar al cliente"
+                      >
+                        <Smartphone size={14} />
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
