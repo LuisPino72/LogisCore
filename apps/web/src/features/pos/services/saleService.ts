@@ -1799,6 +1799,7 @@ export async function confirmOrderPayment(
     ];
 
     await db.transaction('rw', txTables, async (tx) => {
+      await db.saleItems.where({ saleId }).delete();
       const consumeResult = await consumeSaleItems(
         tx, normalItems, assemblyItems, saleId, sale.tenantId, sale.userId, false, saleItems as unknown as CartItem[],
       );

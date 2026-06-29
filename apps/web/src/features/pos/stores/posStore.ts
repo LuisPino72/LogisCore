@@ -25,7 +25,7 @@ interface PosStore extends PosCartSlice, PosRegisterSlice, PosCatalogSlice, PosC
   reset: () => void;
   showDeliveryPrompt: boolean;
   setShowDeliveryPrompt: (v: boolean) => void;
-  parkAsDelivery: (tenantId: string, name: string, needsKitchen: boolean) => Promise<Result<string, AppError>>;
+  parkAsDelivery: (tenantId: string, name: string, needsKitchen: boolean, isUrgent: boolean = false) => Promise<Result<string, AppError>>;
   parkNormal: (tenantId: string, name: string) => Promise<Result<string, AppError>>;
 }
 
@@ -41,7 +41,7 @@ export const usePosStore = create<PosStore>()(
       showDeliveryPrompt: false,
       setShowDeliveryPrompt: (v) => set({ showDeliveryPrompt: v }),
 
-      parkAsDelivery: async (tenantId, name, needsKitchen) => {
+      parkAsDelivery: async (tenantId, name, needsKitchen, isUrgent = false) => {
         const { cart, parkedCarts, selectedCustomerId } = get();
         if (cart.length === 0) {
           const err = new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.');
@@ -63,6 +63,7 @@ export const usePosStore = create<PosStore>()(
               customerId: selectedCustomerId,
               items: cart,
               needsKitchen: true,
+              isUrgent,
             });
             if (orderResult.ok) {
               set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false });

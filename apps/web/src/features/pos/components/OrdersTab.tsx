@@ -177,12 +177,17 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                           Cocina
                         </Badge>
                       )}
-                      {order.orderType === 'delivery' && (
-                        <Badge variant="info" className="text-[10px]">
-                          <Truck size={10} className="inline mr-0.5" />
-                          Delivery
-                        </Badge>
-                      )}
+                       {order.orderType === 'delivery' && (
+                         <Badge variant="info" className="text-[10px]">
+                           <Truck size={10} className="inline mr-0.5" />
+                           Delivery
+                         </Badge>
+                       )}
+                       {order.isUrgent && (
+                         <Badge variant="danger" className="text-[10px]">
+                           🚨 Urgente
+                         </Badge>
+                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 text-xs text-text-secondary">
                       <Clock size={12} />

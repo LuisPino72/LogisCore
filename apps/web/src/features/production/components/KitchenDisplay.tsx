@@ -186,9 +186,16 @@ export default function KitchenDisplay() {
     }
   }, [orders.length]);
 
-  const pendingOrders = useMemo(() => orders.filter((o) => o.status === 'pedida'), [orders]);
-  const preparingOrders = useMemo(() => orders.filter((o) => o.status === 'preparacion'), [orders]);
-  const readyOrders = useMemo(() => orders.filter((o) => o.status === 'lista'), [orders]);
+  const sortedOrders = useMemo(() => {
+    return [...orders].sort((a, b) => {
+      if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  }, [orders]);
+
+  const pendingOrders = useMemo(() => sortedOrders.filter((o) => o.status === 'pedida'), [sortedOrders]);
+  const preparingOrders = useMemo(() => sortedOrders.filter((o) => o.status === 'preparacion'), [sortedOrders]);
+  const readyOrders = useMemo(() => sortedOrders.filter((o) => o.status === 'lista'), [sortedOrders]);
 
   const totalCount = orders.length;
 
