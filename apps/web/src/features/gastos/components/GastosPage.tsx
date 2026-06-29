@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus, Receipt, RotateCcw, DollarSign } from 'lucide-react';
 import { type Result, failure, AppError } from '@logiscore/core';
 import { Button, Card, BottomNav, ModuleOnboarding, type BottomNavItem } from '@/common/components';
@@ -32,17 +32,6 @@ export function GastosPage({ tenantId }: GastosPageProps) {
   const currentRate = useExchangeRateStore((s) => s.rate);
   const { addToast } = useToastStore();
 
-  const [monthlyGastos, setMonthlyGastos] = useState<Gasto[]>([]);
-  const [monthlyRefreshKey, setMonthlyRefreshKey] = useState(0);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    const month = filters.month ?? undefined;
-    gastosService.getAllMonthly(tenantId, month).then((result) => {
-      if (result.ok) setMonthlyGastos(result.data);
-    });
-  }, [tenantId, filters.month, monthlyRefreshKey]);
-
   const [activeTab, setActiveTab] = useState<'gastos' | 'recurrentes'>('gastos');
 
   const session = useAuthStore((s) => s.session);
@@ -73,7 +62,6 @@ export function GastosPage({ tenantId }: GastosPageProps) {
   const handleSubmit = async (data: CreateGastoInput): Promise<Result<Gasto>> => {
     if (!tenantId) return failure(new AppError('NO_TENANT', 'No hay negocio activo.'));
     const result = await createGasto(data);
-    if (result.ok) setMonthlyRefreshKey((k) => k + 1);
     return result;
   };
 
@@ -82,15 +70,12 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     const result = await removeGasto(id);
     if (!result.ok) {
       handleServiceError(result);
-      return;
     }
-    setMonthlyRefreshKey((k) => k + 1);
   };
 
   const handleToggleStatus = async (id: string, status: 'paid' | 'pending') => {
     if (!tenantId) return;
     await updateGasto(id, { status });
-    setMonthlyRefreshKey((k) => k + 1);
   };
 
   const handleOpenNew = () => {
@@ -103,7 +88,6 @@ export function GastosPage({ tenantId }: GastosPageProps) {
     if (result.ok) {
       addToast({ type: 'success', message: `${selectedIds.length} gasto${selectedIds.length !== 1 ? 's' : ''} marcado${selectedIds.length !== 1 ? 's' : ''} como pagado${selectedIds.length !== 1 ? 's' : ''}` });
       clearSelection();
-      setMonthlyRefreshKey((k) => k + 1);
       const refreshResult = await gastosService.getAll(tenantId);
       if (refreshResult.ok) {
         useGastosStore.getState().setGastos(refreshResult.data);
@@ -187,7 +171,7 @@ export function GastosPage({ tenantId }: GastosPageProps) {
         </Button>
       </div>
 
-      <GastosSummary gastos={monthlyGastos} />
+      <GastosSummary gastos={gastos} />
 
       <Card>
         <div className="p-4 space-y-4">

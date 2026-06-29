@@ -187,14 +187,14 @@ export function useRecipeForm() {
     const newErrors: Record<string, string> = {};
 
     if (!form.name.trim()) newErrors.name = 'Nombre requerido';
-    if (form.name.trim().length > 25) newErrors.name = 'Máximo 25 caracteres';
+    if (form.name.trim().length > 30) newErrors.name = 'Máximo 30 caracteres';
 
     // PRODUCTION-003 [Paso-2]: productId puede ser vacío (auto-crear) o un UUID
     const isNewProduct = form.productId === NEW_PRODUCT_SENTINEL || form.productId === '';
     // Si es nuevo producto, validar campos
     if (isNewProduct) {
       if (!form.newProductName.trim()) newErrors.newProductName = 'Nombre del producto requerido';
-      if (form.newProductName.length > 25) newErrors.newProductName = 'Máximo 25 caracteres';
+      if (form.newProductName.length > 30) newErrors.newProductName = 'Máximo 30 caracteres';
       if (!form.newProductSku.trim()) newErrors.newProductSku = 'SKU del producto requerido';
       if (form.newProductSku.length > 18) newErrors.newProductSku = 'Máximo 18 caracteres';
       if (!form.newProductIsIngredient && (!form.newProductPriceUsd || form.newProductPriceUsd <= 0)) {
@@ -248,7 +248,7 @@ export function useRecipeForm() {
       // EDIT MODE: step 1 = name + ingredients, step 2 = waste/notes
       if (step === 1) {
         if (!form.name.trim()) stepErrors.name = 'Nombre requerido';
-        if (form.name.trim().length > 25) stepErrors.name = 'Máximo 25 caracteres';
+        if (form.name.trim().length > 30) stepErrors.name = 'Máximo 30 caracteres';
 
         // Also validate ingredients in step 1 (combined)
         if (form.lines.length === 0) stepErrors.lines = 'Agrega al menos un ingrediente';
@@ -329,11 +329,11 @@ export function useRecipeForm() {
       // CREATE MODE: step 1 = info, step 2 = ingredients, step 3 = config
       if (step === 1) {
         if (!form.name.trim()) stepErrors.name = 'Nombre requerido';
-        if (form.name.trim().length > 25) stepErrors.name = 'Máximo 25 caracteres';
+        if (form.name.trim().length > 30) stepErrors.name = 'Máximo 30 caracteres';
 
         // Siempre se crea producto nuevo desde la receta - validar campos obligatorios
         if (!form.newProductName.trim()) stepErrors.newProductName = 'Nombre del producto requerido';
-        if (form.newProductName.length > 25) stepErrors.newProductName = 'Máximo 25 caracteres';
+        if (form.newProductName.length > 30) stepErrors.newProductName = 'Máximo 30 caracteres';
         if (!form.newProductSku.trim()) stepErrors.newProductSku = 'SKU del producto requerido';
         if (form.newProductSku.length > 18) stepErrors.newProductSku = 'Máximo 18 caracteres';
         if (!form.newProductIsIngredient && (!form.newProductPriceUsd || form.newProductPriceUsd <= 0)) {

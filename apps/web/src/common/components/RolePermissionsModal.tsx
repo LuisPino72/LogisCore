@@ -161,14 +161,14 @@ export function RolePermissionsModal({ isOpen, onClose, role, onSave }: RolePerm
           label="Nombre del rol"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          validation={{ required: true, maxLength: 50 }}
+          validation={{ required: true, maxLength: 25 }}
         />
 
         <Input
           label="Descripción"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          validation={{ maxLength: 200 }}
+          validation={{ maxLength: 25 }}
         />
 
         <div>

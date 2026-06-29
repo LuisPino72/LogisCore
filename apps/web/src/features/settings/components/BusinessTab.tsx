@@ -385,18 +385,21 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
                 value={pagoMovilBank}
                 onChange={(e) => setPagoMovilBank(e.target.value)}
                 placeholder="Ej: Mercantil"
+                validation={{ maxLength: 30 }}
               />
               <Input
                 label="Titular"
                 value={pagoMovilHolder}
                 onChange={(e) => setPagoMovilHolder(e.target.value)}
                 placeholder="Nombre del titular"
+                validation={{ maxLength: 25 }}
               />
               <Input
                 label="Cédula/RIF"
                 value={pagoMovilId}
                 onChange={(e) => setPagoMovilId(e.target.value)}
                 placeholder="V-12345678"
+                validation={{ maxLength: 11 }}
               />
               <Input
                 label="Teléfono"
@@ -404,6 +407,7 @@ const BusinessTabInner: FC<BusinessTabProps> = ({ tenantId }) => {
                 onChange={(e) => { const formatted = formatPhone(e.target.value); setPagoMovilPhone(unformatPhone(formatted)); }}
                 inputMode="tel"
                 placeholder="0412-1234567"
+                validation={{ maxLength: 15 }}
               />
             </>
           )}

@@ -28,10 +28,10 @@ export const OperationSettingsSchema = z.object({
   needsKitchenDefault: z.boolean().optional().default(false),
   defaultDeliveryFee: z.number().min(0).optional().default(0),
   pagoMovilEnabled: z.boolean().optional(),
-  pagoMovilBank: z.string().optional(),
-  pagoMovilHolder: z.string().optional(),
-  pagoMovilId: z.string().optional(),
-  pagoMovilPhone: z.string().optional(),
+  pagoMovilBank: z.string().max(30, 'Nombre del banco demasiado largo').optional(),
+  pagoMovilHolder: z.string().max(25, 'Nombre del titular demasiado largo').optional(),
+  pagoMovilId: z.string().max(11, 'Cédula/RIF demasiado largo').optional(),
+  pagoMovilPhone: z.string().max(15, 'Teléfono demasiado largo').optional(),
 }).superRefine((data, ctx) => {
   if (data.pagoMovilEnabled) {
     if (!data.pagoMovilBank || data.pagoMovilBank.trim().length === 0) {

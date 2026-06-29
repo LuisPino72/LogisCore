@@ -106,7 +106,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={fieldErrors.name}
-          validation={{ required: 'Ingresa el nombre del proveedor', maxLength: 25 }}
+          validation={{ required: 'Ingresa el nombre del proveedor', maxLength: 30 }}
           inputClassName="text-sm"
         />
 
@@ -116,7 +116,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           onChange={setRif}
           hint="V/E/J/G/P + 9 dígitos. Ej: J123456789"
           error={fieldErrors.rif}
-          maxLength={9}
+          maxLength={10}
         />
 
         <Input
@@ -125,7 +125,7 @@ export function SupplierForm({ isOpen, onClose, onSubmit, editSupplier }: Suppli
           value={formatPhone(phone)}
           onChange={(e) => { const formatted = formatPhone(e.target.value); setPhone(unformatPhone(formatted)); }}
           error={fieldErrors.phone}
-          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 13 }}
+          validation={{ pattern: /^(\+58|0)\d{10}$/, maxLength: 15 }}
           hint="Formato: 0412-1234567"
           inputClassName="text-sm"
           inputMode="tel"

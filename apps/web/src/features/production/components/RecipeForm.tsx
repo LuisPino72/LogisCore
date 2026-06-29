@@ -236,7 +236,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 onChange={(e) => updateField('name', e.target.value)}
                 placeholder="Ej: Pan de Molde"
                 error={errors.name}
-                validation={{ required: true, maxLength: 25 }}
+                validation={{ required: true, maxLength: 30 }}
               />
 
               {/* Read-only info */}
@@ -417,7 +417,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 value={form.notes}
                 onChange={(e) => updateField('notes', e.target.value)}
                 placeholder="Instrucciones adicionales..."
-                validation={{ maxLength: 25 }}
+                validation={{ maxLength: 30 }}
               />
 
               <Card className="p-3 bg-gray-50 border-gray-200">
@@ -565,7 +565,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               onChange={(e) => updateField('name', e.target.value)}
               placeholder="Ej: Pan de Molde"
               error={errors.name}
-              validation={{ required: true, maxLength: 25 }}
+              validation={{ required: true, maxLength: 30 }}
             />
 
             <div>
@@ -604,7 +604,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                 onChange={(e) => updateField('newProductName', e.target.value)}
                 placeholder="Ej: Masa de empanada"
                 error={errors.newProductName}
-                validation={{ required: true, maxLength: 25 }}
+                validation={{ required: true, maxLength: 30 }}
                 autoComplete="off"
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -891,7 +891,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
               value={form.notes}
               onChange={(e) => updateField('notes', e.target.value)}
               placeholder="Instrucciones adicionales..."
-              validation={{ maxLength: 25 }}
+              validation={{ maxLength: 30 }}
             />
 
             {warnings.filter((w) => w.field !== 'productId' && !w.field.startsWith('line_')).length > 0 && (

@@ -131,6 +131,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
             value={formData.cedula}
             onChange={(val) => updateField('cedula', val)}
             error={fieldErrors.cedula}
+            maxLength={10}
             hint="V/E/J/G/P + 6 a 8 dígitos. Facilita búsqueda."
           />
         </div>
@@ -145,7 +146,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
               updateField('phone', unformatPhone(formatted));
             }}
             error={fieldErrors.phone}
-            validation={{ pattern: /^$|^0\d{10}$/, maxLength: 13 }}
+            validation={{ pattern: /^$|^0\d{10}$/, maxLength: 15 }}
             hint="Formato: 0412-1234567"
             inputClassName="text-sm"
             inputMode="tel"
@@ -160,7 +161,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
             onChange={(e) => updateField('address', e.target.value)}
             placeholder="Ej: Calle 123, Caracas"
             rows={2}
-            validation={{ maxLength: 30 }}
+            validation={{ maxLength: 50 }}
             error={fieldErrors.address}
             autoComplete="street-address"
           />
@@ -189,7 +190,7 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
             onChange={(e) => updateField('notes', e.target.value)}
             placeholder="Ej: Prefiere empanadas los viernes"
             rows={2}
-            validation={{ maxLength: 30 }}
+            validation={{ maxLength: 50 }}
             error={fieldErrors.notes}
             autoComplete="off"
           />

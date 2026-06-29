@@ -166,8 +166,8 @@ export function validateRow(row: CsvRow, _rowIndex: number): ValidationError[] {
 
   if (!row.nombre || row.nombre.trim() === '') {
     errors.push({ field: 'nombre', message: 'El nombre es obligatorio' });
-  } else if (row.nombre.trim().length > 25) {
-    errors.push({ field: 'nombre', message: 'Máximo 25 caracteres' });
+  } else if (row.nombre.trim().length > 30) {
+    errors.push({ field: 'nombre', message: 'Máximo 30 caracteres' });
   }
 
   if (!row.sku || row.sku.trim() === '') {
@@ -258,8 +258,8 @@ function validatePresentationRow(row: CsvRow, _rowIndex: number): ValidationErro
     return errors;
   }
 
-  if (row.pres_nombre.trim().length > 100) {
-    errors.push({ field: 'pres_nombre', message: 'Variante: máximo 100 caracteres' });
+  if (row.pres_nombre.trim().length > 30) {
+    errors.push({ field: 'pres_nombre', message: 'Variante: máximo 30 caracteres' });
   }
 
   if (!row.pres_precio || row.pres_precio.trim() === '') {
@@ -278,8 +278,8 @@ function validatePresentationRow(row: CsvRow, _rowIndex: number): ValidationErro
     }
   }
 
-  if (row.pres_codigo_barras && row.pres_codigo_barras.trim().length > 50) {
-    errors.push({ field: 'pres_codigo_barras', message: `Variante "${row.pres_nombre}": código de barras máximo 50 caracteres` });
+  if (row.pres_codigo_barras && row.pres_codigo_barras.trim().length > 25) {
+    errors.push({ field: 'pres_codigo_barras', message: `Variante "${row.pres_nombre}": código de barras máximo 25 caracteres` });
   }
 
   return errors;

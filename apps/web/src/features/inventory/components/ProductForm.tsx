@@ -406,7 +406,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
             value={formData.name}
             onChange={(e) => setField('name', e.target.value)}
             error={errors.name}
-            validation={{ required: true, maxLength: 25 }}
+            validation={{ required: true, maxLength: 30 }}
             inputClassName="text-sm"
           />
         </div>
@@ -879,7 +879,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         placeholder="Ej: Caja de 12, Pack familiar"
                         value={pres.name}
                         onChange={(e) => updatePresentation(index, 'name', e.target.value)}
-                        validation={{ required: true, maxLength: 100 }}
+                        validation={{ required: true, maxLength: 30 }}
                         inputClassName="text-sm"
                       />
                     </div>
@@ -917,7 +917,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                         placeholder="Ej: HP-001-A"
                         value={pres.barcode || ''}
                         onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
-                        validation={{ maxLength: 50 }}
+                        validation={{ maxLength: 25 }}
                         error={errors[`presentation_${index}_barcode`]}
                         inputClassName="text-sm"
                       />
@@ -1021,7 +1021,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="Ej: Caja de 12, Pack familiar"
                   value={pres.name}
                   onChange={(e) => updatePresentation(index, 'name', e.target.value)}
-                  validation={{ required: true, maxLength: 100 }}
+                  validation={{ required: true, maxLength: 30 }}
                   inputClassName="text-sm"
                 />
               </div>
@@ -1066,7 +1066,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                   placeholder="Ej: 123456789012"
                   value={pres.barcode || ''}
                   onChange={(e) => updatePresentation(index, 'barcode', e.target.value || undefined)}
-                  validation={{ maxLength: 50 }}
+                  validation={{ maxLength: 25 }}
                   error={errors[`presentation_${index}_barcode`]}
                   inputClassName="text-sm"
                 />
@@ -1227,7 +1227,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
               value={categoryName}
               onChange={(e) => { setCategoryName(e.target.value); setCategoryError(''); }}
               error={categoryError}
-              validation={{ required: true, maxLength: 25 }}
+              validation={{ required: true, maxLength: 30 }}
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCategory(); }}
             />

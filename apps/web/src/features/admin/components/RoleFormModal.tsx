@@ -145,14 +145,14 @@ export function RoleFormModal({ role, onClose }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Cajero, Supervisor, …"
-            maxLength={50}
+            maxLength={25}
           />
           <Input
             label="Descripción (opcional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Breve descripción del rol"
-            maxLength={200}
+            maxLength={25}
           />
            <Select
              label="Nivel de acceso en base de datos"
