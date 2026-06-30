@@ -35,18 +35,55 @@ async function validateAssemblyIngredients(
   const wasteMultiplier = 1 + (recipeData.wastePct / 100);
   const db = getDb();
   const session = useAuthStore.getState().session;
-  const ingredients = await Promise.all(recipeData.lines.map((line) => db.products.where({ id: line.productId, tenantId: session?.tenantId }).first()));
-  for (let i = 0; i < recipeData.lines.length; i++) {
-    const line = recipeData.lines[i];
-    const ingredient = ingredients[i];
+  const tenantId = session?.tenantId;
+
+  async function checkIngredient(
+    line: { productId: string; quantity: number; unit: string },
+    parentName: string,
+    currentQuantity: number,
+    depth: number,
+  ): Promise<string | null> {
+    if (depth > 5) return null;
+
+    const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
     if (!ingredient) {
-      return `Stock insuficiente de ingrediente "Desconocido" para "${product.name}". Necesario: ${Math.ceil(line.quantity * quantity * wasteMultiplier)}, Disponible: 0.`;
+      return `Stock insuficiente de ingrediente "Desconocido" para "${parentName}". Necesario: ${Math.ceil(line.quantity * currentQuantity * wasteMultiplier)}, Disponible: 0.`;
     }
-    const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * quantity * wasteMultiplier, line.unit, ingredient.unit);
+
+    const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * currentQuantity * wasteMultiplier, line.unit, ingredient.unit);
     const needed = Math.ceil(neededInStorage);
-    if (ingredient.deletedAt || ingredient.stock < needed) {
-      return `Stock insuficiente de ingrediente "${ingredient.name}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`;
+
+    const subRecipe = await db.recipes
+      .where({ productId: line.productId, mode: 'assembly' as const })
+      .filter(r => !r.deletedAt && r.isActive)
+      .first();
+
+    if (subRecipe) {
+      if (ingredient.stock >= needed) {
+        return null;
+      }
+      const subBatchEquivalent = needed / subRecipe.yieldQuantity;
+      const subLines = await db.recipeLines
+        .where({ recipeId: subRecipe.id })
+        .filter(l => !l.deletedAt)
+        .toArray();
+
+      for (const subLine of subLines) {
+        const error = await checkIngredient(subLine, ingredient.name, subBatchEquivalent, depth + 1);
+        if (error) return error;
+      }
+      return null;
     }
+
+    if (ingredient.deletedAt || ingredient.stock < needed) {
+      return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`;
+    }
+    return null;
+  }
+
+  for (const line of recipeData.lines) {
+    const error = await checkIngredient(line, product.name, quantity, 0);
+    if (error) return error;
   }
   return null;
 }
@@ -273,17 +310,54 @@ export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: Ca
         const wasteMultiplier = 1 + (recipeData.wastePct / 100);
         const effectiveQty = quantity * (cartItem.unitMultiplier || 1);
         const db = getDb();
-        for (const line of recipeData.lines) {
-          const session = useAuthStore.getState().session;
-          const ingredient = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
+        const session = useAuthStore.getState().session;
+        const tenantId = session?.tenantId;
+
+        async function checkQtyIngredient(
+          line: { productId: string; quantity: number; unit: string },
+          parentName: string,
+          currentQty: number,
+          depth: number,
+        ): Promise<string | null> {
+          if (depth > 5) return null;
+
+          const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
           if (!ingredient) {
-            set({ error: `Stock insuficiente de ingrediente "Desconocido" para "${product.name}".` });
-            return;
+            return `Stock insuficiente de ingrediente "Desconocido" para "${parentName}".`;
           }
-          const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * effectiveQty * wasteMultiplier, line.unit, ingredient.unit);
+
+          const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * currentQty * wasteMultiplier, line.unit, ingredient.unit);
           const needed = Math.ceil(neededInStorage);
+
+          const subRecipe = await db.recipes
+            .where({ productId: line.productId, mode: 'assembly' as const })
+            .filter(r => !r.deletedAt && r.isActive)
+            .first();
+
+          if (subRecipe) {
+            if (ingredient.stock >= needed) return null;
+            const subBatchEquivalent = needed / subRecipe.yieldQuantity;
+            const subLines = await db.recipeLines
+              .where({ recipeId: subRecipe.id })
+              .filter(l => !l.deletedAt)
+              .toArray();
+            for (const subLine of subLines) {
+              const error = await checkQtyIngredient(subLine, ingredient.name, subBatchEquivalent, depth + 1);
+              if (error) return error;
+            }
+            return null;
+          }
+
           if (ingredient.deletedAt || ingredient.stock < needed) {
-            set({ error: `Stock insuficiente de ingrediente "${ingredient.name}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient.stock}.` });
+            return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${ingredient.stock}.`;
+          }
+          return null;
+        }
+
+        for (const line of recipeData.lines) {
+          const error = await checkQtyIngredient(line, product.name, effectiveQty, 0);
+          if (error) {
+            set({ error });
             return;
           }
         }

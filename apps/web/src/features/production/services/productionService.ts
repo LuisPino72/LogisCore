@@ -36,6 +36,7 @@ import { expandRecipe, validateCycles } from './recipeGraphService';
 import { calculateRecipeCost as calculateRecipeCostFn } from './costService';
 
 const PRODUCTION_MODULE = 'PRODUCTION';
+const MAX_ASSEMBLY_DEPTH = 5;
 
 // Límite de tiempo para cancelar órdenes de producción (7 días naturales).
 // Después de este período, la orden no se puede cancelar para evitar
@@ -1214,11 +1215,17 @@ export const productionService = {
     userId: string,
     options: { allowOverride?: boolean } = {},
     tx?: Transaction,
+    depth: number = 0,
   ): Promise<Result<{ consumedLots: Array<{ lotId: string; quantity: number }>; totalIngredientCost: number; assemblyAuditEvent?: { eventName: string; module: string; payload: unknown; context: { userId: string; tenantId: string } } }, AppError>> {
     const _consumeSession = useAuthStore.getState().session;
     if (!_consumeSession || !hasActionPermission(_consumeSession, 'production', 'produce_batch')) {
       return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'produce_batch')));
     }
+
+    if (depth > MAX_ASSEMBLY_DEPTH) {
+      return failure(new AppError('RECIPE_MAX_DEPTH_EXCEEDED', 'Se excedió la profundidad máxima de ensamblaje recursivo.'));
+    }
+
     const db = getDb();
     const now = new Date().toISOString();
 
@@ -1266,47 +1273,117 @@ export const productionService = {
         const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, ingredient.unit);
         const needed = Math.ceil(neededInStorage);
 
-        const calcResult = await calculateConsumptionCost(line.productId, needed, { allowOverride: options.allowOverride });
-        if (!calcResult.ok) throw calcResult.error;
-        const { totalCost: lineTotalCost } = calcResult.data;
+        const subRecipe = await db.recipes
+          .where({ productId: line.productId, mode: 'assembly' as const })
+          .filter(r => !r.deletedAt && r.isActive)
+          .first();
 
-        const isInsufficient = ingredient.stock < needed;
-        const previousStock = ingredient.stock;
-        let newStock: number;
-        if (previousStock < needed) {
-          if (options.allowOverride) {
-            newStock = 0;
-          } else {
-            throw new AppError(ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK, `Stock insuficiente para ingrediente. Necesario: ${needed}, disponible: ${previousStock}.`);
+        if (subRecipe && ingredient.stock < needed) {
+          const subBatchEquivalent = needed / subRecipe.yieldQuantity;
+
+          const subRecipeLines = await db.recipeLines
+            .where({ recipeId: subRecipe.id })
+            .filter(l => !l.deletedAt)
+            .toArray();
+
+          if (subRecipeLines.length === 0) {
+            throw new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, `Sub-receta de "${ingredient.name}" no tiene ingredientes.`);
+          }
+
+          for (const subLine of subRecipeLines) {
+            const subIngredient = await db.products.where({ id: subLine.productId, tenantId }).first();
+            if (!subIngredient) {
+              throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, `Ingrediente de sub-receta no encontrado.`);
+            }
+
+            const subNeededInStorage = recipeQtyToStorageBase(subLine.quantity * subBatchEquivalent * wasteMultiplier, subLine.unit, subIngredient.unit);
+            const subNeeded = Math.ceil(subNeededInStorage);
+
+            const subCalcResult = await calculateConsumptionCost(subLine.productId, subNeeded, { allowOverride: options.allowOverride });
+            if (!subCalcResult.ok) throw subCalcResult.error;
+            const { totalCost: subLineCost } = subCalcResult.data;
+
+            const subIsInsufficient = subIngredient.stock < subNeeded;
+            const subPreviousStock = subIngredient.stock;
+            let subNewStock: number;
+            if (subPreviousStock < subNeeded) {
+              if (options.allowOverride) {
+                subNewStock = 0;
+              } else {
+                throw new AppError(ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK, `Stock insuficiente para ingrediente de sub-receta. Necesario: ${subNeeded}, disponible: ${subPreviousStock}.`);
+              }
+            } else {
+              subNewStock = subPreviousStock - subNeeded;
+            }
+
+            await db.products.update(subLine.productId, { stock: subNewStock });
+            await syncQueue.enqueue('products', 'UPDATE', subLine.productId, toSnake({ ...subIngredient, stock: subNewStock } as unknown as Record<string, unknown>), tenantId);
+
+            const subFifoResult = await consumeFifoInternal(subLine.productId, subNeeded, tenantId);
+            if (!subFifoResult.ok) throw subFifoResult.error;
+            for (const cl of subFifoResult.data) {
+              assemblyConsumedLots.push({ lotId: cl.lotId, quantity: cl.quantity });
+            }
+
+            totalIngredientCost += subLineCost;
+            const subMovementCostUsd = preciseRound(subLineCost, 2);
+            const subMovementId = generateId();
+            const subReasonType = subIsInsufficient ? 'ajuste_manual' : 'consumo_interno';
+
+            await db.inventoryMovements.add({
+              id: subMovementId, tenantId, productId: subLine.productId, userId,
+              type: 'adjustment' as const, quantity: -subNeeded, previousStock: subPreviousStock, newStock: subNewStock,
+              reasonType: subReasonType, costUsd: subMovementCostUsd, createdAt: now,
+            });
+            await syncQueue.enqueue('inventory_movements', 'CREATE', subMovementId, toSnake({
+              id: subMovementId, tenantId, productId: subLine.productId, userId,
+              type: 'adjustment', quantity: -subNeeded, previousStock: subPreviousStock, newStock: subNewStock,
+              reasonType: subReasonType, costUsd: subMovementCostUsd, createdAt: now,
+            } as unknown as Record<string, unknown>), tenantId);
           }
         } else {
-          newStock = previousStock - needed;
+          const calcResult = await calculateConsumptionCost(line.productId, needed, { allowOverride: options.allowOverride });
+          if (!calcResult.ok) throw calcResult.error;
+          const { totalCost: lineTotalCost } = calcResult.data;
+
+          const isInsufficient = ingredient.stock < needed;
+          const previousStock = ingredient.stock;
+          let newStock: number;
+          if (previousStock < needed) {
+            if (options.allowOverride) {
+              newStock = 0;
+            } else {
+              throw new AppError(ProductionErrors.ASSEMBLY_INSUFFICIENT_STOCK, `Stock insuficiente para ingrediente. Necesario: ${needed}, disponible: ${previousStock}.`);
+            }
+          } else {
+            newStock = previousStock - needed;
+          }
+
+          await db.products.update(line.productId, { stock: newStock });
+          await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
+
+          const fifoResult = await consumeFifoInternal(line.productId, needed, tenantId);
+          if (!fifoResult.ok) throw fifoResult.error;
+          for (const cl of fifoResult.data) {
+            assemblyConsumedLots.push({ lotId: cl.lotId, quantity: cl.quantity });
+          }
+
+          totalIngredientCost += lineTotalCost;
+          const movementCostUsd = preciseRound(lineTotalCost, 2);
+          const movementId = generateId();
+          const reasonType = isInsufficient ? 'ajuste_manual' : 'consumo_interno';
+
+          await db.inventoryMovements.add({
+            id: movementId, tenantId, productId: line.productId, userId,
+            type: 'adjustment' as const, quantity: -needed, previousStock, newStock,
+            reasonType, costUsd: movementCostUsd, createdAt: now,
+          });
+          await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
+            id: movementId, tenantId, productId: line.productId, userId,
+            type: 'adjustment', quantity: -needed, previousStock, newStock,
+            reasonType, costUsd: movementCostUsd, createdAt: now,
+          } as unknown as Record<string, unknown>), tenantId);
         }
-
-        await db.products.update(line.productId, { stock: newStock });
-        await syncQueue.enqueue('products', 'UPDATE', line.productId, toSnake({ ...ingredient, stock: newStock } as unknown as Record<string, unknown>), tenantId);
-
-        const fifoResult = await consumeFifoInternal(line.productId, needed, tenantId);
-        if (!fifoResult.ok) throw fifoResult.error;
-        for (const cl of fifoResult.data) {
-          assemblyConsumedLots.push({ lotId: cl.lotId, quantity: cl.quantity });
-        }
-
-        totalIngredientCost += lineTotalCost;
-        const movementCostUsd = preciseRound(lineTotalCost, 2);
-        const movementId = generateId();
-        const reasonType = isInsufficient ? 'ajuste_manual' : 'consumo_interno';
-
-        await db.inventoryMovements.add({
-          id: movementId, tenantId, productId: line.productId, userId,
-          type: 'adjustment' as const, quantity: -needed, previousStock, newStock,
-          reasonType, costUsd: movementCostUsd, createdAt: now,
-        });
-        await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake({
-          id: movementId, tenantId, productId: line.productId, userId,
-          type: 'adjustment', quantity: -needed, previousStock, newStock,
-          reasonType, costUsd: movementCostUsd, createdAt: now,
-        } as unknown as Record<string, unknown>), tenantId);
       }
 
       const comboLotId = generateId();
