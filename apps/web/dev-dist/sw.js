@@ -81,13 +81,13 @@ define(['./workbox-16ad23c7'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "/index.html",
-    "revision": "0.ucp9nnmj2ag"
+    "revision": "0.0s27ga8ti74"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
     allowlist: [/^\/$/]
   }));
-  workbox.registerRoute(/\/storage\/v1\/object\/public\/Products\/[^?]+/, new workbox.StaleWhileRevalidate({
+  workbox.registerRoute(/\/storage\/v1\/object\/public\/(Products|logos|Library)\/[^?]+/, new workbox.StaleWhileRevalidate({
     "cacheName": "logiscore-supabase-images",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 200,

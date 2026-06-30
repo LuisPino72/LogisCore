@@ -1,7 +1,14 @@
 const CACHE_NAME = 'logiscore-product-images';
 const MAX_CACHE_SIZE = 100;
+const FETCH_TIMEOUT_MS = 10000;
 
 const resolvedUrlsMemoryCache = new Map<string, string>();
+
+function fetchWithTimeout(url: string, timeoutMs: number, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
 
 function touch(key: string): void {
   const value = resolvedUrlsMemoryCache.get(key);
@@ -28,7 +35,7 @@ async function cacheInBg(url: string): Promise<void> {
     const cache = await caches.open(CACHE_NAME);
     const existing = await cache.match(url);
     if (existing) return;
-    const response = await fetch(url, { mode: 'cors' });
+    const response = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
     if (response.ok) {
       await cache.put(url, response);
     }
@@ -65,7 +72,7 @@ export const imageCacheService = {
       // No está en caché offline. Lo descargamos de forma controlada en un solo fetch
       // para evitar la doble descarga por red (una por fetch y otra por <img>).
       try {
-        const response = await fetch(imageUrl, { mode: 'cors' });
+        const response = await fetchWithTimeout(imageUrl, FETCH_TIMEOUT_MS);
         if (response.ok) {
           const clone = response.clone();
           await cache.put(imageUrl, response);

@@ -36,12 +36,11 @@ interface OrdersTabProps {
   onPayOrder?: (sale: DexieSale) => void;
   onDispatchOrder?: (sale: DexieSale) => void;
   onConfirmDelivery?: (saleId: string) => void;
-  onSendOrderSummary?: (sale: DexieSale) => void;
   onSendAddressToMotorizado?: (sale: DexieSale) => void;
   onNotifyCustomerAfterDispatch?: (sale: DexieSale) => void;
 }
 
-export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery, onSendOrderSummary, onSendAddressToMotorizado, onNotifyCustomerAfterDispatch }: OrdersTabProps) {
+export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery, onSendAddressToMotorizado, onNotifyCustomerAfterDispatch }: OrdersTabProps) {
   const [orders, setOrders] = useState<DexieSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -222,28 +221,17 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                 </div>
 
                 {order.status === 'lista' && onPayOrder && canPayOrder && (
-                  <div className="mt-2 pt-2 border-t border-black/5 flex gap-2">
+                  <div className="mt-2 pt-2 border-t border-black/5">
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={() => onPayOrder(order)}
-                      className="min-h-11 text-xs flex-1"
+                      className="min-h-11 text-xs w-full"
                       aria-label={`Cobrar orden ${order.orderNumber || ''}`}
                     >
                       <DollarSign size={14} />
                       Cobrar
                     </Button>
-                    {onSendOrderSummary && order.orderType === 'delivery' && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onSendOrderSummary(order)}
-                        className="min-h-11 text-xs"
-                        aria-label={`Enviar resumen por WhatsApp`}
-                      >
-                        <MessageCircle size={14} />
-                      </Button>
-                    )}
                   </div>
                 )}
 

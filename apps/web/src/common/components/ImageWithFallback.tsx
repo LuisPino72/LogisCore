@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { imageCacheService } from '../../services/imageCache/imageCacheService';
@@ -38,6 +38,8 @@ export function ImageWithFallback({
 
   const prevProductIdRef = useRef<string | null>(null);
   const prevImageUrlRef = useRef<string | null>(null);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 2;
 
   const cachedResolved = resolvedUrl ? imageCacheService.getResolvedUrl(resolvedUrl) : null;
 
@@ -45,6 +47,36 @@ export function ImageWithFallback({
   const [loading, setLoading] = useState(!cachedResolved);
   const [error, setError] = useState(false);
   const [imgReady, setImgReady] = useState(!!cachedResolved);
+
+  const loadImage = useCallback(async (imageProductId: string, imageResolvedUrl: string, active: { current: boolean }) => {
+    const alreadyResolved = imageCacheService.getResolvedUrl(imageResolvedUrl);
+    if (alreadyResolved) {
+      if (!active.current) return;
+      setSrc(alreadyResolved);
+      setLoading(false);
+      setImgReady(true);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (!active.current) return;
+      setSrc(imageResolvedUrl);
+      setLoading(false);
+    }, 8000);
+
+    try {
+      const result = await imageCacheService.acquireImageUrl(imageProductId, imageResolvedUrl);
+      if (!active.current) return;
+      clearTimeout(timeoutId);
+      setSrc(result);
+      setLoading(false);
+    } catch {
+      if (!active.current) return;
+      clearTimeout(timeoutId);
+      setSrc(imageResolvedUrl);
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (imageUrl) {
@@ -68,24 +100,24 @@ export function ImageWithFallback({
       return;
     }
 
-    let isActive = true;
+    const isActive = { current: true };
 
     const timeoutId = setTimeout(() => {
-      if (!isActive) return;
+      if (!isActive.current) return;
       setSrc(currentEffectiveImageUrl);
       setLoading(false);
-    }, 3000);
+    }, 8000);
 
     (async () => {
       const result = await imageCacheService.acquireImageUrl(productId, currentEffectiveImageUrl);
-      if (!isActive) return;
+      if (!isActive.current) return;
       clearTimeout(timeoutId);
       setSrc(result);
       setLoading(false);
     })();
 
     return () => {
-      isActive = false;
+      isActive.current = false;
       clearTimeout(timeoutId);
     };
   }, [productId, imageUrl, categoryId, categoryDefaults, effectiveImageUrl]);
@@ -94,12 +126,31 @@ export function ImageWithFallback({
     if (prevProductIdRef.current !== productId || prevImageUrlRef.current !== (imageUrl || null)) {
       prevProductIdRef.current = productId;
       prevImageUrlRef.current = imageUrl || null;
+      retryCountRef.current = 0;
       setSrc(cachedResolved || null);
       setLoading(!cachedResolved);
       setError(false);
       setImgReady(!!cachedResolved);
     }
   }, [productId, imageUrl, cachedResolved]);
+
+  useEffect(() => {
+    if (!error || retryCountRef.current >= MAX_RETRIES) return;
+
+    const handleOnline = () => {
+      const currentEffectiveImageUrl = effectiveImageUrl || (categoryId ? categoryDefaults?.get(categoryId) ?? null : null);
+      if (!currentEffectiveImageUrl) return;
+      retryCountRef.current += 1;
+      setError(false);
+      setLoading(true);
+      setImgReady(false);
+      const isActive = { current: true };
+      loadImage(productId, currentEffectiveImageUrl, isActive);
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [error, productId, effectiveImageUrl, categoryId, categoryDefaults, loadImage]);
 
   const handleLoad = () => {
     setImgReady(true);

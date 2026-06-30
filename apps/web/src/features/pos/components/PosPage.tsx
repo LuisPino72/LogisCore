@@ -213,13 +213,10 @@ export function PosPage({ tenantId }: PosPageProps) {
     setShowDispatchPanel(true);
   }, []);
 
-  const handleSendOrderSummary = useCallback(async (saleIdOrSale: string | DexieSale) => {
+  const handleOrderPaySendSummary = useCallback(async (saleId: string, deliveryFee: number) => {
     if (!tenantId) return;
     const db = (await import('../../../services/dexie/db')).getDb();
-    const saleId = typeof saleIdOrSale === 'string' ? saleIdOrSale : saleIdOrSale.id;
-    const sale = typeof saleIdOrSale === 'string' 
-      ? await db.sales.get(saleIdOrSale)
-      : saleIdOrSale;
+    const sale = await db.sales.get(saleId);
     if (!sale) return;
     const items = await db.saleItems.where({ saleId }).filter(i => !i.deletedAt).toArray();
     const customer = sale.customerId ? await db.customers.get(sale.customerId) : null;
@@ -240,13 +237,15 @@ export function PosPage({ tenantId }: PosPageProps) {
         businessRif: tenantRef?.rif,
       },
       sale.deliveryPersonName,
+      deliveryFee,
+      exchangeRateBs,
     );
     if (link) {
       window.open(link, '_blank');
     } else {
       addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado.', duration: 4000 });
     }
-  }, [tenantId, addToast]);
+  }, [tenantId, addToast, exchangeRateBs]);
 
   const handleSendAddressToMotorizado = useCallback(async (sale: DexieSale) => {
     if (!sale.deliveryPersonPhone && !sale.deliveryPersonName) {
@@ -813,7 +812,6 @@ export function PosPage({ tenantId }: PosPageProps) {
                         orderNumber={n.orderNumber}
                         onDismiss={() => dismissNotification(n.saleId)}
                         onViewOrder={() => dismissNotification(n.saleId)}
-                        onSendSummary={handleSendOrderSummary}
                       />
                     ))}
                   </div>
@@ -824,7 +822,6 @@ export function PosPage({ tenantId }: PosPageProps) {
                     onPayOrder={handlePayOrder}
                     onDispatchOrder={handleDispatchOrder}
                     onConfirmDelivery={handleConfirmDeliveryOrder}
-                    onSendOrderSummary={handleSendOrderSummary}
                     onSendAddressToMotorizado={handleSendAddressToMotorizado}
                     onNotifyCustomerAfterDispatch={handleNotifyCustomerAfterDispatch}
                   />
@@ -1037,6 +1034,10 @@ export function PosPage({ tenantId }: PosPageProps) {
         onConfirm={handleConfirmPayOrder}
         onCancel={() => setOrderPayModal(null)}
         onMethodChange={(m) => setOrderPayModal((prev) => prev ? { ...prev, method: m } : null)}
+        onSendSummary={(deliveryFee) => {
+          if (orderPayModal?.sale) handleOrderPaySendSummary(orderPayModal.sale.id, deliveryFee);
+        }}
+        exchangeRate={exchangeRateBs}
         defaultDeliveryFee={defaultDeliveryFee}
       />
 

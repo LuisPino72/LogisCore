@@ -59,6 +59,14 @@ export const ProductGrid = memo(function ProductGrid({
     return map;
   }, [categories]);
 
+  const defaultsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const cat of categories) {
+      if (cat.defaultImageUrl) map.set(cat.id, cat.defaultImageUrl);
+    }
+    return map;
+  }, [categories]);
+
   const fuzzyResults = useFuzzySearch(products, searchQuery, {
     keys: ['name', 'sku'],
     threshold: 0.4,
@@ -221,7 +229,7 @@ export const ProductGrid = memo(function ProductGrid({
                 onReorder={onReorder}
                 hasAssemblyRecipe={product.hasAssemblyRecipe}
                 index={index}
-                categoryDefaults={undefined}
+                categoryDefaults={defaultsMap}
                 categoryName={product.categoryId ? (catNameMap.get(product.categoryId) ?? null) : null}
               />
             ))}

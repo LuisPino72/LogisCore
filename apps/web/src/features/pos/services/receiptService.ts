@@ -497,6 +497,8 @@ export const receiptService = {
       businessRif?: string;
     },
     deliveryPersonName?: string,
+    deliveryFee?: number,
+    exchangeRate?: number,
   ): string {
     const lines = [
       `Hola ${customerName || 'Cliente'}!`,
@@ -518,10 +520,20 @@ export const receiptService = {
     }
     lines.push('');
 
-    lines.push(`Subtotal: ${formatUsd(sale.subtotalUsd)}`);
+    const fee = deliveryFee ?? sale.deliveryFee ?? 0;
+    const subtotal = sale.subtotalUsd > 0 ? sale.subtotalUsd : items.reduce((s, i) => s + i.totalPriceUsd, 0);
+    const totalUsd = subtotal + fee;
+
+    lines.push(`Subtotal: ${formatUsd(subtotal)}`);
     if (sale.ivaUsd > 0) lines.push(`IVA: ${formatUsd(sale.ivaUsd)}`);
-    if (sale.deliveryFee && sale.deliveryFee > 0) lines.push(`Delivery: ${formatUsd(sale.deliveryFee)}`);
-    lines.push(`*Total: ${formatUsd(sale.totalUsd)}*`);
+    if (fee > 0) lines.push(`Delivery: ${formatUsd(fee)}`);
+    lines.push(`*Total: ${formatUsd(totalUsd)}*`);
+
+    if (exchangeRate && exchangeRate > 0) {
+      const totalBs = preciseRound(totalUsd * exchangeRate, 2);
+      lines.push(`*Total Bs.: ${formatBs(totalBs)}*`);
+      lines.push(`💱 Tasa: $1 = Bs. ${exchangeRate.toFixed(2)}`);
+    }
 
     if (deliveryPersonName) {
       lines.push('');
@@ -559,10 +571,12 @@ export const receiptService = {
       businessRif?: string;
     },
     deliveryPersonName?: string,
+    deliveryFee?: number,
+    exchangeRate?: number,
   ): string | null {
     const waPhone = normalizeWaPhone(customerPhone);
     if (!waPhone) return null;
-    const text = encodeURIComponent(receiptService.buildOrderSummaryText(sale, items, customerName, settings, deliveryPersonName));
+    const text = encodeURIComponent(receiptService.buildOrderSummaryText(sale, items, customerName, settings, deliveryPersonName, deliveryFee, exchangeRate));
     
     logCommunication(sale.id, 'order_summary_sent', customerPhone, items.map(i => `${i.quantity}x ${i.productName}`).join(', '));
     

@@ -1,6 +1,7 @@
 import { posService } from '../services/posService';
 import { inventoryService } from '../../../features/inventory/services/inventoryService';
 import { imageCacheService } from '../../../services/imageCache/imageCacheService';
+import { networkAware } from '../../../services/network/networkAwareService';
 import { getDb } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
 import type { Product, Category } from '../../../specs/inventory';
@@ -81,7 +82,9 @@ export const createCatalogSlice = (set: (setter: Partial<CatalogGetter> | ((stat
         return bFav - aFav;
       });
       set({ products: sorted, favoriteProductIds: favIds, assemblyRecipesMap: recipesMap, ...(!silent && { loading: false }) });
-      imageCacheService.preloadAll(result.data);
+      if (networkAware.shouldPreloadImages()) {
+        imageCacheService.preloadAll(result.data);
+      }
     } else if (!silent) {
       set({ loading: false, error: result.error.message });
     }

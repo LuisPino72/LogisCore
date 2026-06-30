@@ -51,7 +51,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            urlPattern: /\/storage\/v1\/object\/public\/Products\/[^?]+/,
+            urlPattern: /\/storage\/v1\/object\/public\/(Products|logos|Library)\/[^?]+/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'logiscore-supabase-images',
