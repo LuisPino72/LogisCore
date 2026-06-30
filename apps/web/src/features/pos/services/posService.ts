@@ -1,5 +1,5 @@
 import { getSessionById, getOpenCashRegister, getLastClosedCashRegister, getOpenSessionByRegisterId, openCashRegister, closeCashRegister } from './cashRegisterService';
-import { createSale, createOrder, getSalesHistory, getSaleItems, voidSale } from './saleService';
+import { createSale, createOrder, getSalesHistory, getSaleItems, voidSale, cancelOrder } from './saleService';
 import { getParkedCarts, parkCart, deleteParkedCart, toggleFavorite, getFavorites } from './cartService';
 import { getProductsForSale, getTodaySoldProducts, getVerificationProducts } from './productService';
 import type { CartItem } from '../types';
@@ -34,6 +34,7 @@ export const posService = {
   getSalesHistory,
   getSaleItems,
   voidSale,
+  cancelOrder,
   getParkedCarts,
   parkCart,
   deleteParkedCart,

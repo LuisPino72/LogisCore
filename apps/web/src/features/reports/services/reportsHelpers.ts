@@ -90,7 +90,7 @@ export async function fetchSalesWithItems(tenantId: string, start: string, end: 
   const sales = await db.sales
     .where('[tenantId+createdAt]')
     .between([tenantId, start], [tenantId, end])
-    .filter((s) => !s.deletedAt && s.status === 'completed')
+    .filter((s) => !s.deletedAt && (s.status === 'completed' || s.status === 'entregada'))
     .toArray();
 
   if (sales.length > 0) {
@@ -193,7 +193,7 @@ export async function fetchSalesWithItems(tenantId: string, start: string, end: 
       .from('sales')
       .select('id, total_bs, igtf_bs, iva_bs, exchange_rate, payment_method, created_at, discount_bs, is_credit_sale, credit_collected, customer_id')
       .eq('tenant_id', tenantUuid)
-      .eq('status', 'completed')
+      .in('status', ['completed', 'entregada'])
       .is('deleted_at', null)
       .gte('created_at', start)
       .lt('created_at', end);

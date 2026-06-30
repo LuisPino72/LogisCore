@@ -1248,6 +1248,7 @@ export async function createOrder(input: {
     status: 'pedida',
     voidedAt: undefined,
     createdAt: now,
+    updatedAt: now,
     deletedAt: undefined,
     discountType: undefined,
     discountValue: undefined,
@@ -1642,6 +1643,31 @@ export async function getActiveOrders(tenantId: string): Promise<Result<DexieSal
         !s.deletedAt
       )
       .sortBy('createdAt');
+
+    if (orders.length > 0) return success(orders);
+
+    try {
+      const uuid = await TenantTranslator.slugToUuid(tenantId);
+      const { data } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('tenant_id', uuid)
+        .in('status', ['pedida', 'preparacion', 'lista', 'pagada', 'despachada'])
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true });
+
+      if (data && data.length > 0) {
+        const mapped: DexieSale[] = [];
+        for (const raw of data) {
+          const result = saleFromSupabase(raw, tenantId);
+          if (result.ok) mapped.push(result.data);
+        }
+        return success(mapped);
+      }
+    } catch (err) {
+      logger.warn(MODULE_NAME, 'Supabase fallback offlined, using local only:', err);
+    }
+
     return success(orders);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en getActiveOrders:', err);

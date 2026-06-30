@@ -54,6 +54,7 @@ import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { failure, AppError } from '@logiscore/core';
 import { confirmOrderPayment, confirmDelivery, generateMapsLink } from '../services/saleService';
 import { customerService } from '../../customers/services/customerService';
+import { posService } from '../services/posService';
 
 interface PosPageProps {
   tenantId: string | null;
@@ -300,6 +301,15 @@ export function PosPage({ tenantId }: PosPageProps) {
     const result = await confirmDelivery(saleId);
     if (result.ok) {
       addToast({ type: 'success', message: 'Entrega confirmada', duration: 3000 });
+    } else {
+      handleServiceError(result);
+    }
+  }, [addToast]);
+
+  const handleCancelOrder = useCallback(async (saleId: string) => {
+    const result = await posService.cancelOrder(saleId);
+    if (result.ok) {
+      addToast({ type: 'success', message: 'Orden cancelada', duration: 3000 });
     } else {
       handleServiceError(result);
     }
@@ -824,6 +834,7 @@ export function PosPage({ tenantId }: PosPageProps) {
                     onConfirmDelivery={handleConfirmDeliveryOrder}
                     onSendAddressToMotorizado={handleSendAddressToMotorizado}
                     onNotifyCustomerAfterDispatch={handleNotifyCustomerAfterDispatch}
+                    onCancelOrder={handleCancelOrder}
                   />
                 </div>
               </div>

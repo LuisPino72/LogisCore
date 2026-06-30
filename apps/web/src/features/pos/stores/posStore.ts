@@ -41,49 +41,49 @@ export const usePosStore = create<PosStore>()(
       showDeliveryPrompt: false,
       setShowDeliveryPrompt: (v) => set({ showDeliveryPrompt: v }),
 
-      parkAsDelivery: async (tenantId, name, needsKitchen, isUrgent = false) => {
-        const { cart, parkedCarts, selectedCustomerId } = get();
-        if (cart.length === 0) {
-          const err = new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.');
-          set({ error: err.message });
-          return failure(err);
-        }
-        if (parkedCarts.length >= MAX_PARKED_CARTS) {
-          const err = new AppErrorClass('PARKED_CART_MAX_REACHED', `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.`);
-          set({ error: err.message });
-          return failure(err);
-        }
-
-        if (needsKitchen && selectedCustomerId) {
-          const userId = useAuthStore.getState().session?.userId;
-          if (userId) {
-            const orderResult = await posService.createOrder({
-              tenantId,
-              userId,
-              customerId: selectedCustomerId,
-              items: cart,
-              needsKitchen: true,
-              isUrgent,
-            });
-            if (orderResult.ok) {
-              set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false, selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
-              get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));
-              return success(orderResult.data.id);
-            }
-            set({ loading: false, error: orderResult.error.message });
-            return failure(orderResult.error);
-          }
-        }
-
-        const result = await posService.parkCart(tenantId, name, cart, selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen, isUrgent });
-        if (result.ok) {
-          set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false, selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
-          get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));
-          return result;
-        }
-        set({ loading: false, error: result.error.message });
-        return failure(result.error);
-      },
+       parkAsDelivery: async (tenantId, name, needsKitchen, isUrgent = false) => {
+         const { cart, parkedCarts, selectedCustomerId } = get();
+         if (cart.length === 0) {
+           const err = new AppErrorClass('SALE_NO_ITEMS', 'No hay productos en el carrito.');
+           set({ error: err.message });
+           return failure(err);
+         }
+         if (parkedCarts.length >= MAX_PARKED_CARTS) {
+           const err = new AppErrorClass('PARKED_CART_MAX_REACHED', `Máximo ${MAX_PARKED_CARTS} ventas en cola. Completa o elimina una.`);
+           set({ error: err.message });
+           return failure(err);
+         }
+         
+         if (selectedCustomerId) {
+           const userId = useAuthStore.getState().session?.userId;
+           if (userId) {
+             const orderResult = await posService.createOrder({
+               tenantId,
+               userId,
+               customerId: selectedCustomerId,
+               items: cart,
+               needsKitchen,
+               isUrgent,
+             });
+             if (orderResult.ok) {
+               set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false, selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
+               get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));
+               return success(orderResult.data.id);
+             }
+             set({ loading: false, error: orderResult.error.message });
+             return failure(orderResult.error);
+           }
+         }
+         
+         const result = await posService.parkCart(tenantId, name, cart, selectedCustomerId ?? undefined, { orderType: 'delivery', needsKitchen, isUrgent });
+         if (result.ok) {
+           set({ cart: [], activeParkedCartId: null, error: null, showDeliveryPrompt: false, selectedCustomerId: null, selectedCustomer: null, isCreditSale: false, discount: null });
+           get().fetchParkedCarts(tenantId).catch(err => logger.warn('POS', 'fetchParkedCarts no await (intencional):', err));
+           return result;
+         }
+         set({ loading: false, error: result.error.message });
+         return failure(result.error);
+       },
 
       parkNormal: async (tenantId, name) => {
         return get().parkCart(tenantId, name);

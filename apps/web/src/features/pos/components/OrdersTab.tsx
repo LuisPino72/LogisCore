@@ -2,7 +2,7 @@ import { useState, useEffect, useDeferredValue, useMemo, useCallback, memo, useR
 import { Badge, Button, Input, Skeleton, EmptyState, Modal } from '@/common/components';
 import { getActiveOrders } from '../services/saleService';
 import type { DexieSale } from '../../../services/dexie/types';
-import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2, MessageCircle, Smartphone, Info, Send, MapPin, CreditCard } from 'lucide-react';
+import { Clock, Truck, ChefHat, Search, Package, DollarSign, CheckCircle2, MessageCircle, Smartphone, Info, Send, MapPin, CreditCard, X } from 'lucide-react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
@@ -38,9 +38,10 @@ interface OrdersTabProps {
   onConfirmDelivery?: (saleId: string) => void;
   onSendAddressToMotorizado?: (sale: DexieSale) => void;
   onNotifyCustomerAfterDispatch?: (sale: DexieSale) => void;
+  onCancelOrder?: (saleId: string) => void;
 }
 
-export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery, onSendAddressToMotorizado, onNotifyCustomerAfterDispatch }: OrdersTabProps) {
+export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispatchOrder, onConfirmDelivery, onSendAddressToMotorizado, onNotifyCustomerAfterDispatch, onCancelOrder }: OrdersTabProps) {
   const [orders, setOrders] = useState<DexieSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -220,7 +221,7 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                   </Button>
                 </div>
 
-                {order.status === 'lista' && onPayOrder && canPayOrder && (
+                {((order.status === 'lista') || (order.status === 'pedida' && !order.needsKitchen)) && onPayOrder && canPayOrder && (
                   <div className="mt-2 pt-2 border-t border-black/5">
                     <Button
                       variant="primary"
@@ -284,6 +285,20 @@ export const OrdersTab = memo(function OrdersTab({ tenantId, onPayOrder, onDispa
                         <Smartphone size={14} />
                       </Button>
                     )}
+                  </div>
+                )}
+
+                {(['pedida', 'preparacion', 'lista'].includes(order.status)) && onCancelOrder && (
+                  <div className="mt-2 pt-2 border-t border-black/5">
+                    <Button
+                      variant="ghost-danger"
+                      size="sm"
+                      onClick={() => onCancelOrder(order.id)}
+                      className="min-h-11 text-xs w-full"
+                    >
+                      <X size={14} />
+                      Cancelar
+                    </Button>
                   </div>
                 )}
               </div>

@@ -87,7 +87,7 @@ export async function getCashAnalysis(tenantId: string, filters: ReportFilters):
     let allSales = await db.sales
       .where('[tenantId+createdAt]')
       .between([tenantId, start], [tenantId, end])
-      .filter((s) => !s.deletedAt && s.status === 'completed' && s.exchangeRate > 0)
+      .filter((s) => !s.deletedAt && (s.status === 'completed' || s.status === 'entregada') && s.exchangeRate > 0)
       .toArray();
 
     // Merge Dexie + Supabase para ventas
@@ -96,7 +96,7 @@ export async function getCashAnalysis(tenantId: string, filters: ReportFilters):
         .from('sales')
         .select('id, user_id, total_bs, subtotal_bs, igtf_bs, iva_bs, exchange_rate, payment_method, status, created_at, subtotal_usd, iva_usd, igtf_usd, total_usd, discount_usd')
         .eq('tenant_id', tenantUuid)
-        .eq('status', 'completed')
+        .in('status', ['completed', 'entregada'])
         .is('deleted_at', null)
         .gte('created_at', start)
         .lt('created_at', end);

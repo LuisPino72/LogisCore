@@ -263,7 +263,7 @@ export async function getPaymentBreakdown(tenantId: string, filters: ReportFilte
     const sales = await db.sales
       .where('[tenantId+createdAt]')
       .between([tenantId, start], [tenantId, end])
-      .filter((s) => !s.deletedAt && s.status === 'completed')
+      .filter((s) => !s.deletedAt && (s.status === 'completed' || s.status === 'entregada'))
       .toArray();
 
     let salesData = sales;
@@ -275,7 +275,7 @@ export async function getPaymentBreakdown(tenantId: string, filters: ReportFilte
         .from('sales')
         .select('total_bs, payment_method, exchange_rate')
         .eq('tenant_id', tenantUuid)
-        .eq('status', 'completed')
+        .in('status', ['completed', 'entregada'])
         .is('deleted_at', null)
         .gte('created_at', start)
         .lt('created_at', end);
@@ -394,7 +394,7 @@ export async function getTicketDistribution(tenantId: string, filters: ReportFil
     const sales = await db.sales
       .where('[tenantId+createdAt]')
       .between([tenantId, start], [tenantId, end])
-      .filter((s) => !s.deletedAt && s.status === 'completed')
+      .filter((s) => !s.deletedAt && (s.status === 'completed' || s.status === 'entregada'))
       .toArray();
 
     let salesData = sales;
@@ -405,7 +405,7 @@ export async function getTicketDistribution(tenantId: string, filters: ReportFil
         .from('sales')
         .select('total_bs, exchange_rate')
         .eq('tenant_id', tenantUuid)
-        .eq('status', 'completed')
+        .in('status', ['completed', 'entregada'])
         .is('deleted_at', null)
         .gte('created_at', start)
         .lt('created_at', end);
