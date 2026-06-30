@@ -27,7 +27,9 @@ const PAYMENT_METHODS = [
 
 export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenantId }: PaySupplierModalProps) {
   const orders = usePurchaseStore((s) => s.orders);
+  const suppliers = usePurchaseStore((s) => s.suppliers);
   const paySupplier = usePurchaseStore((s) => s.paySupplier);
+  const storeError = usePurchaseStore((s) => s.error);
   const rate = useExchangeRateStore((s) => s.rate ?? 1);
 
   const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -41,6 +43,9 @@ export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenan
   const pendingOrders = orders.filter(
     (o) => o.supplierId === supplierId && o.status !== 'cancelled' && o.paymentStatus !== 'paid'
   );
+
+  const supplier = suppliers.find((s) => s.id === supplierId);
+  const supplierBalance = supplier?.balance ?? 0;
 
   const selectedOrder = pendingOrders.find((o) => o.id === selectedOrderId);
   const orderPendingAmount = selectedOrder
@@ -70,6 +75,8 @@ export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenan
     if (!selectedOrderId) { setError('Selecciona una orden.'); return; }
     if (!amount || amount <= 0) { setError('Ingresa un monto válido.'); return; }
     if (amount > orderPendingAmount) { setError(`El monto excede el pendiente (${formatUsd(orderPendingAmount)}).`); return; }
+    if (supplierBalance <= 0) { setError('Este proveedor no tiene deuda pendiente.'); return; }
+    if (amount > supplierBalance) { setError(`El monto (${formatUsd(amount)}) excede la deuda del proveedor (${formatUsd(supplierBalance)}).`); return; }
 
     setSubmitting(true);
     const result = await paySupplier(
@@ -88,7 +95,7 @@ export function PaySupplierModal({ supplierId, isOpen, onClose, onSuccess, tenan
       onSuccess();
       onClose();
     } else {
-      setError('Error al registrar el pago.');
+      setError(storeError || 'Error al registrar el pago.');
     }
   };
 

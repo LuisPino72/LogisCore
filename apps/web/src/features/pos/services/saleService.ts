@@ -1389,6 +1389,9 @@ export async function revertOrderStatus(saleId: string): Promise<Result<void, Ap
   if (sale.status !== 'lista') {
     return failure(new AppError(PosErrors.ORDER_CANNOT_REVERT, 'Solo se puede revertir desde status "lista".'));
   }
+  if (sale.dispatchedAt) {
+    return failure(new AppError(PosErrors.ORDER_CANNOT_REVERT, 'No se puede revertir: la orden ya fue despachada al delivery.'));
+  }
 
   const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
 
@@ -1634,6 +1637,7 @@ export async function getKitchenOrders(tenantId: string): Promise<Result<DexieSa
       .filter(sale =>
         sale.needsKitchen === true &&
         ['pedida', 'preparacion', 'lista'].includes(sale.status) &&
+        !sale.dispatchedAt &&
         !sale.deletedAt
       )
       .toArray();

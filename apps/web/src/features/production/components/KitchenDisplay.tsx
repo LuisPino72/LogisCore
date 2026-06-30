@@ -138,7 +138,8 @@ const OrderCard = React.memo(function OrderCard({
               variant="ghost"
               className="min-h-[80px] px-4"
               onClick={handleRevert}
-              aria-label="Revertir a estado anterior"
+              disabled={!!order.dispatchedAt}
+              aria-label={order.dispatchedAt ? 'No se puede revertir: orden ya despachada' : 'Revertir a estado anterior'}
             >
               Revertir
             </Button>

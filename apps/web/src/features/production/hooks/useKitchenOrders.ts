@@ -20,10 +20,14 @@ export interface KitchenOrderView {
   kitchenNotes?: string;
   modified: boolean;
   createdAt: string;
+  dispatchedAt?: string;
 }
 
-function formatElapsed(createdAt: string): string {
-  const diff = Date.now() - new Date(createdAt).getTime();
+function formatElapsed(createdAt: string, status: string, preparedAt?: string): string {
+  const endTime = status === 'lista' && preparedAt
+    ? new Date(preparedAt).getTime()
+    : Date.now();
+  const diff = endTime - new Date(createdAt).getTime();
   const totalSec = Math.max(0, Math.floor(diff / 1000));
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
@@ -133,12 +137,13 @@ export function useKitchenOrders(enabled = true): {
         customerName: customerMap.get(sale.customerId ?? '') ?? 'Cliente',
         items,
         status: sale.status as KitchenOrderView['status'],
-        elapsed: formatElapsed(sale.createdAt),
+        elapsed: formatElapsed(sale.createdAt, sale.status ?? 'pedida', sale.preparedAt),
         orderType: sale.orderType,
         isUrgent: sale.isUrgent,
         kitchenNotes: sale.kitchenNotes,
         modified: (sale.modificationCount ?? 0) > 0,
         createdAt: sale.createdAt,
+        dispatchedAt: sale.dispatchedAt,
       };
     });
   }, [rawOrders, itemsMap, customerMap, elapsedTick]);
