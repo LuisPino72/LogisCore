@@ -72,7 +72,7 @@ export async function expandRecipe(
           `La sub-receta "${product.name}" está inactiva. Actívala o usa otra.`,
         ));
       }
-      const subMultiplier = line.quantity * multiplier;
+      const subMultiplier = (line.quantity / subRecipe.yieldQuantity) * multiplier;
       const subResult = await expandRecipe(subRecipe.id, subMultiplier, nextVisited, depth + 1);
       if (!subResult.ok) return subResult;
       result.push(...subResult.data);

@@ -75,8 +75,14 @@ async function validateAssemblyIngredients(
       return null;
     }
 
-    if (ingredient.deletedAt || ingredient.stock < needed) {
-      return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`;
+    const lots = await db.inventoryLots
+      .where({ productId: line.productId, tenantId })
+      .filter(l => l.deletedAt == null && l.remainingQuantity > 0)
+      .toArray();
+    const totalAvailable = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+
+    if (ingredient.deletedAt || totalAvailable < needed) {
+      return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${totalAvailable}.`;
     }
     return null;
   }
@@ -348,8 +354,14 @@ export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: Ca
             return null;
           }
 
-          if (ingredient.deletedAt || ingredient.stock < needed) {
-            return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${ingredient.stock}.`;
+          const lots = await db.inventoryLots
+            .where({ productId: line.productId, tenantId })
+            .filter(l => l.deletedAt == null && l.remainingQuantity > 0)
+            .toArray();
+          const totalAvailable = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+
+          if (ingredient.deletedAt || totalAvailable < needed) {
+            return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${totalAvailable}.`;
           }
           return null;
         }

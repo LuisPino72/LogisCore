@@ -50,7 +50,12 @@ export async function computeRecipeCostAsync(
 
     const isSubRecipe = product.productType === 'producto_terminado';
 
-    if (isSubRecipe) {
+    if (product.costPrice != null && product.costPrice > 0) {
+      const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
+      const needed = Math.ceil(neededInStorage);
+      const costPerStorageUnit = product.isWeighted ? product.costPrice / 1000 : product.costPrice;
+      totalCost += needed * costPerStorageUnit;
+    } else if (isSubRecipe) {
       const subRecipe = await db.recipes
         .where({ productId: line.productId })
         .filter(r => !r.deletedAt && r.isActive)
@@ -60,14 +65,14 @@ export async function computeRecipeCostAsync(
           .where({ recipeId: subRecipe.id })
           .filter(l => !l.deletedAt)
           .toArray();
-        const subYield = subRecipe.mode === 'batch' ? subRecipe.yieldQuantity : 1;
+        const subYield = subRecipe.yieldQuantity || 1;
         const subCost = await computeRecipeCostAsync(
           subLines.map(l => ({
             productId: l.productId,
-            quantity: l.quantity * line.quantity * wasteMultiplier,
+            quantity: (l.quantity / subYield) * line.quantity * wasteMultiplier,
             unit: l.unit,
           })),
-          0, // sin merma adicional — la merma se aplica UNA vez al final (padre)
+          0,
           subYield,
         );
         totalCost += subCost.totalCost;
