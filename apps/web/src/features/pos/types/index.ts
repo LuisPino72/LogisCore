@@ -71,7 +71,7 @@ export interface PosState {
   discount: { type: 'percentage' | 'fixed'; value: number } | null;
   saleItems: SaleItem[];
   saleItemsLoading: boolean;
-  assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }>;
+  assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; yieldQuantity: number; lines: Array<{ productId: string; quantity: number; unit: string }> }>;
   selectedCustomerId: string | null;
   selectedCustomer: Customer | null;
   isCreditSale: boolean;

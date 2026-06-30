@@ -895,7 +895,7 @@ export async function voidSale(saleId: string, tenantId: string, userId: string)
             if (!ingredient) continue;
 
             const effectiveQty = item.quantity * (item.unitMultiplier ?? 1);
-            const needed = Math.ceil(recipeQtyToStorageBase(line.quantity * effectiveQty * wasteMultiplier, line.unit, ingredient.unit));
+            const needed = Math.ceil(recipeQtyToStorageBase((line.quantity / assemblyRecipe.yieldQuantity) * effectiveQty * wasteMultiplier, line.unit, ingredient.unit));
             const previousStock = ingredient.stock;
             const restoredForThisIngredient = hasConsumedLots
               ? (restoredByProduct.get(line.productId) ?? 0)

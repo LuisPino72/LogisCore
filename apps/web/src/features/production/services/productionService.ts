@@ -1235,7 +1235,8 @@ export const productionService = {
       return failure(new AppError(ProductionErrors.ASSEMBLY_NO_RECIPE, `Producto no tiene receta de ensamblaje.`));
     }
 
-    const expandResult = await expandRecipe(recipe.id, quantity);
+    const batchEquivalent = quantity / recipe.yieldQuantity;
+    const expandResult = await expandRecipe(recipe.id, batchEquivalent);
     if (!expandResult.ok) return expandResult;
     const expandedLines = expandResult.data;
 
@@ -1319,19 +1320,17 @@ export const productionService = {
           await doWrites();
         });
       }
+      await emitWithAudit({
+        eventName: SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED,
+        module: PRODUCTION_MODULE,
+        payload: { productId, quantity, tenantId },
+        context: { userId, tenantId },
+      });
+      return success({ consumedLots: assemblyConsumedLots, totalIngredientCost });
     } catch (err) {
       if (err instanceof AppError) return failure(err);
       throw err;
     }
-
-    await emitWithAudit({
-      eventName: SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED,
-      module: PRODUCTION_MODULE,
-      payload: { productId, quantity, tenantId },
-      context: { userId, tenantId },
-    });
-
-    return success({ consumedLots: assemblyConsumedLots, totalIngredientCost });
   },
 
   // ===== ORDER DETAILS =====

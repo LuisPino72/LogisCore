@@ -6,6 +6,7 @@ import { usePosStore } from './posStore';
 import type { CartItem, PresentationSelection } from '../types';
 import type { Product } from '../../../specs/inventory';
 import { displayQty, toDisplayValue } from '../../inventory/types';
+import { recipeQtyToStorageBase } from '../../production/services/productionService';
 
 export interface PosCartSlice {
   cart: CartItem[];
@@ -27,7 +28,7 @@ export const initialCartState = {
 };
 
 async function validateAssemblyIngredients(
-  recipeData: { lines: { productId: string; quantity: number }[]; wastePct: number },
+  recipeData: { lines: { productId: string; quantity: number; unit: string }[]; wastePct: number; yieldQuantity: number },
   product: { id: string; name: string },
   quantity: number,
 ): Promise<string | null> {
@@ -38,9 +39,13 @@ async function validateAssemblyIngredients(
   for (let i = 0; i < recipeData.lines.length; i++) {
     const line = recipeData.lines[i];
     const ingredient = ingredients[i];
-    const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
-    if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
-      return `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`;
+    if (!ingredient) {
+      return `Stock insuficiente de ingrediente "Desconocido" para "${product.name}". Necesario: ${Math.ceil(line.quantity * quantity * wasteMultiplier)}, Disponible: 0.`;
+    }
+    const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * quantity * wasteMultiplier, line.unit, ingredient.unit);
+    const needed = Math.ceil(neededInStorage);
+    if (ingredient.deletedAt || ingredient.stock < needed) {
+      return `Stock insuficiente de ingrediente "${ingredient.name}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.`;
     }
   }
   return null;
@@ -48,7 +53,7 @@ async function validateAssemblyIngredients(
 
 type CartGetter = PosCartSlice & {
   products: Product[];
-  assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }>;
+  assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; yieldQuantity: number; lines: Array<{ productId: string; quantity: number; unit: string }> }>;
   error: string | null;
 };
 
@@ -102,7 +107,8 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
       if (isAssembly) {
         const recipeData = get().assemblyRecipesMap[product.id];
         if (recipeData) {
-          const error = await validateAssemblyIngredients(recipeData, product, quantity);
+          const effectiveQty = quantity * (presentation.unitMultiplier || 1);
+          const error = await validateAssemblyIngredients(recipeData, product, effectiveQty);
           if (error) {
             set({ error });
             return false;
@@ -265,13 +271,19 @@ export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice =
       const recipeData = get().assemblyRecipesMap[productId];
       if (recipeData) {
         const wasteMultiplier = 1 + (recipeData.wastePct / 100);
+        const effectiveQty = quantity * (cartItem.unitMultiplier || 1);
         const db = getDb();
         for (const line of recipeData.lines) {
-          const needed = Math.ceil(line.quantity * quantity * wasteMultiplier);
           const session = useAuthStore.getState().session;
           const ingredient = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
-          if (!ingredient || ingredient.deletedAt || ingredient.stock < needed) {
-            set({ error: `Stock insuficiente de ingrediente "${ingredient?.name || 'Desconocido'}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient?.stock || 0}.` });
+          if (!ingredient) {
+            set({ error: `Stock insuficiente de ingrediente "Desconocido" para "${product.name}".` });
+            return;
+          }
+          const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * effectiveQty * wasteMultiplier, line.unit, ingredient.unit);
+          const needed = Math.ceil(neededInStorage);
+          if (ingredient.deletedAt || ingredient.stock < needed) {
+            set({ error: `Stock insuficiente de ingrediente "${ingredient.name}" para "${product.name}". Necesario: ${needed}, Disponible: ${ingredient.stock}.` });
             return;
           }
         }

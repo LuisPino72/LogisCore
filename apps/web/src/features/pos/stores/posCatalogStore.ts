@@ -11,7 +11,7 @@ export interface PosCatalogSlice {
   categories: Category[];
   selectedCategory: string | null;
   presentationsMap: Record<string, Presentation[]>;
-  assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }>;
+  assemblyRecipesMap: Record<string, { recipeId: string; wastePct: number; yieldQuantity: number; lines: Array<{ productId: string; quantity: number; unit: string }> }>;
   favoriteProductIds: Set<string>;
   fetchProducts: (tenantId: string, silent?: boolean) => Promise<void>;
   loadCategories: (tenantId: string) => Promise<void>;
@@ -28,7 +28,7 @@ export const initialCatalogState = {
   categories: [] as Category[],
   selectedCategory: null as string | null,
   presentationsMap: {} as Record<string, Presentation[]>,
-  assemblyRecipesMap: {} as Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }>,
+  assemblyRecipesMap: {} as Record<string, { recipeId: string; wastePct: number; yieldQuantity: number; lines: Array<{ productId: string; quantity: number; unit: string }> }>,
   favoriteProductIds: new Set<string>(),
 };
 
@@ -50,7 +50,7 @@ export const createCatalogSlice = (set: (setter: Partial<CatalogGetter> | ((stat
       const favResult = await posService.getFavorites(tenantId);
       const favIds = favResult.ok ? favResult.data : new Set<string>();
 
-      const recipesMap: Record<string, { recipeId: string; wastePct: number; lines: Array<{ productId: string; quantity: number }> }> = {};
+      const recipesMap: Record<string, { recipeId: string; wastePct: number; yieldQuantity: number; lines: Array<{ productId: string; quantity: number; unit: string }> }> = {};
       try {
         const db = getDb();
         const allRecipes = await db.recipes.toArray();
@@ -67,7 +67,8 @@ export const createCatalogSlice = (set: (setter: Partial<CatalogGetter> | ((stat
           recipesMap[recipe.productId] = {
             recipeId: recipe.id,
             wastePct: recipe.wastePct,
-            lines: lines.map(l => ({ productId: l.productId, quantity: l.quantity })),
+            yieldQuantity: recipe.yieldQuantity,
+            lines: lines.map(l => ({ productId: l.productId, quantity: l.quantity, unit: l.unit })),
           };
         }
       } catch (err) {
