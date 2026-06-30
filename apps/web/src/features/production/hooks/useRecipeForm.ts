@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { CreateRecipeInput, IngredientAvailability } from '../types';
 import { useInventoryStore } from '../../inventory/stores/inventoryStore';
 import { validateCycles } from '../services/productionService';
-import { computeRecipeCostAsync } from '../services/costService';
+import { computeRecipeCostAsync, computeIngredientBreakdown } from '../services/costService';
 import { recipeQtyToStorageBase } from '../services/productionMappers';
 import { getDb } from '@/services/dexie/db';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -120,6 +120,7 @@ export function useRecipeForm() {
   const [modeSelected, setModeSelected] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<{ totalCost: number; costPerUnit: number }>({ totalCost: 0, costPerUnit: 0 });
   const [isCalculatingCost, setIsCalculatingCost] = useState(false);
+  const [ingredientBreakdown, setIngredientBreakdown] = useState<Array<{ productName: string; quantity: number; unit: string; cost: number }>>([]);
 
   const { products, categories, fetchCategories } = useInventoryStore();
 
@@ -574,15 +575,25 @@ export function useRecipeForm() {
     const calc = async () => {
       if (form.lines.length === 0) {
         setEstimatedCost({ totalCost: 0, costPerUnit: 0 });
+        setIngredientBreakdown([]);
         return;
       }
       setIsCalculatingCost(true);
       try {
         const yieldQty = form.mode === 'batch' ? form.yieldQuantity : 1;
-        const result = await computeRecipeCostAsync(form.lines, form.wastePct, yieldQty);
-        if (!cancelled) setEstimatedCost(result);
+        const [costResult, breakdown] = await Promise.all([
+          computeRecipeCostAsync(form.lines, form.wastePct, yieldQty),
+          computeIngredientBreakdown(form.lines, form.wastePct),
+        ]);
+        if (!cancelled) {
+          setEstimatedCost(costResult);
+          setIngredientBreakdown(breakdown);
+        }
       } catch {
-        if (!cancelled) setEstimatedCost({ totalCost: 0, costPerUnit: 0 });
+        if (!cancelled) {
+          setEstimatedCost({ totalCost: 0, costPerUnit: 0 });
+          setIngredientBreakdown([]);
+        }
       } finally {
         if (!cancelled) setIsCalculatingCost(false);
       }
@@ -691,6 +702,7 @@ export function useRecipeForm() {
     warnings,
     estimatedCost,
     isCalculatingCost,
+    ingredientBreakdown,
     ingredientAvailability,
     isCheckingAvailability,
     currentStep,

@@ -42,6 +42,7 @@ async function validateAssemblyIngredients(
     parentName: string,
     currentQuantity: number,
     depth: number,
+    yieldQty: number = recipeData.yieldQuantity,
   ): Promise<string | null> {
     if (depth > 5) return null;
 
@@ -50,7 +51,7 @@ async function validateAssemblyIngredients(
       return `Stock insuficiente de ingrediente "Desconocido" para "${parentName}". Necesario: ${Math.ceil(line.quantity * currentQuantity * wasteMultiplier)}, Disponible: 0.`;
     }
 
-    const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * currentQuantity * wasteMultiplier, line.unit, ingredient.unit);
+    const neededInStorage = recipeQtyToStorageBase((line.quantity / yieldQty) * currentQuantity * wasteMultiplier, line.unit, ingredient.unit);
     const needed = Math.ceil(neededInStorage);
 
     const subRecipe = await db.recipes
@@ -69,7 +70,7 @@ async function validateAssemblyIngredients(
         .toArray();
 
       for (const subLine of subLines) {
-        const error = await checkIngredient(subLine, ingredient.name, subBatchEquivalent, depth + 1);
+        const error = await checkIngredient(subLine, ingredient.name, subBatchEquivalent, depth + 1, subRecipe.yieldQuantity);
         if (error) return error;
       }
       return null;
@@ -79,7 +80,8 @@ async function validateAssemblyIngredients(
       .where({ productId: line.productId, tenantId })
       .filter(l => l.deletedAt == null && l.remainingQuantity > 0)
       .toArray();
-    const totalAvailable = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+    const lotsTotal = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+    const totalAvailable = lotsTotal > 0 ? lotsTotal : (ingredient.stock || 0);
 
     if (ingredient.deletedAt || totalAvailable < needed) {
       return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${totalAvailable}.`;
@@ -324,6 +326,7 @@ export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: Ca
           parentName: string,
           currentQty: number,
           depth: number,
+          yieldQty: number = recipeData.yieldQuantity,
         ): Promise<string | null> {
           if (depth > 5) return null;
 
@@ -332,7 +335,7 @@ export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: Ca
             return `Stock insuficiente de ingrediente "Desconocido" para "${parentName}".`;
           }
 
-          const neededInStorage = recipeQtyToStorageBase((line.quantity / recipeData.yieldQuantity) * currentQty * wasteMultiplier, line.unit, ingredient.unit);
+          const neededInStorage = recipeQtyToStorageBase((line.quantity / yieldQty) * currentQty * wasteMultiplier, line.unit, ingredient.unit);
           const needed = Math.ceil(neededInStorage);
 
           const subRecipe = await db.recipes
@@ -348,7 +351,7 @@ export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: Ca
               .filter(l => !l.deletedAt)
               .toArray();
             for (const subLine of subLines) {
-              const error = await checkQtyIngredient(subLine, ingredient.name, subBatchEquivalent, depth + 1);
+              const error = await checkQtyIngredient(subLine, ingredient.name, subBatchEquivalent, depth + 1, subRecipe.yieldQuantity);
               if (error) return error;
             }
             return null;
@@ -358,7 +361,8 @@ export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: Ca
             .where({ productId: line.productId, tenantId })
             .filter(l => l.deletedAt == null && l.remainingQuantity > 0)
             .toArray();
-          const totalAvailable = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+          const lotsTotal = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+          const totalAvailable = lotsTotal > 0 ? lotsTotal : (ingredient.stock || 0);
 
           if (ingredient.deletedAt || totalAvailable < needed) {
             return `Stock insuficiente de ingrediente "${ingredient.name}" para "${parentName}". Necesario: ${needed}, Disponible: ${totalAvailable}.`;

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button, Input, Modal, Checkbox, Select, SearchableSelect, Tooltip } from '../../../common/components';
-import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check, Camera, Image, BookOpen } from 'lucide-react';
+import { ImagePlus, Plus, X, Scan, Package, Layers, Settings, Trash2, Scale, ChevronLeft, ChevronRight, Check, Camera, Image, BookOpen, DollarSign } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { BarcodeScannerModal } from '../../shared/components/BarcodeScannerModal';
 import { ImageLibraryModal } from './ImageLibraryModal';
@@ -504,25 +504,36 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
                 inputMode="decimal"
               />
            </div>
-            <div className="input-wrapper">
-              <label className="input-label">
-                Stock mínimo (alerta)
-                {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
-                {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
-                {editProduct?.isWeighted && editProduct?.unit === 'm' && ' (m)'}
-              </label>
-              <Input
-                sanitize="number"
-                decimals={0}
-                placeholder="0"
-                value={formData.stockMin || ''}
-                onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
-                validation={{ min: 0, max: 999 }}
-                inputMode="numeric"
-              />
+           <div className="input-wrapper">
+             <label className="input-label">
+               Stock mínimo (alerta)
+               {editProduct?.isWeighted && editProduct?.unit === 'kg' && ' (Kg)'}
+               {editProduct?.isWeighted && editProduct?.unit === 'lt' && ' (Lt)'}
+               {editProduct?.isWeighted && editProduct?.unit === 'm' && ' (m)'}
+             </label>
+             <Input
+               sanitize="number"
+               decimals={0}
+               placeholder="0"
+               value={formData.stockMin || ''}
+               onChange={(e) => setField('stockMin', parseInt(e.target.value) || undefined)}
+               validation={{ min: 0, max: 999 }}
+               inputMode="numeric"
+             />
            </div>
          </div>
-       )}
+        )}
+
+        {isEditing && formData.costPrice > 0 && (
+          <div className="input-wrapper">
+            <label className="input-label">Costo total del lote $</label>
+            <div className="input bg-gray-50 text-gray-600 cursor-not-allowed flex items-center">
+              <DollarSign size={14} className="text-gray-400 mr-1" />
+              {formData.costPrice.toFixed(2)}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-0.5">Costo unitario: {formData.isWeighted ? `$${(formData.costPrice / 1000).toFixed(6)}/g` : `$${formData.costPrice.toFixed(2)}/u`}</p>
+          </div>
+        )}
     </div>
   );
 

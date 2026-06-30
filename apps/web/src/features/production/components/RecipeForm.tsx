@@ -72,7 +72,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const isEdit = !!recipe;
 
   const {
-    form, errors, warnings, estimatedCost, isCalculatingCost,
+    form, errors, warnings, estimatedCost, isCalculatingCost, ingredientBreakdown,
     currentStep, selectMode,
     updateField, addLine, updateLine, removeLine,
     nextStep, prevStep, setCurrentStep,
@@ -88,6 +88,7 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(!!recipe);
   const [showPreview, setShowPreview] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const { ivaRate } = useSettingsStore();
 
   useEffect(() => {
@@ -455,6 +456,28 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                     </div>
                   )}
                 </div>
+                {!isCalculatingCost && estimatedCost.totalCost > 0 && ingredientBreakdown.length > 0 && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowBreakdown(!showBreakdown)}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                    >
+                      {showBreakdown ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      {showBreakdown ? 'Ocultar' : 'Ver'} desglose por ingrediente
+                    </button>
+                    {showBreakdown && (
+                      <div className="mt-1.5 space-y-1">
+                        {ingredientBreakdown.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between text-[11px] text-gray-500 pl-3">
+                            <span className="truncate">{item.productName}</span>
+                            <span className="shrink-0 ml-2 font-medium">{formatUsd(item.cost)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </Card>
             </div>
           )}
@@ -956,6 +979,28 @@ export function RecipeForm({ recipe, tenantId, userId, onClose }: RecipeFormProp
                   </div>
                 )}
               </div>
+              {!isCalculatingCost && estimatedCost.totalCost > 0 && ingredientBreakdown.length > 0 && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBreakdown(!showBreakdown)}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                  >
+                    {showBreakdown ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    {showBreakdown ? 'Ocultar' : 'Ver'} desglose por ingrediente
+                  </button>
+                  {showBreakdown && (
+                    <div className="mt-1.5 space-y-1">
+                      {ingredientBreakdown.map((item, i) => (
+                        <div key={i} className="flex items-center justify-between text-[11px] text-gray-500 pl-3">
+                          <span className="truncate">{item.productName}</span>
+                          <span className="shrink-0 ml-2 font-medium">{formatUsd(item.cost)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
         )}

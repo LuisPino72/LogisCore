@@ -9,6 +9,74 @@ import { recipeQtyToStorageBase } from './productionMappers';
 import { logger } from '../../../lib/logger';
 import type { CalculateRecipeCostResult } from '../../../specs/production';
 
+export interface IngredientCost {
+  productName: string;
+  quantity: number;
+  unit: string;
+  cost: number;
+}
+
+export async function computeIngredientBreakdown(
+  lines: Array<{ productId: string; quantity: number; unit: string }>,
+  wastePct: number,
+): Promise<IngredientCost[]> {
+  const wasteMultiplier = 1 + (wastePct / 100);
+  const db = getDb();
+  const session = useAuthStore.getState().session;
+  const results: IngredientCost[] = [];
+
+  for (const line of lines) {
+    const product = await db.products.where({ id: line.productId, tenantId: session?.tenantId }).first();
+    if (!product) continue;
+
+    let cost = 0;
+    if (product.costPrice != null && product.costPrice > 0) {
+      const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
+      const needed = Math.ceil(neededInStorage);
+      const costPerStorageUnit = product.isWeighted ? product.costPrice / 1000 : product.costPrice;
+      cost = needed * costPerStorageUnit;
+    } else if (product.productType === 'producto_terminado') {
+      const subRecipe = await db.recipes
+        .where({ productId: line.productId })
+        .filter(r => !r.deletedAt && r.isActive)
+        .first();
+      if (subRecipe) {
+        const subLines = await db.recipeLines
+          .where({ recipeId: subRecipe.id })
+          .filter(l => !l.deletedAt)
+          .toArray();
+        const subYield = subRecipe.yieldQuantity || 1;
+        const subCost = await computeRecipeCostAsync(
+          subLines.map(l => ({
+            productId: l.productId,
+            quantity: (l.quantity / subYield) * line.quantity * wasteMultiplier,
+            unit: l.unit,
+          })),
+          0,
+          subYield,
+        );
+        cost = subCost.totalCost;
+      }
+    } else {
+      const neededInStorage = recipeQtyToStorageBase(line.quantity * wasteMultiplier, line.unit, product.unit);
+      const needed = Math.ceil(neededInStorage);
+      if (needed > 0) {
+        const ccResult = await calculateConsumptionCost(line.productId, needed);
+        if (ccResult.ok) cost = ccResult.data.totalCost;
+      }
+    }
+
+    results.push({
+      productName: product.name ?? 'Desconocido',
+      quantity: line.quantity,
+      unit: line.unit,
+      cost: preciseRound(cost, 4),
+    });
+  }
+
+  return results;
+}
+
 export function computeRecipeCostFromLines(
   lines: Array<{ productId: string; quantity: number; unit: string }>,
   products: Map<string, { costPrice: number; isWeighted: boolean; unit: string }>,

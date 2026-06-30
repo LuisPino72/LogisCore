@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import { ChefHat, Edit3, Trash2, Utensils, Package, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChefHat, Edit3, Trash2, Utensils, Package, AlertTriangle, DollarSign } from 'lucide-react';
 import { Card, EmptyState, Button, Badge, Modal, SearchInput, Tooltip } from '../../../common/components';
 import { useProductionStore } from '../stores/productionStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { useAuthStore } from '../../../features/auth/stores/authStore';
 import { hasActionPermission } from '../../../features/auth/permissions/rolePermissions';
+import { computeRecipeCostAsync } from '../services/costService';
+import { getDb } from '@/services/dexie/db';
+import { formatUsd } from '@/lib/formatBs';
 import type { Recipe } from '../types';
 
 interface RecipeListProps {
@@ -17,12 +20,38 @@ interface RecipeListProps {
 export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<Recipe | null>(null);
+  const [recipeCosts, setRecipeCosts] = useState<Map<string, number>>(new Map());
   const { deleteRecipe } = useProductionStore();
   const { addToast } = useToastStore();
   const session = useAuthStore((s) => s.session);
   const canEdit = hasActionPermission(session, 'production', 'update');
   const canDelete = hasActionPermission(session, 'production', 'delete');
   const canProduce = hasActionPermission(session, 'production', 'produce_batch');
+
+  useEffect(() => {
+    let cancelled = false;
+    const computeAll = async () => {
+      const db = getDb();
+      const costs = new Map<string, number>();
+      for (const recipe of recipes) {
+        try {
+          const lines = await db.recipeLines
+            .where({ recipeId: recipe.id })
+            .filter(l => !l.deletedAt)
+            .toArray();
+          const mappedLines = lines.map(l => ({ productId: l.productId, quantity: l.quantity, unit: l.unit }));
+          const yieldQty = recipe.mode === 'batch' ? (recipe.yieldQuantity || 1) : 1;
+          const result = await computeRecipeCostAsync(mappedLines, recipe.wastePct || 0, yieldQty);
+          if (!cancelled) costs.set(recipe.id, result.totalCost);
+        } catch {
+          if (!cancelled) costs.set(recipe.id, 0);
+        }
+      }
+      if (!cancelled) setRecipeCosts(costs);
+    };
+    computeAll();
+    return () => { cancelled = true; };
+  }, [recipes]);
 
   const filteredRecipes = recipes.filter((r) =>
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,6 +118,12 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                       <Package size={11} />
                       Rendimiento: {recipe.yieldQuantity} {recipe.yieldUnit}
                     </span>
+                    {recipeCosts.get(recipe.id) != null && recipeCosts.get(recipe.id)! > 0 && (
+                      <span className="flex items-center gap-1">
+                        <DollarSign size={11} />
+                        Costo: {formatUsd(recipeCosts.get(recipe.id)!)}
+                      </span>
+                    )}
                     {recipe.wastePct > 0 && (
                       <span className="inline-flex items-center text-[10px] font-medium bg-warning/10 text-warning px-1.5 py-0.5 rounded-full">Merma {recipe.wastePct}%</span>
                     )}
