@@ -35,7 +35,12 @@ async function validateAssemblyIngredients(
   const wasteMultiplier = 1 + (recipeData.wastePct / 100);
   const db = getDb();
   const session = useAuthStore.getState().session;
-  const tenantId = session?.tenantId;
+  let tenantId = session?.tenantId;
+
+  if (!tenantId && recipeData.lines.length > 0) {
+    const firstProduct = await db.products.get(recipeData.lines[0].productId);
+    if (firstProduct?.tenantId) tenantId = firstProduct.tenantId;
+  }
 
   async function checkIngredient(
     line: { productId: string; quantity: number; unit: string },
@@ -319,7 +324,12 @@ export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: Ca
         const effectiveQty = quantity * (cartItem.unitMultiplier || 1);
         const db = getDb();
         const session = useAuthStore.getState().session;
-        const tenantId = session?.tenantId;
+        let tenantId = session?.tenantId;
+
+        if (!tenantId && recipeData.lines.length > 0) {
+          const firstProduct = await db.products.get(recipeData.lines[0].productId);
+          if (firstProduct?.tenantId) tenantId = firstProduct.tenantId;
+        }
 
         async function checkQtyIngredient(
           line: { productId: string; quantity: number; unit: string },
