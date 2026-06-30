@@ -56,12 +56,13 @@ async function consumeSaleItems(
   userId: string,
   allowOverride?: boolean,
   originalItems?: CartItem[],
-): Promise<Result<{ consumedItems: ConsumedItem[]; consumedLots: Array<{ lotId: string; quantity: number }> }, AppError>> {
+): Promise<Result<{ consumedItems: ConsumedItem[]; consumedLots: Array<{ lotId: string; quantity: number }>; assemblyAuditEvents: Array<{ eventName: string; module: string; payload: unknown; context: { userId: string; tenantId: string } }> }, AppError>> {
   const db = getDb();
   const now = new Date().toISOString();
   const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
   const consumedItems: ConsumedItem[] = [];
   const allConsumedLots: Array<{ lotId: string; quantity: number }> = [];
+  const assemblyAuditEvents: Array<{ eventName: string; module: string; payload: unknown; context: { userId: string; tenantId: string } }> = [];
 
   // NOTA: throws dentro de consumeSaleItems son intencionales — causan rollback en la transacción Dexie
   try {
@@ -239,7 +240,7 @@ async function consumeSaleItems(
         throw result.error;
       }
 
-      const { consumedLots, totalIngredientCost } = result.data;
+      const { consumedLots, totalIngredientCost, assemblyAuditEvent } = result.data;
       const product = await db.products.where({ id: assemblyItem.productId, tenantId }).first();
       if (!product) {
         throw new AppError(PosErrors.SALE_STOCK_INSUFFICIENT, `Producto "${assemblyItem.productName}" no encontrado.`);
@@ -296,9 +297,12 @@ async function consumeSaleItems(
         available: assemblyItem.quantity,
       });
       allConsumedLots.push(...consumedLots);
+      if (assemblyAuditEvent) {
+        assemblyAuditEvents.push(assemblyAuditEvent);
+      }
     }
 
-    return success({ consumedItems, consumedLots: allConsumedLots });
+    return success({ consumedItems, consumedLots: allConsumedLots, assemblyAuditEvents });
   } catch (err) {
     if (err instanceof AppError) return failure(err);
     throw err;
@@ -459,6 +463,8 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
     }
   }
 
+  let capturedAssemblyAuditEvents: Array<{ eventName: string; module: string; payload: unknown; context: { userId: string; tenantId: string } }> = [];
+
   try {
     const txTables: TxTables = [
       'sales',
@@ -546,6 +552,11 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
         tx, normalItems, assemblyItems, saleId, tenantId, userId, input.allowOverride, items
       );
       if (!consumeResult.ok) throw consumeResult.error;
+      capturedAssemblyAuditEvents = consumeResult.data.assemblyAuditEvents;
+
+      for (const auditEvent of capturedAssemblyAuditEvents) {
+        await outboxService.enqueue(auditEvent.eventName, auditEvent.module, auditEvent.payload, tx);
+      }
 
       if (!isCreditSale) {
         const txCashReg = await db.cashRegisters.get(cashReg.id);
@@ -607,6 +618,10 @@ export async function createSale(input: CreateSaleInput): Promise<Result<Sale, A
       payload: { saleId, tenantSlug: tenantId, totalBs, totalUsd, paymentMethod, itemsCount: items.length },
       context: { userId, tenantId, tenantUuid },
     });
+
+    for (const auditEvent of capturedAssemblyAuditEvents) {
+      await logAuditEventOnly(auditEvent);
+    }
 
 
     syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (createSale):', err));
@@ -1820,6 +1835,8 @@ export async function confirmOrderPayment(
   const now = new Date().toISOString();
   const tenantUuid = await TenantTranslator.slugToUuid(sale.tenantId);
 
+  let capturedAssemblyAuditEvents: Array<{ eventName: string; module: string; payload: unknown; context: { userId: string; tenantId: string } }> = [];
+
   try {
     const txTables: TxTables = [
       'sales', 'saleItems', 'inventoryLots', 'inventoryMovements',
@@ -1833,6 +1850,11 @@ export async function confirmOrderPayment(
         tx, normalItems, assemblyItems, saleId, sale.tenantId, sale.userId, false, mapSaleItemsToCartItems(saleItems),
       );
       if (!consumeResult.ok) throw consumeResult.error;
+      capturedAssemblyAuditEvents = consumeResult.data.assemblyAuditEvents;
+
+      for (const auditEvent of capturedAssemblyAuditEvents) {
+        await outboxService.enqueue(auditEvent.eventName, auditEvent.module, auditEvent.payload, tx);
+      }
 
       await tx.sales.update(saleId, {
         status: 'pagada',
@@ -1896,6 +1918,10 @@ export async function confirmOrderPayment(
       payload: { saleId, tenantSlug: sale.tenantId, totalBs, totalUsd, paymentMethod },
       context: { userId: sale.userId, tenantId: sale.tenantId, tenantUuid },
     });
+
+    for (const auditEvent of capturedAssemblyAuditEvents) {
+      await logAuditEventOnly(auditEvent);
+    }
 
     syncEngine.pushNow().catch((err) => logger.warn(MODULE_NAME, 'pushNow failed (confirmOrderPayment):', err));
 

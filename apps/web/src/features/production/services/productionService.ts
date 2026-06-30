@@ -18,7 +18,7 @@ import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb, type DexieInventoryLot } from '../../../services/dexie/db';
 import { syncEngine } from '../../../services/sync/syncEngine';
 import { syncQueue } from '../../../services/sync/syncQueue';
-import { emitWithAudit, emitWithPersistence } from '../../../services/audit/emitWithAudit';
+import { emitWithPersistence } from '../../../services/audit/emitWithAudit';
 import { requireNetwork } from '../../../services/network/requireNetwork';
 import { ProductionErrors } from '../../../specs/production/errors';
 import { CreateRecipeInputSchema, UpdateRecipeInputSchema, CreateProductionOrderInputSchema } from '../../../specs/production';
@@ -1214,7 +1214,7 @@ export const productionService = {
     userId: string,
     options: { allowOverride?: boolean } = {},
     tx?: Transaction,
-  ): Promise<Result<{ consumedLots: Array<{ lotId: string; quantity: number }>; totalIngredientCost: number }, AppError>> {
+  ): Promise<Result<{ consumedLots: Array<{ lotId: string; quantity: number }>; totalIngredientCost: number; assemblyAuditEvent?: { eventName: string; module: string; payload: unknown; context: { userId: string; tenantId: string } } }, AppError>> {
     const _consumeSession = useAuthStore.getState().session;
     if (!_consumeSession || !hasActionPermission(_consumeSession, 'production', 'produce_batch')) {
       return failure(new AppError('AUTH_SCOPE_DENIED', getPermissionMessage('production', 'produce_batch')));
@@ -1236,20 +1236,28 @@ export const productionService = {
     }
 
     const batchEquivalent = quantity / recipe.yieldQuantity;
-    const expandResult = await expandRecipe(recipe.id, batchEquivalent);
-    if (!expandResult.ok) return expandResult;
-    const expandedLines = expandResult.data;
 
-    if (expandedLines.length === 0) {
+    const recipeLines = await db.recipeLines
+      .where({ recipeId: recipe.id })
+      .filter(l => !l.deletedAt)
+      .toArray();
+
+    if (recipeLines.length === 0) {
       return failure(new AppError(ProductionErrors.RECIPE_NO_INGREDIENTS, `La receta de ensamblaje no tiene ingredientes.`));
     }
+
+    const directLines = recipeLines.map(l => ({
+      productId: l.productId,
+      quantity: l.quantity * batchEquivalent,
+      unit: l.unit,
+    }));
 
     const wasteMultiplier = 1 + (recipe.wastePct / 100);
     let totalIngredientCost = 0;
     const assemblyConsumedLots: Array<{ lotId: string; quantity: number }> = [];
 
     const doWrites = async (): Promise<void> => {
-      for (const line of expandedLines) {
+      for (const line of directLines) {
         const ingredient = await db.products.where({ id: line.productId, tenantId }).first();
         if (!ingredient) {
           throw new AppError(ProductionErrors.RECIPE_INGREDIENT_NOT_FOUND, 'Ingrediente no encontrado.');
@@ -1320,13 +1328,13 @@ export const productionService = {
           await doWrites();
         });
       }
-      await emitWithAudit({
+      const assemblyAuditEvent = {
         eventName: SystemEvents.PRODUCTION_ASSEMBLY_CONSUMED,
         module: PRODUCTION_MODULE,
         payload: { productId, quantity, tenantId },
         context: { userId, tenantId },
-      });
-      return success({ consumedLots: assemblyConsumedLots, totalIngredientCost });
+      };
+      return success({ consumedLots: assemblyConsumedLots, totalIngredientCost, assemblyAuditEvent });
     } catch (err) {
       if (err instanceof AppError) return failure(err);
       throw err;
