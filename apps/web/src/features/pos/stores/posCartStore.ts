@@ -57,7 +57,7 @@ type CartGetter = PosCartSlice & {
   error: string | null;
 };
 
-export const createCartSlice = (set: any, get: () => CartGetter): PosCartSlice => ({
+export const createCartSlice = (set: (partial: Partial<CartGetter> | ((state: CartGetter) => Partial<CartGetter>)) => void, get: () => CartGetter): PosCartSlice => ({
   ...initialCartState,
 
   setSearchQuery: (query) => set({ searchQuery: query }),
