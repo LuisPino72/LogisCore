@@ -93,10 +93,11 @@ export async function selectFifoLots(
       );
     }
     const consumeQty = Math.min(product.stock, quantityNeeded);
+    const costPerStorageUnit = product.isWeighted ? (product.costPrice ?? 0) / 1000 : (product.costPrice ?? 0);
     return success([{
       lotId: `__implicit__${productId}`,
       quantity: consumeQty,
-      costUsdPerUnit: product.costPrice ?? 0,
+      costUsdPerUnit: costPerStorageUnit,
       version: 0,
     }]);
   }
