@@ -1220,6 +1220,9 @@ export async function createOrder(input: {
     return failure(new AppError('ORDER_NO_CUSTOMER', 'El cliente no existe.'));
   }
 
+  // Usar dirección del perfil del cliente si no se proporcionó una
+  const finalDeliveryAddress = deliveryAddress || customer.address || undefined;
+
   const totals = calculateSaleTotals(
     items.map(i => ({ unitPriceUsd: i.unitPriceUsd, quantity: i.quantity, isTaxable: i.isTaxable })),
     0,
@@ -1266,7 +1269,7 @@ export async function createOrder(input: {
     orderNumber,
     deliveryPersonName: undefined,
     deliveryFee: undefined,
-    deliveryAddress,
+    deliveryAddress: finalDeliveryAddress,
     deliveryLat,
     deliveryLng,
     deliveryNotes,

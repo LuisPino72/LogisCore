@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button, Modal, Select, Input, Skeleton, Alert, Card } from '@/common/components';
-import { MapPin, Send, Smartphone } from 'lucide-react';
+import { MapPin, Send } from 'lucide-react';
 import { getDeliveryPersons } from '../../settings/services/deliveryPersonService';
 import { dispatchDelivery, generateMapsLink } from '../services/saleService';
-import { normalizeWaPhone } from '../services/receiptService';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
 import { useToastStore } from '../../../stores/toastStore';
 import { handleServiceError } from '../../../common/utils/handleServiceError';
@@ -127,23 +126,6 @@ export function DeliveryDispatchPanel({
     }
   }, [selectedPerson, deliveryFee, sale, deliveryPersons, waMessageText, addToast, onClose]);
 
-  const handleNotifyCustomer = useCallback(async () => {
-    if (!sale) return;
-    if (!customerPhone) {
-      addToast({ type: 'warning', message: 'El cliente no tiene teléfono registrado' });
-      return;
-    }
-    const person = deliveryPersons.find((p) => p.name === selectedPerson);
-    const personPhone = person?.phone ? `+58${person.phone.replace(/\D/g, '')}` : '';
-    const normalizedPhone = normalizeWaPhone(customerPhone);
-    const lines = [
-      `¡Hola ${customerName}! Tu pedido va en camino con ${selectedPerson} 🚴`,
-      personPhone ? `📞 Contacta al delivery: ${personPhone}` : '',
-    ].filter(Boolean).join('\n\n');
-    const text = encodeURIComponent(lines);
-    window.open(`https://wa.me/${normalizedPhone}?text=${text}`, '_blank');
-  }, [sale, customerPhone, customerName, selectedPerson, deliveryPersons, addToast]);
-
   const parsedFee = parseFloat(deliveryFee) || 0;
   const canDispatch = selectedPerson && parsedFee > 0 && parsedFee <= 1000;
 
@@ -253,18 +235,6 @@ export function DeliveryDispatchPanel({
                 <Send size={16} />
                 Enviar al Motorizado
               </Button>
-              {selectedPerson && (
-                <Button
-                  variant="outline"
-                  fullWidth
-                  onClick={handleNotifyCustomer}
-                  className="min-h-11 bg-[#25D366] border-[#25D366] text-white hover:bg-[#1fb855] hover:border-[#1fb855] focus-visible:ring-[#25D366]"
-                  aria-label="Notificar al cliente por WhatsApp"
-                >
-                  <Smartphone size={16} />
-                  Notificar Cliente
-                </Button>
-              )}
               <Button variant="ghost" fullWidth onClick={onClose} className="min-h-11">
                 Despachar después
               </Button>

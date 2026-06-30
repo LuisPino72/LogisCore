@@ -276,9 +276,17 @@ export function PosPage({ tenantId }: PosPageProps) {
       return;
     }
     const personPhone = sale.deliveryPersonPhone ? `+58${sale.deliveryPersonPhone.replace(/\D/g, '')}` : '';
+    const deliveryFeeText = sale.deliveryFee && sale.deliveryFee > 0
+      ? `💰 Delivery: $${sale.deliveryFee.toFixed(2)}`
+      : '';
+    const totalText = sale.totalUsd && sale.totalUsd > 0
+      ? `💵 Total a pagar: $${sale.totalUsd.toFixed(2)}`
+      : '';
     const lines = [
       `¡Hola ${customer.name}! Tu pedido va en camino con ${sale.deliveryPersonName || 'motorizado'} 🚴`,
       personPhone ? `📞 Contacta al delivery: ${personPhone}` : '',
+      deliveryFeeText,
+      totalText,
     ].filter(Boolean).join('\n\n');
     const text = encodeURIComponent(lines);
     const normalizedPhone = normalizeWaPhone(customer.phone);

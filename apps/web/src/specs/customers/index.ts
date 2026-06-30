@@ -19,7 +19,7 @@ export const CustomerSchema = z.object({
     .max(14, 'Máximo 14 caracteres')
     .optional()
     .or(z.literal('')),
-  address: z.string().max(30, 'Máximo 30 caracteres').optional().or(z.literal('')),
+  address: z.string().max(100, 'Máximo 100 caracteres').optional().or(z.literal('')),
   creditLimit: z.number().min(0, 'Límite no puede ser negativo').max(9999.99).default(0),
   balance: z.number().min(0).max(9999.99).default(0),
   notes: z.string().max(30, 'Máximo 30 caracteres').optional().or(z.literal('')),
