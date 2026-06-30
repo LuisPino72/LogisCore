@@ -80,6 +80,27 @@ export async function selectFifoLots(
 
   // 3. Validar stock suficiente (a menos que sea override manual).
   const totalAvailable = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+
+  // 3a. Fallback: si no hay inventoryLots pero el producto tiene stock,
+  // usar product.stock como lote implícito (ej: productos sin historial de compras).
+  if (lots.length === 0 && product.stock > 0) {
+    if (!allowOverride && product.stock < quantityNeeded) {
+      return failure(
+        new AppError(
+          ProductionErrors.INGREDIENT_INSUFFICIENT_STOCK,
+          `Stock insuficiente de "${product.name ?? productId}": ${product.stock} < ${quantityNeeded}`,
+        ),
+      );
+    }
+    const consumeQty = Math.min(product.stock, quantityNeeded);
+    return success([{
+      lotId: `__implicit__${productId}`,
+      quantity: consumeQty,
+      costUsdPerUnit: product.costPrice ?? 0,
+      version: 0,
+    }]);
+  }
+
   if (!allowOverride && totalAvailable < quantityNeeded) {
     return failure(
       new AppError(
