@@ -6,7 +6,7 @@ vi.mock('../../services/supabase/client', () => ({
 
 const mockRecipes: Array<Record<string, unknown>> = [
   // Sub-receta B→A (ciclo A→B→A si A incluye B)
-  { id: 'rec-b', productId: 'prod-B', lines: [{ productId: 'prod-A', quantity: 1, unit: 'unidad' }], deletedAt: null, isActive: true },
+  { id: 'rec-b', productId: 'prod-B', tenantId: 'test-tenant', lines: [{ productId: 'prod-A', quantity: 1, unit: 'unidad' }], deletedAt: null, isActive: true },
 ];
 
 const mockDb = {
@@ -33,7 +33,7 @@ const mockDb = {
       const matches = (item: Record<string, unknown>) =>
         Object.entries(criteria).every(([k, v]) => item[k] === v);
       const mockLines: Array<Record<string, unknown>> = [
-        { id: 'rl-b1', recipeId: 'rec-b', productId: 'prod-A', quantity: 1, unit: 'unidad' },
+        { id: 'rl-b1', recipeId: 'rec-b', productId: 'prod-A', tenantId: 'test-tenant', quantity: 1, unit: 'unidad' },
       ];
       const pre = Object.keys(criteria).length > 0 ? mockLines.filter(matches) : mockLines;
       return {

@@ -97,35 +97,43 @@ export async function validateCycles(
   lines: Array<{ productId: string; quantity: number; unit: string }>,
 ): Promise<Result<true, AppError>> {
   const db = getDb();
-  const visited = new Set<string>([productId]);
-  const stack: Array<{ pid: string; lines: typeof lines }> = [{ pid: productId, lines }];
+
+  type StackFrame = { pid: string; lines: typeof lines; childIdx: number };
+  const stack: StackFrame[] = [{ pid: productId, lines, childIdx: 0 }];
+  const processing = new Set<string>([productId]);
 
   while (stack.length > 0) {
-    const current = stack.pop()!;
-    if (current.lines.length === 0) continue;
+    const frame = stack[stack.length - 1];
 
-    for (const line of current.lines) {
-      if (visited.has(line.productId)) {
-        return failure(new AppError(
-          ProductionErrors.RECIPE_CYCLE_DETECTED,
-          'No se puede guardar: la receta forma un ciclo.',
-        ));
-      }
+    if (frame.childIdx >= frame.lines.length) {
+      stack.pop();
+      processing.delete(frame.pid);
+      continue;
+    }
 
-      const subRecipe = await db.recipes
-        .where({ productId: line.productId, tenantId })
-        .filter((r) => !r.deletedAt && r.isActive)
-        .first();
+    const line = frame.lines[frame.childIdx];
+    frame.childIdx++;
 
-      if (subRecipe) {
-        visited.add(line.productId);
-        const subLines = await db.recipeLines
-          .where({ recipeId: subRecipe.id })
-          .filter((l) => !l.deletedAt)
-          .toArray();
-        const nextLines = subLines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit }));
-        stack.push({ pid: line.productId, lines: nextLines });
-      }
+    if (processing.has(line.productId)) {
+      return failure(new AppError(
+        ProductionErrors.RECIPE_CYCLE_DETECTED,
+        'No se puede guardar: la receta forma un ciclo.',
+      ));
+    }
+
+    const subRecipe = await db.recipes
+      .where({ productId: line.productId, tenantId })
+      .filter((r) => !r.deletedAt && r.isActive)
+      .first();
+
+    if (subRecipe) {
+      processing.add(line.productId);
+      const subLines = await db.recipeLines
+        .where({ recipeId: subRecipe.id })
+        .filter((l) => !l.deletedAt)
+        .toArray();
+      const nextLines = subLines.map((l) => ({ productId: l.productId, quantity: l.quantity, unit: l.unit }));
+      stack.push({ pid: line.productId, lines: nextLines, childIdx: 0 });
     }
   }
 
