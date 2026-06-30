@@ -17,6 +17,13 @@ import type {
 } from './types';
 import { DEFAULT_BATCH_SIZE } from './types';
 
+// Ventana de seguridad para evitar perder registros por skew de reloj
+// entre el servidor Supabase y el cliente local.
+// Si el reloj local está adelantado, `lastPullAt` puede ser > `updated_at`
+// del servidor para registros recién creados/modificados, causando que
+// se salten en el próximo pull. Restamos este margen al calcular `since`.
+const SAFETY_WINDOW_MS = 60000; // 1 minuto
+
 // Tablas que se sincronizan bidireccionalmente (pull + push)
 // Cada entrada define qué columna usar para incremental fetch
 const PULL_TABLES: { name: string; timeCol: string }[] = [
@@ -236,7 +243,9 @@ export class SyncEngine {
         if (isDbClosing()) break;
         const lastPullAt = meta?.lastPullAt ?? 0;
 
-        const since = new Date(lastPullAt).toISOString();
+        // Restamos SAFETY_WINDOW_MS para evitar perder registros por
+        // diferencia entre el reloj del servidor y el reloj local
+        const since = new Date(lastPullAt - SAFETY_WINDOW_MS).toISOString();
         const query = supabase
           .from(tableName)
           .select('*')

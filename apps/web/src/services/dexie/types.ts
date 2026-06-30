@@ -139,6 +139,7 @@ export interface DexieSale {
   dispatchedAt?: string;
   deliveredAt?: string;
   modifiedAt?: string;
+  updatedAt?: string;
   modificationCount?: number;
   statusHistory?: Array<{
     status: string;

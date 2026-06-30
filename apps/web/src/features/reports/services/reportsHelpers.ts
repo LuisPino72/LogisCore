@@ -76,7 +76,7 @@ export interface SaleWithItems {
   }[];
 }
 
-const salesCache = createVolatileCache<SaleWithItems[]>({ ttlMs: 500 });
+export const salesCache = createVolatileCache<SaleWithItems[]>({ ttlMs: 500 });
 function salesCacheKey(tenantId: string, start: string, end: string): string {
   return `${tenantId}:${start}:${end}`;
 }

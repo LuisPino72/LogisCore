@@ -22,6 +22,7 @@ import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useSettingsStore } from '../../settings/stores/settingsStore';
+import { salesCache } from '../../reports/services/reportsHelpers';
 
 const MODULE_NAME = 'POS';
 
@@ -1164,6 +1165,7 @@ export async function voidSale(saleId: string, tenantId: string, userId: string)
       payload: { saleId, tenantSlug: tenantId },
       context: { userId, tenantId, tenantUuid },
     });
+    salesCache.clear();
     return success(undefined);
   } catch (err) {
     logger.error(MODULE_NAME, 'Error en voidSale:', err);
@@ -1501,10 +1503,11 @@ export async function updateOrderItems(
         totalUsd: totals.subtotalUsd,
         modificationCount: newCount,
         modifiedAt: now,
+        updatedAt: now,
       });
 
       await syncQueue.enqueue('sales', 'UPDATE', saleId, toSnake({
-        id: saleId, tenant_id: tenantUuid, modification_count: newCount, modified_at: now,
+        id: saleId, tenant_id: tenantUuid, modification_count: newCount, updated_at: now,
       } as unknown as Record<string, unknown>), sale.tenantId);
 
       await outboxService.enqueue(SystemEvents.ORDER_STATUS_CHANGED, MODULE_NAME, {

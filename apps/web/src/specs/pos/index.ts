@@ -80,6 +80,7 @@ export const SaleSchema = z.object({
   dispatchedAt: isoDateTime.optional(),
   deliveredAt: isoDateTime.optional(),
   modifiedAt: isoDateTime.optional(),
+  updatedAt: isoDateTime.optional(),
   modificationCount: z.number().int().min(0).optional(),
   statusHistory: z.array(z.object({
     status: z.string(),

@@ -75,6 +75,7 @@ export function saleFromSupabase(raw: SupabaseSale, tenantId: string): Result<Sa
       dispatchedAt: raw.dispatched_at ?? undefined,
       deliveredAt: raw.delivered_at ?? undefined,
       modifiedAt: raw.modified_at ?? undefined,
+      updatedAt: raw.updated_at ?? undefined,
       modificationCount: raw.modification_count ?? undefined,
     }));
   } catch (err) {
