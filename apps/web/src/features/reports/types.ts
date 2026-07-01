@@ -43,6 +43,7 @@ export interface ExecutiveSummaryData {
   totalDiscountUsd: number;
   totalIvaBs: number;
   totalIvaUsd: number;
+  igtfTotal: number;
   pendingCreditUsd: number;
   collectedCreditUsd: number;
   customersWithDebt: number;

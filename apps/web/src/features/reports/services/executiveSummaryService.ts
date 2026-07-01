@@ -37,6 +37,7 @@ export async function getExecutiveSummary(tenantId: string, filters: ReportFilte
     let totalCostUsd = 0;
     let totalDiscountBs = 0;
     let totalIvaBs = 0;
+    let totalIgtfBs = 0;
     let totalIvaUsd = 0;
     let pendingCreditUsd = 0;
     let collectedCreditUsd = 0;
@@ -47,6 +48,7 @@ export async function getExecutiveSummary(tenantId: string, filters: ReportFilte
     for (const { sale, items } of data) {
       totalSalesBs += sale.totalBs;
       totalIvaBs += sale.ivaBs || 0;
+      totalIgtfBs += sale.igtfBs || 0;
       if (sale.ivaBs && sale.exchangeRate > 0) {
         totalIvaUsd += preciseRound(sale.ivaBs / sale.exchangeRate, 2);
       }
@@ -257,6 +259,7 @@ export async function getExecutiveSummary(tenantId: string, filters: ReportFilte
       totalDiscountUsd,
       totalIvaBs,
       totalIvaUsd,
+      igtfTotal: preciseRound(totalIgtfBs, 2),
       pendingCreditUsd: preciseRound(pendingCreditUsd, 2),
       collectedCreditUsd: preciseRound(collectedCreditUsd, 2),
       customersWithDebt: customerDebtMap.size,

@@ -76,7 +76,7 @@ export interface SaleWithItems {
   }[];
 }
 
-export const salesCache = createVolatileCache<SaleWithItems[]>({ ttlMs: 500 });
+export const salesCache = createVolatileCache<SaleWithItems[]>({ ttlMs: 30000 });
 function salesCacheKey(tenantId: string, start: string, end: string): string {
   return `${tenantId}:${start}:${end}`;
 }
@@ -90,7 +90,7 @@ export async function fetchSalesWithItems(tenantId: string, start: string, end: 
   const sales = await db.sales
     .where('[tenantId+createdAt]')
     .between([tenantId, start], [tenantId, end])
-    .filter((s) => !s.deletedAt && (s.status === 'completed' || s.status === 'entregada'))
+    .filter((s) => !s.deletedAt && !s.voidedAt && (s.status === 'completed' || s.status === 'entregada'))
     .toArray();
 
   if (sales.length > 0) {

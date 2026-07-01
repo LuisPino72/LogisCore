@@ -7,6 +7,7 @@ import { getCustomersSummary, getCustomersRanking } from './customersReportServi
 import { getProductionSummary, getRecipeProfitability } from './productionReportService';
 import { getPendingPayables } from './payablesService';
 import { getDeliverySettlement, markDeliverySettlementPaid } from './deliverySettlementService';
+import { getLowStockReport } from './lowStockReportService';
 
 export const reportsService = {
   getExecutiveSummary,
@@ -30,4 +31,5 @@ export const reportsService = {
   getRecipeProfitability,
   getDeliverySettlement,
   markDeliverySettlementPaid,
+  getLowStockReport,
 };

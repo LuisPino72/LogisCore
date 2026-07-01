@@ -175,6 +175,14 @@ export function ExecutiveSummary({ data, loading, tenantId, onKpiClick }: Execut
           animationDelay={0.25}
         />
         <KpiCard
+          label="IGTF Acumulado"
+          value={<span className="text-xs sm:text-lg font-bold text-warning truncate">{formatBs(data.igtfTotal)}</span>}
+          subtitle="Impuesto a Grandes Transacciones Financieras"
+          icon={<Receipt size={18} />}
+          gradient="amber"
+          animationDelay={0.27}
+        />
+        <KpiCard
           label="Pendiente por cobrar"
           value={<span className="text-xs sm:text-lg font-bold text-warning truncate">{formatUsd(data.pendingCreditUsd)}</span>}
           subtitle={

@@ -34,6 +34,7 @@ interface ReportsState {
   customersRanking: CustomerRankingItem[];
   productionSummary: ProductionSummaryData | null;
   recipeProfitability: RecipeProfitabilityItem[];
+  lowStockProducts: { productId: string; name: string; sku: string; stock: number; minStock: number; categoryName?: string }[];
 }
 
 const initialState: ReportsState = {
@@ -41,6 +42,7 @@ const initialState: ReportsState = {
   summary: null, profitOverTime: [], topProducts: [], topCategories: [], paymentBreakdown: [], cashAnalysis: [], expenseBreakdown: [],
   customersSummary: null, customersRanking: [],
   productionSummary: null, recipeProfitability: [],
+  lowStockProducts: [],
 };
 
 export function useReports(tenantId: string | null) {
@@ -180,18 +182,20 @@ export function useReports(tenantId: string | null) {
       if (tab === 'profits') res = await reportsService.getProfitOverTime(tenantId, filters);
       else if (tab === 'cash') res = await reportsService.getCashAnalysis(tenantId, filters);
       else if (tab === 'more') {
-        const [cs, cr, ps, rp] = await Promise.all([
+        const [cs, cr, ps, rp, ls] = await Promise.all([
           reportsService.getCustomersSummary(tenantId, filters),
           reportsService.getCustomersRanking(tenantId, filters),
           reportsService.getProductionSummary(tenantId, filters),
           reportsService.getRecipeProfitability(tenantId, filters),
+          reportsService.getLowStockReport(tenantId),
         ]);
-        const errs = [cs, cr, ps, rp].filter((r) => !r.ok).map((r) => r.error.message);
+        const errs = [cs, cr, ps, rp, ls].filter((r) => !r.ok).map((r) => r.error.message);
         apply({
           customersSummary: cs.ok ? cs.data : null,
           customersRanking: cr.ok ? cr.data : [],
           productionSummary: ps.ok ? ps.data : null,
           recipeProfitability: rp.ok ? rp.data : [],
+          lowStockProducts: ls.ok ? ls.data : [],
         }, errs.length ? errs.join('. ') : null);
         preloadAdjacent(tab);
         return;
@@ -291,6 +295,8 @@ export function useReports(tenantId: string | null) {
       EventBus.on(SystemEvents.ORDER_STATUS_CHANGED, () => refetch(undefined, true)),
       EventBus.on(SystemEvents.ORDER_DELIVERED, () => refetch(undefined, true)),
       EventBus.on(SystemEvents.ORDER_CANCELLED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.SUPPLIER_PAYMENT_CREATED, () => refetch(undefined, true)),
+      EventBus.on(SystemEvents.EXCHANGE_RATE_UPDATED, () => refetch(undefined, true)),
     ];
     return () => {
       subs.forEach((sub) => EventBus.off(sub));
@@ -325,11 +331,12 @@ export function useReports(tenantId: string | null) {
     if (state.customersSummary && state.productionSummary) return;
 
     try {
-      const [cs, cr, ps, rp] = await Promise.all([
+      const [cs, cr, ps, rp, ls] = await Promise.all([
         reportsService.getCustomersSummary(tenantId, filters),
         reportsService.getCustomersRanking(tenantId, filters),
         reportsService.getProductionSummary(tenantId, filters),
         reportsService.getRecipeProfitability(tenantId, filters),
+        reportsService.getLowStockReport(tenantId),
       ]);
       setState((prev) => ({
         ...prev,
@@ -337,11 +344,12 @@ export function useReports(tenantId: string | null) {
         customersRanking: cr.ok ? cr.data : prev.customersRanking,
         productionSummary: ps.ok ? ps.data : prev.productionSummary,
         recipeProfitability: rp.ok ? rp.data : prev.recipeProfitability,
+        lowStockProducts: ls.ok ? ls.data : prev.lowStockProducts,
       }));
     } catch {
       // Silent fail — export will show empty data
     }
-  }, [tenantId, filters, state.customersSummary, state.productionSummary]);
+  }, [tenantId, filters, state.customersSummary, state.productionSummary, state.lowStockProducts]);
 
   return {
     filters, setFilters, activeTab, setActiveTab,

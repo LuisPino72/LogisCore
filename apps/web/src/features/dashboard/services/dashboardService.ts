@@ -238,7 +238,7 @@ export const dashboardService = {
         const localSales = await db.sales
           .where('[tenantId+createdAt]')
           .between([tenantId, startOfDay], [tenantId, endOfDay])
-          .filter((s) => !s.deletedAt && s.status === 'completed' && !s.voidedAt)
+          .filter((s) => !s.deletedAt && (s.status === 'completed' || s.status === 'entregada') && !s.voidedAt)
           .toArray();
 
         if (localSales.length > 0) {
@@ -262,7 +262,7 @@ export const dashboardService = {
         .from('sales')
         .select('id, discount_type, discount_value, discount_bs, created_at')
         .eq('tenant_id', tenantUuid)
-        .eq('status', 'completed')
+        .in('status', ['completed', 'entregada'])
         .is('deleted_at', null)
         .gte('created_at', startOfDay)
         .lt('created_at', endOfDay);

@@ -66,6 +66,22 @@ export async function getProductionSummary(tenantId: string, filters: ReportFilt
       .filter((m) => !m.deletedAt && m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.createdAt >= start && m.createdAt <= end)
       .toArray();
     const totalIngredientCost = movements.reduce((sum, m) => sum + (m.costUsd || 0), 0);
+    const db2 = getDb();
+    const rates = await db2.exchangeRates.where({ tenantId }).toArray();
+    const rateMap = new Map<string, number>();
+    for (const r of rates) {
+      if (!rateMap.has(r.createdAt.slice(0, 10))) {
+        rateMap.set(r.createdAt.slice(0, 10), r.rate);
+      }
+    }
+    let totalIngredientCostBsCalc = 0;
+    for (const m of movements) {
+      const dayKey = m.createdAt.slice(0, 10);
+      const rate = rateMap.get(dayKey) ?? 0;
+      if (rate > 0) {
+        totalIngredientCostBsCalc += (m.costUsd || 0) * rate;
+      }
+    }
 
     return success({
       totalRecipes: recipes.length,
@@ -78,7 +94,7 @@ export async function getProductionSummary(tenantId: string, filters: ReportFilt
       mostProducedQuantity: mostProduced?.quantity,
       averageWastePct: avgWaste,
       totalIngredientCostUsd: preciseRound(totalIngredientCost, 2),
-      totalIngredientCostBs: 0, // Will be calculated with exchange rate if needed
+      totalIngredientCostBs: preciseRound(totalIngredientCostBsCalc, 2),
     });
   } catch (err) {
     console.error('[reportsService.getProductionSummary]', err);
@@ -156,6 +172,18 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
     // Simple cost distribution (proportional to quantity produced)
     const totalQuantity = Array.from(recipeStats.values()).reduce((sum, r) => sum + r.totalQuantityProduced, 0);
     const totalCost = movements.reduce((sum, m) => sum + (m.costUsd || 0), 0);
+    const allRates = await getDb().exchangeRates.where({ tenantId }).toArray();
+    const rateByDay = new Map<string, number>();
+    for (const r of allRates) {
+      const dk = r.createdAt.slice(0, 10);
+      if (!rateByDay.has(dk)) rateByDay.set(dk, r.rate);
+    }
+    let totalCostBsAll = 0;
+    for (const m of movements) {
+      const dayKey = m.createdAt.slice(0, 10);
+      const rate = rateByDay.get(dayKey) ?? 0;
+      if (rate > 0) totalCostBsAll += (m.costUsd || 0) * rate;
+    }
 
     for (const [, stats] of recipeStats) {
       if (totalQuantity > 0) {
@@ -172,7 +200,7 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
         productName: stats.productName,
         mode: stats.mode,
         totalCostUsd: stats.totalCostUsd,
-        totalCostBs: 0, // Will be calculated with exchange rate if needed
+        totalCostBs: totalQuantity > 0 ? preciseRound((stats.totalQuantityProduced / totalQuantity) * totalCostBsAll, 2) : 0,
         timesProduced: stats.timesProduced,
         totalQuantityProduced: stats.totalQuantityProduced,
         yieldUnit: stats.yieldUnit,

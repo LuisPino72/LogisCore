@@ -271,6 +271,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     customersRanking,
     productionSummary,
     recipeProfitability,
+    lowStockProducts,
     fetchMoreTabData,
   } = useReports(tenantId);
 
@@ -602,6 +603,27 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
             <div className="animate-report-fade-in">
               <ProductionReport data={productionSummary} loading={loading} onKpiClick={openDrillDown} />
             </div>
+            {lowStockProducts.length > 0 && (
+              <div className="animate-report-fade-in">
+                <Card className="p-4">
+                  <h3 className="text-sm font-title font-bold text-gray-900 mb-3">Productos con bajo stock</h3>
+                  <div className="divide-y divide-gray-100">
+                    {lowStockProducts.map((p) => (
+                      <div key={p.productId} className="flex items-center justify-between py-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
+                          <p className="text-xs text-gray-500">SKU: {p.sku}</p>
+                        </div>
+                        <div className="text-right shrink-0 ml-4">
+                          <p className="text-sm font-semibold text-danger">{p.stock}</p>
+                          <p className="text-xs text-gray-500">Mín: {p.minStock}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            )}
           </Suspense>
         </div>
         <div className={`print-section ${activeTab !== 'delivery' ? 'hidden' : ''}`}>
