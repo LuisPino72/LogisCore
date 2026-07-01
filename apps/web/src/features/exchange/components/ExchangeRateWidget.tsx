@@ -5,16 +5,17 @@ import { useExchangeRate } from '../hooks/useExchangeRate';
 import { formatBs } from '@/lib/formatBs';
 import { useOnlineStatus } from '../../../services/network/useNetworkGuard';
 import { isVenezuelanHoliday } from '@/lib/venezuelanHolidays';
+import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import { useAuthStore } from '../../auth/stores/authStore';
 
 interface ExchangeRateWidgetProps {
   tenantId: string | null;
-  role: string | null;
 }
 
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 horas
 const STALE_CRITICAL_MS = 48 * 60 * 60 * 1000; // 48 horas
 
-export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role }) => {
+export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId }) => {
   const { rate, source, fetchedAt, loading, isUpdating, error, updateFromBcv, setManual } =
     useExchangeRate(tenantId);
   const [showModal, setShowModal] = useState(false);
@@ -22,7 +23,8 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
   const isOnline = useOnlineStatus();
   const [manualError, setManualError] = useState('');
 
-  const isOwner = role === 'owner' || role === 'admin';
+  const session = useAuthStore((s) => s.session);
+  const canUpdateRate = hasActionPermission(session, 'exchange', 'update');
 
   const handleUpdate = async () => {
     if (!tenantId) return;
@@ -114,7 +116,7 @@ export const ExchangeRateWidget: FC<ExchangeRateWidgetProps> = ({ tenantId, role
           {fetchedAt && ` · ${formatDate(fetchedAt)}`}
         </div>
 
-        {isOwner && (
+        {canUpdateRate && (
           <div className="flex flex-col gap-1 w-full pt-2">
             <Button
               variant={rateStatus === 'fresh' ? 'ghost' : 'primary'}

@@ -382,7 +382,7 @@ function DashboardLayout() {
               footerSlot={
                 effectiveTenantId ? (
                   <Suspense fallback={null}>
-                    <ExchangeRateWidget tenantId={effectiveTenantId} role={role ?? null} />
+                    <ExchangeRateWidget tenantId={effectiveTenantId} />
                   </Suspense>
                 ) : undefined
               }

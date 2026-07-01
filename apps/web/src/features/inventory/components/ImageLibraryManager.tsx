@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Upload, Trash2, Edit3, Star, Image as ImageIcon } from 'lucide-react';
 import { Button, SearchInput, Input, Modal, EmptyState, SearchableSelect, Spinner } from '../../../common/components';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { getLibraryImages, uploadLibraryImage, updateLibraryImage, deleteLibraryImage, adminGetLibraryImages, adminUploadImage, adminUpdateImage, adminDeleteImage } from '../services/imageLibraryService';
 import { getCategories, adminGetGlobalCategories } from '../services/categoryService';
 import type { ImageLibrary } from '../../../specs/image-library';
@@ -16,8 +15,7 @@ interface ImageLibraryManagerProps {
 export function ImageLibraryManager({ tenantId: tenantIdProp, adminMode = false }: ImageLibraryManagerProps = {}) {
   const session = useAuthStore((s) => s.session);
   const tenantId = tenantIdProp || session?.tenantId || '';
-  const isOwner = session?.role === 'admin' || session?.role === 'owner';
-  const canManage = isOwner && hasActionPermission(session!, 'inventory', 'manage_library');
+  const canManage = session?.role === 'admin';
 
   const [images, setImages] = useState<ImageLibrary[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
