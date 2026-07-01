@@ -330,7 +330,8 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
 
       const element = printRef.current;
       const html2pdf = (await import('html2pdf.js')).default;
-      const fileName = `Sasa-Reporte-${new Date().toISOString().slice(0, 10)}.pdf`;
+      const scopeSuffix = scope && scope !== 'all' ? `-${({ summary: 'Resumen', profits: 'Ganancias', products: 'Productos', cash: 'Caja', more: 'Mas', delivery: 'Liquidacion' })[scope] ?? scope}` : '';
+      const fileName = `Sasa-Reporte${scopeSuffix}-${new Date().toISOString().slice(0, 10)}.pdf`;
       
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],

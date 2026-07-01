@@ -435,7 +435,8 @@ export function useExport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const suffix = scope && scope !== 'all' ? `-${scope}` : '';
+    const scopeLabel = scope && scope !== 'all' ? ({ summary: 'Resumen', profits: 'Ganancias', products: 'Productos', cash: 'Caja', more: 'Mas', delivery: 'Liquidacion' })[scope] ?? scope : '';
+    const suffix = scopeLabel ? `-${scopeLabel}` : '';
     a.download = `Sasa-Reporte${suffix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
     document.body.appendChild(a);
     a.click();
