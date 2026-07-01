@@ -70,23 +70,25 @@ export const CartPanel = memo(function CartPanel({
                 >
                   <Trash2 size={18} />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onMobileToggle}
-                  className="p-1.5 min-w-8 min-h-8 md:hidden"
-                  aria-label="Cerrar carrito"
-                >
-                  <X size={18} />
-                </Button>
+                {isMobileOpen && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onMobileToggle}
+                    className="p-1.5 min-w-8 min-h-8"
+                    aria-label="Cerrar carrito"
+                  >
+                    <X size={18} />
+                  </Button>
+                )}
               </div>
             )}
-            {cart.length === 0 && (
+            {cart.length === 0 && isMobileOpen && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onMobileToggle}
-                className="p-1.5 min-w-8 min-h-8 md:hidden"
+                className="p-1.5 min-w-8 min-h-8"
                 aria-label="Cerrar carrito"
               >
                 <X size={18} />
