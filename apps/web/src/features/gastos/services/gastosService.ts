@@ -13,6 +13,7 @@ import { getPermissionMessage } from '../../auth/permissions/messages';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { logger } from '../../../lib/logger';
 import { supabase } from '../../../services/supabase/client';
+import { TenantTranslator } from '../../../services/tenantTranslator';
 
 const GASTOS_MODULE = 'gastos';
 
@@ -69,54 +70,59 @@ export const gastosService = {
         collection = collection.filter((e) => e.date <= options.endDate!);
       }
 
-      const expenses = await collection.sortBy('date');
+      const [expenses, cloudResult] = await Promise.all([
+        collection.sortBy('date'),
+        (async () => {
+          try {
+            const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+            let query = supabase
+              .from('expenses')
+              .select('*')
+              .eq('tenant_id', tenantUuid)
+              .is('deleted_at', null)
+              .eq('is_recurring', false);
 
-      // Fallback a Supabase si Dexie está vacío (sync no ha completado)
-      if (expenses.length === 0) {
-        try {
-          let query = supabase
-            .from('expenses')
-            .select('*')
-            .eq('tenant_id', tenantId)
-            .is('deleted_at', null)
-            .eq('is_recurring', false);
+            if (options?.startDate) query = query.gte('date', options.startDate);
+            if (options?.endDate) query = query.lte('date', options.endDate);
+            if (options?.status && options.status !== 'all') query = query.eq('status', options.status);
+            if (options?.category && options.category !== 'all') query = query.eq('category', options.category);
 
-          if (options?.startDate) query = query.gte('date', options.startDate);
-          if (options?.endDate) query = query.lte('date', options.endDate);
-          if (options?.status && options.status !== 'all') query = query.eq('status', options.status);
-          if (options?.category && options.category !== 'all') query = query.eq('category', options.category);
-
-          const { data, error } = await query.order('date', { ascending: false });
-          if (!error && data && data.length > 0) {
-            const mapped = data.map((row) => mapExpense({
-              id: row.id,
-              tenantId: row.tenant_id,
-              createdByUserId: row.created_by_user_id,
-              category: row.category,
-              amountUsd: row.amount_usd,
-              exchangeRate: row.exchange_rate,
-              amountBs: row.amount_bs,
-              description: row.description,
-              date: row.date,
-              isRecurring: row.is_recurring,
-              recurrenceType: row.recurrence_type,
-              nextDueDate: row.next_due_date,
-              parentExpenseId: row.parent_expense_id,
-              status: row.status,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at,
-              deletedAt: row.deleted_at,
-              saleId: row.sale_id,
-            }));
-            return success(mapped);
+            const { data, error } = await query.order('date', { ascending: false });
+            if (!error && data && data.length > 0) {
+              return data.map((row) => mapExpense({
+                id: row.id,
+                tenantId: row.tenant_id,
+                createdByUserId: row.created_by_user_id,
+                category: row.category,
+                amountUsd: row.amount_usd,
+                exchangeRate: row.exchange_rate,
+                amountBs: row.amount_bs,
+                description: row.description,
+                date: row.date,
+                isRecurring: row.is_recurring,
+                recurrenceType: row.recurrence_type,
+                nextDueDate: row.next_due_date,
+                parentExpenseId: row.parent_expense_id,
+                status: row.status,
+                createdAt: row.created_at,
+                updatedAt: row.updated_at,
+                deletedAt: row.deleted_at,
+                saleId: row.sale_id,
+              }));
+            }
+          } catch (fbErr) {
+            logger.warn(GASTOS_MODULE, 'Supabase fallback failed', fbErr);
           }
-        } catch (fbErr) {
-          logger.warn(GASTOS_MODULE, 'Supabase fallback failed', fbErr);
-        }
-      }
+          return [] as Gasto[];
+        })(),
+      ]);
 
-      const mapped = expenses.reverse().map(mapExpense);
-      return success(mapped);
+      // Merge: Dexie gana (última escritura local), cloud completa lo faltante
+      const localMap = new Map<string, Gasto>();
+      for (const e of expenses.reverse()) localMap.set(e.id, mapExpense(e));
+      for (const e of cloudResult) if (!localMap.has(e.id)) localMap.set(e.id, e);
+
+      return success(Array.from(localMap.values()));
     } catch (err) {
       console.error('[gastosService.getAll]', err);
       return failure(new AppError(GASTOS_ERRORS.GASTOS_FETCH_FAILED.code, GASTOS_ERRORS.GASTOS_FETCH_FAILED.message));
@@ -344,13 +350,14 @@ export const gastosService = {
         .filter((e) => !e.deletedAt && !e.isRecurring && e.date >= startDate && e.date <= endDate)
         .toArray();
 
-      // Fallback a Supabase si Dexie está vacío
-      if (expenses.length === 0) {
+      // Merge con Supabase: Dexie gana, cloud completa lo faltante
+      const cloudRows = await (async () => {
         try {
+          const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
           const { data, error } = await supabase
             .from('expenses')
             .select('*')
-            .eq('tenant_id', tenantId)
+            .eq('tenant_id', tenantUuid)
             .is('deleted_at', null)
             .eq('is_recurring', false)
             .gte('date', startDate)
@@ -358,7 +365,7 @@ export const gastosService = {
             .order('date', { ascending: false });
 
           if (!error && data && data.length > 0) {
-            const mapped = data.map((row) => mapExpense({
+            return data.map((row) => mapExpense({
               id: row.id,
               tenantId: row.tenant_id,
               createdByUserId: row.created_by_user_id,
@@ -378,12 +385,12 @@ export const gastosService = {
               deletedAt: row.deleted_at,
               saleId: row.sale_id,
             }));
-            return success(mapped);
           }
         } catch (fbErr) {
           logger.warn(GASTOS_MODULE, 'Supabase fallback failed for getAllMonthly', fbErr);
         }
-      }
+        return [] as Gasto[];
+      })();
 
       // Heal on read: si una instancia tiene parentExpenseId y el template está paid, marcarla como paid
       const parentIds = [...new Set(expenses.filter((e) => e.parentExpenseId).map((e) => e.parentExpenseId!))];
@@ -406,7 +413,11 @@ export const gastosService = {
         }
       }
 
-      const mapped = expenses.sort((a, b) => b.date.localeCompare(a.date)).map(mapExpense);
+      // Merge: Dexie gana, cloud completa lo faltante
+      const merged = new Map<string, Gasto>();
+      for (const e of expenses) merged.set(e.id, mapExpense(e));
+      for (const e of cloudRows) if (!merged.has(e.id)) merged.set(e.id, e);
+      const mapped = Array.from(merged.values()).sort((a, b) => b.date.localeCompare(a.date));
       return success(mapped);
     } catch (err) {
       console.error('[gastosService.getAllMonthly]', err);

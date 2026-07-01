@@ -28,7 +28,7 @@ export const useGastosStore = create<GastosState>((set) => ({
   loading: false,
   filters: {
     category: 'all',
-    month: new Date().toISOString().slice(0, 7),
+    month: undefined,
     status: 'all',
     recurring: 'all',
     search: '',
