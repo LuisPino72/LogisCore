@@ -1,10 +1,14 @@
-type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'custom';
+type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
 interface BeepConfig {
   freq: number;
   duration: number;
   type?: OscillatorType;
   volume?: number;
+}
+
+interface NoteConfig extends BeepConfig {
+  delay?: number;
 }
 
 class AudioService {
@@ -36,46 +40,72 @@ class AudioService {
     return this.ctx;
   }
 
-  private playBeep(config: BeepConfig): void {
+  private playSequence(notes: NoteConfig[]): void {
     const ctx = this.getContext();
     if (!ctx) return;
     try {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = config.type || 'sine';
-      osc.frequency.value = config.freq;
-      gain.gain.value = config.volume ?? 0.3;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + config.duration);
+      let time = ctx.currentTime;
+      for (const note of notes) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = note.type || 'sine';
+        osc.frequency.value = note.freq;
+        gain.gain.value = note.volume ?? 0.3;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + note.duration);
+        time += note.duration + (note.delay ?? 0.04);
+      }
     } catch {
       // AudioContext no disponible — silencioso
     }
   }
 
   saleComplete(): void {
-    this.playBeep({ freq: 660, duration: 0.15 });
+    this.playSequence([
+      { freq: 523, duration: 0.08, volume: 0.25 },
+      { freq: 659, duration: 0.08, volume: 0.25 },
+      { freq: 784, duration: 0.12, volume: 0.3 },
+    ]);
   }
 
   scanSuccess(): void {
-    this.playBeep({ freq: 1200, duration: 0.08, volume: 0.2 });
+    this.playSequence([
+      { freq: 1000, duration: 0.05, volume: 0.2 },
+      { freq: 1200, duration: 0.05, volume: 0.2 },
+    ]);
   }
 
   lowStock(): void {
-    this.playBeep({ freq: 400, duration: 0.3, type: 'triangle', volume: 0.25 });
+    this.playSequence([
+      { freq: 440, duration: 0.2, type: 'triangle', volume: 0.25 },
+      { freq: 330, duration: 0.25, type: 'triangle', volume: 0.2 },
+    ]);
   }
 
   rateFailed(): void {
-    this.playBeep({ freq: 300, duration: 0.5, type: 'sawtooth', volume: 0.25 });
+    this.playSequence([
+      { freq: 392, duration: 0.15, type: 'sawtooth', volume: 0.2 },
+      { freq: 330, duration: 0.15, type: 'sawtooth', volume: 0.2 },
+      { freq: 262, duration: 0.2, type: 'sawtooth', volume: 0.25 },
+    ]);
   }
 
   kitchenNewOrder(): void {
-    this.playBeep({ freq: 800, duration: 0.15, type: 'square', volume: 0.25 });
+    this.playSequence([
+      { freq: 660, duration: 0.1, type: 'square', volume: 0.2 },
+      { freq: 880, duration: 0.1, type: 'square', volume: 0.2 },
+      { delay: 0.12, freq: 1046, duration: 0.1, type: 'square', volume: 0.25 },
+    ]);
   }
 
   kitchenReady(): void {
-    this.playBeep({ freq: 880, duration: 0.2, volume: 0.3 });
+    this.playSequence([
+      { freq: 660, duration: 0.12, volume: 0.25 },
+      { freq: 784, duration: 0.12, volume: 0.25 },
+      { freq: 880, duration: 0.15, volume: 0.3 },
+    ]);
   }
 
   resume(): void {

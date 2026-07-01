@@ -328,7 +328,7 @@ export const dashboardService = {
             title: `Pago a ${exp.description || 'Motorizado'}`,
             subtitle: `${exp.amountUsd.toFixed(2)} USD`,
             amount: exp.amountUsd,
-            route: '/delivery',
+            route: '/gastos',
             totalCount: deliveryExpenses.length,
           });
         }
