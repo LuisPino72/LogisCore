@@ -30,7 +30,7 @@ function shouldShow(scope: string | undefined, section: string): boolean {
   const tabSections: Record<string, string[]> = {
     summary: ['resumen', 'gastos', 'caja'],
     profits: ['ganancias'],
-    products: ['productos', 'categorias', 'pagos'],
+    products: ['productos', 'categorias', 'pagos', 'insights'],
     cash: ['caja'],
     more: ['clientes', 'produccion', 'stock'],
     delivery: ['delivery'],
