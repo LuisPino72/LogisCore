@@ -37,6 +37,7 @@ function mapExpense(e: DexieExpense): Gasto {
     updatedAt: e.updatedAt,
     deletedAt: e.deletedAt,
     saleId: e.saleId,
+    purchaseOrderId: e.purchaseOrderId,
   };
 }
 
@@ -108,6 +109,7 @@ export const gastosService = {
                 updatedAt: row.updated_at,
                 deletedAt: row.deleted_at,
                 saleId: row.sale_id,
+                purchaseOrderId: row.purchase_order_id,
               }));
             }
           } catch (fbErr) {
@@ -384,6 +386,7 @@ export const gastosService = {
               updatedAt: row.updated_at,
               deletedAt: row.deleted_at,
               saleId: row.sale_id,
+              purchaseOrderId: row.purchase_order_id,
             }));
           }
         } catch (fbErr) {
@@ -465,6 +468,7 @@ export const gastosService = {
             updatedAt: row.updated_at,
             deletedAt: row.deleted_at,
             saleId: row.sale_id,
+            purchaseOrderId: row.purchase_order_id,
           }));
         }
       } catch (fbErr) {

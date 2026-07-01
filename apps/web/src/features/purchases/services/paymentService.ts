@@ -104,6 +104,8 @@ export async function paySupplierDebt(
           await syncQueue.enqueue('expenses', 'UPDATE', expenseId, toSnake({
             id: expenseId, status: 'paid', updated_at: now,
           } as unknown as Record<string, unknown>), tenantId);
+        } else {
+          logger.warn(PURCHASES_MODULE, 'No se encontró expense COMPRA_INVENTARIO para orden', { purchaseOrderId });
         }
       }
 
