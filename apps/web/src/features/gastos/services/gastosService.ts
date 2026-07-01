@@ -433,9 +433,52 @@ export const gastosService = {
         .equals(tenantId)
         .filter((e) => !e.deletedAt && e.isRecurring && !e.parentExpenseId)
         .toArray();
-      const sorted = templates
-        .sort((a, b) => (a.nextDueDate ?? '').localeCompare(b.nextDueDate ?? ''))
-        .map(mapExpense);
+
+      let cloudTemplates: Gasto[] = [];
+      try {
+        const tenantUuid = await TenantTranslator.slugToUuid(tenantId);
+        const { data, error } = await supabase
+          .from('expenses')
+          .select('*')
+          .eq('tenant_id', tenantUuid)
+          .is('deleted_at', null)
+          .eq('is_recurring', true)
+          .is('parent_expense_id', null);
+
+        if (!error && data && data.length > 0) {
+          cloudTemplates = data.map((row) => mapExpense({
+            id: row.id,
+            tenantId: row.tenant_id,
+            createdByUserId: row.created_by_user_id,
+            category: row.category,
+            amountUsd: row.amount_usd,
+            exchangeRate: row.exchange_rate,
+            amountBs: row.amount_bs,
+            description: row.description,
+            date: row.date,
+            isRecurring: row.is_recurring,
+            recurrenceType: row.recurrence_type,
+            nextDueDate: row.next_due_date,
+            parentExpenseId: row.parent_expense_id,
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            deletedAt: row.deleted_at,
+            saleId: row.sale_id,
+          }));
+        }
+      } catch (fbErr) {
+        logger.warn(GASTOS_MODULE, 'Supabase fallback failed for getRecurringTemplates', fbErr);
+      }
+
+      // Merge: Dexie gana, cloud completa lo faltante
+      const merged = new Map<string, Gasto>();
+      for (const t of templates) merged.set(t.id, mapExpense(t));
+      for (const t of cloudTemplates) if (!merged.has(t.id)) merged.set(t.id, t);
+
+      const sorted = Array.from(merged.values()).sort((a, b) =>
+        (a.nextDueDate ?? '').localeCompare(b.nextDueDate ?? ''),
+      );
       return success(sorted);
     } catch (err) {
       console.error('[gastosService.getRecurringTemplates]', err);
