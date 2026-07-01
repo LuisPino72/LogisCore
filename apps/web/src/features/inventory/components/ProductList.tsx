@@ -235,7 +235,7 @@ export function ProductList({ products, categories, tenantId, onSearch, initialT
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, filterCategory]);
+  }, [searchQuery, filterCategory, stockFilter, productTypeFilter]);
 
   const defaultsMap = useMemo(() => {
     const map = new Map<string, string>();

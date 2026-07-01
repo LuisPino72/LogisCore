@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, SearchInput, Button, EmptyState, Spinner, CedulaInput, Input } from '../../../common/components';
+import { Modal, SearchInput, Button, EmptyState, Spinner, CedulaInput, Input, Textarea } from '../../../common/components';
 import { User, UserPlus, X } from 'lucide-react';
 import { useCustomerStore } from '../stores/customerStore';
 import { useCustomers } from '../hooks/useCustomers';
@@ -31,6 +31,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newCedula, setNewCedula] = useState('');
+  const [newAddress, setNewAddress] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
     setNewName('');
     setNewPhone('');
     setNewCedula('');
+    setNewAddress('');
     setFieldErrors({});
     onClose();
   };
@@ -62,6 +64,7 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
       name: newName.trim(),
       phone: newPhone.trim() || undefined,
       cedula: newCedula.trim().toUpperCase() || undefined,
+      address: newAddress.trim() || undefined,
     };
     const parsed = CreateCustomerInputSchema.safeParse(payload);
     if (!parsed.success) {
@@ -230,6 +233,16 @@ export function CustomerPickerModal({ isOpen, onClose, onSelect, tenantId, selec
             hint="Formato: 0412-1234567"
             inputClassName="text-sm"
             inputMode="tel"
+          />
+
+          <Textarea
+            label="Dirección (opcional)"
+            value={newAddress}
+            onChange={(e) => { setNewAddress(e.target.value); clearFieldError('address'); }}
+            error={fieldErrors.address}
+            placeholder="Ej: Calle 123, Caracas"
+            rows={2}
+            validation={{ maxLength: 100 }}
           />
 
           {fieldErrors.form && (
