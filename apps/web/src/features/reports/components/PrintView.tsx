@@ -1,4 +1,10 @@
 import { forwardRef } from 'react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, Cell,
+  BarChart, Bar,
+  ResponsiveContainer,
+} from 'recharts';
 import type {
   ExecutiveSummaryData,
   DailyProfitPoint,
@@ -19,7 +25,23 @@ function formatDual(bs: number, usd: number): string {
   return `${formatBs(bs)} / ${formatUsd(usd)}`;
 }
 
+function shouldShow(scope: string | undefined, section: string): boolean {
+  if (!scope || scope === 'all') return true;
+  const tabSections: Record<string, string[]> = {
+    summary: ['resumen', 'gastos', 'caja'],
+    profits: ['ganancias'],
+    products: ['productos', 'categorias', 'pagos'],
+    cash: ['caja'],
+    more: ['clientes', 'produccion', 'stock'],
+    delivery: ['delivery'],
+  };
+  return (tabSections[scope] ?? []).includes(section);
+}
+
+const CHART_COLORS = ['#0D9488', '#F59E0B', '#EF4444', '#8B5CF6', '#3B82F6', '#10B981', '#F97316', '#EC4899', '#6366F1', '#14B8A6'];
+
 interface PrintViewProps {
+  scope?: string;
   summary: ExecutiveSummaryData | null;
   profitOverTime: DailyProfitPoint[];
   topProducts: TopProductData[];
@@ -31,6 +53,11 @@ interface PrintViewProps {
   customersRanking: CustomerRankingItem[];
   productionSummary: ProductionSummaryData | null;
   recipeProfitability: RecipeProfitabilityItem[];
+  lowStockProducts?: { productId: string; name: string; sku: string; stock: number; minStock: number; categoryName?: string }[];
+  worstProducts?: TopProductData[];
+  worstCategories?: TopCategoryData[];
+  topByVolume?: TopProductData[];
+  deliverySettlement?: { name: string; deliveryCount: number; totalFees: number; paidAmount: number; pendingAmount: number }[];
 }
 
 const printStyles = `
@@ -175,7 +202,7 @@ const printStyles = `
 `;
 
 export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function PrintView(
-  { summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability },
+  { scope, summary, profitOverTime, topProducts, topCategories, paymentBreakdown, cashAnalysis, expenseBreakdown, customersSummary, customersRanking, productionSummary, recipeProfitability, lowStockProducts = [], worstProducts = [], worstCategories = [], topByVolume = [], deliverySettlement = [] },
   ref,
 ) {
   const reportDate = new Date().toLocaleDateString('es-VE', {
@@ -192,6 +219,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
       </div>
 
       {/* Resumen Ejecutivo */}
+      {shouldShow(scope, 'resumen') && (
       <div className="print-section">
         <h2 className="print-section-title">Resumen Ejecutivo</h2>
         {summary ? (
@@ -204,14 +232,20 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
             {summary.salesVsYesterdayPercent !== undefined && (
               <KpiCard label="Vs Ayer" value={`${summary.salesVsYesterdayPercent}%`} />
             )}
+            {summary.igtfTotal > 0 && <KpiCard label="IGTF Total" value={formatUsd(summary.igtfTotal)} />}
+            {summary.totalIvaUsd > 0 && <KpiCard label="IVA Total" value={formatDual(summary.totalIvaBs, summary.totalIvaUsd)} />}
+            {summary.totalDiscountUsd > 0 && <KpiCard label="Descuentos" value={formatDual(summary.totalDiscountBs, summary.totalDiscountUsd)} />}
+            {summary.pendingCreditUsd > 0 && <KpiCard label="Crédito Pendiente" value={formatUsd(summary.pendingCreditUsd)} />}
+            {summary.collectedCreditUsd > 0 && <KpiCard label="Crédito Cobrado" value={formatUsd(summary.collectedCreditUsd)} />}
           </div>
         ) : (
           <div className="print-empty">Sin datos de resumen</div>
         )}
       </div>
+      )}
 
       {/* Ganancias en el Tiempo */}
-      {profitOverTime.length > 0 && (
+      {shouldShow(scope, 'ganancias') && profitOverTime.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Ganancias en el Tiempo</h2>
           <div className="print-table-wrap">
@@ -240,17 +274,39 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                     <td>{formatUsd(p.costUsd)}</td>
                     <td>{formatBs(p.profitBs)}</td>
                     <td>{formatUsd(p.profitUsd)}</td>
-                    <td>{p.transactions}</td>
-                  </tr>
-                ))}
+                  <td>{p.transactions}</td>
+                </tr>
+              ))}
               </tbody>
             </table>
           </div>
+          {profitOverTime.length > 1 && shouldShow(scope, 'ganancias') && (
+            <div style={{ width: '100%', height: '220px', marginTop: '12px' }}>
+              <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px' }}>Ganancias Diarias</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={profitOverTime}>
+                  <defs>
+                    <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0D9488" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#0D9488" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="label" tick={{ fontSize: 8 }} />
+                  <YAxis tick={{ fontSize: 8 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '8pt' }} />
+                  <Area type="monotone" dataKey="profitUsd" name="Ganancia $" stroke="#0D9488" fill="url(#profitGrad)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="salesUsd" name="Ventas $" stroke="#F59E0B" fill="none" strokeWidth={1.5} strokeDasharray="4 2" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
 
       {/* Top Productos */}
-      {topProducts.length > 0 && (
+      {shouldShow(scope, 'productos') && topProducts.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Top Productos por Ganancia</h2>
           <div className="print-table-wrap">
@@ -285,11 +341,34 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               </tbody>
             </table>
           </div>
+          {topProducts.length > 1 && shouldShow(scope, 'productos') && (
+            <div style={{ width: '100%', height: '240px', marginTop: '12px' }}>
+              <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px' }}>Top Productos — Ganancia $</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={topProducts.slice(0, 8)}
+                  layout="vertical"
+                  margin={{ left: 100, right: 20, top: 5, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 8 }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 7 }} width={90} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '8pt' }} />
+                  <Bar dataKey="profitUsd" name="Ganancia $" radius={[0, 3, 3, 0]}>
+                    {topProducts.slice(0, 8).map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       )}
 
       {/* Top Categorías */}
-      {topCategories.length > 0 && (
+      {shouldShow(scope, 'categorias') && topCategories.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Top Categorías por Ganancia</h2>
           <div className="print-table-wrap">
@@ -330,7 +409,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
       )}
 
       {/* Métodos de Pago */}
-      {paymentBreakdown.length > 0 && (
+      {shouldShow(scope, 'pagos') && paymentBreakdown.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Métodos de Pago</h2>
           <div className="print-table-wrap">
@@ -351,17 +430,43 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                     <td>{p.count}</td>
                     <td>{formatBs(p.totalBs)}</td>
                     <td>{formatUsd(p.totalUsd)}</td>
-                    <td>{p.percentage}%</td>
-                  </tr>
-                ))}
+                  <td>{p.percentage}%</td>
+                </tr>
+              ))}
               </tbody>
             </table>
           </div>
+          {paymentBreakdown.length > 0 && shouldShow(scope, 'pagos') && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
+              <div style={{ width: '280px', height: '220px' }}>
+                <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>Distribución de Pagos</h3>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={paymentBreakdown}
+                      cx="50%" cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      dataKey="totalUsd"
+                      nameKey="label"
+                      paddingAngle={2}
+                    >
+                      {paymentBreakdown.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: '8pt' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Desglose de Gastos */}
-      {expenseBreakdown.length > 0 && (
+      {shouldShow(scope, 'gastos') && expenseBreakdown.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Desglose de Gastos</h2>
           <div className="print-table-wrap">
@@ -396,11 +501,37 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               </tbody>
             </table>
           </div>
+          {expenseBreakdown.length > 0 && shouldShow(scope, 'gastos') && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
+              <div style={{ width: '280px', height: '220px' }}>
+                <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>Gastos por Categoría</h3>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={expenseBreakdown}
+                      cx="50%" cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      dataKey="amountUsd"
+                      nameKey="label"
+                      paddingAngle={2}
+                    >
+                      {expenseBreakdown.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: '8pt' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Análisis de Caja */}
-      {cashAnalysis.length > 0 && (
+      {shouldShow(scope, 'caja') && cashAnalysis.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Análisis de Caja</h2>
           <div className="print-table-wrap">
@@ -408,6 +539,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <thead>
                 <tr>
                   <th>Caja</th>
+                  <th>Operador</th>
                   <th>Apertura Bs</th>
                   <th>Apertura $</th>
                   <th>Ventas Bs</th>
@@ -419,7 +551,8 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <tbody>
                 {cashAnalysis.map((r, i) => (
                   <tr key={`${i}-a`}>
-                    <td style={{ fontWeight: 600 }}>{new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
+                    <td style={{ fontWeight: 600 }}>{r.registerName ?? new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
+                    <td>{r.operatorName ?? '-'}</td>
                     <td>{formatBs(r.openingBalanceBs)}</td>
                     <td>{formatUsd(r.openingBalanceUsd)}</td>
                     <td>{formatBs(r.totalSalesBs)}</td>
@@ -436,6 +569,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <thead>
                 <tr>
                   <th>Caja</th>
+                  <th>Operador</th>
                   <th>Cierre Bs</th>
                   <th>Cierre $</th>
                   <th>Diferencia Bs</th>
@@ -446,7 +580,8 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
               <tbody>
                 {cashAnalysis.map((r, i) => (
                   <tr key={`${i}-b`}>
-                    <td style={{ fontWeight: 600 }}>{new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
+                    <td style={{ fontWeight: 600 }}>{r.registerName ?? new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short' })}</td>
+                    <td>{r.operatorName ?? '-'}</td>
                     <td>{r.closingBalanceBs !== undefined ? formatBs(r.closingBalanceBs) : '-'}</td>
                     <td>{r.closingBalanceUsd !== undefined ? formatUsd(r.closingBalanceUsd) : '-'}</td>
                     <td>{r.differenceBs !== undefined ? formatBs(r.differenceBs) : '-'}</td>
@@ -461,7 +596,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
       )}
 
       {/* Clientes */}
-      {customersRanking.length > 0 && (
+      {shouldShow(scope, 'clientes') && customersRanking.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Ranking de Clientes</h2>
           {customersSummary && (
@@ -504,7 +639,7 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
       )}
 
       {/* Producción */}
-      {recipeProfitability.length > 0 && (
+      {shouldShow(scope, 'produccion') && recipeProfitability.length > 0 && (
         <div className="print-section">
           <h2 className="print-section-title">Producción — Rentabilidad de Recetas</h2>
           {productionSummary && (
@@ -542,6 +677,159 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                     <td>{formatUsd(r.costPerUnitUsd)}</td>
                     <td>{r.wastePct}%</td>
                     <td>{r.totalQuantityProduced}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Productos con Stock Bajo */}
+      {lowStockProducts && lowStockProducts.length > 0 && shouldShow(scope, 'stock') && (
+        <div className="print-section">
+          <h2 className="print-section-title">Productos con Stock Bajo</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>SKU</th>
+                  <th>Stock Actual</th>
+                  <th>Stock Mínimo</th>
+                  <th>Categoría</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowStockProducts.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.name}</td>
+                    <td>{p.sku}</td>
+                    <td style={{ color: '#dc2626', fontWeight: 700 }}>{p.stock}</td>
+                    <td>{p.minStock}</td>
+                    <td>{p.categoryName ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Insights */}
+      {(worstProducts?.length || worstCategories?.length || topByVolume?.length) && shouldShow(scope, 'insights') && (
+        <div className="print-section">
+          <h2 className="print-section-title">Insights</h2>
+
+          {worstProducts && worstProducts.length > 0 && (
+            <>
+              <h3 style={{ fontSize: '9pt', fontWeight: 600, margin: '8px 0 4px' }}>Peores Productos (menor ganancia)</h3>
+              <div className="print-table-wrap">
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Ganancia $</th>
+                      <th>Vendidos</th>
+                      <th>Margen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {worstProducts.map((p, i) => (
+                      <tr key={i}>
+                        <td>{p.name}</td>
+                        <td>{formatUsd(p.profitUsd)}</td>
+                        <td>{p.quantitySold}</td>
+                        <td>{p.marginPercent}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {worstCategories && worstCategories.length > 0 && (
+            <>
+              <h3 style={{ fontSize: '9pt', fontWeight: 600, margin: '8px 0 4px' }}>Peores Categorías</h3>
+              <div className="print-table-wrap">
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th>Categoría</th>
+                      <th>Ganancia $</th>
+                      <th>Vendidos</th>
+                      <th>Margen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {worstCategories.map((c, i) => (
+                      <tr key={i}>
+                        <td>{c.categoryName}</td>
+                        <td>{formatUsd(c.profitUsd)}</td>
+                        <td>{c.quantitySold}</td>
+                        <td>{c.marginPercent}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {topByVolume && topByVolume.length > 0 && (
+            <>
+              <h3 style={{ fontSize: '9pt', fontWeight: 600, margin: '8px 0 4px' }}>Top por Volumen de Ventas</h3>
+              <div className="print-table-wrap">
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Vendidos</th>
+                      <th>Ingreso $</th>
+                      <th>Ganancia $</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topByVolume.map((p, i) => (
+                      <tr key={i}>
+                        <td>{p.name}</td>
+                        <td>{p.quantitySold}</td>
+                        <td>{formatUsd(p.revenueUsd)}</td>
+                        <td>{formatUsd(p.profitUsd)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Liquidación Delivery */}
+      {deliverySettlement && deliverySettlement.length > 0 && shouldShow(scope, 'delivery') && (
+        <div className="print-section">
+          <h2 className="print-section-title">Liquidación de Delivery</h2>
+          <div className="print-table-wrap">
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th>Motorizado</th>
+                  <th>Entregas</th>
+                  <th>Tarifas $</th>
+                  <th>Pagado $</th>
+                  <th>Pendiente $</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deliverySettlement.map((s, i) => (
+                  <tr key={i}>
+                    <td style={{ fontWeight: 600 }}>{s.name}</td>
+                    <td>{s.deliveryCount}</td>
+                    <td>{formatUsd(s.totalFees)}</td>
+                    <td>{formatUsd(s.paidAmount)}</td>
+                    <td style={s.pendingAmount > 0 ? { color: '#dc2626', fontWeight: 700 } : {}}>{s.pendingAmount > 0 ? formatUsd(s.pendingAmount) : '\u2014'}</td>
                   </tr>
                 ))}
               </tbody>

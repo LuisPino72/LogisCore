@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { Result, AppError } from '@logiscore/core';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { reportsService } from '../services/reportsService';
+import type { DeliverySettlementRow } from '../services/deliverySettlementService';
 import type {
   ReportFilters,
   ExecutiveSummaryData,
@@ -35,6 +36,7 @@ interface ReportsState {
   productionSummary: ProductionSummaryData | null;
   recipeProfitability: RecipeProfitabilityItem[];
   lowStockProducts: { productId: string; name: string; sku: string; stock: number; minStock: number; categoryName?: string }[];
+  deliverySettlementRows: DeliverySettlementRow[];
 }
 
 const initialState: ReportsState = {
@@ -43,6 +45,7 @@ const initialState: ReportsState = {
   customersSummary: null, customersRanking: [],
   productionSummary: null, recipeProfitability: [],
   lowStockProducts: [],
+  deliverySettlementRows: [],
 };
 
 export function useReports(tenantId: string | null) {
@@ -217,7 +220,7 @@ export function useReports(tenantId: string | null) {
   }, [tenantId, filters]);
 
   const preloadAdjacent = useCallback((currentTab: ReportTab) => {
-    const tabs: ReportTab[] = ['summary', 'profits', 'products', 'cash', 'more'];
+    const tabs: ReportTab[] = ['summary', 'profits', 'products', 'cash', 'more', 'delivery'];
     const idx = tabs.indexOf(currentTab);
     if (idx > 0) preloadTabData(tabs[idx - 1]);
     if (idx < tabs.length - 1) preloadTabData(tabs[idx + 1]);
@@ -328,15 +331,14 @@ export function useReports(tenantId: string | null) {
 
   const fetchMoreTabData = useCallback(async () => {
     if (!tenantId) return;
-    if (state.customersSummary && state.productionSummary) return;
-
     try {
-      const [cs, cr, ps, rp, ls] = await Promise.all([
+      const [cs, cr, ps, rp, ls, ds] = await Promise.all([
         reportsService.getCustomersSummary(tenantId, filters),
         reportsService.getCustomersRanking(tenantId, filters),
         reportsService.getProductionSummary(tenantId, filters),
         reportsService.getRecipeProfitability(tenantId, filters),
         reportsService.getLowStockReport(tenantId),
+        reportsService.getDeliverySettlement(tenantId, filters.startDate ?? '', filters.endDate ?? ''),
       ]);
       setState((prev) => ({
         ...prev,
@@ -345,11 +347,12 @@ export function useReports(tenantId: string | null) {
         productionSummary: ps.ok ? ps.data : prev.productionSummary,
         recipeProfitability: rp.ok ? rp.data : prev.recipeProfitability,
         lowStockProducts: ls.ok ? ls.data : prev.lowStockProducts,
+        deliverySettlementRows: ds.ok ? ds.data : prev.deliverySettlementRows,
       }));
     } catch {
       // Silent fail — export will show empty data
     }
-  }, [tenantId, filters, state.customersSummary, state.productionSummary, state.lowStockProducts]);
+  }, [tenantId, filters, state.customersSummary, state.productionSummary, state.lowStockProducts, state.deliverySettlementRows]);
 
   return {
     filters, setFilters, activeTab, setActiveTab,

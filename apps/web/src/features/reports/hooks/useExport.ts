@@ -28,6 +28,11 @@ interface ExportAllData {
   customersRanking: CustomerRankingItem[];
   productionSummary: ProductionSummaryData | null;
   recipeProfitability: RecipeProfitabilityItem[];
+  lowStockProducts?: { productId: string; name: string; sku: string; stock: number; minStock: number; categoryName?: string }[];
+  worstProducts?: TopProductData[];
+  worstCategories?: TopCategoryData[];
+  topByVolume?: TopProductData[];
+  deliverySettlement?: { name: string; deliveryCount: number; totalFees: number; paidAmount: number; pendingAmount: number }[];
 }
 
 interface SheetConfig {
@@ -57,6 +62,18 @@ function addSheet(wb: Workbook, { name, headers, rows, colWidths }: SheetConfig)
   });
 }
 
+function getSheetsForTab(tab: string): string[] {
+  const map: Record<string, string[]> = {
+    summary: ['Resumen', 'Gastos', 'Caja'],
+    profits: ['Ganancias'],
+    products: ['Productos', 'Categorías', 'Pagos'],
+    cash: ['Caja'],
+    more: ['Clientes', 'Producción', 'Stock Bajo'],
+    delivery: ['Liquidación Delivery'],
+  };
+  return map[tab] ?? [];
+}
+
 function buildSheets(data: ExportAllData): SheetConfig[] {
   const sheets: SheetConfig[] = [];
 
@@ -69,6 +86,16 @@ function buildSheets(data: ExportAllData): SheetConfig[] {
   sheets.push(buildCashSheet(data.cashAnalysis));
   sheets.push(buildCustomersSheet(data.customersSummary, data.customersRanking));
   sheets.push(buildProductionSheet(data.productionSummary, data.recipeProfitability));
+
+  if (data.lowStockProducts && data.lowStockProducts.length > 0) {
+    sheets.push(buildLowStockSheet(data.lowStockProducts));
+  }
+  if ((data.worstProducts && data.worstProducts.length > 0) || (data.worstCategories && data.worstCategories.length > 0) || (data.topByVolume && data.topByVolume.length > 0)) {
+    sheets.push(buildInsightsSheet(data.worstProducts, data.worstCategories, data.topByVolume));
+  }
+  if (data.deliverySettlement && data.deliverySettlement.length > 0) {
+    sheets.push(buildDeliverySheet(data.deliverySettlement));
+  }
 
   return sheets;
 }
@@ -93,6 +120,11 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): SheetConfig {
       ['Gastos Totales', `${formatBs(summary.totalExpensesBs)} / ${formatUsd(summary.totalExpensesUsd)}`],
       ['Ganancia Neta', `${formatBs(summary.netProfitBs)} / ${formatUsd(summary.netProfitUsd)}`],
       ['Top Producto', summary.topProductName ?? 'N/A'],
+      ['IGTF Total', formatUsd(summary.igtfTotal)],
+      ['IVA Total', `${formatBs(summary.totalIvaBs)} / ${formatUsd(summary.totalIvaUsd)}`],
+      ['Descuentos', `${formatBs(summary.totalDiscountBs)} / ${formatUsd(summary.totalDiscountUsd)}`],
+      ['Crédito Pendiente', formatUsd(summary.pendingCreditUsd)],
+      ['Crédito Cobrado', formatUsd(summary.collectedCreditUsd)],
     );
     if (summary.salesVsYesterdayPercent !== undefined) {
       rows.push(['Vs Ayer %', `${summary.salesVsYesterdayPercent}%`]);
@@ -113,9 +145,18 @@ function buildProfitSheet(profitOverTime: DailyProfitPoint[]): SheetConfig {
       formatUsd(p.costUsd),
       formatBs(p.profitBs),
       formatUsd(p.profitUsd),
-      p.transactions,
-    ]);
+    p.transactions,
+  ]);
   });
+  // Datos para gráfico (chart-ready)
+  if (profitOverTime.length > 0) {
+    rows.push(['', '', '', '', '', '', '', '', '']);
+    rows.push(['--- DATOS PARA GRÁFICO DE GANANCIAS ---', '', '', '', '', '', '', '', '']);
+    rows.push(['Fecha', '', 'Ventas $', '', '', 'Gasto $', '', 'Ganancia $', '']);
+    profitOverTime.forEach((p) => {
+      rows.push([p.label, '', formatUsd(p.salesUsd), '', '', formatUsd(p.costUsd), '', formatUsd(p.profitUsd), '']);
+    });
+  }
   return { name: 'Ganancias', headers: ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'], rows, colWidths: [16, 10, 14, 10, 14, 10, 14, 10, 14] };
 }
 
@@ -134,6 +175,15 @@ function buildProductsSheet(topProducts: TopProductData[]): SheetConfig {
       `${p.marginPercent}%`,
     ]);
   });
+  // Datos para gráfico (chart-ready)
+  if (topProducts.length > 0) {
+    rows.push(['', '', '', '', '', '', '', '', '']);
+    rows.push(['--- DATOS PARA GRÁFICO DE PRODUCTOS ---', '', '', '', '', '', '', '', '']);
+    rows.push(['Producto', '', '', 'Ganancia $', '', '', '', '', '']);
+    topProducts.slice(0, 10).forEach((p) => {
+      rows.push([p.name, '', '', p.profitUsd, '', '', '', '', '']);
+    });
+  }
   return { name: 'Productos', headers: ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [30, 10, 14, 10, 14, 10, 14, 10, 10] };
 }
 
@@ -174,6 +224,16 @@ function buildExpensesSheet(expenseBreakdown: ExpenseBreakdownItem[]): SheetConf
   rows.push(['', '', '', '']);
   rows.push(['TOTAL', formatBs(totalBs), formatUsd(totalUsd), '100%']);
 
+  // Datos para gráfico (chart-ready)
+  if (expenseBreakdown.length > 0) {
+    rows.push(['', '', '', '']);
+    rows.push(['--- DATOS PARA GRÁFICO DE GASTOS ---', '', '', '']);
+    rows.push(['Tipo de Gasto', 'Monto $', '', '']);
+    expenseBreakdown.forEach((e) => {
+      rows.push([e.label, e.amountUsd, '', '']);
+    });
+  }
+
   return { name: 'Gastos', headers: ['Tipo de Gasto', 'Monto Bs', 'Monto $', '% del Total'], rows, colWidths: [30, 16, 12, 12] };
 }
 
@@ -182,6 +242,15 @@ function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): SheetConf
   paymentBreakdown.forEach((p) => {
     rows.push([p.label, p.count, formatBs(p.totalBs), formatUsd(p.totalUsd), `${p.percentage}%`]);
   });
+  // Datos para gráfico (chart-ready)
+  if (paymentBreakdown.length > 0) {
+    rows.push(['', '', '', '', '']);
+    rows.push(['--- DATOS PARA GRÁFICO DE PAGOS ---', '', '', '', '']);
+    rows.push(['Método', 'Total $', '', '', '']);
+    paymentBreakdown.forEach((p) => {
+      rows.push([p.label, p.totalUsd, '', '', '']);
+    });
+  }
   return { name: 'Pagos', headers: ['Método', 'Transacciones', 'Total Bs', 'Total $', '%'], rows, colWidths: [20, 14, 14, 10, 8] };
 }
 
@@ -189,7 +258,8 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): SheetConfig {
   const rows: (string | number | undefined | null)[][] = [];
   cashAnalysis.forEach((r) => {
     rows.push([
-      new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
+      r.registerName ?? new Date(r.openedAt).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }),
+      r.operatorName ?? '',
       formatBs(r.openingBalanceBs),
       formatUsd(r.openingBalanceUsd),
       formatBs(r.totalSalesBs),
@@ -203,7 +273,7 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): SheetConfig {
       r.status === 'open' ? 'Abierta' : 'Cerrada',
     ]);
   });
-  return { name: 'Caja', headers: ['Caja', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'], rows, colWidths: [12, 14, 10, 14, 10, 14, 10, 14, 10, 14, 10, 10] };
+  return { name: 'Caja', headers: ['Caja', 'Operador', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'], rows, colWidths: [18, 18, 14, 10, 14, 10, 14, 10, 14, 10, 14, 10, 10] };
 }
 
 function buildCustomersSheet(summary: CustomersSummaryData | null, ranking: CustomerRankingItem[]): SheetConfig {
@@ -281,11 +351,80 @@ function buildProductionSheet(summary: ProductionSummaryData | null, profitabili
   };
 }
 
+function buildLowStockSheet(products: { productId: string; name: string; sku: string; stock: number; minStock: number; categoryName?: string }[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
+  products.forEach((p) => {
+    rows.push([p.name, p.sku, p.stock, p.minStock, p.categoryName ?? '']);
+  });
+  return {
+    name: 'Stock Bajo',
+    headers: ['Producto', 'SKU', 'Stock Actual', 'Stock Mínimo', 'Categoría'],
+    rows,
+    colWidths: [30, 16, 14, 14, 20],
+  };
+}
+
+function buildInsightsSheet(
+  worstProducts?: TopProductData[],
+  worstCategories?: TopCategoryData[],
+  topByVolume?: TopProductData[],
+): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
+
+  if (worstProducts && worstProducts.length > 0) {
+    rows.push(['--- PEORES PRODUCTOS (menor ganancia) ---', '', '', '']);
+    worstProducts.forEach((p) => {
+      rows.push([p.name, `${formatUsd(p.profitUsd)}`, `${p.quantitySold} vendidos`, `${p.marginPercent}% margen`]);
+    });
+    rows.push(['', '', '', '']);
+  }
+
+  if (worstCategories && worstCategories.length > 0) {
+    rows.push(['--- PEORES CATEGORÍAS (menor ganancia) ---', '', '', '']);
+    worstCategories.forEach((c) => {
+      rows.push([c.categoryName, `${formatUsd(c.profitUsd)}`, `${c.quantitySold} vendidos`, `${c.marginPercent}% margen`]);
+    });
+    rows.push(['', '', '', '']);
+  }
+
+  if (topByVolume && topByVolume.length > 0) {
+    rows.push(['--- TOP POR VOLUMEN (más vendidos) ---', '', '', '']);
+    topByVolume.forEach((p) => {
+      rows.push([p.name, `${p.quantitySold} vendidos`, `${formatUsd(p.revenueUsd)} ingreso`, `${formatUsd(p.profitUsd)} ganancia`]);
+    });
+  }
+
+  return {
+    name: 'Insights',
+    headers: ['Nombre', 'Métrica 1', 'Métrica 2', 'Métrica 3'],
+    rows,
+    colWidths: [30, 20, 20, 20],
+  };
+}
+
+function buildDeliverySheet(settlements: { name: string; deliveryCount: number; totalFees: number; paidAmount: number; pendingAmount: number }[]): SheetConfig {
+  const rows: (string | number | undefined | null)[][] = [];
+  settlements.forEach((s) => {
+    rows.push([s.name, s.deliveryCount, formatUsd(s.totalFees), formatUsd(s.paidAmount), formatUsd(s.pendingAmount)]);
+  });
+  return {
+    name: 'Liquidación Delivery',
+    headers: ['Motorizado', 'Entregas', 'Tarifas $', 'Pagado $', 'Pendiente $'],
+    rows,
+    colWidths: [25, 12, 12, 12, 12],
+  };
+}
+
 export function useExport() {
-  const exportExcelAll = useCallback(async (data: ExportAllData) => {
+  const exportExcelAll = useCallback(async (data: ExportAllData, scope?: string) => {
     const { default: ExcelJS } = await import('exceljs');
     const wb = new ExcelJS.Workbook();
-    const sheets = buildSheets(data);
+    let sheets = buildSheets(data);
+
+    if (scope && scope !== 'all') {
+      const allowed = getSheetsForTab(scope);
+      sheets = sheets.filter((s) => allowed.includes(s.name));
+    }
 
     for (const sheet of sheets) {
       addSheet(wb, sheet);
@@ -296,7 +435,8 @@ export function useExport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reporte-logiscore-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const suffix = scope && scope !== 'all' ? `-${scope}` : '';
+    a.download = `Sasa-Reporte${suffix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

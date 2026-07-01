@@ -42,6 +42,15 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'delivery', label: 'Liquidación', icon: <Truck size={20} /> },
 ];
 
+const TAB_LABELS: Record<string, string> = {
+  summary: 'Resumen',
+  profits: 'Ganancias',
+  products: 'Productos',
+  cash: 'Caja',
+  more: 'Más',
+  delivery: 'Liquidación',
+};
+
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo_bs: 'Efectivo Bs',
   pago_movil: 'Pago Móvil',
@@ -272,6 +281,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
     productionSummary,
     recipeProfitability,
     lowStockProducts,
+    deliverySettlementRows,
     fetchMoreTabData,
   } = useReports(tenantId);
 
@@ -280,12 +290,16 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
   const [showCustomDate, setShowCustomDate] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [printScope, setPrintScope] = useState<string>('all');
 
-  const handlePrint = useCallback(async () => {
+  const handlePrint = useCallback(async (scope: string = 'all') => {
+    setPrintScope(scope);
+    await new Promise(resolve => setTimeout(resolve, 0));
+
     if (!printRef.current) return;
-    
+
     setIsGeneratingPdf(true);
-    
+
     const container = printRef.current.parentElement;
     if (!container) {
       setIsGeneratingPdf(false);
@@ -467,6 +481,13 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
               onPrint={handlePrint}
               isGeneratingPdf={isGeneratingPdf}
               fetchMoreTabData={fetchMoreTabData}
+              activeTab={activeTab}
+              activeTabLabel={TAB_LABELS[activeTab]}
+              lowStockProducts={lowStockProducts}
+              worstProducts={worstProducts}
+              worstCategories={worstCategories}
+              topByVolume={topByVolume}
+              deliverySettlement={deliverySettlementRows}
             />
           </Tooltip>
         </div>
@@ -667,6 +688,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
       <div className="print-container">
         <PrintView
           ref={printRef}
+          scope={printScope}
           summary={summary}
           profitOverTime={profitOverTime}
           topProducts={topProducts}
@@ -678,6 +700,11 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
           customersRanking={customersRanking}
           productionSummary={productionSummary}
           recipeProfitability={recipeProfitability}
+          lowStockProducts={lowStockProducts}
+          worstProducts={worstProducts}
+          worstCategories={worstCategories}
+          topByVolume={topByVolume}
+          deliverySettlement={deliverySettlementRows}
         />
       </div>
 
