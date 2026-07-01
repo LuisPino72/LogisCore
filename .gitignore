@@ -53,6 +53,10 @@ skills-lock.json
 # graphify
 .opencode
 graphify-out
+
+# Build artifacts
+dev-dist/
+*.tsbuildinfo
 AGENTS.md
 .vercel
 supabase/seed.sql

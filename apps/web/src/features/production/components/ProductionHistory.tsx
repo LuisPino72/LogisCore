@@ -34,6 +34,10 @@ export function ProductionHistory({ orders, onCancel, cancellingOrderId, tenantI
   const [ordersWithSales, setOrdersWithSales] = useState<Set<string>>(new Set());
   const { hasOrderSales, allRecipes } = useProductionStore();
 
+  useEffect(() => {
+    setPage(1);
+  }, [orders]);
+
   // Verificar ventas asociadas para órdenes confirmadas
   useEffect(() => {
     const checkSales = async () => {
