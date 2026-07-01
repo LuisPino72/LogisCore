@@ -35,6 +35,7 @@ function mapExpense(e: DexieExpense): Gasto {
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
     deletedAt: e.deletedAt,
+    saleId: e.saleId,
   };
 }
 
@@ -105,6 +106,7 @@ export const gastosService = {
               createdAt: row.created_at,
               updatedAt: row.updated_at,
               deletedAt: row.deleted_at,
+              saleId: row.sale_id,
             }));
             return success(mapped);
           }
@@ -374,6 +376,7 @@ export const gastosService = {
               createdAt: row.created_at,
               updatedAt: row.updated_at,
               deletedAt: row.deleted_at,
+              saleId: row.sale_id,
             }));
             return success(mapped);
           }

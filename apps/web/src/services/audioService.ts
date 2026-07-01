@@ -25,15 +25,7 @@ class AudioService {
 
   private getContext(): AudioContext | null {
     if (!this._enabled) return null;
-    const AudioCtx = window.AudioContext || (window as unknown as Record<string, unknown>)['webkitAudioContext'];
-    if (!AudioCtx) return null;
-    if (!this.ctx || this.ctx.state === 'closed') {
-      try {
-        this.ctx = new AudioCtx();
-      } catch {
-        return null;
-      }
-    }
+    if (!this.ctx || this.ctx.state === 'closed') return null;
     if (this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
@@ -109,9 +101,17 @@ class AudioService {
   }
 
   resume(): void {
-    const ctx = this.getContext();
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
+    const AudioCtx = window.AudioContext || (window as unknown as Record<string, unknown>)['webkitAudioContext'];
+    if (!AudioCtx) return;
+    if (!this.ctx || this.ctx.state === 'closed') {
+      try {
+        this.ctx = new AudioCtx();
+      } catch {
+        return;
+      }
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
     }
   }
 

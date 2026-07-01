@@ -52,6 +52,8 @@ export interface Gasto {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  purchaseOrderId?: string;
+  saleId?: string;
 }
 
 export interface CreateGastoInput {
