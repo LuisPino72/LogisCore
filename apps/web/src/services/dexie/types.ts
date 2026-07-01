@@ -41,6 +41,7 @@ export interface DexieProduct {
   stockMin?: number | null;
   imageUrl?: string | null;
   costPrice?: number | null;
+  lastLotCost?: number | null;
   productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both';
   createdAt?: string | null;
   updatedAt?: string | null;

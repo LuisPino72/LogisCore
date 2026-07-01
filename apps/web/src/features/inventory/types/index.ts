@@ -43,6 +43,7 @@ export interface ProductFormData {
   stockInicial: number;
   stockMin?: number;
   costPrice: number;
+  lastLotCost?: number;
   presentations?: CreatePresentationInput[];
   stockType?: 'shared';
 }

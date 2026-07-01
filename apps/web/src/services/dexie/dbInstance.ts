@@ -162,6 +162,7 @@ export class LogisCoreDB extends Dexie {
         }
       });
     });
+    this.version(37).stores({});
 
   }
 }

@@ -32,6 +32,8 @@ export const ProductSchema = z.object({
   stockMin: z.number().int().min(0).optional(),
   imageUrl: z.string().optional(),
   costPrice: z.number().min(0).optional(),
+  /** Precio total pagado por el último lote comprado (display para el usuario) */
+  lastLotCost: z.number().min(0).optional(),
   productType: ProductTypeEnum.default('resale').optional(),
   deletedAt: isoDateTime.nullable().optional(),
   hasAssemblyRecipe: z.boolean().optional(),

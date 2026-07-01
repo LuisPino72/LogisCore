@@ -166,7 +166,8 @@ export async function receiveOrder(
             updatedAt: now,
             version: 1,
           };
-          await db.products.update(item.productId, { stock: newStock, costPrice: newCostPrice });
+          const lotTotalCost = preciseRound(effectiveQty * itemCostStorage, 2);
+          await db.products.update(item.productId, { stock: newStock, costPrice: newCostPrice, lastLotCost: lotTotalCost });
           await db.inventoryMovements.add(movement);
           await db.inventoryLots.add(lot);
           await syncQueue.enqueue('inventory_movements', 'CREATE', movementId, toSnake(movement as unknown as Record<string, unknown>), tenantId);
@@ -175,6 +176,7 @@ export async function receiveOrder(
             ...product,
             stock: newStock,
             costPrice: newCostPrice,
+            lastLotCost: lotTotalCost,
           } as unknown as Record<string, unknown>), tenantId);
         }
       }

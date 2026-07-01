@@ -59,6 +59,7 @@ const defaultFormData: ProductFormData = {
   stockInicial: 0,
   stockMin: undefined,
   costPrice: 0,
+  lastLotCost: 0,
 };
 
 export function useProductForm(options: UseProductFormOptions): UseProductFormReturn {

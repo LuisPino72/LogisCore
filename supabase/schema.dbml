@@ -95,6 +95,7 @@ Table products {
   stock_in_carts integer [not null, default: 0]
   image_url text
   cost_price numeric(12,4)
+  last_lot_cost numeric(10,2)                    -- Precio total de la última compra (display para el usuario)
   product_type text [not null, default: 'materia_prima']
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]

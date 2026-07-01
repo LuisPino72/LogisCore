@@ -53,7 +53,7 @@ interface ProductFormProps {
   onClose: () => void;
   onSubmit: (data: CreateProductInput & { stockInicial: number; presentations?: CreatePresentationInput[]; stockType?: 'shared' }, imageFile?: File | null, imagePreview?: string | null) => Promise<boolean>;
   categories: { id: string; name: string; isPredefined?: boolean }[];
-  editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string; costPrice?: number; productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both' } | null;
+  editProduct?: { id: string; name: string; sku: string; priceUsd: number; categoryId?: string; isWeighted: boolean; unit: string; stockMin?: number; imageUrl?: string; costPrice?: number; lastLotCost?: number; productType?: 'resale' | 'materia_prima' | 'producto_terminado' | 'both' } | null;
   onCreateCategory?: (name: string) => Promise<string | null>;
 }
 
@@ -103,6 +103,7 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
           : editProduct.stockMin)
       : undefined,
     costPrice: editProduct.costPrice ?? 0,
+    lastLotCost: editProduct.lastLotCost ?? 0,
     imageUrl: editProduct.imageUrl || undefined,
     isRawMaterial: editProduct.productType !== 'resale' && editProduct.productType != null,
     productionType: editProduct.productType !== 'resale' && editProduct.productType != null ? ('materia_prima' as const) : undefined,
@@ -524,14 +525,23 @@ export function ProductForm({ isOpen, onClose, onSubmit, categories, editProduct
          </div>
         )}
 
-        {isEditing && formData.costPrice > 0 && (
+        {isEditing && formData.lastLotCost != null && formData.lastLotCost > 0 && (
           <div className="input-wrapper">
-            <label className="input-label">Costo total del lote $</label>
+            <label className="input-label">Precio total de la última compra $</label>
             <div className="input bg-gray-50 text-gray-600 cursor-not-allowed flex items-center">
               <DollarSign size={14} className="text-gray-400 mr-1" />
-              {formData.costPrice.toFixed(2)}
+              {formData.lastLotCost.toFixed(2)}
             </div>
             <p className="text-[11px] text-gray-400 mt-0.5">Costo unitario: {formData.isWeighted ? `$${(formData.costPrice / 1000).toFixed(6)}/g` : `$${formData.costPrice.toFixed(2)}/u`}</p>
+          </div>
+        )}
+        {isEditing && (formData.lastLotCost == null || formData.lastLotCost <= 0) && formData.costPrice > 0 && (
+          <div className="input-wrapper">
+            <label className="input-label">Costo unitario $</label>
+            <div className="input bg-gray-50 text-gray-600 cursor-not-allowed flex items-center">
+              <DollarSign size={14} className="text-gray-400 mr-1" />
+              {formData.isWeighted ? `$${(formData.costPrice / 1000).toFixed(6)}/g` : `$${formData.costPrice.toFixed(2)}/u`}
+            </div>
           </div>
         )}
     </div>

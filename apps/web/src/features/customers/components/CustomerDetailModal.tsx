@@ -120,9 +120,9 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
       size="lg"
       title="Detalle del cliente"
       footer={
-        <div className="flex gap-2 w-full">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2 w-full">
           {onEdit && (
-            <Button variant="primary" className="flex-1" onClick={() => onEdit(customer)}>
+            <Button variant="primary" className="flex-1 min-h-11" onClick={() => onEdit(customer)}>
               Editar
             </Button>
           )}
@@ -140,7 +140,7 @@ export const CustomerDetailModal = memo(function CustomerDetailModal({ customer,
               <span className="sm:hidden">Menú</span>
             </Button>
           </Tooltip>
-          <Button variant="ghost" className="flex-1" onClick={onClose}>
+          <Button variant="ghost" className="flex-1 min-h-11" onClick={onClose}>
             Cerrar
           </Button>
         </div>

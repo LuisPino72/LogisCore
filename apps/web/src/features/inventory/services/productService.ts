@@ -160,6 +160,7 @@ export async function createProduct(
       ? convertToStorage(input.stockMin, unitToStorageType(input.isWeighted, input.unit))
       : undefined,
     costPrice: costPerDisplayUnit,
+      lastLotCost: input.costPrice != null && input.costPrice > 0 ? preciseRound(input.costPrice, 2) : undefined,
       productType: input.productType ?? 'resale',
     };
 
@@ -319,6 +320,7 @@ export async function createProductWithPresentations(
         ? convertToStorage(input.stockMin, unitToStorageType(input.isWeighted, input.unit))
         : undefined,
       costPrice: costPerDisplayUnit,
+      lastLotCost: input.costPrice != null && input.costPrice > 0 ? preciseRound(input.costPrice, 2) : undefined,
       imageUrl: input.imageUrl,
     productType: input.productType ?? 'resale',
     };
