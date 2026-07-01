@@ -114,7 +114,7 @@ export function ProfitChart({ data, loading }: ProfitChartProps) {
 
       <div className="h-48 sm:h-64" ref={containerRef}>
         {ready ? (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer key="chart-ready" width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
             <defs>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">

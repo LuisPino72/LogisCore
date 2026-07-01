@@ -77,6 +77,8 @@ export function saleFromSupabase(raw: SupabaseSale, tenantId: string): Result<Sa
       modifiedAt: raw.modified_at ?? undefined,
       updatedAt: raw.updated_at ?? undefined,
       modificationCount: raw.modification_count ?? undefined,
+      statusHistory: raw.status_history ?? undefined,
+      communicationLog: raw.communication_log ?? undefined,
     }));
   } catch (err) {
     return failure(toFailureFromZod(err, 'Sale'));

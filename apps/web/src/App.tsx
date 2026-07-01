@@ -24,6 +24,7 @@ import type { SidebarModule } from './common/components/Sidebar';
 import { OfflineBanner } from './common/components/OfflineBanner';
 import { PermissionDeniedModal } from './common/components/PermissionDeniedModal';
 import { usePermissionDenied } from './common/hooks/usePermissionDenied';
+import { audioService } from './services/audioService';
 import { isVenezuelanHoliday } from './lib/venezuelanHolidays';
 import {
   ShoppingCart,
@@ -657,6 +658,23 @@ const App = () => {
       useAuthStore.getState().clearSession();
     });
     return () => EventBus.off(sub);
+  }, []);
+
+  useEffect(() => {
+    const resumeAudio = () => {
+      audioService.resume();
+      document.removeEventListener('click', resumeAudio);
+      document.removeEventListener('touchstart', resumeAudio);
+      document.removeEventListener('keydown', resumeAudio);
+    };
+    document.addEventListener('click', resumeAudio, { once: true });
+    document.addEventListener('touchstart', resumeAudio, { once: true });
+    document.addEventListener('keydown', resumeAudio, { once: true });
+    return () => {
+      document.removeEventListener('click', resumeAudio);
+      document.removeEventListener('touchstart', resumeAudio);
+      document.removeEventListener('keydown', resumeAudio);
+    };
   }, []);
 
   if (isLoading) return <LoadingScreen />;

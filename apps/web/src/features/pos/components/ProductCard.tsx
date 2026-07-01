@@ -40,7 +40,7 @@ export const ProductCard = memo(function ProductCard({ product, onAdd, onToggleF
       EventBus.emit('CART.ADD_ANIMATION', {
         fromX: mouseEvent.clientX,
         fromY: mouseEvent.clientY,
-        imageUrl: product.imageUrl || '',
+        imageUrl: product.imageUrl || null,
       });
     }
     onAdd(product);

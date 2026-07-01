@@ -49,11 +49,13 @@ export const FlyToCart = () => {
             '--fly-y': `${anim.destY}px`,
           } as React.CSSProperties}
         >
-          <img
-            src={anim.imageUrl}
-            alt="flying"
-            className="w-full h-full object-cover"
-          />
+          {anim.imageUrl && (
+            <img
+              src={anim.imageUrl}
+              alt="flying"
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
       ))}
     </div>

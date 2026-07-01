@@ -314,6 +314,8 @@ export const authService = {
       await sessionGuard.release();
     }
 
+    this.stopSync();
+
     try {
       await supabase.auth.signOut({ scope: 'global' });
     } catch (err) {
@@ -325,8 +327,6 @@ export const authService = {
         console.debug('[AuthService] signOut retry also failed, continuing best-effort', retryErr);
       }
     }
-
-    this.stopSync();
 
     // Reset settings store to avoid stale data from previous tenant
     const { useSettingsStore } = await import('../../settings/stores/settingsStore');
