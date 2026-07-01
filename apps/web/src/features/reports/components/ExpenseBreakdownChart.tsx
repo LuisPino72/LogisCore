@@ -65,7 +65,7 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
               strokeWidth={2}
             >
               {chartData.map((entry) => (
-                <Cell key={entry.type} fill={EXPENSE_CATEGORY_COLORS[entry.type] ?? '#9ca3af'} />
+                <Cell key={entry.label} fill={EXPENSE_CATEGORY_COLORS[entry.label] ?? '#9ca3af'} />
               ))}
             </Pie>
             <Tooltip
@@ -82,10 +82,10 @@ export function ExpenseBreakdownChart({ data, loading }: ExpenseBreakdownChartPr
         {chartData.map((d) => {
           const pct = totalBs > 0 ? ((d.amountBs / totalBs) * 100).toFixed(1) : '0';
           return (
-            <div key={d.type} className="flex items-center gap-2 text-xs p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+            <div key={d.label} className="flex items-center gap-2 text-xs p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
               <span
                 className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: EXPENSE_CATEGORY_COLORS[d.type] ?? '#9ca3af' }}
+                style={{ backgroundColor: EXPENSE_CATEGORY_COLORS[d.label] ?? '#9ca3af' }}
               />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-700 wrap-break-word">{d.label}</p>
