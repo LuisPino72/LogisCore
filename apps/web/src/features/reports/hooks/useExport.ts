@@ -104,33 +104,33 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): SheetConfig {
   const rows: (string | number | undefined | null)[][] = [];
   if (summary) {
     rows.push(
-      ['Ventas Totales', `${formatBs(summary.totalSalesBs)} / ${formatUsd(summary.totalSalesUsd)}`],
-      ['Costo de Compras', `${formatBs(summary.totalCostBs)} / ${formatUsd(summary.totalCostUsd)}`],
-      ['Ganancia Bruta', `${formatBs(summary.grossProfitBs)} / ${formatUsd(summary.grossProfitUsd)}`],
-      ['Margen %', `${summary.profitMarginPercent}%`],
-      ['Transacciones', summary.totalTransactions],
-      ['Ticket Promedio', `${formatBs(summary.averageTicketBs)} / ${formatUsd(summary.averageTicketUsd)}`],
-      ['Gastos de Consumo', `${formatBs(summary.nonSellableExpensesBs)} / ${formatUsd(summary.nonSellableExpensesUsd)}`],
-      ['Pérdidas por Ajustes', `${formatBs(summary.adjustmentLossExpenses.totalBs)} / ${formatUsd(summary.adjustmentLossExpenses.totalUsd)}`],
-      ['- Pérdida', `${formatUsd(summary.adjustmentLossExpenses.perdida.totalUsd)} (${summary.adjustmentLossExpenses.perdida.count})`],
-      ['- Robo', `${formatUsd(summary.adjustmentLossExpenses.robo.totalUsd)} (${summary.adjustmentLossExpenses.robo.count})`],
-      ['- Vencido', `${formatUsd(summary.adjustmentLossExpenses.vencido.totalUsd)} (${summary.adjustmentLossExpenses.vencido.count})`],
-      ['- Consumo Interno', `${formatUsd(summary.adjustmentLossExpenses.consumo_interno.totalUsd)} (${summary.adjustmentLossExpenses.consumo_interno.count})`],
-      ['- Otros', `${formatUsd(summary.adjustmentLossExpenses.otros.totalUsd)} (${summary.adjustmentLossExpenses.otros.count})`],
-      ['Gastos Totales', `${formatBs(summary.totalExpensesBs)} / ${formatUsd(summary.totalExpensesUsd)}`],
-      ['Ganancia Neta', `${formatBs(summary.netProfitBs)} / ${formatUsd(summary.netProfitUsd)}`],
-      ['Top Producto', summary.topProductName ?? 'N/A'],
-      ['IGTF Total', formatUsd(summary.igtfTotal)],
-      ['IVA Total', `${formatBs(summary.totalIvaBs)} / ${formatUsd(summary.totalIvaUsd)}`],
-      ['Descuentos', `${formatBs(summary.totalDiscountBs)} / ${formatUsd(summary.totalDiscountUsd)}`],
-      ['Crédito Pendiente', formatUsd(summary.pendingCreditUsd)],
-      ['Crédito Cobrado', formatUsd(summary.collectedCreditUsd)],
+      ['Ventas Totales', formatBs(summary.totalSalesBs), formatUsd(summary.totalSalesUsd)],
+      ['Costo de Compras', formatBs(summary.totalCostBs), formatUsd(summary.totalCostUsd)],
+      ['Ganancia Bruta', formatBs(summary.grossProfitBs), formatUsd(summary.grossProfitUsd)],
+      ['Margen %', '', `${summary.profitMarginPercent}%`],
+      ['Transacciones', '', summary.totalTransactions],
+      ['Ticket Promedio', formatBs(summary.averageTicketBs), formatUsd(summary.averageTicketUsd)],
+      ['Gastos de Consumo', formatBs(summary.nonSellableExpensesBs), formatUsd(summary.nonSellableExpensesUsd)],
+      ['Pérdidas por Ajustes', formatBs(summary.adjustmentLossExpenses.totalBs), formatUsd(summary.adjustmentLossExpenses.totalUsd)],
+      ['- Pérdida', '', `${formatUsd(summary.adjustmentLossExpenses.perdida.totalUsd)} (${summary.adjustmentLossExpenses.perdida.count})`],
+      ['- Robo', '', `${formatUsd(summary.adjustmentLossExpenses.robo.totalUsd)} (${summary.adjustmentLossExpenses.robo.count})`],
+      ['- Vencido', '', `${formatUsd(summary.adjustmentLossExpenses.vencido.totalUsd)} (${summary.adjustmentLossExpenses.vencido.count})`],
+      ['- Consumo Interno', '', `${formatUsd(summary.adjustmentLossExpenses.consumo_interno.totalUsd)} (${summary.adjustmentLossExpenses.consumo_interno.count})`],
+      ['- Otros', '', `${formatUsd(summary.adjustmentLossExpenses.otros.totalUsd)} (${summary.adjustmentLossExpenses.otros.count})`],
+      ['Gastos Totales', formatBs(summary.totalExpensesBs), formatUsd(summary.totalExpensesUsd)],
+      ['Ganancia Neta', formatBs(summary.netProfitBs), formatUsd(summary.netProfitUsd)],
+      ['Top Producto', '', summary.topProductName ?? 'N/A'],
+      ['IGTF Total', '', formatUsd(summary.igtfTotal)],
+      ['IVA Total', formatBs(summary.totalIvaBs), formatUsd(summary.totalIvaUsd)],
+      ['Descuentos', formatBs(summary.totalDiscountBs), formatUsd(summary.totalDiscountUsd)],
+      ['Crédito Pendiente', '', formatUsd(summary.pendingCreditUsd)],
+      ['Crédito Cobrado', '', formatUsd(summary.collectedCreditUsd)],
     );
     if (summary.salesVsYesterdayPercent !== undefined) {
-      rows.push(['Vs Ayer %', `${summary.salesVsYesterdayPercent}%`]);
+      rows.push(['Vs Ayer %', '', `${summary.salesVsYesterdayPercent}%`]);
     }
   }
-  return { name: 'Resumen', headers: ['Métrica', 'Valor'], rows, colWidths: [28, 28] };
+  return { name: 'Resumen', headers: ['Métrica', 'Bs', 'USD'], rows, colWidths: [28, 18, 18] };
 }
 
 function buildProfitSheet(profitOverTime: DailyProfitPoint[]): SheetConfig {
@@ -157,7 +157,7 @@ function buildProfitSheet(profitOverTime: DailyProfitPoint[]): SheetConfig {
       rows.push([p.label, '', formatUsd(p.salesUsd), '', '', formatUsd(p.costUsd), '', formatUsd(p.profitUsd), '']);
     });
   }
-  return { name: 'Ganancias', headers: ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'], rows, colWidths: [16, 10, 14, 10, 14, 10, 14, 10, 14] };
+  return { name: 'Ganancias', headers: ['Fecha', 'Tasa', 'Ventas Bs', 'Ventas $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Transacciones'], rows, colWidths: [16, 10, 16, 12, 16, 12, 16, 12, 14] };
 }
 
 function buildProductsSheet(topProducts: TopProductData[]): SheetConfig {
@@ -184,7 +184,7 @@ function buildProductsSheet(topProducts: TopProductData[]): SheetConfig {
       rows.push([p.name, '', '', p.profitUsd, '', '', '', '', '']);
     });
   }
-  return { name: 'Productos', headers: ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [30, 10, 14, 10, 14, 10, 14, 10, 10] };
+  return { name: 'Productos', headers: ['Producto', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [30, 10, 16, 12, 16, 12, 16, 12, 10] };
 }
 
 function buildCategoriesSheet(topCategories: TopCategoryData[]): SheetConfig {
@@ -203,7 +203,7 @@ function buildCategoriesSheet(topCategories: TopCategoryData[]): SheetConfig {
       `${c.marginPercent}%`,
     ]);
   });
-  return { name: 'Categorías', headers: ['Categoría', 'Productos', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [25, 10, 10, 14, 10, 14, 10, 14, 10, 10] };
+  return { name: 'Categorías', headers: ['Categoría', 'Productos', 'Vendidos', 'Ingreso Bs', 'Ingreso $', 'Gasto Bs', 'Gasto $', 'Ganancia Bs', 'Ganancia $', 'Margen %'], rows, colWidths: [25, 10, 10, 16, 12, 16, 12, 16, 12, 10] };
 }
 
 function buildExpensesSheet(expenseBreakdown: ExpenseBreakdownItem[]): SheetConfig {
@@ -234,7 +234,7 @@ function buildExpensesSheet(expenseBreakdown: ExpenseBreakdownItem[]): SheetConf
     });
   }
 
-  return { name: 'Gastos', headers: ['Tipo de Gasto', 'Monto Bs', 'Monto $', '% del Total'], rows, colWidths: [30, 16, 12, 12] };
+  return { name: 'Gastos', headers: ['Tipo de Gasto', 'Monto Bs', 'Monto $', '% del Total'], rows, colWidths: [30, 18, 14, 12] };
 }
 
 function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): SheetConfig {
@@ -251,7 +251,7 @@ function buildPaymentsSheet(paymentBreakdown: PaymentBreakdownData[]): SheetConf
       rows.push([p.label, p.totalUsd, '', '', '']);
     });
   }
-  return { name: 'Pagos', headers: ['Método', 'Transacciones', 'Total Bs', 'Total $', '%'], rows, colWidths: [20, 14, 14, 10, 8] };
+  return { name: 'Pagos', headers: ['Método', 'Transacciones', 'Total Bs', 'Total $', '%'], rows, colWidths: [20, 14, 16, 12, 10] };
 }
 
 function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): SheetConfig {
@@ -273,7 +273,7 @@ function buildCashSheet(cashAnalysis: CashRegisterSummaryData[]): SheetConfig {
       r.status === 'open' ? 'Abierta' : 'Cerrada',
     ]);
   });
-  return { name: 'Caja', headers: ['Caja', 'Operador', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'], rows, colWidths: [18, 18, 14, 10, 14, 10, 14, 10, 14, 10, 14, 10, 10] };
+  return { name: 'Caja', headers: ['Caja', 'Operador', 'Apertura Bs', 'Apertura $', 'Ventas Bs', 'Ventas $', 'Esperado Bs', 'Esperado $', 'Cierre Bs', 'Cierre $', 'Diferencia Bs', 'Diferencia $', 'Estado'], rows, colWidths: [18, 20, 16, 12, 16, 12, 16, 12, 16, 12, 16, 12, 10] };
 }
 
 function buildCustomersSheet(summary: CustomersSummaryData | null, ranking: CustomerRankingItem[]): SheetConfig {
@@ -310,7 +310,7 @@ function buildCustomersSheet(summary: CustomersSummaryData | null, ranking: Cust
     name: 'Clientes',
     headers: ['Nombre', 'Cédula', 'Compras', 'Total Gastado Bs', 'Total Gastado $', 'Ticket Prom $', 'Última Compra'],
     rows,
-    colWidths: [25, 14, 10, 16, 12, 14, 14],
+    colWidths: [25, 14, 10, 18, 14, 14, 14],
   };
 }
 
@@ -347,7 +347,7 @@ function buildProductionSheet(summary: ProductionSummaryData | null, profitabili
     name: 'Producción',
     headers: ['Receta', 'Producto', 'Tipo', 'Veces Producida', 'Costo/Unidad $', 'Merma %', 'Unidades Totales'],
     rows,
-    colWidths: [25, 25, 14, 14, 14, 10, 14],
+    colWidths: [25, 25, 14, 16, 14, 10, 14],
   };
 }
 
@@ -398,7 +398,7 @@ function buildInsightsSheet(
     name: 'Insights',
     headers: ['Nombre', 'Métrica 1', 'Métrica 2', 'Métrica 3'],
     rows,
-    colWidths: [30, 20, 20, 20],
+    colWidths: [30, 22, 22, 22],
   };
 }
 
@@ -411,7 +411,7 @@ function buildDeliverySheet(settlements: { name: string; deliveryCount: number; 
     name: 'Liquidación Delivery',
     headers: ['Motorizado', 'Entregas', 'Tarifas $', 'Pagado $', 'Pendiente $'],
     rows,
-    colWidths: [25, 12, 12, 12, 12],
+    colWidths: [25, 12, 14, 14, 14],
   };
 }
 

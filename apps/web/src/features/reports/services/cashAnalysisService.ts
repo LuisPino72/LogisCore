@@ -236,7 +236,7 @@ export async function getCashAnalysis(tenantId: string, filters: ReportFilters):
       return {
         registerId: r.id,
         registerName: r.registerId ? (regNameMap.get(r.registerId) ?? 'Caja') : 'Caja Principal',
-        operatorName: r.openedBy ? (userNameMap.get(r.openedBy) ?? 'Usuario') : '—',
+        operatorName: r.operatorName || (r.openedBy ? (userNameMap.get(r.openedBy) ?? 'Usuario') : '—'),
         openedAt: r.openedAt ?? r.createdAt,
         closedAt: r.closedAt ?? undefined,
         openingBalanceBs: r.openingBalanceBs ?? 0,
@@ -336,7 +336,7 @@ export async function getCashAnalysisByRegister(tenantId: string, date: string):
       return {
         registerId: r.id,
         registerName: r.registerId ? (configMap.get(r.registerId) ?? 'Caja') : 'Caja Principal',
-        operatorName: r.openedBy ? (userMap.get(r.openedBy) ?? 'Usuario') : '—',
+        operatorName: r.operatorName || (r.openedBy ? (userMap.get(r.openedBy) ?? 'Usuario') : '—'),
         openingBalanceBs: openingBal,
         totalSalesBs: salesBs,
         totalSalesCount: r.totalSalesCount,

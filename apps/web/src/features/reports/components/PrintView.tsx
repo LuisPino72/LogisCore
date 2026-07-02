@@ -199,6 +199,16 @@ const printStyles = `
     font-size: 7pt;
     color: #999;
   }
+  .recharts-legend-item-text {
+    font-size: 9pt !important;
+    white-space: nowrap !important;
+  }
+  .recharts-cartesian-axis-tick-value {
+    font-size: 8pt !important;
+  }
+  .recharts-tooltip-wrapper {
+    font-size: 8pt !important;
+  }
 `;
 
 export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function PrintView(
@@ -281,9 +291,9 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
             </table>
           </div>
           {profitOverTime.length > 1 && shouldShow(scope, 'ganancias') && (
-            <div style={{ width: '100%', height: '220px', marginTop: '12px' }}>
+            <div style={{ width: '100%', height: '280px', marginTop: '12px' }}>
               <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px' }}>Ganancias Diarias</h3>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={profitOverTime}>
                   <defs>
                     <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
@@ -342,17 +352,17 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
             </table>
           </div>
           {topProducts.length > 1 && shouldShow(scope, 'productos') && (
-            <div style={{ width: '100%', height: '240px', marginTop: '12px' }}>
+            <div style={{ width: '100%', height: '300px', marginTop: '12px' }}>
               <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px' }}>Top Productos — Ganancia $</h3>
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart
                   data={topProducts.slice(0, 8)}
                   layout="vertical"
-                  margin={{ left: 100, right: 20, top: 5, bottom: 5 }}
+                  margin={{ left: 120, right: 30, top: 10, bottom: 10 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 8 }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 7 }} width={90} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 7 }} width={110} />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: '8pt' }} />
                   <Bar dataKey="profitUsd" name="Ganancia $" radius={[0, 3, 3, 0]}>
@@ -438,9 +448,9 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
           </div>
           {paymentBreakdown.length > 0 && shouldShow(scope, 'pagos') && (
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
-              <div style={{ width: '280px', height: '220px' }}>
+              <div style={{ width: '340px', height: '280px' }}>
                 <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>Distribución de Pagos</h3>
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
                     <Pie
                       data={paymentBreakdown}
@@ -503,9 +513,9 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
           </div>
           {expenseBreakdown.length > 0 && shouldShow(scope, 'gastos') && (
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
-              <div style={{ width: '280px', height: '220px' }}>
+              <div style={{ width: '340px', height: '280px' }}>
                 <h3 style={{ fontSize: '9pt', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>Gastos por Categoría</h3>
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
                     <Pie
                       data={expenseBreakdown}

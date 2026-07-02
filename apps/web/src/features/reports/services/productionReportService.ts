@@ -7,7 +7,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { getPermissionMessage } from '../../auth/permissions/messages';
 import type { ProductionSummaryData, RecipeProfitabilityItem, ReportFilters } from '../types';
-import { getDateRange } from './reportsHelpers';
+import { getDateRange, getRateForDateCached } from './reportsHelpers';
 
 export async function getProductionSummary(tenantId: string, filters: ReportFilters): Promise<Result<ProductionSummaryData, AppError>> {
   const session = useAuthStore.getState().session;
@@ -66,18 +66,10 @@ export async function getProductionSummary(tenantId: string, filters: ReportFilt
       .filter((m) => !m.deletedAt && m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.createdAt >= start && m.createdAt <= end)
       .toArray();
     const totalIngredientCost = movements.reduce((sum, m) => sum + (m.costUsd || 0), 0);
-    const db2 = getDb();
-    const rates = await db2.exchangeRates.where({ tenantId }).toArray();
-    const rateMap = new Map<string, number>();
-    for (const r of rates) {
-      if (!rateMap.has(r.createdAt.slice(0, 10))) {
-        rateMap.set(r.createdAt.slice(0, 10), r.rate);
-      }
-    }
     let totalIngredientCostBsCalc = 0;
     for (const m of movements) {
       const dayKey = m.createdAt.slice(0, 10);
-      const rate = rateMap.get(dayKey) ?? 0;
+      const rate = await getRateForDateCached(tenantId, dayKey);
       if (rate > 0) {
         totalIngredientCostBsCalc += (m.costUsd || 0) * rate;
       }
@@ -169,19 +161,41 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
       .filter((m) => !m.deletedAt && m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.createdAt >= start && m.createdAt <= end)
       .toArray();
 
+    // Agregar recetas assembly desde movimientos de inventario
+    const assemblyMovements = movements.filter(m =>
+      !m.productionOrderId && m.reasonType === 'consumo_interno' && m.productId
+    );
+
+    const assemblyByProduct = new Map<string, number>();
+    for (const m of assemblyMovements) {
+      assemblyByProduct.set(m.productId, (assemblyByProduct.get(m.productId) || 0) + 1);
+    }
+
+    for (const [productId, times] of assemblyByProduct) {
+      const recipe = recipes.find(r => r.productId === productId && r.mode === 'assembly');
+      if (recipe && !recipeStats.has(recipe.id)) {
+        const sess = useAuthStore.getState().session;
+        const product = await db.products.where({ id: productId, tenantId: sess?.tenantId }).first();
+        recipeStats.set(recipe.id, {
+          recipeName: recipe.name,
+          productName: product?.name || 'Desconocido',
+          mode: 'assembly',
+          totalCostUsd: 0,
+          timesProduced: times,
+          totalQuantityProduced: 0,
+          yieldUnit: recipe.yieldUnit,
+          wastePct: recipe.wastePct,
+        });
+      }
+    }
+
     // Simple cost distribution (proportional to quantity produced)
     const totalQuantity = Array.from(recipeStats.values()).reduce((sum, r) => sum + r.totalQuantityProduced, 0);
     const totalCost = movements.reduce((sum, m) => sum + (m.costUsd || 0), 0);
-    const allRates = await getDb().exchangeRates.where({ tenantId }).toArray();
-    const rateByDay = new Map<string, number>();
-    for (const r of allRates) {
-      const dk = r.createdAt.slice(0, 10);
-      if (!rateByDay.has(dk)) rateByDay.set(dk, r.rate);
-    }
     let totalCostBsAll = 0;
     for (const m of movements) {
       const dayKey = m.createdAt.slice(0, 10);
-      const rate = rateByDay.get(dayKey) ?? 0;
+      const rate = await getRateForDateCached(tenantId, dayKey);
       if (rate > 0) totalCostBsAll += (m.costUsd || 0) * rate;
     }
 
