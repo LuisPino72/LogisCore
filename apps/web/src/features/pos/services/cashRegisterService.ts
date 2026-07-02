@@ -291,7 +291,7 @@ export async function openCashRegister(input: OpenCashRegisterInput): Promise<Re
   if (!networkCheck.ok) return failure(networkCheck.error);
 
   const db = getDb();
-  const { tenantId, userId, openingBalanceBs, openingRate, registerId } = input;
+  const { tenantId, userId, openingBalanceBs, openingRate, registerId, operatorName } = input;
 
   const session = useAuthStore.getState().session;
   if (!session || !hasActionPermission(session, 'pos', 'open_box')) {
@@ -449,6 +449,7 @@ export async function openCashRegister(input: OpenCashRegisterInput): Promise<Re
       collectedDebtBs: 0,
       registerId: resolvedRegisterId ?? undefined,
       operatorId: userId,
+      operatorName,
       createdAt: now,
       updatedAt: now,
     };
@@ -473,6 +474,7 @@ export async function openCashRegister(input: OpenCashRegisterInput): Promise<Re
       };
       if (resolvedRegisterId) snakePayload.register_id = resolvedRegisterId;
       if (userId) snakePayload.operator_id = userId;
+      if (operatorName) snakePayload.operator_name = operatorName;
 
       await syncQueue.enqueue('cash_registers', 'CREATE', id, toSnake(snakePayload), tenantId);
 

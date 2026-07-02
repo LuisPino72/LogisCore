@@ -2,6 +2,7 @@ import { posService } from '../services/posService';
 import { useExchangeRateStore } from '../../../features/exchange/stores/exchangeRateStore';
 import { type Result, type AppError, success, failure, AppError as AppErrorClass } from '@logiscore/core';
 import type { CashRegister } from '../types';
+import { useAuthStore } from '../../auth/stores/authStore';
 
 export interface PosRegisterSlice {
   cashRegister: CashRegister | null;
@@ -76,7 +77,9 @@ export const createRegisterSlice = (set: any, get: () => RegisterGetter): PosReg
       return failure(new AppErrorClass('SALE_FAILED', 'No hay tasa de cambio disponible. Configure la tasa antes de abrir la caja.'));
     }
     const resolvedRegisterId = registerId ?? get().activeRegisterId;
-    const result = await posService.openCashRegister({ tenantId, userId, openingBalanceBs: openingBalance, openingRate: rate, registerId: resolvedRegisterId ?? undefined });
+    const session = useAuthStore.getState().session;
+    const operatorName = session?.email || undefined;
+    const result = await posService.openCashRegister({ tenantId, userId, openingBalanceBs: openingBalance, openingRate: rate, registerId: resolvedRegisterId ?? undefined, operatorName });
     if (result.ok) {
       const reg = result.data;
       const regName = registerName ?? get().registerName ?? (reg.registerId ? 'Caja' : 'Caja Principal');

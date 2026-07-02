@@ -1,37 +1,31 @@
 import { useState, useCallback, useMemo, memo } from 'react';
-import { Card, Button, Spinner, EmptyState, Modal, DatePicker, Skeleton, Alert, DataTable } from '@/common/components';
+import { Card, Button, Spinner, EmptyState, Modal, Skeleton, Alert, DataTable } from '@/common/components';
 import type { Column } from '@/common/components';
 import { Truck, Check, Wallet, AlertCircle } from 'lucide-react';
 import { useDeliverySettlement } from '../hooks/useDeliverySettlement';
 import { formatUsd } from '@/lib/formatBs';
 import type { DeliverySettlementRow } from '../services/deliverySettlementService';
+import type { ReportFilters } from '../types';
 
 interface DeliverySettlementReportProps {
   tenantId: string;
+  filters: ReportFilters;
 }
 
-export const DeliverySettlementReport = memo(function DeliverySettlementReport({ tenantId }: DeliverySettlementReportProps) {
-  const { data, loading, error, date, setDate, paySettlement } = useDeliverySettlement(tenantId);
+export const DeliverySettlementReport = memo(function DeliverySettlementReport({ tenantId, filters }: DeliverySettlementReportProps) {
+  const { data, loading, error, paySettlement } = useDeliverySettlement(tenantId, filters);
   const [paying, setPaying] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ name: string; amount: number } | null>(null);
-
-  const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value;
-    if (!v) return;
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date());
-    const clamped = v > today ? today : v;
-    setDate({ start: `${clamped}T00:00:00`, end: `${clamped}T23:59:59` });
-  }, [setDate]);
 
   const handlePay = useCallback(async () => {
     if (!confirmModal) return;
     setPaying(confirmModal.name);
-    const result = await paySettlement(confirmModal.name, date.start, date.end);
+    const result = await paySettlement(confirmModal.name);
     if (result.ok) {
       setConfirmModal(null);
     }
     setPaying(null);
-  }, [confirmModal, paySettlement, date]);
+  }, [confirmModal, paySettlement]);
 
   const columns: Column<DeliverySettlementRow>[] = useMemo(() => [
     {
@@ -159,11 +153,6 @@ export const DeliverySettlementReport = memo(function DeliverySettlementReport({
   if (error) {
     return (
       <div className="space-y-4">
-        <DatePicker
-          label="Fecha"
-          value={date.start.slice(0, 10)}
-          onChange={handleDateChange}
-        />
         <Alert variant="error" title="Error al cargar liquidaciones">{error}</Alert>
       </div>
     );
@@ -172,13 +161,6 @@ export const DeliverySettlementReport = memo(function DeliverySettlementReport({
   if (data.length === 0) {
     return (
       <Card className="p-8">
-        <div className="flex flex-col items-center gap-3 mb-4">
-          <DatePicker
-            label="Fecha"
-            value={date.start.slice(0, 10)}
-            onChange={handleDateChange}
-          />
-        </div>
         <EmptyState
           icon={<Truck size={32} />}
           title="Sin entregas"
@@ -190,14 +172,6 @@ export const DeliverySettlementReport = memo(function DeliverySettlementReport({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <DatePicker
-          label="Fecha"
-          value={date.start.slice(0, 10)}
-          onChange={handleDateChange}
-        />
-      </div>
-
       <DataTable<DeliverySettlementRow>
         columns={columns}
         data={data}

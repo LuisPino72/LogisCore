@@ -651,7 +651,7 @@ export function ReportsPage({ tenantId }: ReportsPageProps) {
         <div className={`print-section ${activeTab !== 'delivery' ? 'hidden' : ''}`}>
           <Suspense fallback={<div className="flex justify-center py-8"><Spinner size="sm" /></div>}>
             <div className="animate-report-fade-in">
-              <DeliverySettlementReport tenantId={tenantId ?? ''} />
+              <DeliverySettlementReport tenantId={tenantId ?? ''} filters={filters} />
             </div>
           </Suspense>
         </div>

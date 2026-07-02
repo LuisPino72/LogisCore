@@ -1,29 +1,22 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { getDeliverySettlement, markDeliverySettlementPaid, type DeliverySettlementRow } from '../services/deliverySettlementService';
+import { getDateRange } from '../services/reportsHelpers';
+import type { ReportFilters } from '../types';
 
-interface DateRange {
-  start: string;
-  end: string;
-}
-
-function getTodayRange(): DateRange {
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Caracas' }).format(new Date());
-  return { start: `${today}T00:00:00`, end: `${today}T23:59:59` };
-}
-
-export function useDeliverySettlement(tenantId: string | null) {
+export function useDeliverySettlement(tenantId: string | null, filters: ReportFilters) {
   const [data, setData] = useState<DeliverySettlementRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState<DateRange>(getTodayRange);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+
+  const dateRange = useMemo(() => getDateRange(filters), [filters]);
 
   const fetchData = useCallback(async (silent = false) => {
     if (!tenantId) return;
     if (!silent) setLoading(true);
     setError(null);
-    const result = await getDeliverySettlement(tenantId, date.start, date.end);
+    const result = await getDeliverySettlement(tenantId, dateRange.start, dateRange.end);
     if (!mountedRef.current) return;
     if (result.ok) {
       setData(result.data);
@@ -31,11 +24,11 @@ export function useDeliverySettlement(tenantId: string | null) {
       setError(result.error.message);
     }
     setLoading(false);
-  }, [tenantId, date]);
+  }, [tenantId, dateRange]);
 
-  const paySettlement = useCallback(async (name: string, start: string, end: string) => {
+  const paySettlement = useCallback(async (name: string) => {
     const tid = tenantId ?? '';
-    const result = await markDeliverySettlementPaid(tid, name, start, end);
+    const result = await markDeliverySettlementPaid(tid, name, dateRange.start, dateRange.end);
     if (!mountedRef.current) return result;
     if (result.ok) {
       await fetchData(true);
@@ -43,7 +36,7 @@ export function useDeliverySettlement(tenantId: string | null) {
       setError(result.error.message);
     }
     return result;
-  }, [tenantId, fetchData]);
+  }, [tenantId, fetchData, dateRange]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -64,5 +57,5 @@ export function useDeliverySettlement(tenantId: string | null) {
     return () => { subs.forEach((s) => EventBus.off(s)); };
   }, [tenantId, fetchData]);
 
-  return { data, loading, error, date, setDate, refresh: fetchData, paySettlement };
+  return { data, loading, error, refresh: fetchData, paySettlement };
 }

@@ -180,6 +180,7 @@ export const OpenCashRegisterInputSchema = z.object({
   openingBalanceBs: z.number().positive('Monto inicial debe ser mayor a 0'),
   openingRate: z.number().positive('Se requiere tasa de cambio al abrir la caja'),
   registerId: z.string().uuid().optional(),
+  operatorName: z.string().optional(),
 });
 
 export type OpenCashRegisterInput = z.infer<typeof OpenCashRegisterInputSchema>;

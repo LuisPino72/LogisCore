@@ -130,7 +130,7 @@ function buildSummarySheet(summary: ExecutiveSummaryData | null): SheetConfig {
       rows.push(['Vs Ayer %', '', `${summary.salesVsYesterdayPercent}%`]);
     }
   }
-  return { name: 'Resumen', headers: ['Métrica', 'Bs', 'USD'], rows, colWidths: [28, 18, 18] };
+  return { name: 'Resumen', headers: ['Métrica', 'Bolívares', 'Dólares'], rows, colWidths: [28, 18, 18] };
 }
 
 function buildProfitSheet(profitOverTime: DailyProfitPoint[]): SheetConfig {
