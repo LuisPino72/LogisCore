@@ -223,7 +223,7 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
       { key: 'mode', header: 'Tipo', className: 'text-center', render: (item) => item.mode === 'batch' ? 'Lotes' : 'Ensamblaje' },
       { key: 'timesProduced', header: 'Veces', className: 'text-center' },
       { key: 'totalQuantityProduced', header: 'Producido', className: 'text-center' },
-      { key: 'costPerUnitUsd', header: 'Costo/Unidad', render: (item) => formatUsd(item.costPerUnitUsd as number) },
+      { key: 'totalCostUsd', header: 'Costo Total', render: (item) => formatUsd(item.totalCostUsd as number) },
       { key: 'wastePct', header: 'Merma', render: (item) => `${item.wastePct}%`, className: 'text-center' },
     ],
     footerSummary: (data) => {
@@ -312,8 +312,7 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
     title: 'Costos de Ingredientes por Receta',
     columns: [
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
-      { key: 'totalCostUsd', header: 'Costo Total $', render: (item) => formatUsd(item.totalCostUsd as number) },
-      { key: 'costPerUnitUsd', header: 'Costo/Unidad', render: (item) => formatUsd(item.costPerUnitUsd as number) },
+      { key: 'totalCostUsd', header: 'Costo Total', render: (item) => formatUsd(item.totalCostUsd as number) },
       { key: 'yieldUnit', header: 'Unidad', className: 'text-center' },
     ],
     footerSummary: (data) => {

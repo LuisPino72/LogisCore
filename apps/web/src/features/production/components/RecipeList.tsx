@@ -121,7 +121,7 @@ export function RecipeList({ recipes, onEdit, onProduce, tenantId }: RecipeListP
                     {recipeCosts.get(recipe.id) != null && recipeCosts.get(recipe.id)! > 0 && (
                       <span className="flex items-center gap-1">
                         <DollarSign size={11} />
-                        Costo: {formatUsd(recipeCosts.get(recipe.id)!)}
+                        <span className="hidden sm:inline">Costo:</span> {formatUsd(recipeCosts.get(recipe.id)!)}
                       </span>
                     )}
                     {recipe.wastePct > 0 && (

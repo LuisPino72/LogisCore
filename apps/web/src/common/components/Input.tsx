@@ -106,7 +106,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
     if (sanitize === 'currency' || sanitize === 'number') {
       const num = parseFloat(displayValue);
       if (!isNaN(num)) {
-        const formatted = num.toFixed(decimals);
+        const hasDecimals = num !== Math.floor(num);
+        const formatted = hasDecimals ? num.toFixed(decimals) : String(num);
         if (formatted !== displayValue) {
           isInternalRef.current = true;
           setDisplayValue(formatted);
