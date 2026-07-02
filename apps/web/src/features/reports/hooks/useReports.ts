@@ -3,6 +3,7 @@ import type { Result, AppError } from '@logiscore/core';
 import { EventBus, SystemEvents } from '@logiscore/core';
 import { reportsService } from '../services/reportsService';
 import type { DeliverySettlementRow } from '../services/deliverySettlementService';
+import { getDateRange } from '../services/reportsHelpers';
 import type {
   ReportFilters,
   ExecutiveSummaryData,
@@ -332,13 +333,14 @@ export function useReports(tenantId: string | null) {
   const fetchMoreTabData = useCallback(async () => {
     if (!tenantId) return;
     try {
+      const { start: delStart, end: delEnd } = getDateRange(filters);
       const [cs, cr, ps, rp, ls, ds] = await Promise.all([
         reportsService.getCustomersSummary(tenantId, filters),
         reportsService.getCustomersRanking(tenantId, filters),
         reportsService.getProductionSummary(tenantId, filters),
         reportsService.getRecipeProfitability(tenantId, filters),
         reportsService.getLowStockReport(tenantId),
-        reportsService.getDeliverySettlement(tenantId, filters.startDate ?? '', filters.endDate ?? ''),
+        reportsService.getDeliverySettlement(tenantId, delStart, delEnd),
       ]);
       setState((prev) => ({
         ...prev,

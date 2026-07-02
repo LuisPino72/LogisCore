@@ -161,28 +161,32 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
       .filter((m) => !m.deletedAt && m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.createdAt >= start && m.createdAt <= end)
       .toArray();
 
-    // Agregar recetas assembly desde movimientos de inventario
-    const assemblyMovements = movements.filter(m =>
-      !m.productionOrderId && m.reasonType === 'consumo_interno' && m.productId
-    );
+    // Agregar recetas assembly desde ventas (saleItems)
+    const assemblyRecipes = recipes.filter(r => r.mode === 'assembly');
+    for (const recipe of assemblyRecipes) {
+      const allSaleItems = await db.saleItems
+        .where({ tenantId })
+        .filter(si => !si.deletedAt && si.productId === recipe.productId)
+        .toArray();
 
-    const assemblyByProduct = new Map<string, number>();
-    for (const m of assemblyMovements) {
-      assemblyByProduct.set(m.productId, (assemblyByProduct.get(m.productId) || 0) + 1);
-    }
+      const filteredItems = allSaleItems.filter(si => {
+        return !si.createdAt || (si.createdAt >= start && si.createdAt <= end);
+      });
 
-    for (const [productId, times] of assemblyByProduct) {
-      const recipe = recipes.find(r => r.productId === productId && r.mode === 'assembly');
-      if (recipe && !recipeStats.has(recipe.id)) {
+      if (filteredItems.length > 0 && !recipeStats.has(recipe.id)) {
         const sess = useAuthStore.getState().session;
-        const product = await db.products.where({ id: productId, tenantId: sess?.tenantId }).first();
+        const product = await db.products.where({ id: recipe.productId, tenantId: sess?.tenantId }).first();
+
+        const totalQty = filteredItems.reduce((sum, si) => sum + si.quantity, 0);
+        const totalCost = filteredItems.reduce((sum, si) => sum + ((si.costUsdPerUnit || 0) * si.quantity), 0);
+
         recipeStats.set(recipe.id, {
           recipeName: recipe.name,
           productName: product?.name || 'Desconocido',
           mode: 'assembly',
-          totalCostUsd: 0,
-          timesProduced: times,
-          totalQuantityProduced: 0,
+          totalCostUsd: totalCost,
+          timesProduced: filteredItems.length,
+          totalQuantityProduced: totalQty,
           yieldUnit: recipe.yieldUnit,
           wastePct: recipe.wastePct,
         });

@@ -197,7 +197,7 @@ export interface DexieCashRegister {
   collectedDebtBs: number;
   registerId?: string;
   operatorId?: string;
-  operatorName?: string;  
+  operatorName?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

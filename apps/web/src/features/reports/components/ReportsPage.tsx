@@ -38,8 +38,8 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'profits', label: 'Ganancias', icon: <BarChart3 size={20} /> },
   { id: 'products', label: 'Productos', icon: <ShoppingBag size={20} /> },
   { id: 'cash', label: 'Caja', icon: <Wallet size={20} /> },
-  { id: 'more', label: 'Más', icon: <Users size={20} /> },
   { id: 'delivery', label: 'Liquidación', icon: <Truck size={20} /> },
+  { id: 'more', label: 'Más', icon: <Users size={20} /> },
 ];
 
 const TAB_LABELS: Record<string, string> = {
@@ -47,8 +47,8 @@ const TAB_LABELS: Record<string, string> = {
   profits: 'Ganancias',
   products: 'Productos',
   cash: 'Caja',
-  more: 'Más',
   delivery: 'Liquidación',
+  more: 'Más',
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -171,7 +171,7 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
       return [
         { label: 'Subtotal', value: formatBs(totalSubtotal) },
         { label: 'Descuento total', value: <span className="text-danger font-bold">-{formatBs(totalDiscountBs)}</span> },
-        { label: 'Descuento USD', value: <span className="text-danger">-{formatUsd(totalDiscountUsd)}</span> },
+        { label: 'Descuento $', value: <span className="text-danger">-{formatUsd(totalDiscountUsd)}</span> },
       ];
     },
   },
