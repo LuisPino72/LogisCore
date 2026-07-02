@@ -671,10 +671,10 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                   <th>Receta</th>
                   <th>Producto</th>
                   <th>Tipo</th>
-                  <th>Veces Producida</th>
-                  <th>Costo/Unidad $</th>
+                  <th>N. Producido</th>
+                  <th>Costo Receta $</th>
+                  <th>Total Gastado $</th>
                   <th>Merma %</th>
-                  <th>Unidades</th>
                 </tr>
               </thead>
               <tbody>
@@ -684,9 +684,9 @@ export const PrintView = forwardRef<HTMLDivElement, PrintViewProps>(function Pri
                     <td>{r.productName}</td>
                     <td>{r.mode === 'batch' ? 'Lotes' : 'Ensamblaje'}</td>
                     <td>{r.timesProduced}</td>
-                    <td>{formatUsd(r.costPerUnitUsd)}</td>
+                    <td>{formatUsd(r.costPerRecipe)}</td>
+                    <td>{formatUsd(r.totalSpent)}</td>
                     <td>{r.wastePct}%</td>
-                    <td>{r.totalQuantityProduced}</td>
                   </tr>
                 ))}
               </tbody>

@@ -199,12 +199,10 @@ export interface RecipeProfitabilityItem {
   recipeName: string;
   productName: string;
   mode: 'batch' | 'assembly';
-  totalCostUsd: number;
-  totalCostBs: number;
+  costPerRecipe: number;
   timesProduced: number;
-  totalQuantityProduced: number;
+  totalSpent: number;
   yieldUnit: string;
-  costPerUnitUsd: number;
   wastePct: number;
 }
 

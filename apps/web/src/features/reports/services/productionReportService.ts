@@ -6,6 +6,7 @@ import { ValidateTenantInputSchema } from '../../../specs/reports/index';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { getPermissionMessage } from '../../auth/permissions/messages';
+import { computeRecipeCostAsync } from '../../production/services/costService';
 import type { ProductionSummaryData, RecipeProfitabilityItem, ReportFilters } from '../types';
 import { getDateRange, getRateForDateCached } from './reportsHelpers';
 
@@ -117,24 +118,22 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
       .filter((o) => !o.deletedAt && o.createdAt >= start && o.createdAt <= end && o.status !== 'cancelled')
       .toArray();
 
-    // Calculate recipe profitability
+    // Contar veces producida por receta (batch: órdenes, assembly: saleItems)
     const recipeStats = new Map<string, {
       recipeName: string;
       productName: string;
       mode: 'batch' | 'assembly';
-      totalCostUsd: number;
       timesProduced: number;
-      totalQuantityProduced: number;
       yieldUnit: string;
       wastePct: number;
+      yieldQuantity: number;
+      recipeId: string;
     }>();
 
     for (const order of orders) {
       const recipe = recipes.find((r) => r.id === order.recipeId);
       if (!recipe) continue;
 
-      // Get product name
-      const session = useAuthStore.getState().session;
       const product = await db.products.where({ id: recipe.productId, tenantId: session?.tenantId }).first();
       const productName = product?.name || 'Desconocido';
 
@@ -142,28 +141,22 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
         recipeName: recipe.name,
         productName,
         mode: recipe.mode,
-        totalCostUsd: 0,
         timesProduced: 0,
-        totalQuantityProduced: 0,
         yieldUnit: recipe.yieldUnit,
         wastePct: recipe.wastePct,
+        yieldQuantity: recipe.yieldQuantity || 1,
+        recipeId: recipe.id,
       };
 
       existing.timesProduced++;
-      existing.totalQuantityProduced += order.quantityProduced || order.quantityTarget;
-
       recipeStats.set(order.recipeId, existing);
     }
 
-    // Get ingredient costs from movements
-    const movements = await db.inventoryMovements
-      .where({ tenantId })
-      .filter((m) => !m.deletedAt && m.type === 'adjustment' && m.reasonType === 'consumo_interno' && m.createdAt >= start && m.createdAt <= end)
-      .toArray();
-
-    // Agregar recetas assembly desde ventas (saleItems)
+    // Agregar recetas assembly desde ventas (saleItems) si no tienen órdenes
     const assemblyRecipes = recipes.filter(r => r.mode === 'assembly');
     for (const recipe of assemblyRecipes) {
+      if (recipeStats.has(recipe.id)) continue;
+
       const allSaleItems = await db.saleItems
         .where({ tenantId })
         .filter(si => !si.deletedAt && si.productId === recipe.productId)
@@ -173,65 +166,53 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
         return !si.createdAt || (si.createdAt >= start && si.createdAt <= end);
       });
 
-      if (filteredItems.length > 0 && !recipeStats.has(recipe.id)) {
-        const sess = useAuthStore.getState().session;
-        const product = await db.products.where({ id: recipe.productId, tenantId: sess?.tenantId }).first();
-
-        const totalQty = filteredItems.reduce((sum, si) => sum + si.quantity, 0);
-        const totalCost = filteredItems.reduce((sum, si) => sum + ((si.costUsdPerUnit || 0) * si.quantity), 0);
+      if (filteredItems.length > 0) {
+        const product = await db.products.where({ id: recipe.productId, tenantId: session?.tenantId }).first();
 
         recipeStats.set(recipe.id, {
           recipeName: recipe.name,
           productName: product?.name || 'Desconocido',
           mode: 'assembly',
-          totalCostUsd: totalCost,
           timesProduced: filteredItems.length,
-          totalQuantityProduced: totalQty,
           yieldUnit: recipe.yieldUnit,
           wastePct: recipe.wastePct,
+          yieldQuantity: recipe.yieldQuantity || 1,
+          recipeId: recipe.id,
         });
       }
     }
 
-    let totalCostBsAll = 0;
-    for (const m of movements) {
-      const dayKey = m.createdAt.slice(0, 10);
-      const rate = await getRateForDateCached(tenantId, dayKey);
-      if (rate > 0) totalCostBsAll += (m.costUsd || 0) * rate;
-    }
-
-    // Costo real: desde órdenes de producción (batch) o saleItems (assembly)
-    for (const [recipeId, stats] of recipeStats) {
-      if (stats.mode === 'batch' && stats.totalCostUsd === 0) {
-        const ordersForRecipe = orders.filter(o => o.recipeId === recipeId);
-        let orderTotalCost = 0;
-        for (const order of ordersForRecipe) {
-          if (order.totalCost) {
-            orderTotalCost += order.totalCost;
-          }
-        }
-        stats.totalCostUsd = orderTotalCost > 0 ? preciseRound(orderTotalCost, 2) : 0;
-      }
-    }
-
-    const totalQuantity = Array.from(recipeStats.values()).reduce((sum, r) => sum + r.totalQuantityProduced, 0);
-
-    // Convert to array and calculate cost per unit
+    // Calcular costPerRecipe para cada receta usando computeRecipeCostAsync
     const result: RecipeProfitabilityItem[] = [];
     for (const [recipeId, stats] of recipeStats) {
+      let costPerRecipe = 0;
+
+      const recipe = recipes.find(r => r.id === recipeId);
+      if (recipe) {
+        const lines = await db.recipeLines
+          .where({ recipeId })
+          .filter(l => !l.deletedAt)
+          .toArray();
+
+        if (lines.length > 0) {
+          const mappedLines = lines.map(l => ({ productId: l.productId, quantity: l.quantity, unit: l.unit }));
+          const yieldQty = stats.mode === 'batch' ? stats.yieldQuantity : 1;
+          const costResult = await computeRecipeCostAsync(mappedLines, recipe.wastePct || 0, yieldQty);
+          costPerRecipe = costResult.totalCost;
+        }
+      }
+
+      const totalSpent = preciseRound(costPerRecipe * stats.timesProduced, 2);
+
       result.push({
         recipeId,
         recipeName: stats.recipeName,
         productName: stats.productName,
         mode: stats.mode,
-        totalCostUsd: stats.totalCostUsd,
-        totalCostBs: totalQuantity > 0 ? preciseRound((stats.totalQuantityProduced / totalQuantity) * totalCostBsAll, 2) : 0,
+        costPerRecipe: preciseRound(costPerRecipe, 2),
         timesProduced: stats.timesProduced,
-        totalQuantityProduced: stats.totalQuantityProduced,
+        totalSpent,
         yieldUnit: stats.yieldUnit,
-        costPerUnitUsd: stats.totalQuantityProduced > 0
-          ? preciseRound(stats.totalCostUsd / stats.totalQuantityProduced, 4)
-          : 0,
         wastePct: stats.wastePct,
       });
     }

@@ -337,17 +337,17 @@ function buildProductionSheet(summary: ProductionSummaryData | null, profitabili
       r.productName,
       r.mode === 'batch' ? 'Lotes' : 'Ensamblaje',
       r.timesProduced,
-      formatUsd(r.costPerUnitUsd),
+      formatUsd(r.costPerRecipe),
+      formatUsd(r.totalSpent),
       `${r.wastePct}%`,
-      r.totalQuantityProduced,
     ]);
   });
 
   return {
     name: 'Producción',
-    headers: ['Receta', 'Producto', 'Tipo', 'Veces Producida', 'Costo/Unidad $', 'Merma %', 'Unidades Totales'],
+    headers: ['Receta', 'Producto', 'Tipo', 'N. Producido', 'Costo Receta $', 'Total Gastado $', 'Merma %'],
     rows,
-    colWidths: [25, 25, 14, 16, 14, 10, 14],
+    colWidths: [25, 25, 14, 10, 16, 16, 10],
   };
 }
 

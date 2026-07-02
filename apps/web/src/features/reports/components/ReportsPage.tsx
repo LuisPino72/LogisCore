@@ -221,17 +221,16 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
       { key: 'productName', header: 'Producto', hideOnMobile: true, render: (item) => <span className="wrap-break-word">{item.productName as string}</span> },
       { key: 'mode', header: 'Tipo', className: 'text-center', render: (item) => item.mode === 'batch' ? 'Lotes' : 'Ensamblaje' },
-      { key: 'timesProduced', header: 'Veces', className: 'text-center' },
-      { key: 'totalQuantityProduced', header: 'Producido', className: 'text-center' },
-      { key: 'totalCostUsd', header: 'Costo Total', render: (item) => formatUsd(item.totalCostUsd as number) },
+      { key: 'timesProduced', header: 'N. Producido', className: 'text-center' },
+      { key: 'costPerRecipe', header: 'Costo Receta', render: (item) => formatUsd(item.costPerRecipe as number) },
+      { key: 'totalSpent', header: 'Total Gastado', render: (item) => formatUsd(item.totalSpent as number) },
       { key: 'wastePct', header: 'Merma', render: (item) => `${item.wastePct}%`, className: 'text-center' },
     ],
     footerSummary: (data) => {
-      const totalProduced = data.reduce((s, d) => s + (d.totalQuantityProduced as number), 0);
-      const totalCost = data.reduce((s, d) => s + (d.totalCostUsd as number), 0);
+      const totalSpent = data.reduce((s, d) => s + (d.totalSpent as number), 0);
       return [
-        { label: 'Total Producido', value: String(totalProduced) },
-        { label: 'Costo Total', value: formatUsd(totalCost) },
+        { label: 'Total Gastado', value: formatUsd(totalSpent) },
+        { label: 'Recetas', value: String(data.length) },
       ];
     },
   },
@@ -283,13 +282,14 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
     title: 'Unidades Producidas',
     columns: [
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
-      { key: 'totalQuantityProduced', header: 'Unidades', className: 'text-center' },
-      { key: 'timesProduced', header: 'Veces', className: 'text-center' },
+      { key: 'timesProduced', header: 'N. Producido', className: 'text-center' },
+      { key: 'costPerRecipe', header: 'Costo Receta', render: (item) => formatUsd(item.costPerRecipe as number) },
+      { key: 'totalSpent', header: 'Total Gastado', render: (item) => formatUsd(item.totalSpent as number) },
     ],
     footerSummary: (data) => {
-      const totalProduced = data.reduce((s, d) => s + (d.totalQuantityProduced as number), 0);
+      const totalSpent = data.reduce((s, d) => s + (d.totalSpent as number), 0);
       return [
-        { label: 'Total Unidades', value: String(totalProduced) },
+        { label: 'Total Gastado', value: formatUsd(totalSpent) },
       ];
     },
   },
@@ -298,7 +298,7 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
     columns: [
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
       { key: 'wastePct', header: 'Merma', render: (item) => `${item.wastePct}%`, className: 'text-center' },
-      { key: 'totalQuantityProduced', header: 'Producido', className: 'text-center' },
+      { key: 'timesProduced', header: 'N. Producido', className: 'text-center' },
     ],
     footerSummary: (data) => {
       const avgWaste = data.reduce((s, d) => s + (d.wastePct as number), 0) / (data.length || 1);
@@ -312,13 +312,14 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
     title: 'Costos de Ingredientes por Receta',
     columns: [
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
-      { key: 'totalCostUsd', header: 'Costo Total', render: (item) => formatUsd(item.totalCostUsd as number) },
+      { key: 'costPerRecipe', header: 'Costo Receta', render: (item) => formatUsd(item.costPerRecipe as number) },
+      { key: 'totalSpent', header: 'Total Gastado', render: (item) => formatUsd(item.totalSpent as number) },
       { key: 'yieldUnit', header: 'Unidad', className: 'text-center' },
     ],
     footerSummary: (data) => {
-      const totalCost = data.reduce((s, d) => s + (d.totalCostUsd as number), 0);
+      const totalSpent = data.reduce((s, d) => s + (d.totalSpent as number), 0);
       return [
-        { label: 'Costo Total', value: formatUsd(totalCost) },
+        { label: 'Total Gastado', value: formatUsd(totalSpent) },
         { label: 'Recetas', value: String(data.length) },
       ];
     },
