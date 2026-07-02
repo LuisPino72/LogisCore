@@ -495,6 +495,7 @@ export const receiptService = {
       pagoMovilPhone?: string;
       businessName?: string;
       businessRif?: string;
+      footerMessage?: string;
     },
     deliveryPersonName?: string,
     deliveryFee?: number,
@@ -551,7 +552,7 @@ export const receiptService = {
 
     lines.push('');
     lines.push('Cuando confirmes el pago, procederemos a despachar tu pedido.');
-    lines.push('¡Gracias por tu compra!');
+    lines.push(settings?.footerMessage || '¡Gracias por su compra!');
 
     return lines.join('\n');
   },
@@ -569,6 +570,7 @@ export const receiptService = {
       pagoMovilPhone?: string;
       businessName?: string;
       businessRif?: string;
+      footerMessage?: string;
     },
     deliveryPersonName?: string,
     deliveryFee?: number,

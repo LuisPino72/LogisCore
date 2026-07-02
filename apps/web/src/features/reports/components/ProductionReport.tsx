@@ -64,7 +64,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
           value={String(data.totalQuantityProduced)}
           icon={<Hash size={14} className="sm:w-4 sm:h-4" />}
           gradient="amber"
-          onClick={() => onKpiClick?.('produccionOrdenes')}
+          onClick={() => onKpiClick?.('produccionUnidades')}
           animationDelay={0.1}
         />
         <KpiCard
@@ -72,6 +72,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
           value={`${data.averageWastePct}%`}
           icon={<AlertTriangle size={14} className="sm:w-4 sm:h-4" />}
           gradient={data.averageWastePct > 10 ? 'red' : 'green'}
+          onClick={() => onKpiClick?.('produccionMerma')}
           animationDelay={0.15}
         />
         <KpiCard
@@ -79,7 +80,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
           value={formatUsd(data.totalIngredientCostUsd)}
           icon={<DollarSign size={14} className="sm:w-4 sm:h-4" />}
           gradient="red"
-          onClick={() => onKpiClick?.('produccionRecetas')}
+          onClick={() => onKpiClick?.('produccionCostoIng')}
           animationDelay={0.2}
         />
         {data.mostProducedRecipe && (
@@ -89,7 +90,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
             subtitle={displayQty(data.mostProducedQuantity ?? 0, 'unidad')}
             icon={<TrendingUp size={14} className="sm:w-4 sm:h-4" />}
             gradient="blue"
-            onClick={() => onKpiClick?.('produccionRecetas')}
+            onClick={() => onKpiClick?.('produccionMasProducida')}
             animationDelay={0.25}
           />
         )}

@@ -1,4 +1,4 @@
-import { type Result, success, failure, AppError, SystemEvents } from '@logiscore/core';
+import { type Result, success, failure, AppError, EventBus, SystemEvents } from '@logiscore/core';
 import { toSnake, generateId, preciseRound } from '@logiscore/shared';
 import { getDb } from '../../../services/dexie/db';
 import type { DexieCustomer } from '../../../services/dexie/db';
@@ -27,6 +27,7 @@ import { CustomerErrors } from '../../../specs/customers/errors';
 import { PaymentMethodSchema } from '../../../specs/pos';
 import type { PaymentMethod } from '../../../specs/pos';
 import type { Sale } from '../../pos/types';
+import { salesCache } from '../../reports/services/reportsHelpers';
 
 const MODULE_NAME = 'CUSTOMERS';
 
@@ -751,8 +752,14 @@ export const customerService = {
       const amountBs = preciseRound(amountUsd * exchangeRate, 2);
       const newBalance = preciseRound(Math.max(0, customer.balance - amountUsd), 2);
 
-      // Determinar si es cobro total
-      const isFullPayment = newBalance <= 0.01; // Tolerancia de 1 céntimo
+      // Calcular si la venta específica queda pagada
+      const saleTotalUsd = sale.exchangeRate > 0 ? sale.totalBs / sale.exchangeRate : 0;
+      const existingPaymentsOnSale = await db.creditPayments
+        .where({ saleId })
+        .filter(p => !p.deletedAt)
+        .toArray();
+      const totalPaidOnSale = existingPaymentsOnSale.reduce((sum, p) => sum + p.amountUsd, 0) + amountUsd;
+      const isFullPayment = totalPaidOnSale >= saleTotalUsd - 0.01;
 
       await db.transaction('rw', [db.creditPayments, db.customers, db.sales, db.cashRegisters, db.syncQueue, db.outbox], async (tx) => {
         // Crear registro de pago
@@ -845,6 +852,15 @@ export const customerService = {
         module: MODULE_NAME,
         payload: { customerId, saleId, paymentId, amountUsd: preciseRound(amountUsd, 2) },
         context: { tenantId, userId: useAuthStore.getState().session?.userId },
+      });
+
+      salesCache.clear();
+      EventBus.emit(SystemEvents.DEBT_COLLECTED, {
+        customerId,
+        saleId,
+        paymentId,
+        amountUsd: preciseRound(amountUsd, 2),
+        tenantSlug: tenantId,
       });
 
       return success({ paymentId, newBalance: isFullPayment ? 0 : newBalance });

@@ -195,6 +195,7 @@ export function ExecutiveSummary({ data, loading, tenantId, onKpiClick }: Execut
           }
           icon={<Wallet size={18} />}
           gradient="amber"
+          onClick={onKpiClick ? () => onKpiClick('pendientePorCobrar') : undefined}
           animationDelay={0.3}
         />
         <KpiCard
@@ -203,6 +204,7 @@ export function ExecutiveSummary({ data, loading, tenantId, onKpiClick }: Execut
           subtitle={pendingPayables !== null ? 'Total pendiente con proveedores' : 'Cargando...'}
           icon={<CreditCard size={18} />}
           gradient={(pendingPayables || 0) > 0 ? 'red' : 'green'}
+          onClick={onKpiClick ? () => onKpiClick('cuentasPorPagar') : undefined}
           animationDelay={0.35}
         />
       </div>

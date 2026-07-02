@@ -193,9 +193,6 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
       }
     }
 
-    // Simple cost distribution (proportional to quantity produced)
-    const totalQuantity = Array.from(recipeStats.values()).reduce((sum, r) => sum + r.totalQuantityProduced, 0);
-    const totalCost = movements.reduce((sum, m) => sum + (m.costUsd || 0), 0);
     let totalCostBsAll = 0;
     for (const m of movements) {
       const dayKey = m.createdAt.slice(0, 10);
@@ -203,11 +200,21 @@ export async function getRecipeProfitability(tenantId: string, filters: ReportFi
       if (rate > 0) totalCostBsAll += (m.costUsd || 0) * rate;
     }
 
-    for (const [, stats] of recipeStats) {
-      if (totalQuantity > 0) {
-        stats.totalCostUsd = preciseRound((stats.totalQuantityProduced / totalQuantity) * totalCost, 2);
+    // Costo real: desde órdenes de producción (batch) o saleItems (assembly)
+    for (const [recipeId, stats] of recipeStats) {
+      if (stats.mode === 'batch' && stats.totalCostUsd === 0) {
+        const ordersForRecipe = orders.filter(o => o.recipeId === recipeId);
+        let orderTotalCost = 0;
+        for (const order of ordersForRecipe) {
+          if (order.totalCost) {
+            orderTotalCost += order.totalCost;
+          }
+        }
+        stats.totalCostUsd = orderTotalCost > 0 ? preciseRound(orderTotalCost, 2) : 0;
       }
     }
+
+    const totalQuantity = Array.from(recipeStats.values()).reduce((sum, r) => sum + r.totalQuantityProduced, 0);
 
     // Convert to array and calculate cost per unit
     const result: RecipeProfitabilityItem[] = [];

@@ -6,7 +6,7 @@ import { ValidateTenantInputSchema } from '../../../specs/reports/index';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
 import { getPermissionMessage } from '../../auth/permissions/messages';
-import type { CustomersSummaryData, CustomerRankingItem, ReportFilters } from '../types';
+import type { CustomersSummaryData, CustomerRankingItem, ReportFilters, PendingCreditDetailItem } from '../types';
 import { getDateRange } from './reportsHelpers';
 
 export async function getCustomersSummary(tenantId: string, filters: ReportFilters): Promise<Result<CustomersSummaryData, AppError>> {
@@ -235,5 +235,47 @@ export async function getCustomersRanking(tenantId: string, filters: ReportFilte
   } catch (err) {
     console.error('[reportsService.getCustomersRanking]', err);
     return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener ranking de clientes.'));
+  }
+}
+
+export async function getPendingCreditDetail(tenantId: string): Promise<Result<PendingCreditDetailItem[], AppError>> {
+  const session = useAuthStore.getState().session;
+  if (!session || !hasActionPermission(session, 'reports', 'read')) {
+    return failure(new AppError('REPORTS_SCOPE_DENIED', getPermissionMessage('reports', 'read')));
+  }
+  const tenantCheck = ValidateTenantInputSchema.safeParse(tenantId);
+  if (!tenantCheck.success) {
+    return failure(new AppError(ReportsErrors.REPORT_INVALID_TENANT_ID, tenantCheck.error.issues[0]?.message || 'Negocio no válido.'));
+  }
+  try {
+    const db = getDb();
+    const customers = await db.customers
+      .where({ tenantId })
+      .filter((c) => !c.deletedAt && (c.balance || 0) > 0)
+      .toArray();
+
+    const customerIds = customers.map((c) => c.id);
+    const sales = await db.sales
+      .where({ tenantId })
+      .filter((s) => !s.deletedAt && !!s.customerId && customerIds.includes(s.customerId) && !!s.isCreditSale && !s.creditCollected)
+      .toArray();
+
+    const pendingCountByCustomer = new Map<string, number>();
+    for (const sale of sales) {
+      pendingCountByCustomer.set(sale.customerId!, (pendingCountByCustomer.get(sale.customerId!) ?? 0) + 1);
+    }
+
+    const detail: PendingCreditDetailItem[] = customers.map((c) => ({
+      customerId: c.id,
+      customerName: c.name,
+      balance: c.balance,
+      creditLimit: c.creditLimit,
+      pendingSalesCount: pendingCountByCustomer.get(c.id) ?? 0,
+    }));
+
+    return success(detail);
+  } catch (err) {
+    console.error('[reportsService.getPendingCreditDetail]', err);
+    return failure(new AppError(ReportsErrors.REPORT_FETCH_FAILED, 'Error al obtener detalle de créditos pendientes.'));
   }
 }

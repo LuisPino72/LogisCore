@@ -236,6 +236,7 @@ export function PosPage({ tenantId }: PosPageProps) {
         pagoMovilPhone: settingsStore.pagoMovilPhone,
         businessName: tenantRef?.name,
         businessRif: tenantRef?.rif,
+        footerMessage: settingsStore.ticketFooterMessage,
       },
       sale.deliveryPersonName,
       deliveryFee,

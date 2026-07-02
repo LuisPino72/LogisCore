@@ -27,11 +27,18 @@ export function useDrillDown(tenantId: string | null, filters: ReportFilters) {
         result = await reportsService.getCustomersRanking(tenantId, filters);
       } else if (type === 'produccionRecetas') {
         result = await reportsService.getRecipeProfitability(tenantId, filters);
+      } else if (type === 'pendientePorCobrar') {
+        result = await reportsService.getPendingCreditDetail(tenantId);
+      } else if (type === 'cuentasPorPagar') {
+        const payablesData = await reportsService.getPayablesDetail(tenantId);
+        result = { ok: true as const, data: payablesData };
       } else if (type === 'produccionOrdenes') {
         const orderResult = await reportsService.getProductionSummary(tenantId, filters);
         if (orderResult.ok) {
           result = { ok: true as const, data: [orderResult.data] };
         }
+      } else if (type === 'produccionUnidades' || type === 'produccionMerma' || type === 'produccionCostoIng' || type === 'produccionMasProducida') {
+        result = await reportsService.getRecipeProfitability(tenantId, filters);
       }
       if (result?.ok) setDrillDownData(result.data as unknown as Record<string, unknown>[]);
     } finally {

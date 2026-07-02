@@ -3,6 +3,7 @@ import { getDb } from '../../../services/dexie/db';
 import { logger } from '../../../lib/logger';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { hasActionPermission } from '../../auth/permissions/rolePermissions';
+import type { PayablesDetailItem } from '../types';
 
 export async function getPendingPayables(tenantId: string): Promise<number> {
   const session = useAuthStore.getState().session;
@@ -33,4 +34,32 @@ export async function getPendingPayables(tenantId: string): Promise<number> {
   }
 
   return roundedOrderTotal;
+}
+
+export async function getPayablesDetail(tenantId: string): Promise<PayablesDetailItem[]> {
+  const db = getDb();
+  const suppliers = await db.suppliers
+    .where({ tenantId })
+    .filter((s) => !s.deletedAt && (s.balance || 0) > 0)
+    .toArray();
+
+  const supplierIds = suppliers.map((s) => s.id);
+  const orders = await db.purchaseOrders
+    .where({ tenantId })
+    .filter((o) => !o.deletedAt && !!o.supplierId && supplierIds.includes(o.supplierId) && o.status !== 'cancelled')
+    .toArray();
+
+  const ordersCountBySupplier = new Map<string, number>();
+  for (const order of orders) {
+    ordersCountBySupplier.set(order.supplierId, (ordersCountBySupplier.get(order.supplierId) ?? 0) + 1);
+  }
+
+  const detail: PayablesDetailItem[] = suppliers.map((s) => ({
+    supplierId: s.id,
+    supplierName: s.name,
+    balance: s.balance,
+    pendingOrdersCount: ordersCountBySupplier.get(s.id) ?? 0,
+  }));
+
+  return detail;
 }

@@ -125,7 +125,7 @@ export interface CashRegisterSummaryData {
 
 export type ReportTab = 'summary' | 'profits' | 'products' | 'cash' | 'more' | 'delivery';
 
-export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos' | 'topClientes' | 'clientesRanking' | 'produccionRecetas' | 'produccionOrdenes';
+export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos' | 'topClientes' | 'clientesRanking' | 'produccionRecetas' | 'produccionOrdenes' | 'pendientePorCobrar' | 'cuentasPorPagar' | 'produccionUnidades' | 'produccionMerma' | 'produccionCostoIng' | 'produccionMasProducida';
 
 export interface SaleDetail {
   id: string;
@@ -246,6 +246,21 @@ export interface GlobalCashAnalysis {
   totalCollectedDebtBs: number;
   totalExpectedClosingBs: number;
   totalDifferenceBs: number;
+}
+
+export interface PendingCreditDetailItem {
+  customerId: string;
+  customerName: string;
+  balance: number;
+  creditLimit: number;
+  pendingSalesCount: number;
+}
+
+export interface PayablesDetailItem {
+  supplierId: string;
+  supplierName: string;
+  balance: number;
+  pendingOrdersCount: number;
 }
 
 

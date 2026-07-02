@@ -248,7 +248,7 @@ async function consumeSaleItems(
       }
 
       const cartItemData = originalItems?.find(i => i.productId === assemblyItem.productId);
-      const costUsdPerUnit = assemblyItem.quantity > 0 ? preciseRound(totalIngredientCost / assemblyItem.quantity, 4) : 0;
+      const costUsdPerUnit = scaledQuantity > 0 ? preciseRound(totalIngredientCost / scaledQuantity, 4) : 0;
 
       const saleItemId = generateId();
       await db.saleItems.add({
