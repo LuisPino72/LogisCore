@@ -280,13 +280,11 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
     },
   },
   produccionUnidades: {
-    title: 'Unidades Producidas por Receta',
+    title: 'Unidades Producidas',
     columns: [
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
-      { key: 'productName', header: 'Producto', hideOnMobile: true, render: (item) => <span className="wrap-break-word">{item.productName as string}</span> },
-      { key: 'mode', header: 'Tipo', className: 'text-center', render: (item) => item.mode === 'batch' ? 'Lotes' : 'Ensamblaje' },
       { key: 'totalQuantityProduced', header: 'Unidades', className: 'text-center' },
-      { key: 'costPerUnitUsd', header: 'Costo/Unidad', render: (item) => formatUsd(item.costPerUnitUsd as number) },
+      { key: 'timesProduced', header: 'Veces', className: 'text-center' },
     ],
     footerSummary: (data) => {
       const totalProduced = data.reduce((s, d) => s + (d.totalQuantityProduced as number), 0);
@@ -299,11 +297,8 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
     title: 'Merma por Receta',
     columns: [
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
-      { key: 'productName', header: 'Producto', hideOnMobile: true, render: (item) => <span className="wrap-break-word">{item.productName as string}</span> },
-      { key: 'mode', header: 'Tipo', className: 'text-center', render: (item) => item.mode === 'batch' ? 'Lotes' : 'Ensamblaje' },
       { key: 'wastePct', header: 'Merma', render: (item) => `${item.wastePct}%`, className: 'text-center' },
       { key: 'totalQuantityProduced', header: 'Producido', className: 'text-center' },
-      { key: 'costPerUnitUsd', header: 'Costo/Unidad', render: (item) => formatUsd(item.costPerUnitUsd as number) },
     ],
     footerSummary: (data) => {
       const avgWaste = data.reduce((s, d) => s + (d.wastePct as number), 0) / (data.length || 1);
@@ -317,8 +312,6 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
     title: 'Costos de Ingredientes por Receta',
     columns: [
       { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
-      { key: 'productName', header: 'Producto', hideOnMobile: true },
-      { key: 'totalQuantityProduced', header: 'Unidades', className: 'text-center' },
       { key: 'totalCostUsd', header: 'Costo Total $', render: (item) => formatUsd(item.totalCostUsd as number) },
       { key: 'costPerUnitUsd', header: 'Costo/Unidad', render: (item) => formatUsd(item.costPerUnitUsd as number) },
       { key: 'yieldUnit', header: 'Unidad', className: 'text-center' },
@@ -330,18 +323,6 @@ const DRILL_DOWN_CONFIGS: Record<DrillDownType, {
         { label: 'Recetas', value: String(data.length) },
       ];
     },
-  },
-  produccionMasProducida: {
-    title: 'Detalle de Receta Más Producida',
-    columns: [
-      { key: 'recipeName', header: 'Receta', render: (item) => <span className="wrap-break-word">{item.recipeName as string}</span> },
-      { key: 'productName', header: 'Producto', hideOnMobile: true },
-      { key: 'mode', header: 'Tipo', className: 'text-center', render: (item) => item.mode === 'batch' ? 'Lotes' : 'Ensamblaje' },
-      { key: 'timesProduced', header: 'Veces Producida', className: 'text-center' },
-      { key: 'totalQuantityProduced', header: 'Total Unidades', className: 'text-center' },
-      { key: 'costPerUnitUsd', header: 'Costo/Unidad', render: (item) => formatUsd(item.costPerUnitUsd as number) },
-      { key: 'wastePct', header: 'Merma', render: (item) => `${item.wastePct}%`, className: 'text-center' },
-    ],
   },
 };
 

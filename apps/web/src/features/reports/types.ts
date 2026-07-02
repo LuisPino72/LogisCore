@@ -125,7 +125,7 @@ export interface CashRegisterSummaryData {
 
 export type ReportTab = 'summary' | 'profits' | 'products' | 'cash' | 'more' | 'delivery';
 
-export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos' | 'topClientes' | 'clientesRanking' | 'produccionRecetas' | 'produccionOrdenes' | 'pendientePorCobrar' | 'cuentasPorPagar' | 'produccionUnidades' | 'produccionMerma' | 'produccionCostoIng' | 'produccionMasProducida';
+export type DrillDownType = 'ventas' | 'ganancia' | 'gastos' | 'ticket' | 'topProducto' | 'descuentos' | 'topClientes' | 'clientesRanking' | 'produccionRecetas' | 'produccionOrdenes' | 'pendientePorCobrar' | 'cuentasPorPagar' | 'produccionUnidades' | 'produccionMerma' | 'produccionCostoIng';
 
 export interface SaleDetail {
   id: string;

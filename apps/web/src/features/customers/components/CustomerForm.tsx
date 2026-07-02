@@ -146,7 +146,6 @@ export function CustomerForm({ isOpen, onClose, onSubmit, editCustomer }: Custom
               updateField('phone', unformatPhone(formatted));
             }}
             error={fieldErrors.phone}
-            validation={{ pattern: /^$|^0\d{10}$/, maxLength: 15 }}
             hint="Formato: 0412-1234567"
             inputClassName="text-sm"
             inputMode="tel"

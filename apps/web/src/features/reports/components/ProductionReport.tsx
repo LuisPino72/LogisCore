@@ -90,7 +90,7 @@ export function ProductionReport({ data, loading, onKpiClick }: ProductionReport
             subtitle={displayQty(data.mostProducedQuantity ?? 0, 'unidad')}
             icon={<TrendingUp size={14} className="sm:w-4 sm:h-4" />}
             gradient="blue"
-            onClick={() => onKpiClick?.('produccionMasProducida')}
+            onClick={() => onKpiClick?.('produccionRecetas')}
             animationDelay={0.25}
           />
         )}

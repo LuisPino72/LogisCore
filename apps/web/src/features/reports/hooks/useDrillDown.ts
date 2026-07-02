@@ -37,7 +37,7 @@ export function useDrillDown(tenantId: string | null, filters: ReportFilters) {
         if (orderResult.ok) {
           result = { ok: true as const, data: [orderResult.data] };
         }
-      } else if (type === 'produccionUnidades' || type === 'produccionMerma' || type === 'produccionCostoIng' || type === 'produccionMasProducida') {
+      } else if (type === 'produccionUnidades' || type === 'produccionMerma' || type === 'produccionCostoIng') {
         result = await reportsService.getRecipeProfitability(tenantId, filters);
       }
       if (result?.ok) setDrillDownData(result.data as unknown as Record<string, unknown>[]);

@@ -3,6 +3,8 @@ import { Alert, Modal, Input, Button } from '../../../common/components';
 import { formatBs } from '@/lib/formatBs';
 import { MAX_CENTS_DIFFERENCE } from '@logiscore/shared';
 import type { Result, AppError } from '@logiscore/core';
+import { ClosingBreakdownModal } from './ClosingBreakdownModal';
+import { Info } from 'lucide-react';
 
 type CashMode = 'open' | 'close';
 
@@ -21,6 +23,8 @@ interface CashRegisterModalProps {
   error?: string | null;
   loading: boolean;
   disabled?: boolean;
+  sessionId?: string | null;
+  tenantId?: string | null;
 }
 
 export function CashRegisterModal({
@@ -37,12 +41,15 @@ export function CashRegisterModal({
   error,
   loading,
   disabled,
+  sessionId,
+  tenantId,
 }: CashRegisterModalProps) {
   const [balance, setBalance] = useState('');
   const [declaredClosing, setDeclaredClosing] = useState('');
   const [localError, setLocalError] = useState('');
   const [balanceTouched, setBalanceTouched] = useState(false);
   const [declaredTouched, setDeclaredTouched] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const handleOpen = async () => {
     const parsed = parseFloat(balance);
@@ -86,7 +93,7 @@ export function CashRegisterModal({
   }, [declaredClosing, expectedClosing, mode]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={mode === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}>
+    <><Modal isOpen={isOpen} onClose={onClose} title={mode === 'open' ? 'Abrir Caja' : 'Cerrar Caja'}>
       <div className="flex flex-col gap-4 animate-slide-down">
         {mode === 'open' ? (
           <>
@@ -124,7 +131,19 @@ export function CashRegisterModal({
               </div>
               <div className="flex justify-between border-t border-border pt-1 mt-1">
                 <span className="text-gray-700 font-medium">Cierre esperado</span>
-                <span className="font-bold">{formatBs(expectedClosing)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{formatBs(expectedClosing)}</span>
+                  {mode === 'close' && sessionId && tenantId && (
+                    <button
+                      type="button"
+                      onClick={() => setShowBreakdown(true)}
+                      className="text-primary hover:text-primary-dark transition-colors"
+                      title="Ver detalle del cierre"
+                    >
+                      <Info size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <Input
@@ -178,5 +197,14 @@ export function CashRegisterModal({
         </div>
       </div>
     </Modal>
-  );
+
+    {showBreakdown && sessionId && tenantId && (
+      <ClosingBreakdownModal
+        isOpen={showBreakdown}
+        onClose={() => setShowBreakdown(false)}
+        sessionId={sessionId}
+        tenantId={tenantId}
+      />
+    )}
+  </>);
 }

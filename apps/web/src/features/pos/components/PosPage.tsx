@@ -924,6 +924,8 @@ export function PosPage({ tenantId }: PosPageProps) {
         error={cashError}
         loading={loading}
         disabled={!isOnline}
+        sessionId={activeSessionId}
+        tenantId={tenantId}
       />
 
       <StockVerificationModal

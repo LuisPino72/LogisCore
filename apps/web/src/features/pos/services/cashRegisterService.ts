@@ -652,3 +652,94 @@ export async function closeCashRegister(input: CloseCashRegisterInput): Promise<
     return failure(new AppError('BOX_ALREADY_CLOSED', 'Error al cerrar la caja.'));
   }
 }
+
+// ─── Breakdown ──────────────────────────────────────────────────────────
+
+export interface ClosingBreakdownItem {
+  id: string;
+  description: string;
+  amountBs: number;
+  type: 'opening' | 'sale' | 'debt';
+}
+
+export interface ClosingBreakdown {
+  openingBalanceBs: number;
+  totalSalesBs: number;
+  totalCollectedDebtBs: number;
+  expectedClosing: number;
+  items: ClosingBreakdownItem[];
+}
+
+export async function getClosingBreakdown(sessionId: string, tenantId: string): Promise<Result<ClosingBreakdown, AppError>> {
+  try {
+    const db = getDb();
+    const session = await db.cashRegisters.get(sessionId);
+    if (!session) {
+      return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Sesión de caja no encontrada.'));
+    }
+
+    const items: ClosingBreakdownItem[] = [];
+
+    items.push({
+      id: 'opening',
+      description: 'Saldo inicial',
+      amountBs: session.openingBalanceBs ?? 0,
+      type: 'opening',
+    });
+
+    const sales = await db.sales
+      .where({ tenantId, cashRegisterId: sessionId })
+      .filter((s) => !s.voidedAt && !s.deletedAt)
+      .toArray();
+
+    const customerIds = [...new Set(sales.map((s) => s.customerId).filter(Boolean))] as string[];
+    const customers = customerIds.length > 0
+      ? await db.customers.where('id').anyOf(customerIds).toArray()
+      : [];
+    const customerMap = new Map(customers.map((c) => [c.id, c.name]));
+
+    for (const sale of sales) {
+      const name = sale.customerId ? customerMap.get(sale.customerId) : undefined;
+      items.push({
+        id: sale.id,
+        description: name ? `Venta — ${name}` : 'Venta',
+        amountBs: sale.totalBs,
+        type: 'sale',
+      });
+    }
+
+    const openedAt = session.openedAt ?? session.createdAt;
+    const now = new Date().toISOString();
+    const debtPayments = await db.creditPayments
+      .where({ tenantId })
+      .filter((p) => !p.deletedAt && p.createdAt >= openedAt && p.createdAt <= now)
+      .toArray();
+
+    const debtCustomerIds = [...new Set(debtPayments.map((p) => p.customerId))];
+    const debtCustomers = debtCustomerIds.length > 0
+      ? await db.customers.where('id').anyOf(debtCustomerIds).toArray()
+      : [];
+    const debtCustomerMap = new Map(debtCustomers.map((c) => [c.id, c.name]));
+
+    for (const payment of debtPayments) {
+      const name = debtCustomerMap.get(payment.customerId);
+      items.push({
+        id: payment.id,
+        description: name ? `Cobro deuda — ${name}` : 'Cobro deuda',
+        amountBs: payment.amountBs,
+        type: 'debt',
+      });
+    }
+
+    return success({
+      openingBalanceBs: session.openingBalanceBs ?? 0,
+      totalSalesBs: session.totalSalesBs,
+      totalCollectedDebtBs: session.collectedDebtBs ?? 0,
+      expectedClosing: (session.openingBalanceBs ?? 0) + session.totalSalesBs + (session.collectedDebtBs ?? 0),
+      items,
+    });
+  } catch (err) {
+    logger.error(MODULE_NAME, 'Error en getClosingBreakdown:', err);
+    return failure(new AppError(PosErrors.BOX_QUERY_FAILED, 'Error al obtener detalle del cierre.'));
+  }
+}
